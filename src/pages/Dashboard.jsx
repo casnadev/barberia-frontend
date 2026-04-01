@@ -475,7 +475,7 @@ function Dashboard() {
               </div>
 
               {dashboard.topTrabajadores?.length > 0 ? (
-                <div className="row g-3">
+                <div id="top-trabajadores-mobile" className="row g-3">
                   {dashboard.topTrabajadores.map((item, index) => (
                     <div className="col-lg-4 col-md-6" key={index}>
                       <div
