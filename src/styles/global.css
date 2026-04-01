@@ -408,3 +408,18 @@ body {
     display: none;
   }
 }
+@media (max-width: 768px) {
+  #resumen-dashboard {
+    justify-content: center;
+  }
+
+  #resumen-dashboard > div {
+    display: flex;
+    justify-content: center;
+  }
+
+  #resumen-dashboard > div > div {
+    width: 100%;
+    max-width: 360px;
+  }
+}
