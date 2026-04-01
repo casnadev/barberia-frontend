@@ -456,3 +456,8 @@ body {
     padding-right: 0 !important;
   }
 }
+.brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}

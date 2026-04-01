@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import LogoAnimado from "../components/ui/LogoAnimado";
 
 function Item({ to, label, active, onClick }) {
   return (
@@ -49,7 +50,10 @@ export default function AdminLayout() {
 
       <aside className={`sidebar ${menuAbierto ? "sidebar-open" : ""}`}>
         <div className="sidebar-top">
-          <h4 className="sidebar-brand">Barbería</h4>
+          <div className="brand-wrap">
+  <LogoAnimado />
+  <h4 className="sidebar-brand">Barbería</h4>
+</div>
 
           <button
             type="button"
@@ -131,7 +135,10 @@ export default function AdminLayout() {
             ☰
           </button>
 
-          <span className="mobile-topbar-title">Barbería</span>
+          <div className="brand-wrap">
+  <LogoAnimado />
+  <span className="mobile-topbar-title">Barbería</span>
+</div>
         </header>
 
         <main className="admin-content">
