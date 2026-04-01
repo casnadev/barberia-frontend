@@ -1,13 +1,40 @@
-import Lottie from "lottie-react";
+import LottieModule from "lottie-react";
 import animationData from "../../assets/logo.json";
 
-function LogoAnimado() {
+const Lottie = LottieModule?.default ?? LottieModule;
+
+function LogoAnimado({ width = 100, height = 100 }) {
+  if (!Lottie) {
+    return (
+      <div
+        style={{
+          width: width,
+          height: height,
+          borderRadius: 8,
+          background: "#d4af37",
+        }}
+      />
+    );
+  }
+
   return (
-    <div style={{ width: 32, height: 32 }}>
+    <div
+      style={{
+        width: width,
+        height: height,
+        overflow: "hidden",
+      }}
+    >
       <Lottie
         animationData={animationData}
-        loop={true}
-        autoplay={true}
+        loop
+        autoplay
+        style={{
+          width: "100%",
+          height: "100%",
+          transform: "scale(1.6)",
+          transformOrigin: "center",
+        }}
       />
     </div>
   );

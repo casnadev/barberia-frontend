@@ -4,6 +4,7 @@ import CardDark from "../components/ui/CardDark";
 import PageHeader from "../components/ui/PageHeader";
 import GoldBadge from "../components/ui/GoldBadge";
 import TableDark from "../components/ui/TableDark";
+import LogoAnimado from "../components/ui/LogoAnimado";
 import AnimatedNumber from "../components/ui/AnimatedNumber";
 import {
   ResponsiveContainer,
@@ -293,6 +294,7 @@ function Dashboard() {
 
   return (
     <div className="page-shell">
+      
       <PageHeader
         title="Bienvenido, Nader"
         subtitle="Control de ventas, rendimiento y movimiento diario del negocio"
@@ -486,8 +488,8 @@ function Dashboard() {
                             index === 0
                               ? "linear-gradient(135deg, #d4af37, #f5deb3)"
                               : index === 1
-                              ? "linear-gradient(135deg, #2b2b2b, #3b3b3b)"
-                              : "linear-gradient(135deg, #4a3513, #7a5a1c)",
+                                ? "linear-gradient(135deg, #2b2b2b, #3b3b3b)"
+                                : "linear-gradient(135deg, #4a3513, #7a5a1c)",
                           color: index === 0 ? "#111" : "#fff",
                           boxShadow: "0 12px 24px rgba(0,0,0,0.25)",
                         }}
@@ -790,7 +792,7 @@ function Dashboard() {
                           !obtenerMontoPago(c.idTrabajador) ||
                           obtenerMontoPago(c.idTrabajador) <= 0 ||
                           obtenerMontoPago(c.idTrabajador) >
-                            c.totalComisionPendiente
+                          c.totalComisionPendiente
                         }
                         onClick={() =>
                           abrirConfirmacion(
@@ -807,9 +809,9 @@ function Dashboard() {
                             procesandoPago === c.idTrabajador
                               ? "#555"
                               : c.totalComisionPendiente > 0 &&
-                                  obtenerMontoPago(c.idTrabajador) > 0 &&
-                                  obtenerMontoPago(c.idTrabajador) <=
-                                    c.totalComisionPendiente
+                                obtenerMontoPago(c.idTrabajador) > 0 &&
+                                obtenerMontoPago(c.idTrabajador) <=
+                                c.totalComisionPendiente
                                 ? "#d4af37"
                                 : "#333",
                           color: "#111",
@@ -819,9 +821,9 @@ function Dashboard() {
                             procesandoPago === c.idTrabajador
                               ? "wait"
                               : c.totalComisionPendiente > 0 &&
-                                  obtenerMontoPago(c.idTrabajador) > 0 &&
-                                  obtenerMontoPago(c.idTrabajador) <=
-                                    c.totalComisionPendiente
+                                obtenerMontoPago(c.idTrabajador) > 0 &&
+                                obtenerMontoPago(c.idTrabajador) <=
+                                c.totalComisionPendiente
                                 ? "pointer"
                                 : "not-allowed",
                         }}
@@ -873,10 +875,10 @@ function Dashboard() {
 
                     {obtenerMontoPago(c.idTrabajador) >
                       c.totalComisionPendiente && (
-                      <small style={{ color: "#f87171" }}>
-                        El monto excede lo pendiente
-                      </small>
-                    )}
+                        <small style={{ color: "#f87171" }}>
+                          El monto excede lo pendiente
+                        </small>
+                      )}
                   </td>
                 </tr>
               ))

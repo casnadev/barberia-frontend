@@ -122,11 +122,13 @@ body {
   color: #d4af37;
   font-weight: 700;
   margin-bottom: 4px;
+  margin: 0;
 }
 
 .page-subtitle {
   color: #b8b8b8;
   margin-bottom: 0;
+  margin: 0;
 }
 
 .topbar-dark {
@@ -459,5 +461,92 @@ body {
 .brand-wrap {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
+}
+.header-dashboard {
+  align-items: center;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* LOGO */
+.header-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+/* AQUÍ ESTÁ LA CLAVE 🔥 */
+.header-logo > div {
+  width: 90px;
+  height: 90px;
+}
+
+/* TEXTO */
+.header-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.2;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .header-dashboard {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+  }
+
+  .header-logo {
+    flex-shrink: 0;
+  }
+
+  .header-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .page-title {
+    margin: 0;
+    font-size: 2rem;
+    line-height: 1.05;
+  }
+
+  .page-subtitle {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.25;
+  }
+}
+.logo-lottie-container {
+  width: 140px;
+  height: 140px;
+}
+
+.logo-lottie-box {
+  width: 140px;
+  height: 140px;
+  overflow: hidden;
+}
+
+.logo-lottie-box svg {
+  transform: scale(1.6);
+  transform-origin: center;
+}
+
+@media (max-width: 768px) {
+  .logo-lottie-box {
+    width: 100px;
+    height: 100px;
+  }
+
+  .logo-lottie-box svg {
+    transform: scale(1.35);
+  }
 }
