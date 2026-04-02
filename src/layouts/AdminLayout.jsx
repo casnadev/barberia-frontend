@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import LogoAnimado from "../components/ui/LogoAnimado";
+import logo2 from "../assets/logo2.png";
 
 function Item({ to, label, active, onClick }) {
   return (
@@ -51,9 +51,9 @@ export default function AdminLayout() {
       <aside className={`sidebar ${menuAbierto ? "sidebar-open" : ""}`}>
         <div className="sidebar-top">
           <div className="brand-wrap">
-  <LogoAnimado />
-  <h4 className="sidebar-brand">Barbería</h4>
-</div>
+            <img src={logo2} alt="Logo" className="sidebar-logo-img" />
+            <h4 className="sidebar-brand">Barbería</h4>
+          </div>
 
           <button
             type="button"
@@ -112,18 +112,17 @@ export default function AdminLayout() {
             onClick={esMobile ? cerrarMenu : undefined}
           />
         </nav>
-        <div className="sidebar-footer">
 
-        <button
-          type="button"
-          onClick={cerrarSesion}
-          className="sidebar-logout"
-        >
-          Cerrar sesión
-        </button>
+        <div className="sidebar-footer">
+          <button
+            type="button"
+            onClick={cerrarSesion}
+            className="sidebar-logout"
+          >
+            Cerrar sesión
+          </button>
         </div>
       </aside>
-      
 
       <div className="admin-main">
         <header className="mobile-topbar">
@@ -136,9 +135,9 @@ export default function AdminLayout() {
           </button>
 
           <div className="brand-wrap">
-  <LogoAnimado />
-  <span className="mobile-topbar-title">Barbería</span>
-</div>
+            <img src={logo2} alt="Logo" className="sidebar-logo-img" />
+            <span className="mobile-topbar-title">Barbería</span>
+          </div>
         </header>
 
         <main className="admin-content">
