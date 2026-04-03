@@ -234,6 +234,9 @@ function Ventas() {
                 value={fechaDesde}
                 onChange={(e) => setFechaDesde(e.target.value)}
               />
+              {!fechaDesde && (
+              <small className="fecha-help">Seleccionar una fecha</small>
+              )}
             </div>
 
             <div className="col-md-2">
@@ -249,6 +252,9 @@ function Ventas() {
                 value={fechaHasta}
                 onChange={(e) => setFechaHasta(e.target.value)}
               />
+              {!fechaDesde && (
+              <small className="fecha-help">Seleccionar una fecha</small>
+              )}
             </div>
 
             <div className="col-md-3">
