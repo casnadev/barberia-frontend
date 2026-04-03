@@ -252,7 +252,7 @@ function Ventas() {
                 value={fechaHasta}
                 onChange={(e) => setFechaHasta(e.target.value)}
               />
-              {!fechaDesde && (
+              {!fechaHasta && (
               <small className="fecha-help">Seleccionar una fecha</small>
               )}
             </div>

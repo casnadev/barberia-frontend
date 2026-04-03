@@ -582,3 +582,13 @@ body {
   display: block;
   flex-shrink: 0;
 }
+.campo-fecha {
+  display: flex;
+  flex-direction: column;
+}
+
+.fecha-help {
+  color: #b8b8b8;
+  font-size: 0.75rem;
+  margin-top: 4px;
+}
