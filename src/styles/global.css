@@ -476,7 +476,7 @@ body {
 .brand-wrap {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 1px;
 }
 .header-dashboard {
   align-items: center;
@@ -576,8 +576,8 @@ body {
 }
 
 .sidebar-logo-img {
-  width: 80px;
-  height: 80px;
+  width: 50;
+  height: 50px;
   object-fit: contain;
   display: block;
   flex-shrink: 0;

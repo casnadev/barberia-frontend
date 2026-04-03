@@ -52,7 +52,7 @@ export default function AdminLayout() {
         <div className="sidebar-top">
           <div className="brand-wrap">
             <img src={logo2} alt="Logo" className="sidebar-logo-img" />
-            <h4 className="sidebar-brand">Barbería</h4>
+            <h4 className="sidebar-brand">BarberControl</h4>
           </div>
 
           <button
