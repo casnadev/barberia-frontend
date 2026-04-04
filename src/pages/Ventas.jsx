@@ -233,10 +233,7 @@ function Ventas() {
                 className="form-control input-dark"
                 value={fechaDesde}
                 onChange={(e) => setFechaDesde(e.target.value)}
-              />
-              {!fechaDesde && (
-              <small className="fecha-help">Seleccionar una fecha</small>
-              )}
+              />            
             </div>
 
             <div className="col-md-2">
@@ -251,10 +248,7 @@ function Ventas() {
                 className="form-control input-dark"
                 value={fechaHasta}
                 onChange={(e) => setFechaHasta(e.target.value)}
-              />
-              {!fechaHasta && (
-              <small className="fecha-help">Seleccionar una fecha</small>
-              )}
+              />           
             </div>
 
             <div className="col-md-3">
