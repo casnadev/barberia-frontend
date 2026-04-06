@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import API_BASE from "../services/api";
+import authFetch from "../services/authFetch";
 import CardDark from "../components/ui/CardDark";
 import PageHeader from "../components/ui/PageHeader";
 import GoldBadge from "../components/ui/GoldBadge";
@@ -32,8 +33,6 @@ function RegistrarVenta() {
   const [error, setError] = useState("");
 
   const [venta, setVenta] = useState({
-    idNegocio: 1,
-    idUsuario: 1,
     detalles: [{ ...detalleVacio }],
   });
 
@@ -41,9 +40,11 @@ function RegistrarVenta() {
     const cargarDatos = async () => {
       try {
         const [resTrabajadores, resServicios] = await Promise.all([
-          fetch(`${API_BASE}/Trabajadores`),
-          fetch(`${API_BASE}/Servicios`),
+          authFetch(`${API_BASE}/Trabajadores`),
+          authFetch(`${API_BASE}/Servicios`),
         ]);
+
+        if (!resTrabajadores || !resServicios) return;
 
         const [dataTrabajadores, dataServicios] = await Promise.all([
           resTrabajadores.json(),
@@ -94,62 +95,61 @@ function RegistrarVenta() {
   };
 
   const limpiarVenta = () =>
-    setVenta((prev) => ({
-      ...prev,
+    setVenta({
       detalles: [{ ...detalleVacio }],
-    }));
-
-    const guardarVenta = async (e) => {
-  e.preventDefault();
-  setMensaje("");
-  setError("");
-
-  const detalles = venta.detalles.map((d) => ({
-    idServicio: Number(d.idServicio),
-    idTrabajador: Number(d.idTrabajador),
-    cantidad: Number(d.cantidad),
-    precioUnitario: Number(d.precioUnitario),
-  }));
-
-  const hayErrores = detalles.some(
-    (d) =>
-      !d.idServicio ||
-      !d.idTrabajador ||
-      d.cantidad <= 0 ||
-      d.precioUnitario <= 0
-  );
-
-  if (hayErrores) {
-    setError("Completa correctamente todos los detalles de la venta.");
-    return;
-  }
-
-  try {
-    const res = await fetch(`${API_BASE}/Ventas`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        idNegocio: venta.idNegocio,
-        idUsuario: venta.idUsuario,
-        detalles,
-      }),
     });
 
-    const data = await res.json();
+  const guardarVenta = async (e) => {
+    e.preventDefault();
+    setMensaje("");
+    setError("");
 
-    if (!res.ok) {
-      setError(data.mensaje || "Error al guardar venta");
+    const detalles = venta.detalles.map((d) => ({
+      idServicio: Number(d.idServicio),
+      idTrabajador: Number(d.idTrabajador),
+      cantidad: Number(d.cantidad),
+      precioUnitario: Number(d.precioUnitario),
+    }));
+
+    const hayErrores = detalles.some(
+      (d) =>
+        !d.idServicio ||
+        !d.idTrabajador ||
+        d.cantidad <= 0 ||
+        d.precioUnitario <= 0
+    );
+
+    if (hayErrores) {
+      setError("Completa correctamente todos los detalles de la venta.");
       return;
     }
 
-    setMensaje(`Venta registrada correctamente. Total: S/ ${data.total}`);
-    limpiarVenta();
-  } catch (err) {
-    console.error(err);
-    setError("Error al guardar venta");
-  }
-};
-  
+    try {
+      const res = await authFetch(`${API_BASE}/Ventas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          detalles,
+        }),
+      });
+
+      if (!res) return;
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.mensaje || "Error al guardar venta");
+        return;
+      }
+
+      setMensaje(`Venta registrada correctamente. Total: S/ ${data.total}`);
+      limpiarVenta();
+    } catch (err) {
+      console.error(err);
+      setError("Error al guardar venta");
+    }
+  };
+
   return (
     <div className="page-shell">
       <PageHeader

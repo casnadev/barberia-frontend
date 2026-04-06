@@ -8,6 +8,7 @@ import Pagos from "./pages/Pagos";
 import Ventas from "./pages/Ventas";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminRoute from "./components/auth/AdminRoute";
+import Servicios from "./pages/Servicios";
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
         <Route path="/ventas/registrar" element={<RegistrarVenta />} />
         <Route path="/ventas/historial" element={<Ventas />} />
         <Route path="/pagos" element={<Pagos />} />
+        <Route path="/servicios" element={<Servicios />} />
       </Route>
     </Routes>
   );

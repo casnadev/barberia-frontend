@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import API_BASE from "../services/api";
+import authFetch from "../services/authFetch";
 import CardDark from "../components/ui/CardDark";
 import PageHeader from "../components/ui/PageHeader";
 import GoldBadge from "../components/ui/GoldBadge";
@@ -19,18 +20,15 @@ function Ventas() {
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        const [resVentas, resTrabajadores, resServicios] = await Promise.all([
-          fetch(`${API_BASE}/Ventas/completas`),
-          fetch(`${API_BASE}/Trabajadores`),
-          fetch(`${API_BASE}/Servicios`),
-        ]);
+        const resVentas = await authFetch(`${API_BASE}/Ventas/completas`);
+        const resTrabajadores = await authFetch(`${API_BASE}/Trabajadores`);
+        const resServicios = await authFetch(`${API_BASE}/Servicios`);
 
-        const [dataVentas, dataTrabajadores, dataServicios] =
-          await Promise.all([
-            resVentas.json(),
-            resTrabajadores.json(),
-            resServicios.json(),
-          ]);
+        if (!resVentas || !resTrabajadores || !resServicios) return;
+
+        const dataVentas = await resVentas.json();
+        const dataTrabajadores = await resTrabajadores.json();
+        const dataServicios = await resServicios.json();
 
         setVentas(dataVentas);
         setTrabajadores(dataTrabajadores);
@@ -233,7 +231,7 @@ function Ventas() {
                 className="form-control input-dark"
                 value={fechaDesde}
                 onChange={(e) => setFechaDesde(e.target.value)}
-              />            
+              />
             </div>
 
             <div className="col-md-2">
@@ -248,7 +246,7 @@ function Ventas() {
                 className="form-control input-dark"
                 value={fechaHasta}
                 onChange={(e) => setFechaHasta(e.target.value)}
-              />           
+              />
             </div>
 
             <div className="col-md-3">
@@ -319,8 +317,8 @@ function Ventas() {
             ]}
           >
             {ventasFiltradas.length > 0 ? (
-              ventasFiltradas.map((v, index) => (
-                <tr key={index}>
+              ventasFiltradas.map((v) => (
+                <tr key={`${v.idVenta}-${v.fechaVenta}-${v.servicio}-${v.trabajador}`}>
                   <td style={{ fontWeight: 700 }}>{v.idVenta}</td>
                   <td>{new Date(v.fechaVenta).toLocaleString()}</td>
                   <td>{v.servicio}</td>

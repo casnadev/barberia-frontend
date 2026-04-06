@@ -32,8 +32,9 @@ export default function AdminLayout() {
   const [menuAbierto, setMenuAbierto] = useState(false);
 
   const cerrarSesion = () => {
+    localStorage.removeItem("token");
     localStorage.removeItem("usuario");
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
 
   const cerrarMenu = () => {
@@ -90,6 +91,13 @@ export default function AdminLayout() {
               onClick={esMobile ? cerrarMenu : undefined}
             />
           )}
+
+          <Item
+            to="/servicios"
+            label="Servicios"
+            active={location.pathname === "/servicios"}
+            onClick={esMobile ? cerrarMenu : undefined}
+          />
 
           <Item
             to="/ventas/registrar"

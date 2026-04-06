@@ -1,3 +1,3 @@
-const API_BASE = "https://barberia-api-nader-bpe3h0hzdphkbuep.brazilsouth-01.azurewebsites.net/api";
+const API_BASE = "https://localhost:44302/api";
 
 export default API_BASE;

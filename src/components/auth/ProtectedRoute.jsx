@@ -1,10 +1,11 @@
 import { Navigate } from "react-router-dom";
 
-export default function ProtectedRoute({ children }) {
-  const usuario = localStorage.getItem("usuario");
+export default function AdminRoute({ children }) {
+  const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+  const esAdmin = usuario?.rol?.toLowerCase() === "admin";
 
-  if (!usuario) {
-    return <Navigate to="/login" />;
+  if (!esAdmin) {
+    return <Navigate to="/" replace />;
   }
 
   return children;

@@ -18,6 +18,7 @@ import {
   Area,
   AreaChart,
 } from "recharts";
+import authFetch from "../services/authFetch";
 
 function Dashboard() {
   const [dashboard, setDashboard] = useState({
@@ -42,6 +43,8 @@ function Dashboard() {
   const [animarCards, setAnimarCards] = useState(false);
 
   const resumenRef = useRef(null);
+
+  const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
 
   const esMobile = window.innerWidth < 768;
 
@@ -76,9 +79,9 @@ function Dashboard() {
     const cargarDashboard = async () => {
       try {
         const [resDashboard, resComisiones, resVentasPorDia] = await Promise.all([
-          fetch(`${API_BASE}/Ventas/dashboard`),
-          fetch(`${API_BASE}/Ventas/comisiones-por-trabajador`),
-          fetch(`${API_BASE}/Ventas/ventas-por-dia`),
+          authFetch(`${API_BASE}/Ventas/dashboard`),
+          authFetch(`${API_BASE}/Ventas/comisiones-por-trabajador`),
+          authFetch(`${API_BASE}/Ventas/ventas-por-dia`),
         ]);
 
         const [dataDashboard, dataComisiones, dataVentasPorDia] =
@@ -102,7 +105,7 @@ function Dashboard() {
 
   const refrescarComisiones = async () => {
     try {
-      const resComisiones = await fetch(
+      const resComisiones = await authFetch(
         `${API_BASE}/Ventas/comisiones-por-trabajador`
       );
       const dataComisiones = await resComisiones.json();
@@ -121,8 +124,7 @@ function Dashboard() {
   const irAResumenDashboard = () => {
     if (!resumenRef.current) return;
 
-    const esMobile = window.innerWidth < 768;
-    const offset = esMobile ? 100 : 40;
+        const offset = esMobile ? 100 : 40;
 
     const top =
       resumenRef.current.getBoundingClientRect().top +
@@ -172,7 +174,7 @@ function Dashboard() {
     setProcesandoPago(idTrabajador);
 
     try {
-      const res = await fetch(`${API_BASE}/Ventas/pago-parcial`, {
+      const res = await authFetch(`${API_BASE}/Ventas/pago-parcial`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -226,7 +228,7 @@ function Dashboard() {
     setProcesandoPago(idTrabajador);
 
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE}/Ventas/pagar-comisiones/${idTrabajador}`,
         {
           method: "PATCH",
@@ -352,9 +354,9 @@ function Dashboard() {
     <div className="page-shell">
 
       <PageHeader
-        title="Bienvenido, Nader"
-        subtitle="Control de ventas, rendimiento y movimiento diario del negocio"
-      />
+  title={`Bienvenido, ${usuario?.nombre || "Usuario"}`}
+  subtitle="Control de ventas, rendimiento y movimiento diario del negocio"
+/>
 
       <div className="container-fluid py-4">
         {error && <div className="alert alert-danger">{error}</div>}

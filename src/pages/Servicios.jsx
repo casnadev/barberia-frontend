@@ -6,11 +6,10 @@ import PageHeader from "../components/ui/PageHeader";
 import GoldBadge from "../components/ui/GoldBadge";
 import TableDark from "../components/ui/TableDark";
 
-function Trabajadores() {
+function Servicios() {
   const [lista, setLista] = useState([]);
   const [nombre, setNombre] = useState("");
-  const [telefono, setTelefono] = useState("");
-  const [porcentaje, setPorcentaje] = useState("");
+  const [precioBase, setPrecioBase] = useState("");
   const [editando, setEditando] = useState(null);
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
@@ -18,30 +17,30 @@ function Trabajadores() {
   useEffect(() => {
     const cargarInicial = async () => {
       try {
-        const res = await authFetch(`${API_BASE}/Trabajadores`);
+        const res = await authFetch(`${API_BASE}/Servicios`);
         if (!res) return;
 
         const data = await res.json();
         setLista(data);
       } catch (err) {
         console.error(err);
-        setError("Error al cargar trabajadores");
+        setError("Error al cargar servicios");
       }
     };
 
     cargarInicial();
   }, []);
 
-  const recargarTrabajadores = async () => {
+  const recargarServicios = async () => {
     try {
-      const res = await authFetch(`${API_BASE}/Trabajadores`);
+      const res = await authFetch(`${API_BASE}/Servicios`);
       if (!res) return;
 
       const data = await res.json();
       setLista(data);
     } catch (err) {
       console.error(err);
-      setError("Error al cargar trabajadores");
+      setError("Error al cargar servicios");
     }
   };
 
@@ -50,27 +49,31 @@ function Trabajadores() {
     setError("");
 
     if (!nombre.trim()) {
-      setError("El nombre es obligatorio");
+      setError("El nombre del servicio es obligatorio");
+      return;
+    }
+
+    if (!precioBase || Number(precioBase) <= 0) {
+      setError("El precio debe ser mayor a 0");
       return;
     }
 
     const payload = {
       nombre: nombre.trim(),
-      telefono,
-      porcentajeComision: Number(porcentaje),
+      precioBase: Number(precioBase),
     };
 
     try {
       let response;
 
       if (editando) {
-        response = await authFetch(`${API_BASE}/Trabajadores/${editando}`, {
+        response = await authFetch(`${API_BASE}/Servicios/${editando}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
       } else {
-        response = await authFetch(`${API_BASE}/Trabajadores`, {
+        response = await authFetch(`${API_BASE}/Servicios`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -82,29 +85,28 @@ function Trabajadores() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.mensaje || "No se pudo guardar el trabajador");
+        setError(data.mensaje || "No se pudo guardar el servicio");
         return;
       }
 
       setMensaje(
         editando
-          ? "Trabajador actualizado correctamente"
-          : "Trabajador registrado correctamente"
+          ? "Servicio actualizado correctamente"
+          : "Servicio registrado correctamente"
       );
 
       limpiar();
-      await recargarTrabajadores();
+      await recargarServicios();
     } catch (err) {
       console.error(err);
-      setError("Error al guardar trabajador");
+      setError("Error al guardar servicio");
     }
   };
 
-  const editar = (t) => {
-    setEditando(t.idTrabajador);
-    setNombre(t.nombre || "");
-    setTelefono(t.telefono || "");
-    setPorcentaje(t.porcentajeComision ?? "");
+  const editar = (s) => {
+    setEditando(s.idServicio);
+    setNombre(s.nombre || "");
+    setPrecioBase(s.precioBase ?? "");
     setMensaje("");
     setError("");
   };
@@ -114,42 +116,38 @@ function Trabajadores() {
     setError("");
 
     try {
-      const response = await authFetch(
-        `${API_BASE}/Trabajadores/desactivar/${id}`,
-        {
-          method: "PATCH",
-        }
-      );
+      const response = await authFetch(`${API_BASE}/Servicios/desactivar/${id}`, {
+        method: "PATCH",
+      });
 
       if (!response) return;
 
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.mensaje || "No se pudo desactivar el trabajador");
+        setError(data.mensaje || "No se pudo desactivar el servicio");
         return;
       }
 
-      setMensaje("Trabajador desactivado correctamente");
-      await recargarTrabajadores();
+      setMensaje("Servicio desactivado correctamente");
+      await recargarServicios();
     } catch (err) {
       console.error(err);
-      setError("Error al desactivar trabajador");
+      setError("Error al desactivar servicio");
     }
   };
 
   const limpiar = () => {
     setEditando(null);
     setNombre("");
-    setTelefono("");
-    setPorcentaje("");
+    setPrecioBase("");
   };
 
   return (
     <div className="page-shell">
       <PageHeader
-        title="Gestión de Trabajadores"
-        subtitle="Registra, edita y desactiva personal del negocio"
+        title="Gestión de Servicios"
+        subtitle="Registra, edita y desactiva servicios del negocio"
       />
 
       <div className="container-fluid py-4">
@@ -160,7 +158,7 @@ function Trabajadores() {
           <div className="col-lg-4">
             <CardDark className="h-100">
               <h4 className="section-title mb-4">
-                {editando ? "Editar trabajador" : "Nuevo trabajador"}
+                {editando ? "Editar servicio" : "Nuevo servicio"}
               </h4>
 
               <div className="mb-3">
@@ -174,26 +172,15 @@ function Trabajadores() {
                 />
               </div>
 
-              <div className="mb-3">
-                <label className="form-label" style={{ color: "#d4af37" }}>
-                  Teléfono
-                </label>
-                <input
-                  className="form-control input-dark"
-                  value={telefono}
-                  onChange={(e) => setTelefono(e.target.value)}
-                />
-              </div>
-
               <div className="mb-4">
                 <label className="form-label" style={{ color: "#d4af37" }}>
-                  % Comisión
+                  Precio base
                 </label>
                 <input
                   type="number"
                   className="form-control input-dark"
-                  value={porcentaje}
-                  onChange={(e) => setPorcentaje(e.target.value)}
+                  value={precioBase}
+                  onChange={(e) => setPrecioBase(e.target.value)}
                 />
               </div>
 
@@ -213,37 +200,34 @@ function Trabajadores() {
             <CardDark>
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                  <h4 className="section-title">Lista de trabajadores</h4>
+                  <h4 className="section-title">Lista de servicios</h4>
                   <p className="section-subtitle">
-                    Personal activo registrado en el sistema
+                    Servicios activos registrados en el sistema
                   </p>
                 </div>
 
                 <GoldBadge>{lista.length} registros</GoldBadge>
               </div>
 
-              <TableDark
-                headers={["Nombre", "Teléfono", "% Comisión", "Acciones"]}
-              >
+              <TableDark headers={["Nombre", "Precio Base", "Acciones"]}>
                 {lista.length > 0 ? (
-                  lista.map((t) => (
-                    <tr key={t.idTrabajador}>
-                      <td style={{ fontWeight: 600 }}>{t.nombre}</td>
-                      <td>{t.telefono}</td>
+                  lista.map((s) => (
+                    <tr key={s.idServicio}>
+                      <td style={{ fontWeight: 600 }}>{s.nombre}</td>
                       <td style={{ color: "#f0cf73", fontWeight: 700 }}>
-                        {t.porcentajeComision}%
+                        S/ {Number(s.precioBase).toFixed(2)}
                       </td>
                       <td>
                         <button
                           className="btn btn-sm me-2 btn-gold"
-                          onClick={() => editar(t)}
+                          onClick={() => editar(s)}
                         >
                           Editar
                         </button>
 
                         <button
                           className="btn btn-sm btn-dark-outline"
-                          onClick={() => eliminar(t.idTrabajador)}
+                          onClick={() => eliminar(s.idServicio)}
                         >
                           Desactivar
                         </button>
@@ -252,8 +236,8 @@ function Trabajadores() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4" className="text-center py-4">
-                      No hay trabajadores registrados
+                    <td colSpan="3" className="text-center py-4">
+                      No hay servicios registrados
                     </td>
                   </tr>
                 )}
@@ -266,4 +250,4 @@ function Trabajadores() {
   );
 }
 
-export default Trabajadores;
+export default Servicios;

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import API_BASE from "../services/api";
+import authFetch from "../services/authFetch";
 import CardDark from "../components/ui/CardDark";
 import PageHeader from "../components/ui/PageHeader";
 import GoldBadge from "../components/ui/GoldBadge";
@@ -16,7 +17,9 @@ function Pagos() {
   useEffect(() => {
     const cargarPagos = async () => {
       try {
-        const res = await fetch(`${API_BASE}/Ventas/historial-pagos`);
+        const res = await authFetch(`${API_BASE}/Ventas/historial-pagos`);
+        if (!res) return;
+
         const data = await res.json();
         setHistorialPagos(data);
       } catch (err) {
@@ -44,7 +47,11 @@ function Pagos() {
       }
 
       if (filtroTrabajador.trim()) {
-        if (!p.trabajador?.toLowerCase().includes(filtroTrabajador.toLowerCase())) {
+        if (
+          !p.trabajador
+            ?.toLowerCase()
+            .includes(filtroTrabajador.toLowerCase())
+        ) {
           return false;
         }
       }
@@ -180,7 +187,7 @@ function Pagos() {
                 >
                   {pagosFiltrados.length > 0
                     ? new Date(pagosFiltrados[0].fechaPago).toLocaleString()
-                    : "-"}
+                    : "Aún no hay registros"}
                 </div>
               </div>
             </div>
@@ -265,8 +272,8 @@ function Pagos() {
             ]}
           >
             {pagosFiltrados.length > 0 ? (
-              pagosFiltrados.map((p, index) => (
-                <tr key={index}>
+              pagosFiltrados.map((p) => (
+                <tr key={p.idPago}>
                   <td style={{ fontWeight: 600 }}>{p.trabajador}</td>
                   <td>{new Date(p.fechaPago).toLocaleString()}</td>
                   <td style={{ color: "#86efac", fontWeight: 700 }}>
