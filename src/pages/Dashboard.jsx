@@ -4,7 +4,6 @@ import CardDark from "../components/ui/CardDark";
 import PageHeader from "../components/ui/PageHeader";
 import GoldBadge from "../components/ui/GoldBadge";
 import TableDark from "../components/ui/TableDark";
-import LogoAnimado from "../components/ui/LogoAnimado";
 import AnimatedNumber from "../components/ui/AnimatedNumber";
 import {
   ResponsiveContainer,
@@ -29,6 +28,10 @@ function Dashboard() {
   const [comisiones, setComisiones] = useState([]);
   const [ventasPorDia, setVentasPorDia] = useState([]);
 
+  const [loadingResumen, setLoadingResumen] = useState(true);
+  const [loadingComisiones, setLoadingComisiones] = useState(true);
+  const [loadingVentasDia, setLoadingVentasDia] = useState(true);
+
   const [error, setError] = useState("");
   const [mensajePago, setMensajePago] = useState("");
   const [tipoMensajePago, setTipoMensajePago] = useState("info");
@@ -44,9 +47,14 @@ function Dashboard() {
 
   const resumenRef = useRef(null);
 
+  const [nombreNegocio, setNombreNegocio] = useState(
+    localStorage.getItem("nombreNegocio") || ""
+  );
+
   const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
 
-  const esMobile = window.innerWidth < 768;
+  const esMobile =
+    typeof window !== "undefined" && window.innerWidth < 768;
 
   const chartColors = {
     gold: "#d4af37",
@@ -76,38 +84,93 @@ function Dashboard() {
   };
 
   useEffect(() => {
-    const cargarDashboard = async () => {
+    const cargarResumen = async () => {
       try {
-        const [resDashboard, resComisiones, resVentasPorDia] = await Promise.all([
-          authFetch(`${API_BASE}/Ventas/dashboard`),
-          authFetch(`${API_BASE}/Ventas/comisiones-por-trabajador`),
-          authFetch(`${API_BASE}/Ventas/ventas-por-dia`),
-        ]);
+        setLoadingResumen(true);
 
-        const [dataDashboard, dataComisiones, dataVentasPorDia] =
-          await Promise.all([
-            resDashboard.json(),
-            resComisiones.json(),
-            resVentasPorDia.json(),
-          ]);
+        const resDashboard = await authFetch(`${API_BASE}/Ventas/dashboard`);
+        if (!resDashboard) return;
 
+        const dataDashboard = await resDashboard.json();
         setDashboard(dataDashboard);
-        setComisiones(dataComisiones);
-        setVentasPorDia(dataVentasPorDia);
       } catch (err) {
         console.error(err);
-        setError("Error al cargar el dashboard");
+        setError("Error al cargar el resumen del dashboard");
+      } finally {
+        setLoadingResumen(false);
       }
     };
 
-    cargarDashboard();
+    cargarResumen();
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      try {
+        setLoadingComisiones(true);
+
+        const resComisiones = await authFetch(
+          `${API_BASE}/Ventas/comisiones-por-trabajador`
+        );
+        if (!resComisiones) return;
+
+        const dataComisiones = await resComisiones.json();
+        setComisiones(dataComisiones);
+      } catch (err) {
+        console.error(err);
+        setError("Error al cargar comisiones");
+      } finally {
+        setLoadingComisiones(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      try {
+        setLoadingVentasDia(true);
+
+        const resVentasPorDia = await authFetch(
+          `${API_BASE}/Ventas/ventas-por-dia`
+        );
+        if (!resVentasPorDia) return;
+
+        const dataVentasPorDia = await resVentasPorDia.json();
+        setVentasPorDia(dataVentasPorDia);
+      } catch (err) {
+        console.error(err);
+        setError("Error al cargar ventas por día");
+      } finally {
+        setLoadingVentasDia(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const actualizarNombre = () => {
+      setNombreNegocio(localStorage.getItem("nombreNegocio") || "");
+    };
+
+    window.addEventListener("nombre-negocio-actualizado", actualizarNombre);
+
+    return () => {
+      window.removeEventListener("nombre-negocio-actualizado", actualizarNombre);
+    };
   }, []);
 
   const refrescarComisiones = async () => {
     try {
+      setLoadingComisiones(true);
+
       const resComisiones = await authFetch(
         `${API_BASE}/Ventas/comisiones-por-trabajador`
       );
+      if (!resComisiones) return;
+
       const dataComisiones = await resComisiones.json();
       setComisiones(dataComisiones);
 
@@ -118,13 +181,15 @@ function Dashboard() {
     } catch (err) {
       console.error(err);
       setError("Error al refrescar comisiones");
+    } finally {
+      setLoadingComisiones(false);
     }
   };
 
   const irAResumenDashboard = () => {
     if (!resumenRef.current) return;
 
-        const offset = esMobile ? 100 : 40;
+    const offset = esMobile ? 100 : 40;
 
     const top =
       resumenRef.current.getBoundingClientRect().top +
@@ -166,7 +231,7 @@ function Dashboard() {
     if (monto > totalPendiente) {
       setTipoMensajePago("error");
       setMensajePago(
-        `El monto no puede exceder lo pendiente: S/ ${Number(totalPendiente).toFixed(2)}`
+        `El monto no puede exceder lo pendiente: S/ ${Number(totalPendiente).toFixed(2)}` 
       );
       return;
     }
@@ -185,6 +250,8 @@ function Dashboard() {
           observacion: "Pago parcial desde sistema",
         }),
       });
+
+      if (!res) return;
 
       const data = await res.json();
 
@@ -235,6 +302,8 @@ function Dashboard() {
         }
       );
 
+      if (!res) return;
+
       const data = await res.json();
 
       if (!res.ok) {
@@ -278,18 +347,10 @@ function Dashboard() {
   );
 
   const ventasPorDiaProcesadas = useMemo(() => {
-    const nombresDias = [
-      "Lun",
-      "Mar",
-      "Mié",
-      "Jue",
-      "Vie",
-      "Sáb",
-      "Dom",
-    ];
+    const nombresDias = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
     const hoy = new Date();
-    const diaActual = hoy.getDay(); // domingo=0, lunes=1...
+    const diaActual = hoy.getDay();
     const ajusteLunes = diaActual === 0 ? 6 : diaActual - 1;
 
     const inicioSemana = new Date(hoy);
@@ -352,11 +413,10 @@ function Dashboard() {
 
   return (
     <div className="page-shell">
-
       <PageHeader
-  title={`Bienvenido, ${usuario?.nombre || "Usuario"}`}
-  subtitle="Control de ventas, rendimiento y movimiento diario del negocio"
-/>
+        title={nombreNegocio || `Bienvenido, ${usuario?.nombre || "Usuario"}`}
+        subtitle="Control diario de ventas, rendimiento y movimiento del negocio"
+      />
 
       <div className="container-fluid py-4">
         {error && <div className="alert alert-danger">{error}</div>}
@@ -404,7 +464,9 @@ function Dashboard() {
                   color: "#ffffff",
                 }}
               >
-                S/ {Number(dashboard.totalDia || 0).toFixed(2)}
+                {loadingResumen
+                  ? "Cargando..."
+                  : `S/ ${Number(dashboard.totalDia || 0).toFixed(2)}`}
               </h2>
 
               <div
@@ -442,7 +504,7 @@ function Dashboard() {
                   letterSpacing: "1px",
                 }}
               >
-                Saldo pendiente
+                Saldo pendiente del día
               </p>
 
               <h2
@@ -452,7 +514,15 @@ function Dashboard() {
                   color: "#ffffff",
                 }}
               >
-                <AnimatedNumber value={saldoPendienteTotal} prefix="S/ " duration={1400} />
+                {loadingComisiones ? (
+                  "Cargando..."
+                ) : (
+                  <AnimatedNumber
+                    value={saldoPendienteTotal}
+                    prefix="S/ "
+                    duration={1400}
+                  />
+                )}
               </h2>
 
               <div
@@ -464,7 +534,7 @@ function Dashboard() {
                   color: "#f8e7a1",
                 }}
               >
-                Total de comisiones pendientes por pagar
+                Comisiones pendientes generadas hoy
               </div>
             </CardDark>
           </div>
@@ -490,7 +560,7 @@ function Dashboard() {
                   letterSpacing: "1px",
                 }}
               >
-                Comisiones pagadas
+                Comisiones pagadas del día
               </p>
 
               <h2
@@ -500,7 +570,15 @@ function Dashboard() {
                   color: "#ffffff",
                 }}
               >
-                <AnimatedNumber value={totalComisionesPagadas} prefix="S/ " duration={1400} />
+                {loadingComisiones ? (
+                  "Cargando..."
+                ) : (
+                  <AnimatedNumber
+                    value={totalComisionesPagadas}
+                    prefix="S/ "
+                    duration={1400}
+                  />
+                )}
               </h2>
 
               <div
@@ -512,7 +590,7 @@ function Dashboard() {
                   color: "#b7f7c9",
                 }}
               >
-                Total abonado a trabajadores
+                Total abonado hoy a trabajadores
               </div>
             </CardDark>
           </div>
@@ -523,9 +601,9 @@ function Dashboard() {
             <CardDark>
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                  <h4 className="section-title">Top trabajadores</h4>
+                  <h4 className="section-title">Top trabajadores del día</h4>
                   <p className="section-subtitle">
-                    Ranking de ingresos generados
+                    Ranking diario de ingresos generados
                   </p>
                 </div>
 
@@ -534,7 +612,9 @@ function Dashboard() {
                 </GoldBadge>
               </div>
 
-              {dashboard.topTrabajadores?.length > 0 ? (
+              {loadingResumen ? (
+                <p className="section-subtitle mb-0">Cargando ranking...</p>
+              ) : dashboard.topTrabajadores?.length > 0 ? (
                 <div id="top-trabajadores-mobile" className="row g-3">
                   {dashboard.topTrabajadores.map((item, index) => (
                     <div className="col-lg-4 col-md-6" key={index}>
@@ -546,8 +626,8 @@ function Dashboard() {
                             index === 0
                               ? "linear-gradient(135deg, #d4af37, #f5deb3)"
                               : index === 1
-                                ? "linear-gradient(135deg, #2b2b2b, #3b3b3b)"
-                                : "linear-gradient(135deg, #4a3513, #7a5a1c)",
+                              ? "linear-gradient(135deg, #2b2b2b, #3b3b3b)"
+                              : "linear-gradient(135deg, #4a3513, #7a5a1c)",
                           color: index === 0 ? "#111" : "#fff",
                           boxShadow: "0 12px 24px rgba(0,0,0,0.25)",
                         }}
@@ -572,7 +652,7 @@ function Dashboard() {
                         <h5 className="fw-bold mb-2">{item.trabajador}</h5>
 
                         <p className="mb-1" style={{ opacity: 0.85 }}>
-                          Total generado
+                          Total generado hoy
                         </p>
 
                         <h4 className="fw-bold mb-0">
@@ -592,85 +672,92 @@ function Dashboard() {
         </div>
 
         <div className="row g-4 mb-4">
-
-
           <div className="col-lg-6">
             <CardDark className="h-100">
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <div>
                   <h4 className="section-title">Ventas por trabajador</h4>
                   <p className="section-subtitle">
-                    Comparación de ingresos generados
+                    Comparación diaria de ingresos generados
                   </p>
                 </div>
                 <GoldBadge>{comisiones.length} datos</GoldBadge>
               </div>
 
-              <div className="chart-scroll-mobile">
-                <div
-                  style={{
-                    width:
-                      window.innerWidth < 768
-                        ? `${Math.max(comisiones.length * 90, 360)}px`
-                        : "100%",
-                    height: 320,
-                  }}
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={comisiones}>
-                      <defs>
-                        <linearGradient
-                          id="ventasTrabajadorGradient"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop offset="0%" stopColor="#f4d35e" stopOpacity={1} />
-                          <stop
-                            offset="100%"
-                            stopColor="#d4af37"
-                            stopOpacity={0.85}
+              {loadingComisiones ? (
+                <p className="section-subtitle mb-0">Cargando gráfico...</p>
+              ) : (
+                <>
+                  <div className="chart-scroll-mobile">
+                    <div
+                      style={{
+                        width: esMobile
+                          ? `${Math.max(comisiones.length * 90, 360)}px`
+                          : "100%",
+                        height: 320,
+                      }}
+                    >
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={comisiones}>
+                          <defs>
+                            <linearGradient
+                              id="ventasTrabajadorGradient"
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2="1"
+                            >
+                              <stop
+                                offset="0%"
+                                stopColor="#f4d35e"
+                                stopOpacity={1}
+                              />
+                              <stop
+                                offset="100%"
+                                stopColor="#d4af37"
+                                stopOpacity={0.85}
+                              />
+                            </linearGradient>
+                          </defs>
+
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke={chartColors.grid}
                           />
-                        </linearGradient>
-                      </defs>
+                          <XAxis
+                            dataKey="trabajador"
+                            stroke={chartColors.axis}
+                            interval={0}
+                            tick={{ fontSize: 12 }}
+                          />
+                          <YAxis stroke={chartColors.axis} />
+                          <Tooltip {...tooltipStyle} />
+                          {!esMobile && <Legend {...legendStyle} />}
 
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke={chartColors.grid}
-                      />
-                      <XAxis
-                        dataKey="trabajador"
-                        stroke={chartColors.axis}
-                        interval={0}
-                        tick={{ fontSize: 12 }}
-                      />
-                      <YAxis stroke={chartColors.axis} />
-                      <Tooltip {...tooltipStyle} />
-                      {window.innerWidth >= 768 && <Legend {...legendStyle} />}
+                          <Bar
+                            dataKey="totalGenerado"
+                            name="Total generado hoy"
+                            fill="url(#ventasTrabajadorGradient)"
+                            radius={[8, 8, 0, 0]}
+                            animationDuration={900}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
 
-                      <Bar
-                        dataKey="totalGenerado"
-                        name="Total generado"
-                        fill="url(#ventasTrabajadorGradient)"
-                        radius={[8, 8, 0, 0]}
-                        animationDuration={900}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {window.innerWidth < 768 && (
-                <div className="chart-legend-mobile">
-                  <span className="chart-legend-item">
-                    <span
-                      className="chart-legend-color"
-                      style={{ background: "#d4af37" }}
-                    ></span>
-                    Total generado
-                  </span>
-                </div>
+                  {esMobile && (
+                    <div className="chart-legend-mobile">
+                      <span className="chart-legend-item">
+                        <span
+                          className="chart-legend-color"
+                          style={{ background: "#d4af37" }}
+                        ></span>
+                        Total generado hoy
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
             </CardDark>
           </div>
@@ -679,7 +766,7 @@ function Dashboard() {
             <CardDark className="h-100">
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                  <h4 className="section-title">Comisiones</h4>
+                  <h4 className="section-title">Comisiones del día</h4>
                   <p className="section-subtitle">
                     Pendiente vs pagado por trabajador
                   </p>
@@ -687,105 +774,117 @@ function Dashboard() {
                 <GoldBadge>{comisiones.length} datos</GoldBadge>
               </div>
 
-              <div className="chart-scroll-mobile">
-                <div
-                  style={{
-                    width:
-                      window.innerWidth < 768
-                        ? `${Math.max(comisiones.length * 90, 360)}px`
-                        : "100%",
-                    height: 320,
-                  }}
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={comisiones}>
-                      <defs>
-                        <linearGradient
-                          id="pendienteGradient"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop offset="0%" stopColor="#f8e16c" stopOpacity={1} />
-                          <stop
-                            offset="100%"
-                            stopColor="#d4af37"
-                            stopOpacity={0.85}
+              {loadingComisiones ? (
+                <p className="section-subtitle mb-0">Cargando gráfico...</p>
+              ) : (
+                <>
+                  <div className="chart-scroll-mobile">
+                    <div
+                      style={{
+                        width: esMobile
+                          ? `${Math.max(comisiones.length * 90, 360)}px`
+                          : "100%",
+                        height: 320,
+                      }}
+                    >
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={comisiones}>
+                          <defs>
+                            <linearGradient
+                              id="pendienteGradient"
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2="1"
+                            >
+                              <stop
+                                offset="0%"
+                                stopColor="#f8e16c"
+                                stopOpacity={1}
+                              />
+                              <stop
+                                offset="100%"
+                                stopColor="#d4af37"
+                                stopOpacity={0.85}
+                              />
+                            </linearGradient>
+
+                            <linearGradient
+                              id="pagadaGradient"
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2="1"
+                            >
+                              <stop
+                                offset="0%"
+                                stopColor="#4ade80"
+                                stopOpacity={1}
+                              />
+                              <stop
+                                offset="100%"
+                                stopColor="#22c55e"
+                                stopOpacity={0.85}
+                              />
+                            </linearGradient>
+                          </defs>
+
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke={chartColors.grid}
                           />
-                        </linearGradient>
-
-                        <linearGradient
-                          id="pagadaGradient"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop offset="0%" stopColor="#4ade80" stopOpacity={1} />
-                          <stop
-                            offset="100%"
-                            stopColor="#22c55e"
-                            stopOpacity={0.85}
+                          <XAxis
+                            dataKey="trabajador"
+                            stroke={chartColors.axis}
+                            interval={0}
+                            tick={{ fontSize: 12 }}
                           />
-                        </linearGradient>
-                      </defs>
+                          <YAxis stroke={chartColors.axis} />
+                          <Tooltip {...tooltipStyle} />
+                          {!esMobile && <Legend {...legendStyle} />}
 
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke={chartColors.grid}
-                      />
-                      <XAxis
-                        dataKey="trabajador"
-                        stroke={chartColors.axis}
-                        interval={0}
-                        tick={{ fontSize: 12 }}
-                      />
-                      <YAxis stroke={chartColors.axis} />
-                      <Tooltip {...tooltipStyle} />
-                      {window.innerWidth >= 768 && <Legend {...legendStyle} />}
+                          <Bar
+                            dataKey="totalComisionPendiente"
+                            name="Pendiente hoy"
+                            fill="url(#pendienteGradient)"
+                            radius={[8, 8, 0, 0]}
+                            animationDuration={900}
+                          />
+                          <Bar
+                            dataKey="totalComisionPagada"
+                            name="Pagada hoy"
+                            fill="url(#pagadaGradient)"
+                            radius={[8, 8, 0, 0]}
+                            animationDuration={900}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
 
-                      <Bar
-                        dataKey="totalComisionPendiente"
-                        name="Pendiente"
-                        fill="url(#pendienteGradient)"
-                        radius={[8, 8, 0, 0]}
-                        animationDuration={900}
-                      />
-                      <Bar
-                        dataKey="totalComisionPagada"
-                        name="Pagada"
-                        fill="url(#pagadaGradient)"
-                        radius={[8, 8, 0, 0]}
-                        animationDuration={900}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
+                  {esMobile && (
+                    <div className="chart-legend-mobile">
+                      <span className="chart-legend-item">
+                        <span
+                          className="chart-legend-color"
+                          style={{ background: "#f8e16c" }}
+                        ></span>
+                        Pendiente hoy
+                      </span>
 
-              {window.innerWidth < 768 && (
-                <div className="chart-legend-mobile">
-                  <span className="chart-legend-item">
-                    <span
-                      className="chart-legend-color"
-                      style={{ background: "#f8e16c" }}
-                    ></span>
-                    Pendiente
-                  </span>
-
-                  <span className="chart-legend-item">
-                    <span
-                      className="chart-legend-color"
-                      style={{ background: "#22c55e" }}
-                    ></span>
-                    Pagada
-                  </span>
-                </div>
+                      <span className="chart-legend-item">
+                        <span
+                          className="chart-legend-color"
+                          style={{ background: "#22c55e" }}
+                        ></span>
+                        Pagada hoy
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
             </CardDark>
           </div>
-
         </div>
 
         <CardDark className="mb-4">
@@ -793,82 +892,85 @@ function Dashboard() {
             <div>
               <h4 className="section-title">Ventas por día</h4>
               <p className="section-subtitle">
-                Evolución diaria de ingresos registrados
+                Evolución semanal de ingresos registrados
               </p>
             </div>
 
             <GoldBadge>{ventasPorDia.length} días</GoldBadge>
           </div>
 
-          <div style={{ width: "100%", height: 340 }}>
-            <ResponsiveContainer>
-              <AreaChart data={ventasPorDiaProcesadas}>
-                <defs>
-                  <linearGradient
-                    id="ventasDiaArea"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="0%" stopColor="#c084fc" stopOpacity={0.45} />
-                    <stop
-                      offset="100%"
-                      stopColor="#c084fc"
-                      stopOpacity={0.05}
-                    />
-                  </linearGradient>
-                </defs>
+          {loadingVentasDia ? (
+            <p className="section-subtitle mb-0">Cargando evolución diaria...</p>
+          ) : (
+            <div style={{ width: "100%", height: 340 }}>
+              <ResponsiveContainer>
+                <AreaChart data={ventasPorDiaProcesadas}>
+                  <defs>
+                    <linearGradient
+                      id="ventasDiaArea"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="0%" stopColor="#c084fc" stopOpacity={0.45} />
+                      <stop
+                        offset="100%"
+                        stopColor="#c084fc"
+                        stopOpacity={0.05}
+                      />
+                    </linearGradient>
+                  </defs>
 
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke={chartColors.grid}
-                />
-                <XAxis
-                  dataKey="dia"
-                  stroke={chartColors.axis}
-                  interval={0}
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke={chartColors.grid}
+                  />
+                  <XAxis
+                    dataKey="dia"
+                    stroke={chartColors.axis}
+                    interval={0}
+                    minTickGap={0}
+                  />
+                  <YAxis stroke={chartColors.axis} />
+                  <Tooltip
+                    {...tooltipStyle}
+                    labelFormatter={(value, payload) => {
+                      if (payload && payload.length > 0) {
+                        return `${value} - ${payload[0].payload.fechaReal}`;
+                      }
+                      return value;
+                    }}
+                    formatter={(value) => [
+                      `S/ ${Number(value).toFixed(2)}`,
+                      "Ventas",
+                    ]}
+                  />
+                  <Legend {...legendStyle} />
 
-                  minTickGap={0}
-                />
-                <YAxis stroke={chartColors.axis} />
-                <Tooltip
-                  {...tooltipStyle}
-                  labelFormatter={(value, payload) => {
-                    if (payload && payload.length > 0) {
-                      return `${value} - ${payload[0].payload.fechaReal}`;
-                    }
-                    return value;
-                  }}
-                  formatter={(value) => [
-                    `S / ${Number(value).toFixed(2)}`,
-                    "Ventas",
-                  ]}
-                />
-                <Legend {...legendStyle} />
-
-                <Area
-                  type="monotone"
-                  dataKey="total"
-                  name="Gráfico Semanal"
-                  stroke="#c084fc"
-                  strokeWidth={3}
-                  fill="url(#ventasDiaArea)"
-                  dot={{ r: 4, fill: "#c084fc" }}
-                  activeDot={{ r: 6 }}
-                  animationDuration={1000}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+                  <Area
+                    type="monotone"
+                    dataKey="total"
+                    name="Gráfico semanal"
+                    stroke="#c084fc"
+                    strokeWidth={3}
+                    fill="url(#ventasDiaArea)"
+                    dot={{ r: 4, fill: "#c084fc" }}
+                    activeDot={{ r: 6 }}
+                    animationDuration={1000}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </CardDark>
 
         <CardDark className="mb-4">
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div>
-              <h4 className="section-title">Comisiones por trabajador</h4>
+              <h4 className="section-title">Comisiones del día por trabajador</h4>
               <p className="section-subtitle">
-                Resumen de comisiones pendientes y pagadas
+                Resumen diario de comisiones pendientes y pagadas
               </p>
             </div>
 
@@ -884,7 +986,13 @@ function Dashboard() {
               "Acciones",
             ]}
           >
-            {comisiones.length > 0 ? (
+            {loadingComisiones ? (
+              <tr>
+                <td colSpan="5" className="text-center py-4">
+                  Cargando comisiones...
+                </td>
+              </tr>
+            ) : comisiones.length > 0 ? (
               comisiones.map((c, index) => (
                 <tr key={index}>
                   <td style={{ fontWeight: 600 }}>{c.trabajador}</td>
@@ -918,7 +1026,7 @@ function Dashboard() {
                           !obtenerMontoPago(c.idTrabajador) ||
                           obtenerMontoPago(c.idTrabajador) <= 0 ||
                           obtenerMontoPago(c.idTrabajador) >
-                          c.totalComisionPendiente
+                            c.totalComisionPendiente
                         }
                         onClick={() =>
                           abrirConfirmacion(
@@ -937,9 +1045,9 @@ function Dashboard() {
                               : c.totalComisionPendiente > 0 &&
                                 obtenerMontoPago(c.idTrabajador) > 0 &&
                                 obtenerMontoPago(c.idTrabajador) <=
-                                c.totalComisionPendiente
-                                ? "#d4af37"
-                                : "#333",
+                                  c.totalComisionPendiente
+                              ? "#d4af37"
+                              : "#333",
                           color: "#111",
                           fontWeight: 700,
                           border: "none",
@@ -949,9 +1057,9 @@ function Dashboard() {
                               : c.totalComisionPendiente > 0 &&
                                 obtenerMontoPago(c.idTrabajador) > 0 &&
                                 obtenerMontoPago(c.idTrabajador) <=
-                                c.totalComisionPendiente
-                                ? "pointer"
-                                : "not-allowed",
+                                  c.totalComisionPendiente
+                              ? "pointer"
+                              : "not-allowed",
                         }}
                       >
                         {procesandoPago === c.idTrabajador
@@ -980,8 +1088,8 @@ function Dashboard() {
                             procesandoPago === c.idTrabajador
                               ? "#555"
                               : c.totalComisionPendiente > 0
-                                ? "#22c55e"
-                                : "#333",
+                              ? "#22c55e"
+                              : "#333",
                           color: "#fff",
                           fontWeight: 700,
                           border: "none",
@@ -989,8 +1097,8 @@ function Dashboard() {
                             procesandoPago === c.idTrabajador
                               ? "wait"
                               : c.totalComisionPendiente > 0
-                                ? "pointer"
-                                : "not-allowed",
+                              ? "pointer"
+                              : "not-allowed",
                         }}
                       >
                         {procesandoPago === c.idTrabajador
@@ -1001,10 +1109,10 @@ function Dashboard() {
 
                     {obtenerMontoPago(c.idTrabajador) >
                       c.totalComisionPendiente && (
-                        <small style={{ color: "#f87171" }}>
-                          El monto excede lo pendiente
-                        </small>
-                      )}
+                      <small style={{ color: "#f87171" }}>
+                        El monto excede lo pendiente
+                      </small>
+                    )}
                   </td>
                 </tr>
               ))

@@ -1,11 +1,13 @@
 import { useState } from "react";
 import API_BASE from "../services/api";
 import { useNavigate } from "react-router-dom";
+import Toast from "../components/ui/Toast";
 
 export default function Login() {
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [tipoMensaje, setTipoMensaje] = useState("error");
   const [cargando, setCargando] = useState(false);
   const [mostrarPassword, setMostrarPassword] = useState(false);
 
@@ -31,6 +33,7 @@ export default function Login() {
       const data = await res.json();
 
       if (!res.ok) {
+        setTipoMensaje("error");
         setError(data.mensaje || "Error al iniciar sesión");
         return;
       }
@@ -51,6 +54,7 @@ export default function Login() {
       navigate("/");
     } catch (err) {
       console.error(err);
+      setTipoMensaje("error");
       setError("Error de conexión");
     } finally {
       setCargando(false);
@@ -66,8 +70,6 @@ export default function Login() {
           <h1>Iniciar sesión</h1>
           <p>Accede al panel de gestión de la barbería</p>
         </div>
-
-        {error && <div className="alert alert-danger py-2">{error}</div>}
 
         <div className="mb-3">
           <label className="login-label">Correo</label>
@@ -131,6 +133,12 @@ export default function Login() {
           {cargando ? "Ingresando..." : "Ingresar"}
         </button>
       </form>
+
+      <Toast
+        mensaje={error}
+        tipo={tipoMensaje}
+        onClose={() => setError("")}
+      />
     </div>
   );
 }

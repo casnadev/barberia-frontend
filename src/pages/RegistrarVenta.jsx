@@ -4,6 +4,7 @@ import authFetch from "../services/authFetch";
 import CardDark from "../components/ui/CardDark";
 import PageHeader from "../components/ui/PageHeader";
 import GoldBadge from "../components/ui/GoldBadge";
+import Toast from "../components/ui/Toast";
 
 const detalleVacio = {
   idServicio: "",
@@ -31,6 +32,8 @@ function RegistrarVenta() {
   const [servicios, setServicios] = useState([]);
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
+  const [tipoMensaje, setTipoMensaje] = useState("success");
+  const [guardando, setGuardando] = useState(false);
 
   const [venta, setVenta] = useState({
     detalles: [{ ...detalleVacio }],
@@ -55,6 +58,7 @@ function RegistrarVenta() {
         setServicios(dataServicios);
       } catch (err) {
         console.error(err);
+        setTipoMensaje("error");
         setError("Error al cargar datos");
       }
     };
@@ -101,8 +105,12 @@ function RegistrarVenta() {
 
   const guardarVenta = async (e) => {
     e.preventDefault();
+
+    if (guardando) return;
+
     setMensaje("");
     setError("");
+    setGuardando(true);
 
     const detalles = venta.detalles.map((d) => ({
       idServicio: Number(d.idServicio),
@@ -120,7 +128,9 @@ function RegistrarVenta() {
     );
 
     if (hayErrores) {
+      setTipoMensaje("error");
       setError("Completa correctamente todos los detalles de la venta.");
+      setGuardando(false);
       return;
     }
 
@@ -133,20 +143,29 @@ function RegistrarVenta() {
         }),
       });
 
-      if (!res) return;
+      if (!res) {
+        setGuardando(false);
+        return;
+      }
 
       const data = await res.json();
 
       if (!res.ok) {
+        setTipoMensaje("error");
         setError(data.mensaje || "Error al guardar venta");
+        setGuardando(false);
         return;
       }
 
+      setTipoMensaje("success");
       setMensaje(`Venta registrada correctamente. Total: S/ ${data.total}`);
       limpiarVenta();
     } catch (err) {
       console.error(err);
+      setTipoMensaje("error");
       setError("Error al guardar venta");
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -158,9 +177,6 @@ function RegistrarVenta() {
       />
 
       <div className="container-fluid py-4">
-        {mensaje && <div className="alert alert-success">{mensaje}</div>}
-        {error && <div className="alert alert-danger">{error}</div>}
-
         <CardDark>
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div>
@@ -277,8 +293,8 @@ function RegistrarVenta() {
                 + Servicio
               </button>
 
-              <button type="submit" className="btn btn-gold">
-                Guardar Venta
+              <button type="submit" className="btn btn-gold" disabled={guardando}>
+                {guardando ? "Guardando..." : "Guardar Venta"}
               </button>
             </div>
 
@@ -298,6 +314,15 @@ function RegistrarVenta() {
           </form>
         </CardDark>
       </div>
+
+      <Toast
+        mensaje={mensaje || error}
+        tipo={tipoMensaje}
+        onClose={() => {
+          setMensaje("");
+          setError("");
+        }}
+      />
     </div>
   );
 }
