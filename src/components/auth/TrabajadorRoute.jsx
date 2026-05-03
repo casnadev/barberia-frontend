@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { getAuthData, clearAuthData } from "./authStorage";
 
-export default function AdminRoute({ children }) {
+export default function TrabajadorRoute({ children }) {
   const { token, usuario } = getAuthData();
 
   if (!token || !usuario) {
@@ -9,10 +9,10 @@ export default function AdminRoute({ children }) {
     return <Navigate to="/login" replace />;
   }
 
-  const esAdmin = usuario?.rol?.toLowerCase() === "admin";
+  const esTrabajador = usuario?.rol?.toLowerCase() === "trabajador";
 
-  if (!esAdmin) {
-    return <Navigate to="/trabajador" replace />;
+  if (!esTrabajador) {
+    return <Navigate to="/" replace />;
   }
 
   return children;

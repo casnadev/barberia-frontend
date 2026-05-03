@@ -4,7 +4,6 @@ import CardDark from "../components/ui/CardDark";
 import PageHeader from "../components/ui/PageHeader";
 import GoldBadge from "../components/ui/GoldBadge";
 import TableDark from "../components/ui/TableDark";
-import AnimatedNumber from "../components/ui/AnimatedNumber";
 import {
   ResponsiveContainer,
   BarChart,
@@ -28,6 +27,13 @@ function Dashboard() {
   const [comisiones, setComisiones] = useState([]);
   const [ventasPorDia, setVentasPorDia] = useState([]);
 
+  const [resumenFinanciero, setResumenFinanciero] = useState({
+    totalVentas: 0,
+    totalPagos: 0,
+    totalGastos: 0,
+    utilidad: 0,
+  });
+
   const [loadingResumen, setLoadingResumen] = useState(true);
   const [loadingComisiones, setLoadingComisiones] = useState(true);
   const [loadingVentasDia, setLoadingVentasDia] = useState(true);
@@ -38,12 +44,11 @@ function Dashboard() {
 
   const [montosPago, setMontosPago] = useState({});
   const [procesandoPago, setProcesandoPago] = useState(null);
+  const [reservasPendientes, setReservasPendientes] = useState(0);
 
   const [modalConfirmacion, setModalConfirmacion] = useState(false);
   const [accionPendiente, setAccionPendiente] = useState(null);
   const [textoConfirmacion, setTextoConfirmacion] = useState("");
-
-  const [animarCards, setAnimarCards] = useState(false);
 
   const resumenRef = useRef(null);
 
@@ -51,29 +56,41 @@ function Dashboard() {
     localStorage.getItem("nombreNegocio") || ""
   );
 
-  const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+  let usuario = null;
+
+  try {
+    usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+  } catch {
+    usuario = null;
+  }
+
+  const utilidad = Number(resumenFinanciero.utilidad || 0);
+  const esPositivo = utilidad > 0;
+  const esNegativo = utilidad < 0;
+  const esCero = utilidad === 0;
 
   const esMobile =
     typeof window !== "undefined" && window.innerWidth < 768;
 
   const chartColors = {
-    gold: "#d4af37",
-    white: "#f5f5f5",
-    axis: "#cfcfcf",
-    grid: "#333",
-    dark: "#111",
-    border: "rgba(212,175,55,0.25)",
+    gold: "#c9a227",
+    white: "#111827",
+    axis: "#6b7280",
+    grid: "#e5e7eb",
+    dark: "#fff",
+    border: "rgba(15,23,42,0.08)",
   };
 
   const tooltipStyle = {
     contentStyle: {
-      backgroundColor: chartColors.dark,
+      backgroundColor: "#ffffff",
       border: `1px solid ${chartColors.border}`,
       borderRadius: "10px",
-      color: chartColors.white,
+      color: "#111827",
+      boxShadow: "0 8px 20px rgba(15, 23, 42, 0.08)",
     },
-    labelStyle: { color: chartColors.gold },
-    itemStyle: { color: chartColors.white },
+    labelStyle: { color: "#111827" },
+    itemStyle: { color: "#111827" },
   };
 
   const legendStyle = {
@@ -83,13 +100,75 @@ function Dashboard() {
     },
   };
 
+  const obtenerFechaHoy = () => {
+    const hoy = new Date();
+
+    return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(hoy.getDate()).padStart(2, "0")}`;
+  };
+
+  const refrescarResumenFinanciero = async () => {
+    try {
+      const fechaHoy = obtenerFechaHoy();
+
+      const res = await authFetch(
+        `${API_BASE}/Ventas/resumen-financiero?desde=${fechaHoy}&hasta=${fechaHoy}`
+      );
+
+      if (!res) return;
+
+      if (!res.ok) {
+        const textoError = await res.text();
+        console.error("Error resumen financiero:", textoError);
+        setError("Error al cargar resumen financiero");
+        return;
+      }
+
+      const data = await res.json();
+      setResumenFinanciero(data);
+    } catch (err) {
+      console.error(err);
+      setError("Error al refrescar resumen financiero");
+    }
+  };
+
+  const refrescarComisiones = async () => {
+    try {
+      setLoadingComisiones(true);
+
+      const resComisiones = await authFetch(
+        `${API_BASE}/Ventas/comisiones-dia`
+      );
+
+      if (!resComisiones) return;
+
+      const dataComisiones = await resComisiones.json();
+      setComisiones(dataComisiones);
+    } catch (err) {
+      console.error(err);
+      setError("Error al refrescar comisiones");
+    } finally {
+      setLoadingComisiones(false);
+    }
+  };
+
   useEffect(() => {
     const cargarResumen = async () => {
       try {
         setLoadingResumen(true);
 
         const resDashboard = await authFetch(`${API_BASE}/Ventas/dashboard`);
+
         if (!resDashboard) return;
+
+        if (!resDashboard.ok) {
+          const textoError = await resDashboard.text();
+          console.error("Error dashboard:", textoError);
+          setError("Error al cargar el resumen del dashboard");
+          return;
+        }
 
         const dataDashboard = await resDashboard.json();
         setDashboard(dataDashboard);
@@ -105,26 +184,63 @@ function Dashboard() {
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(async () => {
+    const cargarReservasPendientes = async () => {
       try {
-        setLoadingComisiones(true);
+        const res = await authFetch(`${API_BASE}/Reservas/mis-reservas`);
 
-        const resComisiones = await authFetch(
-          `${API_BASE}/Ventas/comisiones-por-trabajador`
-        );
-        if (!resComisiones) return;
+        if (!res) return;
 
-        const dataComisiones = await resComisiones.json();
-        setComisiones(dataComisiones);
+        const data = await res.json();
+
+        const pendientes = data.filter(
+          (r) => r.estado === "Pendiente"
+        ).length;
+
+        setReservasPendientes(pendientes);
       } catch (err) {
         console.error(err);
-        setError("Error al cargar comisiones");
-      } finally {
-        setLoadingComisiones(false);
+        setError("Error al cargar reservas pendientes");
       }
+    };
+
+    cargarReservasPendientes();
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      await refrescarComisiones();
     }, 250);
 
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const cargarResumenFinanciero = async () => {
+      try {
+        const fechaHoy = obtenerFechaHoy();
+
+        const res = await authFetch(
+          `${API_BASE}/Ventas/resumen-financiero?desde=${fechaHoy}&hasta=${fechaHoy}`
+        );
+
+        if (!res) return;
+
+        if (!res.ok) {
+          const textoError = await res.text();
+          console.error("Error resumen financiero:", textoError);
+          setError("Error al cargar resumen financiero");
+          return;
+        }
+
+        const data = await res.json();
+        setResumenFinanciero(data);
+      } catch (err) {
+        console.error(err);
+        setError("Error al cargar resumen financiero");
+      }
+    };
+
+    cargarResumenFinanciero();
   }, []);
 
   useEffect(() => {
@@ -135,6 +251,7 @@ function Dashboard() {
         const resVentasPorDia = await authFetch(
           `${API_BASE}/Ventas/ventas-por-dia`
         );
+
         if (!resVentasPorDia) return;
 
         const dataVentasPorDia = await resVentasPorDia.json();
@@ -162,30 +279,6 @@ function Dashboard() {
     };
   }, []);
 
-  const refrescarComisiones = async () => {
-    try {
-      setLoadingComisiones(true);
-
-      const resComisiones = await authFetch(
-        `${API_BASE}/Ventas/comisiones-por-trabajador`
-      );
-      if (!resComisiones) return;
-
-      const dataComisiones = await resComisiones.json();
-      setComisiones(dataComisiones);
-
-      setAnimarCards(true);
-      setTimeout(() => {
-        setAnimarCards(false);
-      }, 1500);
-    } catch (err) {
-      console.error(err);
-      setError("Error al refrescar comisiones");
-    } finally {
-      setLoadingComisiones(false);
-    }
-  };
-
   const irAResumenDashboard = () => {
     if (!resumenRef.current) return;
 
@@ -201,6 +294,40 @@ function Dashboard() {
       behavior: "smooth",
     });
   };
+
+  const irSitioPublico = () => {
+    const slug = localStorage.getItem("slugNegocio");
+
+    if (!slug) {
+      alert("No se pudo obtener el link público del negocio.");
+      return;
+    }
+
+    window.open(`/negocio/${slug}`, "_blank");
+  };
+
+  useEffect(() => {
+    const cargarNegocio = async () => {
+      try {
+        const res = await authFetch(`${API_BASE}/Negocios/mi-negocio`);
+
+        if (!res) return;
+
+        const data = await res.json();
+
+        if (!res.ok) return;
+
+        localStorage.setItem("slugNegocio", data.slug || "");
+        localStorage.setItem("nombreNegocio", data.nombre || "");
+
+        setNombreNegocio(data.nombre || "");
+      } catch (err) {
+        console.error("Error cargando negocio:", err);
+      }
+    };
+
+    cargarNegocio();
+  }, []);
 
   const cambiarMontoPago = (idTrabajador, valor) => {
     setMontosPago((prev) => ({
@@ -231,7 +358,9 @@ function Dashboard() {
     if (monto > totalPendiente) {
       setTipoMensajePago("error");
       setMensajePago(
-        `El monto no puede exceder lo pendiente: S/ ${Number(totalPendiente).toFixed(2)}` 
+        `El monto no puede exceder lo pendiente: S/ ${Number(
+          totalPendiente
+        ).toFixed(2)}`
       );
       return;
     }
@@ -272,6 +401,7 @@ function Dashboard() {
       }));
 
       await refrescarComisiones();
+      await refrescarResumenFinanciero();
 
       setTimeout(() => {
         irAResumenDashboard();
@@ -323,6 +453,7 @@ function Dashboard() {
       }));
 
       await refrescarComisiones();
+      await refrescarResumenFinanciero();
 
       setTimeout(() => {
         irAResumenDashboard();
@@ -335,16 +466,6 @@ function Dashboard() {
       setProcesandoPago(null);
     }
   };
-
-  const saldoPendienteTotal = comisiones.reduce(
-    (acc, item) => acc + Number(item.totalComisionPendiente || 0),
-    0
-  );
-
-  const totalComisionesPagadas = comisiones.reduce(
-    (acc, item) => acc + Number(item.totalComisionPagada || 0),
-    0
-  );
 
   const ventasPorDiaProcesadas = useMemo(() => {
     const nombresDias = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
@@ -408,6 +529,7 @@ function Dashboard() {
     if (accionPendiente) {
       accionPendiente();
     }
+
     cerrarConfirmacion();
   };
 
@@ -418,7 +540,113 @@ function Dashboard() {
         subtitle="Control diario de ventas, rendimiento y movimiento del negocio"
       />
 
-      <div className="container-fluid py-4">
+      <div className="container-fluid pt-2 pb-3 d-flex justify-content-between align-items-center">
+        <div style={{ color: "#9ca3af", fontSize: "0.9rem" }}>
+          Vista pública del negocio
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-gold"
+          onClick={irSitioPublico}
+        >
+          🌐 Ver sitio
+        </button>
+      </div>
+
+      <div className="container-fluid py-3 dashboard-admin-container">
+        <style>{`
+          .dashboard-admin-container {
+            max-width: 100%;
+          }
+
+          .dashboard-admin-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+          }
+
+          .dashboard-four-cols {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 1rem;
+          }
+
+          .dashboard-two-cols {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem;
+          }
+
+          .dashboard-full-row {
+            width: 100%;
+          }
+
+          .dashboard-chart-box {
+            width: 100%;
+            height: 280px;
+          }
+
+          .dashboard-chart-box-large {
+            width: 100%;
+            height: 290px;
+          }
+
+          .dashboard-table-compact {
+            max-height: 300px;
+            overflow-y: auto;
+            overflow-x: auto;
+          }
+
+          @media (min-width: 1200px) {
+            .dashboard-admin-layout {
+              gap: 0.85rem;
+            }
+
+            .dashboard-four-cols {
+              gap: 0.85rem;
+            }
+
+            .dashboard-two-cols {
+              gap: 0.85rem;
+            }
+
+            .dashboard-chart-box {
+              height: 250px;
+            }
+
+            .dashboard-chart-box-large {
+              height: 260px;
+            }
+
+            .dashboard-table-compact {
+              max-height: 260px;
+            }
+          }
+
+          @media (max-width: 1200px) {
+            .dashboard-four-cols {
+              grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+          }
+
+          @media (max-width: 992px) {
+            .dashboard-four-cols {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .dashboard-two-cols {
+              grid-template-columns: 1fr;
+            }
+          }
+
+          @media (max-width: 576px) {
+            .dashboard-four-cols {
+              grid-template-columns: 1fr;
+            }
+          }
+        `}</style>
+
         {error && <div className="alert alert-danger">{error}</div>}
 
         {mensajePago && (
@@ -443,161 +671,227 @@ function Dashboard() {
           </div>
         )}
 
-        <div id="resumen-dashboard" ref={resumenRef} className="row g-4 mb-4">
-          <div className="col-lg-4 col-md-6">
-            <CardDark className="h-100">
-              <p
-                className="text-uppercase fw-semibold mb-2"
-                style={{
-                  color: "#c9a227",
-                  fontSize: "0.85rem",
-                  letterSpacing: "1px",
-                }}
-              >
-                Ventas del día
-              </p>
+        <div className="dashboard-admin-layout">
+          <section
+            id="resumen-dashboard"
+            ref={resumenRef}
+            className="dashboard-full-row"
+          >
+            <div className="dashboard-four-cols">
+              <CardDark className="h-100">
+                <p
+                  className="text-uppercase fw-semibold mb-2"
+                  style={{
+                    color: "#c9a227",
+                    fontSize: "0.85rem",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  Ventas del día
+                </p>
 
-              <h2
-                className="fw-bold mb-3"
-                style={{
-                  fontSize: "2.4rem",
-                  color: "#ffffff",
-                }}
-              >
-                {loadingResumen
-                  ? "Cargando..."
-                  : `S/ ${Number(dashboard.totalDia || 0).toFixed(2)}`}
-              </h2>
+                <h2
+                  className="fw-bold mb-3"
+                  style={{
+                    fontSize: "2.4rem",
+                    color: "#6b7280",
+                  }}
+                >
+                  {loadingResumen
+                    ? "Cargando..."
+                    : `S/ ${Number(
+                      resumenFinanciero.totalVentas || dashboard.totalDia || 0
+                    ).toFixed(2)}`}
+                </h2>
 
-              <div
-                className="p-3"
-                style={{
-                  background: "rgba(212, 175, 55, 0.08)",
-                  borderRadius: "16px",
-                  border: "1px solid rgba(212, 175, 55, 0.22)",
-                  color: "#f3e7b3",
-                }}
-              >
-                Rendimiento diario actualizado en tiempo real
-              </div>
-            </CardDark>
-          </div>
+                <div
+                  className="p-3"
+                  style={{
+                    background: "rgba(201, 162, 39, 0.08)",
+                    borderRadius: "16px",
+                    border: "1px solid rgba(201, 162, 39, 0.18)",
+                    color: "#8b6f10",
+                  }}
+                >
+                  Rendimiento diario actualizado en tiempo real
+                </div>
+              </CardDark>
 
-          <div className="col-lg-4 col-md-6">
-            <CardDark
-              className="h-100"
-              style={{
-                transform: animarCards ? "scale(1.05)" : "scale(1)",
-                boxShadow: animarCards
-                  ? "0 0 25px rgba(212,175,55,0.5), 0 20px 45px rgba(0,0,0,0.42)"
-                  : undefined,
-                border: animarCards
-                  ? "1px solid rgba(212,175,55,0.65)"
-                  : undefined,
-              }}
-            >
-              <p
-                className="text-uppercase fw-semibold mb-2"
-                style={{
-                  color: "#f4d35e",
-                  fontSize: "0.85rem",
-                  letterSpacing: "1px",
-                }}
-              >
-                Saldo pendiente del día
-              </p>
+              <CardDark className="h-100">
+                <p
+                  className="text-uppercase fw-semibold mb-2"
+                  style={{
+                    color: "#f4d35e",
+                    fontSize: "0.85rem",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  Pagos del día
+                </p>
 
-              <h2
-                className="fw-bold mb-3"
-                style={{
-                  fontSize: "2.4rem",
-                  color: "#ffffff",
-                }}
-              >
-                {loadingComisiones ? (
-                  "Cargando..."
-                ) : (
-                  <AnimatedNumber
-                    value={saldoPendienteTotal}
-                    prefix="S/ "
-                    duration={1400}
-                  />
+                <h2
+                  className="fw-bold mb-3"
+                  style={{
+                    fontSize: "2.4rem",
+                    color: "#6b7280",
+                  }}
+                >
+                  S/ {Number(resumenFinanciero.totalPagos || 0).toFixed(2)}
+                </h2>
+
+                <div
+                  className="p-3"
+                  style={{
+                    background: "rgba(245, 158, 11, 0.08)",
+                    borderRadius: "16px",
+                    border: "1px solid rgba(245, 158, 11, 0.18)",
+                    color: "#92400e",
+                  }}
+                >
+                  Total pagado hoy a trabajadores
+                </div>
+              </CardDark>
+
+              <CardDark className="h-100">
+                <p
+                  className="text-uppercase fw-semibold mb-2"
+                  style={{
+                    color: "#f87171",
+                    fontSize: "0.85rem",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  Gastos del día
+                </p>
+
+                <h2
+                  className="fw-bold mb-3"
+                  style={{
+                    fontSize: "2.4rem",
+                    color: "#6b7280",
+                  }}
+                >
+                  S/ {Number(resumenFinanciero.totalGastos || 0).toFixed(2)}
+                </h2>
+
+                <div
+                  className="p-3"
+                  style={{
+                    background: "rgba(239, 68, 68, 0.08)",
+                    borderRadius: "16px",
+                    border: "1px solid rgba(239, 68, 68, 0.18)",
+                    color: "#991b1b",
+                  }}
+                >
+                  Total de egresos registrados hoy
+                </div>
+              </CardDark>
+
+              <CardDark className="h-100">
+                <p
+                  className="text-uppercase fw-semibold mb-2"
+                  style={{
+                    color:
+                      Number(resumenFinanciero.utilidad || 0) >= 0
+                        ? "#4ade80"
+                        : "#f87171",
+                    fontSize: "0.85rem",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  Utilidad del día
+                </p>
+
+                <h2
+                  className="fw-bold mb-3"
+                  style={{
+                    fontSize: "2.4rem",
+                    color: "#6b7280",
+                  }}
+                >
+                  S/ {Number(resumenFinanciero.utilidad || 0).toFixed(2)}
+                </h2>
+
+                <div
+                  className="p-3"
+                  style={{
+                    background: esPositivo
+                      ? "rgba(34, 197, 94, 0.08)"
+                      : esNegativo
+                        ? "rgba(239, 68, 68, 0.08)"
+                        : "rgba(156, 163, 175, 0.08)",
+
+                    border: esPositivo
+                      ? "1px solid rgba(34, 197, 94, 0.2)"
+                      : esNegativo
+                        ? "1px solid rgba(239, 68, 68, 0.2)"
+                        : "1px solid rgba(156, 163, 175, 0.2)",
+
+                    color: esPositivo
+                      ? "#166534"
+                      : esNegativo
+                        ? "#991b1b"
+                        : "#374151",
+
+                    borderRadius: "16px",
+                  }}
+                >
+                  {esPositivo && "Ganancia del negocio hoy"}
+                  {esNegativo && "Pérdida del negocio hoy"}
+                  {esCero && "Sin ganancia ni pérdida hoy"}
+                </div>
+              </CardDark>
+
+              <CardDark className="h-100">
+                <p
+                  className="text-uppercase fw-semibold mb-2"
+                  style={{
+                    color: "#38bdf8",
+                    fontSize: "0.85rem",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  Reservas pendientes
+                </p>
+
+                <h2
+                  className="fw-bold mb-3"
+                  style={{
+                    fontSize: "2.4rem",
+                    color: "#6b7280",
+                  }}
+                >
+                  {reservasPendientes}
+                </h2>
+
+                <div
+                  className="p-3"
+                  style={{
+                    background: "rgba(56,189,248,.08)",
+                    borderRadius: "16px",
+                    border: "1px solid rgba(56,189,248,.18)",
+                    color: "#075985",
+                  }}
+                >
+                  Citas pendientes por confirmar
+                </div>
+
+                {reservasPendientes > 0 && (
+                  <div
+                    style={{
+                      marginTop: "14px",
+                      color: "#0ea5e9",
+                      fontWeight: 700,
+                    }}
+                  >
+                    🔔 Atención requerida
+                  </div>
                 )}
-              </h2>
+              </CardDark>
+            </div>
+          </section>
 
-              <div
-                className="p-3"
-                style={{
-                  background: "rgba(244, 211, 94, 0.08)",
-                  borderRadius: "16px",
-                  border: "1px solid rgba(244, 211, 94, 0.22)",
-                  color: "#f8e7a1",
-                }}
-              >
-                Comisiones pendientes generadas hoy
-              </div>
-            </CardDark>
-          </div>
-
-          <div className="col-lg-4 col-md-12">
-            <CardDark
-              className="h-100"
-              style={{
-                transform: animarCards ? "scale(1.05)" : "scale(1)",
-                boxShadow: animarCards
-                  ? "0 0 25px rgba(212,175,55,0.5), 0 20px 45px rgba(0,0,0,0.42)"
-                  : undefined,
-                border: animarCards
-                  ? "1px solid rgba(212,175,55,0.65)"
-                  : undefined,
-              }}
-            >
-              <p
-                className="text-uppercase fw-semibold mb-2"
-                style={{
-                  color: "#4ade80",
-                  fontSize: "0.85rem",
-                  letterSpacing: "1px",
-                }}
-              >
-                Comisiones pagadas del día
-              </p>
-
-              <h2
-                className="fw-bold mb-3"
-                style={{
-                  fontSize: "2.4rem",
-                  color: "#ffffff",
-                }}
-              >
-                {loadingComisiones ? (
-                  "Cargando..."
-                ) : (
-                  <AnimatedNumber
-                    value={totalComisionesPagadas}
-                    prefix="S/ "
-                    duration={1400}
-                  />
-                )}
-              </h2>
-
-              <div
-                className="p-3"
-                style={{
-                  background: "rgba(74, 222, 128, 0.08)",
-                  borderRadius: "16px",
-                  border: "1px solid rgba(74, 222, 128, 0.22)",
-                  color: "#b7f7c9",
-                }}
-              >
-                Total abonado hoy a trabajadores
-              </div>
-            </CardDark>
-          </div>
-        </div>
-
-        <div className="row g-4 mb-4">
-          <div className="col-12">
+          <section className="dashboard-full-row">
             <CardDark>
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <div>
@@ -626,8 +920,8 @@ function Dashboard() {
                             index === 0
                               ? "linear-gradient(135deg, #d4af37, #f5deb3)"
                               : index === 1
-                              ? "linear-gradient(135deg, #2b2b2b, #3b3b3b)"
-                              : "linear-gradient(135deg, #4a3513, #7a5a1c)",
+                                ? "linear-gradient(135deg, #2b2b2b, #3b3b3b)"
+                                : "linear-gradient(135deg, #4a3513, #7a5a1c)",
                           color: index === 0 ? "#111" : "#fff",
                           boxShadow: "0 12px 24px rgba(0,0,0,0.25)",
                         }}
@@ -668,11 +962,9 @@ function Dashboard() {
                 </p>
               )}
             </CardDark>
-          </div>
-        </div>
+          </section>
 
-        <div className="row g-4 mb-4">
-          <div className="col-lg-6">
+          <section className="dashboard-two-cols">
             <CardDark className="h-100">
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <div>
@@ -681,6 +973,7 @@ function Dashboard() {
                     Comparación diaria de ingresos generados
                   </p>
                 </div>
+
                 <GoldBadge>{comisiones.length} datos</GoldBadge>
               </div>
 
@@ -690,11 +983,11 @@ function Dashboard() {
                 <>
                   <div className="chart-scroll-mobile">
                     <div
+                      className="dashboard-chart-box"
                       style={{
                         width: esMobile
                           ? `${Math.max(comisiones.length * 90, 360)}px`
                           : "100%",
-                        height: 320,
                       }}
                     >
                       <ResponsiveContainer width="100%" height="100%">
@@ -760,9 +1053,7 @@ function Dashboard() {
                 </>
               )}
             </CardDark>
-          </div>
 
-          <div className="col-lg-6">
             <CardDark className="h-100">
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <div>
@@ -771,6 +1062,7 @@ function Dashboard() {
                     Pendiente vs pagado por trabajador
                   </p>
                 </div>
+
                 <GoldBadge>{comisiones.length} datos</GoldBadge>
               </div>
 
@@ -780,11 +1072,11 @@ function Dashboard() {
                 <>
                   <div className="chart-scroll-mobile">
                     <div
+                      className="dashboard-chart-box"
                       style={{
                         width: esMobile
                           ? `${Math.max(comisiones.length * 90, 360)}px`
                           : "100%",
-                        height: 320,
                       }}
                     >
                       <ResponsiveContainer width="100%" height="100%">
@@ -850,6 +1142,7 @@ function Dashboard() {
                             radius={[8, 8, 0, 0]}
                             animationDuration={900}
                           />
+
                           <Bar
                             dataKey="totalComisionPagada"
                             name="Pagada hoy"
@@ -884,247 +1177,266 @@ function Dashboard() {
                 </>
               )}
             </CardDark>
-          </div>
-        </div>
+          </section>
 
-        <CardDark className="mb-4">
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <div>
-              <h4 className="section-title">Ventas por día</h4>
-              <p className="section-subtitle">
-                Evolución semanal de ingresos registrados
-              </p>
-            </div>
+          <section className="dashboard-full-row">
+            <CardDark>
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                  <h4 className="section-title">Ventas por día</h4>
+                  <p className="section-subtitle">
+                    Evolución semanal de ingresos registrados
+                  </p>
+                </div>
 
-            <GoldBadge>{ventasPorDia.length} días</GoldBadge>
-          </div>
+                <GoldBadge>{ventasPorDia.length} días</GoldBadge>
+              </div>
 
-          {loadingVentasDia ? (
-            <p className="section-subtitle mb-0">Cargando evolución diaria...</p>
-          ) : (
-            <div style={{ width: "100%", height: 340 }}>
-              <ResponsiveContainer>
-                <AreaChart data={ventasPorDiaProcesadas}>
-                  <defs>
-                    <linearGradient
-                      id="ventasDiaArea"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="0%" stopColor="#c084fc" stopOpacity={0.45} />
-                      <stop
-                        offset="100%"
-                        stopColor="#c084fc"
-                        stopOpacity={0.05}
+              {loadingVentasDia ? (
+                <p className="section-subtitle mb-0">
+                  Cargando evolución diaria...
+                </p>
+              ) : (
+                <div className="dashboard-chart-box-large">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={ventasPorDiaProcesadas}>
+                      <defs>
+                        <linearGradient
+                          id="ventasDiaArea"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="0%"
+                            stopColor="#c084fc"
+                            stopOpacity={0.45}
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="#c084fc"
+                            stopOpacity={0.05}
+                          />
+                        </linearGradient>
+                      </defs>
+
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke={chartColors.grid}
                       />
-                    </linearGradient>
-                  </defs>
+                      <XAxis
+                        dataKey="dia"
+                        stroke={chartColors.axis}
+                        interval={0}
+                        minTickGap={0}
+                      />
+                      <YAxis stroke={chartColors.axis} />
+                      <Tooltip
+                        {...tooltipStyle}
+                        labelFormatter={(value, payload) => {
+                          if (payload && payload.length > 0) {
+                            return `${value} - ${payload[0].payload.fechaReal}`;
+                          }
 
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={chartColors.grid}
-                  />
-                  <XAxis
-                    dataKey="dia"
-                    stroke={chartColors.axis}
-                    interval={0}
-                    minTickGap={0}
-                  />
-                  <YAxis stroke={chartColors.axis} />
-                  <Tooltip
-                    {...tooltipStyle}
-                    labelFormatter={(value, payload) => {
-                      if (payload && payload.length > 0) {
-                        return `${value} - ${payload[0].payload.fechaReal}`;
-                      }
-                      return value;
-                    }}
-                    formatter={(value) => [
-                      `S/ ${Number(value).toFixed(2)}`,
-                      "Ventas",
-                    ]}
-                  />
-                  <Legend {...legendStyle} />
-
-                  <Area
-                    type="monotone"
-                    dataKey="total"
-                    name="Gráfico semanal"
-                    stroke="#c084fc"
-                    strokeWidth={3}
-                    fill="url(#ventasDiaArea)"
-                    dot={{ r: 4, fill: "#c084fc" }}
-                    activeDot={{ r: 6 }}
-                    animationDuration={1000}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </CardDark>
-
-        <CardDark className="mb-4">
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <div>
-              <h4 className="section-title">Comisiones del día por trabajador</h4>
-              <p className="section-subtitle">
-                Resumen diario de comisiones pendientes y pagadas
-              </p>
-            </div>
-
-            <GoldBadge>{comisiones.length} trabajadores</GoldBadge>
-          </div>
-
-          <TableDark
-            headers={[
-              "Trabajador",
-              "Total generado",
-              "Comisión pendiente",
-              "Comisión pagada",
-              "Acciones",
-            ]}
-          >
-            {loadingComisiones ? (
-              <tr>
-                <td colSpan="5" className="text-center py-4">
-                  Cargando comisiones...
-                </td>
-              </tr>
-            ) : comisiones.length > 0 ? (
-              comisiones.map((c, index) => (
-                <tr key={index}>
-                  <td style={{ fontWeight: 600 }}>{c.trabajador}</td>
-                  <td>S/ {Number(c.totalGenerado).toFixed(2)}</td>
-                  <td style={{ color: "#f0cf73", fontWeight: 700 }}>
-                    S/ {Number(c.totalComisionPendiente).toFixed(2)}
-                  </td>
-                  <td style={{ color: "#86efac", fontWeight: 700 }}>
-                    S/ {Number(c.totalComisionPagada).toFixed(2)}
-                  </td>
-                  <td style={{ minWidth: "260px" }}>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="Monto"
-                      className="form-control input-dark mb-2"
-                      value={montosPago[c.idTrabajador] || ""}
-                      onChange={(e) =>
-                        cambiarMontoPago(c.idTrabajador, e.target.value)
-                      }
-                      disabled={c.totalComisionPendiente <= 0}
-                    />
-
-                    <div className="d-flex gap-2 mb-2">
-                      <button
-                        className="btn btn-sm"
-                        disabled={
-                          procesandoPago === c.idTrabajador ||
-                          c.totalComisionPendiente <= 0 ||
-                          !obtenerMontoPago(c.idTrabajador) ||
-                          obtenerMontoPago(c.idTrabajador) <= 0 ||
-                          obtenerMontoPago(c.idTrabajador) >
-                            c.totalComisionPendiente
-                        }
-                        onClick={() =>
-                          abrirConfirmacion(
-                            `¿Confirmar pago parcial a ${c.trabajador}?`,
-                            () =>
-                              pagarParcial(
-                                c.idTrabajador,
-                                c.totalComisionPendiente
-                              )
-                          )
-                        }
-                        style={{
-                          background:
-                            procesandoPago === c.idTrabajador
-                              ? "#555"
-                              : c.totalComisionPendiente > 0 &&
-                                obtenerMontoPago(c.idTrabajador) > 0 &&
-                                obtenerMontoPago(c.idTrabajador) <=
-                                  c.totalComisionPendiente
-                              ? "#d4af37"
-                              : "#333",
-                          color: "#111",
-                          fontWeight: 700,
-                          border: "none",
-                          cursor:
-                            procesandoPago === c.idTrabajador
-                              ? "wait"
-                              : c.totalComisionPendiente > 0 &&
-                                obtenerMontoPago(c.idTrabajador) > 0 &&
-                                obtenerMontoPago(c.idTrabajador) <=
-                                  c.totalComisionPendiente
-                              ? "pointer"
-                              : "not-allowed",
+                          return value;
                         }}
-                      >
-                        {procesandoPago === c.idTrabajador
-                          ? "Procesando..."
-                          : "Parcial"}
-                      </button>
+                        formatter={(value) => [
+                          `S/ ${Number(value).toFixed(2)}`,
+                          "Ventas",
+                        ]}
+                      />
+                      <Legend {...legendStyle} />
 
-                      <button
-                        className="btn btn-sm"
-                        disabled={
-                          procesandoPago === c.idTrabajador ||
-                          c.totalComisionPendiente <= 0
-                        }
-                        onClick={() =>
-                          abrirConfirmacion(
-                            `¿Pagar todo lo pendiente a ${c.trabajador}?`,
-                            () =>
-                              pagarTodo(
-                                c.idTrabajador,
+                      <Area
+                        type="monotone"
+                        dataKey="total"
+                        name="Gráfico semanal"
+                        stroke="#c084fc"
+                        strokeWidth={3}
+                        fill="url(#ventasDiaArea)"
+                        dot={{ r: 4, fill: "#c084fc" }}
+                        activeDot={{ r: 6 }}
+                        animationDuration={1000}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </CardDark>
+          </section>
+
+          <section className="dashboard-full-row">
+            <CardDark>
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                  <h4 className="section-title">
+                    Comisiones del día por trabajador
+                  </h4>
+                  <p className="section-subtitle">
+                    Resumen diario de comisiones pendientes y pagadas
+                  </p>
+                </div>
+
+                <GoldBadge>{comisiones.length} trabajadores</GoldBadge>
+              </div>
+
+              <div className="dashboard-table-compact">
+                <TableDark
+                  headers={[
+                    "Trabajador",
+                    "Total generado",
+                    "Comisión pendiente",
+                    "Comisión pagada",
+                    "Acciones",
+                  ]}
+                >
+                  {loadingComisiones ? (
+                    <tr>
+                      <td colSpan="5" className="text-center py-4">
+                        Cargando comisiones...
+                      </td>
+                    </tr>
+                  ) : comisiones.length > 0 ? (
+                    comisiones.map((c, index) => (
+                      <tr key={index}>
+                        <td style={{ fontWeight: 600 }}>{c.trabajador}</td>
+
+                        <td>S/ {Number(c.totalGenerado).toFixed(2)}</td>
+
+                        <td style={{ color: "#f0cf73", fontWeight: 700 }}>
+                          S/ {Number(c.totalComisionPendiente).toFixed(2)}
+                        </td>
+
+                        <td style={{ color: "#86efac", fontWeight: 700 }}>
+                          S/ {Number(c.totalComisionPagada).toFixed(2)}
+                        </td>
+
+                        <td style={{ minWidth: "260px" }}>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Monto"
+                            className="form-control input-dark mb-2"
+                            value={montosPago[c.idTrabajador] || ""}
+                            onChange={(e) =>
+                              cambiarMontoPago(c.idTrabajador, e.target.value)
+                            }
+                            disabled={c.totalComisionPendiente <= 0}
+                          />
+
+                          <div className="d-flex gap-2 mb-2">
+                            <button
+                              className="btn btn-sm"
+                              disabled={
+                                procesandoPago === c.idTrabajador ||
+                                c.totalComisionPendiente <= 0 ||
+                                !obtenerMontoPago(c.idTrabajador) ||
+                                obtenerMontoPago(c.idTrabajador) <= 0 ||
+                                obtenerMontoPago(c.idTrabajador) >
                                 c.totalComisionPendiente
-                              )
-                          )
-                        }
-                        style={{
-                          background:
-                            procesandoPago === c.idTrabajador
-                              ? "#555"
-                              : c.totalComisionPendiente > 0
-                              ? "#22c55e"
-                              : "#333",
-                          color: "#fff",
-                          fontWeight: 700,
-                          border: "none",
-                          cursor:
-                            procesandoPago === c.idTrabajador
-                              ? "wait"
-                              : c.totalComisionPendiente > 0
-                              ? "pointer"
-                              : "not-allowed",
-                        }}
-                      >
-                        {procesandoPago === c.idTrabajador
-                          ? "Procesando..."
-                          : "Todo"}
-                      </button>
-                    </div>
+                              }
+                              onClick={() =>
+                                abrirConfirmacion(
+                                  `¿Confirmar pago parcial a ${c.trabajador}?`,
+                                  () =>
+                                    pagarParcial(
+                                      c.idTrabajador,
+                                      c.totalComisionPendiente
+                                    )
+                                )
+                              }
+                              style={{
+                                background:
+                                  procesandoPago === c.idTrabajador
+                                    ? "#555"
+                                    : c.totalComisionPendiente > 0 &&
+                                      obtenerMontoPago(c.idTrabajador) > 0 &&
+                                      obtenerMontoPago(c.idTrabajador) <=
+                                      c.totalComisionPendiente
+                                      ? "#d4af37"
+                                      : "#333",
+                                color: "#111",
+                                fontWeight: 700,
+                                border: "none",
+                                cursor:
+                                  procesandoPago === c.idTrabajador
+                                    ? "wait"
+                                    : c.totalComisionPendiente > 0 &&
+                                      obtenerMontoPago(c.idTrabajador) > 0 &&
+                                      obtenerMontoPago(c.idTrabajador) <=
+                                      c.totalComisionPendiente
+                                      ? "pointer"
+                                      : "not-allowed",
+                              }}
+                            >
+                              {procesandoPago === c.idTrabajador
+                                ? "Procesando..."
+                                : "Parcial"}
+                            </button>
 
-                    {obtenerMontoPago(c.idTrabajador) >
-                      c.totalComisionPendiente && (
-                      <small style={{ color: "#f87171" }}>
-                        El monto excede lo pendiente
-                      </small>
-                    )}
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="5" className="text-center py-4">
-                  No hay comisiones registradas
-                </td>
-              </tr>
-            )}
-          </TableDark>
-        </CardDark>
+                            <button
+                              className="btn btn-sm"
+                              disabled={
+                                procesandoPago === c.idTrabajador ||
+                                c.totalComisionPendiente <= 0
+                              }
+                              onClick={() =>
+                                abrirConfirmacion(
+                                  `¿Pagar todo lo pendiente a ${c.trabajador}?`,
+                                  () =>
+                                    pagarTodo(
+                                      c.idTrabajador,
+                                      c.totalComisionPendiente
+                                    )
+                                )
+                              }
+                              style={{
+                                background:
+                                  procesandoPago === c.idTrabajador
+                                    ? "#555"
+                                    : c.totalComisionPendiente > 0
+                                      ? "#22c55e"
+                                      : "#333",
+                                color: "#fff",
+                                fontWeight: 700,
+                                border: "none",
+                                cursor:
+                                  procesandoPago === c.idTrabajador
+                                    ? "wait"
+                                    : c.totalComisionPendiente > 0
+                                      ? "pointer"
+                                      : "not-allowed",
+                              }}
+                            >
+                              {procesandoPago === c.idTrabajador
+                                ? "Procesando..."
+                                : "Todo"}
+                            </button>
+                          </div>
+
+                          {obtenerMontoPago(c.idTrabajador) >
+                            c.totalComisionPendiente && (
+                              <small style={{ color: "#f87171" }}>
+                                El monto excede lo pendiente
+                              </small>
+                            )}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="text-center py-4">
+                        No hay comisiones registradas
+                      </td>
+                    </tr>
+                  )}
+                </TableDark>
+              </div>
+            </CardDark>
+          </section>
+        </div>
 
         {modalConfirmacion && (
           <div

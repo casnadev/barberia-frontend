@@ -14,7 +14,6 @@ const authFetch = async (url, options = {}) => {
   if (response.status === 401) {
     localStorage.removeItem("token");
     localStorage.removeItem("usuario");
-    alert("Tu sesión ha expirado. Inicia sesión nuevamente.");
     window.location.href = "/login";
     return;
   }

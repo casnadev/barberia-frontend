@@ -12,12 +12,14 @@ function Item({ to, label, active, onClick }) {
       style={{
         display: "block",
         padding: "12px 16px",
-        borderRadius: "10px",
-        marginBottom: "8px",
+        borderRadius: "12px",
+        marginBottom: "10px",
         background: active ? "rgba(212,175,55,.18)" : "transparent",
         color: active ? "#b8860b" : "#1f2937",
         textDecoration: "none",
-        fontWeight: 600,
+        fontWeight: active ? 700 : 600,
+        letterSpacing: "0.3px",
+        transition: "all .25s ease"
       }}
     >
       {label}
@@ -25,10 +27,11 @@ function Item({ to, label, active, onClick }) {
   );
 }
 
-export default function AdminLayout() {
+export default function TrabajadorLayout() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // ✅ SEGURO
   let usuario = null;
 
   try {
@@ -37,7 +40,7 @@ export default function AdminLayout() {
     usuario = null;
   }
 
-  const esAdmin = usuario?.rol?.toLowerCase() === "admin";
+  const esTrabajador = usuario?.rol?.toLowerCase() === "trabajador";
 
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [logoNegocio, setLogoNegocio] = useState(
@@ -47,8 +50,9 @@ export default function AdminLayout() {
     localStorage.getItem("nombreNegocio") || ""
   );
 
+  // 🔐 PROTECCIÓN EXTRA
   useEffect(() => {
-    if (!usuario || !esAdmin) {
+    if (!usuario || !esTrabajador) {
       localStorage.removeItem("token");
       localStorage.removeItem("usuario");
       localStorage.removeItem("logoNegocio");
@@ -57,8 +61,9 @@ export default function AdminLayout() {
 
       navigate("/login", { replace: true });
     }
-  }, [navigate, esAdmin, usuario]);
+  }, [navigate, esTrabajador, usuario]);
 
+  // 🔄 CARGA NEGOCIO
   useEffect(() => {
     const cargarNegocio = async () => {
       try {
@@ -84,11 +89,12 @@ export default function AdminLayout() {
       }
     };
 
-    if (esAdmin) {
+    if (esTrabajador) {
       cargarNegocio();
     }
-  }, [esAdmin]);
+  }, [esTrabajador]);
 
+  // 🔄 EVENTOS
   useEffect(() => {
     const actualizarBranding = () => {
       const logoGuardado = localStorage.getItem("logoNegocio") || "";
@@ -103,13 +109,11 @@ export default function AdminLayout() {
 
     return () => {
       window.removeEventListener("logo-negocio-actualizado", actualizarBranding);
-      window.removeEventListener(
-        "nombre-negocio-actualizado",
-        actualizarBranding
-      );
+      window.removeEventListener("nombre-negocio-actualizado", actualizarBranding);
     };
   }, []);
 
+  // 🔓 LOGOUT CORREGIDO
   const cerrarSesion = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("usuario");
@@ -148,76 +152,29 @@ export default function AdminLayout() {
         </div>
 
         <div className="sidebar-user-card">
-          <div className="sidebar-user-label">Sesión activa</div>
+          <div className="sidebar-user-label">Panel trabajador</div>
+
           <div className="sidebar-user-name">
-            {nombreNegocio || usuario?.nombre || "Usuario"}
+            {usuario?.nombre || "Trabajador"}
           </div>
-          <div className="sidebar-user-email">{usuario?.correo || ""}</div>
+
+          <div className="sidebar-user-email">
+            {nombreNegocio || usuario?.correo || ""}
+          </div>
         </div>
 
         <nav className="sidebar-nav">
-          <Item
-            to="/"
-            label="Dashboard"
-            active={location.pathname === "/"}
-            onClick={esMobile ? cerrarMenu : undefined}
-          />
+          <Item to="/trabajador" label="Inicio" active={location.pathname === "/trabajador"} onClick={esMobile ? cerrarMenu : undefined} />
 
-          <Item
-            to="/trabajadores"
-            label="Trabajadores"
-            active={location.pathname === "/trabajadores"}
-            onClick={esMobile ? cerrarMenu : undefined}
-          />
+          <Item to="/trabajador/registrar" label="Registrar Servicio" active={location.pathname === "/trabajador/registrar"} onClick={esMobile ? cerrarMenu : undefined} />
 
-          <Item
-            to="/servicios"
-            label="Servicios"
-            active={location.pathname === "/servicios"}
-            onClick={esMobile ? cerrarMenu : undefined}
-          />
+          <Item to="/trabajador/reservas" label="Agenda de Reservas" active={location.pathname === "/trabajador/reservas"} onClick={esMobile ? cerrarMenu : undefined} />
 
-          <Item
-            to="/ventas/registrar"
-            label="Registrar Venta"
-            active={location.pathname === "/ventas/registrar"}
-            onClick={esMobile ? cerrarMenu : undefined}
-          />
+          <Item to="/trabajador/disponibilidad" label="Mi Disponibilidad" active={location.pathname === "/trabajador/disponibilidad"} onClick={esMobile ? cerrarMenu : undefined} />
 
-          <Item
-            to="/ventas/historial"
-            label="Ventas/Análisis"
-            active={location.pathname === "/ventas/historial"}
-            onClick={esMobile ? cerrarMenu : undefined}
-          />
+          <Item to="/trabajador/servicios" label="Mis Servicios" active={location.pathname === "/trabajador/servicios"} onClick={esMobile ? cerrarMenu : undefined} />
 
-          <Item
-            to="/pagos"
-            label="Pagos por Trabajador"
-            active={location.pathname === "/pagos"}
-            onClick={esMobile ? cerrarMenu : undefined}
-          />
-
-          <Item
-            to="/gastos"
-            label="Gastos del Negocio"
-            active={location.pathname === "/gastos"}
-            onClick={esMobile ? cerrarMenu : undefined}
-          />
-
-          <Item
-            to="/reservas"
-            label="Reservas"
-            active={location.pathname === "/reservas"}
-            onClick={esMobile ? cerrarMenu : undefined}
-          />
-
-          <Item
-            to="/configuracion"
-            label="Configuración"
-            active={location.pathname === "/configuracion"}
-            onClick={esMobile ? cerrarMenu : undefined}
-          />
+          <Item to="/trabajador/pagos" label="Mis Pagos" active={location.pathname === "/trabajador/pagos"} onClick={esMobile ? cerrarMenu : undefined} />
         </nav>
 
         <div className="sidebar-footer">
@@ -229,18 +186,14 @@ export default function AdminLayout() {
 
       <div className="admin-main">
         <header className="mobile-topbar">
-          <button
-            type="button"
-            className="menu-toggle"
-            onClick={() => setMenuAbierto(true)}
-          >
+          <button type="button" className="menu-toggle" onClick={() => setMenuAbierto(true)}>
             ☰
           </button>
 
           <div className="brand-wrap">
             <img src={logoSrc} alt="Logo" className="sidebar-logo-img" />
             <span className="mobile-topbar-title">
-              {nombreNegocio || "Barbería"}
+              {nombreNegocio || "Panel trabajador"}
             </span>
           </div>
         </header>

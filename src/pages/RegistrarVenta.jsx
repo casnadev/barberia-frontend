@@ -10,16 +10,13 @@ const detalleVacio = {
   idServicio: "",
   idTrabajador: "",
   cantidad: 1,
-  precioUnitario: 0,
+  precioReferencial: 0,
 };
 
 function CampoLabel({ label, children }) {
   return (
     <div>
-      <label
-        className="form-label"
-        style={{ color: "#d4af37", fontWeight: 600 }}
-      >
+      <label className="form-label" style={{ color: "#d4af37", fontWeight: 600 }}>
         {label}
       </label>
       {children}
@@ -66,10 +63,10 @@ function RegistrarVenta() {
     cargarDatos();
   }, []);
 
-  const total = useMemo(
+  const totalReferencial = useMemo(
     () =>
       venta.detalles.reduce(
-        (acc, d) => acc + Number(d.cantidad) * Number(d.precioUnitario),
+        (acc, d) => acc + Number(d.cantidad) * Number(d.precioReferencial),
         0
       ),
     [venta.detalles]
@@ -84,7 +81,7 @@ function RegistrarVenta() {
 
     if (campo === "idServicio") {
       const servicio = servicios.find((s) => s.idServicio === Number(valor));
-      if (servicio) detalles[index].precioUnitario = servicio.precioBase;
+      detalles[index].precioReferencial = servicio ? servicio.precioBase : 0;
     }
 
     actualizarDetalles(detalles);
@@ -110,55 +107,45 @@ function RegistrarVenta() {
 
     setMensaje("");
     setError("");
-    setGuardando(true);
 
     const detalles = venta.detalles.map((d) => ({
       idServicio: Number(d.idServicio),
       idTrabajador: Number(d.idTrabajador),
       cantidad: Number(d.cantidad),
-      precioUnitario: Number(d.precioUnitario),
+      precioUnitario: 0,
     }));
 
     const hayErrores = detalles.some(
-      (d) =>
-        !d.idServicio ||
-        !d.idTrabajador ||
-        d.cantidad <= 0 ||
-        d.precioUnitario <= 0
+      (d) => !d.idServicio || !d.idTrabajador || d.cantidad <= 0
     );
 
     if (hayErrores) {
       setTipoMensaje("error");
       setError("Completa correctamente todos los detalles de la venta.");
-      setGuardando(false);
       return;
     }
+
+    setGuardando(true);
 
     try {
       const res = await authFetch(`${API_BASE}/Ventas`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          detalles,
-        }),
+        body: JSON.stringify({ detalles }),
       });
 
-      if (!res) {
-        setGuardando(false);
-        return;
-      }
+      if (!res) return;
 
       const data = await res.json();
 
       if (!res.ok) {
         setTipoMensaje("error");
         setError(data.mensaje || "Error al guardar venta");
-        setGuardando(false);
         return;
       }
 
       setTipoMensaje("success");
-      setMensaje(`Venta registrada correctamente. Total: S/ ${data.total}`);
+      setMensaje(`Venta registrada correctamente. Total: S/ ${Number(data.total).toFixed(2)}`);
       limpiarVenta();
     } catch (err) {
       console.error(err);
@@ -193,7 +180,7 @@ function RegistrarVenta() {
               <div
                 key={i}
                 style={{
-                  background: "#141414",
+                  background: "#fff",
                   border: "1px solid rgba(212, 175, 55, 0.18)",
                   borderRadius: "16px",
                   padding: "18px",
@@ -209,6 +196,7 @@ function RegistrarVenta() {
                         onChange={(e) =>
                           cambiarDetalle(i, "idServicio", e.target.value)
                         }
+                        disabled={guardando}
                       >
                         <option value="">Seleccione</option>
                         {servicios.map((s) => (
@@ -228,6 +216,7 @@ function RegistrarVenta() {
                         onChange={(e) =>
                           cambiarDetalle(i, "idTrabajador", e.target.value)
                         }
+                        disabled={guardando}
                       >
                         <option value="">Seleccione</option>
                         {trabajadores.map((t) => (
@@ -243,11 +232,13 @@ function RegistrarVenta() {
                     <CampoLabel label="Cantidad">
                       <input
                         type="number"
+                        min="1"
                         className="form-control input-dark"
                         value={d.cantidad}
                         onChange={(e) =>
                           cambiarDetalle(i, "cantidad", e.target.value)
                         }
+                        disabled={guardando}
                       />
                     </CampoLabel>
                   </div>
@@ -257,10 +248,8 @@ function RegistrarVenta() {
                       <input
                         type="number"
                         className="form-control input-dark"
-                        value={d.precioUnitario}
-                        onChange={(e) =>
-                          cambiarDetalle(i, "precioUnitario", e.target.value)
-                        }
+                        value={d.precioReferencial}
+                        readOnly
                       />
                     </CampoLabel>
                   </div>
@@ -270,6 +259,7 @@ function RegistrarVenta() {
                       type="button"
                       className="btn w-100"
                       onClick={() => eliminarDetalle(i)}
+                      disabled={guardando || venta.detalles.length === 1}
                       style={{
                         background: "#8b1e1e",
                         color: "#fff",
@@ -289,6 +279,7 @@ function RegistrarVenta() {
                 type="button"
                 className="btn btn-dark-outline"
                 onClick={agregarDetalle}
+                disabled={guardando}
               >
                 + Servicio
               </button>
@@ -309,7 +300,7 @@ function RegistrarVenta() {
                 fontWeight: 700,
               }}
             >
-              Total: S/ {total.toFixed(2)}
+              Total referencial: S/ {totalReferencial.toFixed(2)}
             </div>
           </form>
         </CardDark>

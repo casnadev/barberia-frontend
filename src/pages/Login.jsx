@@ -16,6 +16,15 @@ export default function Login() {
   const login = async (e) => {
     e.preventDefault();
     setError("");
+
+    const correoLimpio = correo.trim().toLowerCase();
+
+    if (!correoLimpio || !password.trim()) {
+      setTipoMensaje("error");
+      setError("Ingresa correo y contraseña.");
+      return;
+    }
+
     setCargando(true);
 
     try {
@@ -25,37 +34,56 @@ export default function Login() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          correo,
+          correo: correoLimpio,
           password,
         }),
       });
 
-      const data = await res.json();
+      let data = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
 
       if (!res.ok) {
         setTipoMensaje("error");
-        setError(data.mensaje || "Error al iniciar sesión");
+        setError(data.mensaje || "Correo o contraseña incorrectos.");
         return;
       }
 
+      if (!data.token) {
+        setTipoMensaje("error");
+        setError("No se recibió token de acceso.");
+        return;
+      }
+
+      const usuario = {
+        idUsuario: data.idUsuario,
+        idNegocio: data.idNegocio,
+        idTrabajador: data.idTrabajador,
+        nombre: data.nombre,
+        correo: data.correo,
+        rol: data.rol,
+      };
+
       localStorage.setItem("token", data.token);
+      localStorage.setItem("usuario", JSON.stringify(usuario));
 
-      localStorage.setItem(
-        "usuario",
-        JSON.stringify({
-          idUsuario: data.idUsuario,
-          idNegocio: data.idNegocio,
-          nombre: data.nombre,
-          correo: data.correo,
-          rol: data.rol,
-        })
-      );
-
-      navigate("/");
+      if (data.rol === "Trabajador") {
+        navigate("/trabajador", { replace: true });
+      } else if (data.rol === "Admin") {
+        navigate("/", { replace: true });
+      } else {
+        localStorage.removeItem("token");
+        localStorage.removeItem("usuario");
+        setTipoMensaje("error");
+        setError("Rol no autorizado.");
+      }
     } catch (err) {
       console.error(err);
       setTipoMensaje("error");
-      setError("Error de conexión");
+      setError("Error de conexión con el servidor.");
     } finally {
       setCargando(false);
     }
@@ -78,21 +106,24 @@ export default function Login() {
             className="form-control login-input"
             value={correo}
             onChange={(e) => setCorreo(e.target.value)}
-            placeholder="admin@barberia.com"
+            placeholder="admin@barberstyles.com"
             autoComplete="username"
+            disabled={cargando}
           />
         </div>
 
         <div className="mb-2">
           <label className="login-label">Contraseña</label>
+
           <div style={{ position: "relative" }}>
             <input
               type={mostrarPassword ? "text" : "password"}
               className="form-control login-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="**"
+              placeholder="Contraseña"
               autoComplete="current-password"
+              disabled={cargando}
             />
 
             <button
@@ -134,11 +165,7 @@ export default function Login() {
         </button>
       </form>
 
-      <Toast
-        mensaje={error}
-        tipo={tipoMensaje}
-        onClose={() => setError("")}
-      />
+      <Toast mensaje={error} tipo={tipoMensaje} onClose={() => setError("")} />
     </div>
   );
 }

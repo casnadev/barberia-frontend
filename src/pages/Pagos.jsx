@@ -18,6 +18,7 @@ function Pagos() {
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [tipoMensaje, setTipoMensaje] = useState("success");
+  const [loading, setLoading] = useState(true);
 
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
@@ -33,8 +34,18 @@ function Pagos() {
   const [accionPendiente, setAccionPendiente] = useState(null);
   const [textoConfirmacion, setTextoConfirmacion] = useState("");
 
+  const obtenerFechaLocal = (fecha) => {
+    return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(fecha.getDate()).padStart(2, "0")}`;
+  };
+
   const cargarPagos = async () => {
     try {
+      setLoading(true);
+      setError("");
+
       const [resHistorial, resPendientes] = await Promise.all([
         authFetch(`${API_BASE}/Ventas/historial-pagos`),
         authFetch(`${API_BASE}/Ventas/comisiones-pendientes`),
@@ -47,12 +58,26 @@ function Pagos() {
         resPendientes.json(),
       ]);
 
-      setHistorialPagos(dataHistorial);
-      setComisionesPendientes(dataPendientes);
+      if (!resHistorial.ok) {
+        setTipoMensaje("error");
+        setError(dataHistorial.mensaje || "Error al cargar historial de pagos");
+        return;
+      }
+
+      if (!resPendientes.ok) {
+        setTipoMensaje("error");
+        setError(dataPendientes.mensaje || "Error al cargar comisiones pendientes");
+        return;
+      }
+
+      setHistorialPagos(dataHistorial || []);
+      setComisionesPendientes(dataPendientes || []);
     } catch (err) {
       console.error(err);
       setTipoMensaje("error");
       setError("Error al cargar pagos");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -61,13 +86,10 @@ function Pagos() {
   }, []);
 
   const aplicarFiltroHoy = () => {
-    const hoy = new Date();
-    const fechaHoy = `${hoy.getFullYear()}-${String(
-      hoy.getMonth() + 1
-    ).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
+    const hoy = obtenerFechaLocal(new Date());
 
-    setFechaDesde(fechaHoy);
-    setFechaHasta(fechaHoy);
+    setFechaDesde(hoy);
+    setFechaHasta(hoy);
     setFiltroRapidoActivo("hoy");
   };
 
@@ -79,16 +101,8 @@ function Pagos() {
     const lunes = new Date(hoy);
     lunes.setDate(hoy.getDate() - ajuste);
 
-    const fechaHoy = `${hoy.getFullYear()}-${String(
-      hoy.getMonth() + 1
-    ).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
-
-    const fechaLunes = `${lunes.getFullYear()}-${String(
-      lunes.getMonth() + 1
-    ).padStart(2, "0")}-${String(lunes.getDate()).padStart(2, "0")}`;
-
-    setFechaDesde(fechaLunes);
-    setFechaHasta(fechaHoy);
+    setFechaDesde(obtenerFechaLocal(lunes));
+    setFechaHasta(obtenerFechaLocal(hoy));
     setFiltroRapidoActivo("semana");
   };
 
@@ -96,16 +110,8 @@ function Pagos() {
     const hoy = new Date();
     const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
 
-    const fechaHoy = `${hoy.getFullYear()}-${String(
-      hoy.getMonth() + 1
-    ).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
-
-    const fechaPrimerDia = `${primerDia.getFullYear()}-${String(
-      primerDia.getMonth() + 1
-    ).padStart(2, "0")}-${String(primerDia.getDate()).padStart(2, "0")}`;
-
-    setFechaDesde(fechaPrimerDia);
-    setFechaHasta(fechaHoy);
+    setFechaDesde(obtenerFechaLocal(primerDia));
+    setFechaHasta(obtenerFechaLocal(hoy));
     setFiltroRapidoActivo("mes");
   };
 
@@ -125,7 +131,9 @@ function Pagos() {
 
       if (filtroTrabajador.trim()) {
         if (
-          !p.trabajador?.toLowerCase().includes(filtroTrabajador.toLowerCase())
+          !String(p.trabajador || "")
+            .toLowerCase()
+            .includes(filtroTrabajador.toLowerCase())
         ) {
           return false;
         }
@@ -139,11 +147,14 @@ function Pagos() {
     return comisionesPendientes.filter((p) => {
       if (filtroTrabajador.trim()) {
         if (
-          !p.trabajador?.toLowerCase().includes(filtroTrabajador.toLowerCase())
+          !String(p.trabajador || "")
+            .toLowerCase()
+            .includes(filtroTrabajador.toLowerCase())
         ) {
           return false;
         }
       }
+
       return true;
     });
   }, [comisionesPendientes, filtroTrabajador]);
@@ -159,6 +170,14 @@ function Pagos() {
         (acc, p) => acc + Number(p.totalComisionPendiente || 0),
         0
       ),
+    [pendientesFiltrados]
+  );
+
+  const trabajadoresConSaldo = useMemo(
+    () =>
+      pendientesFiltrados.filter(
+        (p) => Number(p.totalComisionPendiente || 0) > 0
+      ).length,
     [pendientesFiltrados]
   );
 
@@ -329,17 +348,12 @@ function Pagos() {
       return;
     }
 
-    const columnas = [
-      "Trabajador",
-      "Fecha de pago",
-      "Monto pagado",
-      "Observación",
-    ];
+    const columnas = ["Trabajador", "Fecha de pago", "Monto pagado", "Observación"];
 
     const filas = pagosFiltrados.map((p) => [
       p.trabajador,
       new Date(p.fechaPago).toLocaleString(),
-      `S/ ${Number(p.montoPagado).toFixed(2)}`,
+      `S/ ${Number(p.montoPagado || 0).toFixed(2)}`,
       p.observacion || "-",
     ]);
 
@@ -371,7 +385,7 @@ function Pagos() {
     const filas = pagosFiltrados.map((p) => ({
       trabajador: p.trabajador,
       fechaPago: new Date(p.fechaPago).toLocaleString(),
-      montoPagado: Number(p.montoPagado).toFixed(2),
+      montoPagado: Number(p.montoPagado || 0).toFixed(2),
       observacion: p.observacion || "-",
     }));
 
@@ -396,22 +410,21 @@ function Pagos() {
 
       <div className="container-fluid py-4">
         <CardDark className="mb-4">
-          <div className="d-flex justify-content-between align-items-center mb-4">
+          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <div>
               <h4 className="section-title">Filtros de pagos</h4>
               <p className="section-subtitle">
-                Usa filtros rápidos o fechas específicas para revisar pagos e historial
+                Usa filtros rápidos o fechas específicas para revisar pagos e historial.
               </p>
             </div>
-            <GoldBadge>{pagosFiltrados.length} pagos</GoldBadge>
+
+            <GoldBadge>{loading ? "Cargando..." : `${pagosFiltrados.length} pagos`}</GoldBadge>
           </div>
 
           <div className="filtros-rapidos mb-3">
             <button
               type="button"
-              className={`btn ${
-                filtroRapidoActivo === "hoy" ? "btn-gold" : "btn-dark-outline"
-              }`}
+              className={`btn ${filtroRapidoActivo === "hoy" ? "btn-gold" : "btn-dark-outline"}`}
               onClick={aplicarFiltroHoy}
             >
               Hoy
@@ -419,11 +432,7 @@ function Pagos() {
 
             <button
               type="button"
-              className={`btn ${
-                filtroRapidoActivo === "semana"
-                  ? "btn-gold"
-                  : "btn-dark-outline"
-              }`}
+              className={`btn ${filtroRapidoActivo === "semana" ? "btn-gold" : "btn-dark-outline"}`}
               onClick={aplicarFiltroSemana}
             >
               Semana
@@ -431,9 +440,7 @@ function Pagos() {
 
             <button
               type="button"
-              className={`btn ${
-                filtroRapidoActivo === "mes" ? "btn-gold" : "btn-dark-outline"
-              }`}
+              className={`btn ${filtroRapidoActivo === "mes" ? "btn-gold" : "btn-dark-outline"}`}
               onClick={aplicarFiltroMes}
             >
               Mes
@@ -441,16 +448,14 @@ function Pagos() {
 
             <button
               type="button"
-              className={`btn ${
-                limpiandoActivo ? "btn-gold" : "btn-dark-outline"
-              }`}
+              className={`btn ${limpiandoActivo ? "btn-gold" : "btn-dark-outline"}`}
               onClick={limpiarFiltros}
             >
               {limpiandoActivo ? "↺ Limpiando..." : "Limpiar"}
             </button>
           </div>
 
-          <div className="analisis-filtros mb-4">
+          <div className="analisis-filtros mb-1">
             <div className="filtro-item">
               <DateFilter
                 label="Desde"
@@ -475,10 +480,7 @@ function Pagos() {
             </div>
 
             <div className="filtro-item">
-              <label
-                className="form-label"
-                style={{ color: "#d4af37", fontWeight: 600 }}
-              >
+              <label className="form-label" style={{ color: "#d4af37", fontWeight: 700 }}>
                 Trabajador
               </label>
               <input
@@ -486,6 +488,7 @@ function Pagos() {
                 className="form-control input-dark"
                 placeholder="Buscar por nombre"
                 value={filtroTrabajador}
+                maxLength={120}
                 onChange={(e) => {
                   setFiltroTrabajador(e.target.value);
                   setFiltroRapidoActivo("");
@@ -494,10 +497,7 @@ function Pagos() {
             </div>
 
             <div className="filtro-item">
-              <label
-                className="form-label"
-                style={{ color: "#d4af37", fontWeight: 600 }}
-              >
+              <label className="form-label" style={{ color: "#d4af37", fontWeight: 700 }}>
                 Estado
               </label>
               <input
@@ -511,124 +511,149 @@ function Pagos() {
         </CardDark>
 
         <CardDark className="mb-4">
-          <div className="d-flex justify-content-between align-items-center mb-4">
+          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <div>
               <h4 className="section-title">Resumen financiero</h4>
               <p className="section-subtitle">
-                Vista general de pendientes y pagos registrados
+                Vista general de pendientes y pagos registrados.
               </p>
             </div>
+
             <GoldBadge>{pagosFiltrados.length} pagos</GoldBadge>
           </div>
 
-          <div className="row g-3">
-            <div className="col-lg-4">
+          <div className="dashboard-four-cols">
+            <CardDark className="h-100">
+              <p
+                className="text-uppercase fw-semibold mb-2"
+                style={{
+                  color: "#f4d35e",
+                  fontSize: "0.85rem",
+                  letterSpacing: "1px",
+                }}
+              >
+                Total pendiente
+              </p>
+
+              <h2 className="fw-bold mb-3" style={{ fontSize: "2.2rem", color: "#6b7280" }}>
+                S/ {totalPendiente.toFixed(2)}
+              </h2>
+
               <div
-                className="p-3 h-100"
+                className="p-3"
                 style={{
                   background: "rgba(244, 211, 94, 0.08)",
                   borderRadius: "16px",
-                  border: "1px solid rgba(244, 211, 94, 0.22)",
+                  border: "1px solid rgba(244, 211, 94, 0.18)",
+                  color: "#8b6f10",
+                  fontWeight: 700,
                 }}
               >
-                <div
-                  style={{
-                    color: "#f4d35e",
-                    fontWeight: 700,
-                    fontSize: "0.9rem",
-                    marginBottom: "8px",
-                  }}
-                >
-                  Total pendiente
-                </div>
-                <div
-                  style={{
-                    color: "#ffffff",
-                    fontSize: "2rem",
-                    fontWeight: 800,
-                  }}
-                >
-                  S/ {totalPendiente.toFixed(2)}
-                </div>
+                Comisiones por pagar
               </div>
-            </div>
+            </CardDark>
 
-            <div className="col-lg-4">
-              <div
-                className="p-3 h-100"
+            <CardDark className="h-100">
+              <p
+                className="text-uppercase fw-semibold mb-2"
                 style={{
-                  background: "rgba(74, 222, 128, 0.08)",
-                  borderRadius: "16px",
-                  border: "1px solid rgba(74, 222, 128, 0.22)",
+                  color: "#22c55e",
+                  fontSize: "0.85rem",
+                  letterSpacing: "1px",
                 }}
               >
-                <div
-                  style={{
-                    color: "#86efac",
-                    fontWeight: 700,
-                    fontSize: "0.9rem",
-                    marginBottom: "8px",
-                  }}
-                >
-                  Total pagado
-                </div>
-                <div
-                  style={{
-                    color: "#ffffff",
-                    fontSize: "2rem",
-                    fontWeight: 800,
-                  }}
-                >
-                  S/ {totalPagado.toFixed(2)}
-                </div>
-              </div>
-            </div>
+                Total pagado
+              </p>
 
-            <div className="col-lg-4">
+              <h2 className="fw-bold mb-3" style={{ fontSize: "2.2rem", color: "#6b7280" }}>
+                S/ {totalPagado.toFixed(2)}
+              </h2>
+
               <div
-                className="p-3 h-100"
+                className="p-3"
                 style={{
-                  background: "rgba(212, 175, 55, 0.08)",
+                  background: "rgba(34, 197, 94, 0.08)",
                   borderRadius: "16px",
-                  border: "1px solid rgba(212, 175, 55, 0.22)",
+                  border: "1px solid rgba(34, 197, 94, 0.18)",
+                  color: "#166534",
+                  fontWeight: 700,
                 }}
               >
-                <div
-                  style={{
-                    color: "#d4af37",
-                    fontWeight: 700,
-                    fontSize: "0.9rem",
-                    marginBottom: "8px",
-                  }}
-                >
-                  Trabajadores con saldo
-                </div>
-                <div
-                  style={{
-                    color: "#ffffff",
-                    fontSize: "2rem",
-                    fontWeight: 800,
-                  }}
-                >
-                  {
-                    pendientesFiltrados.filter(
-                      (p) => Number(p.totalComisionPendiente || 0) > 0
-                    ).length
-                  }
-                </div>
+                Pagos filtrados
               </div>
-            </div>
+            </CardDark>
+
+            <CardDark className="h-100">
+              <p
+                className="text-uppercase fw-semibold mb-2"
+                style={{
+                  color: "#38bdf8",
+                  fontSize: "0.85rem",
+                  letterSpacing: "1px",
+                }}
+              >
+                Trabajadores con saldo
+              </p>
+
+              <h2 className="fw-bold mb-3" style={{ fontSize: "2.2rem", color: "#6b7280" }}>
+                {trabajadoresConSaldo}
+              </h2>
+
+              <div
+                className="p-3"
+                style={{
+                  background: "rgba(56,189,248,.08)",
+                  borderRadius: "16px",
+                  border: "1px solid rgba(56,189,248,.18)",
+                  color: "#075985",
+                  fontWeight: 700,
+                }}
+              >
+                Requieren pago
+              </div>
+            </CardDark>
+
+            <CardDark className="h-100">
+              <p
+                className="text-uppercase fw-semibold mb-2"
+                style={{
+                  color: "#d4af37",
+                  fontSize: "0.85rem",
+                  letterSpacing: "1px",
+                }}
+              >
+                Pagos registrados
+              </p>
+
+              <h2 className="fw-bold mb-3" style={{ fontSize: "2.2rem", color: "#6b7280" }}>
+                {pagosFiltrados.length}
+              </h2>
+
+              <div
+                className="p-3"
+                style={{
+                  background: "rgba(212,175,55,.08)",
+                  borderRadius: "16px",
+                  border: "1px solid rgba(212,175,55,.18)",
+                  color: "#8b6f10",
+                  fontWeight: 700,
+                }}
+              >
+                En historial
+              </div>
+            </CardDark>
           </div>
         </CardDark>
 
         <CardDark className="mb-4">
-          <div className="d-flex justify-content-between align-items-center mb-4">
+          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <div>
               <h4 className="section-title">Pendientes por trabajador</h4>
               <p className="section-subtitle">
-                Revisa desde cuándo existe deuda y registra pagos parciales o totales
+                Revisa saldos y registra pagos parciales o totales.
               </p>
             </div>
+
             <GoldBadge>{pendientesFiltrados.length} trabajadores</GoldBadge>
           </div>
 
@@ -642,21 +667,27 @@ function Pagos() {
               "Acciones",
             ]}
           >
-            {pendientesFiltrados.length > 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan="6" className="text-center py-4">
+                  Cargando pendientes...
+                </td>
+              </tr>
+            ) : pendientesFiltrados.length > 0 ? (
               pendientesFiltrados.map((p) => (
                 <tr key={p.idTrabajador}>
-                  <td style={{ fontWeight: 600 }}>{p.trabajador}</td>
+                  <td style={{ fontWeight: 700 }}>{p.trabajador}</td>
                   <td>
                     {p.fechaPendiente
                       ? new Date(p.fechaPendiente).toLocaleDateString()
                       : "-"}
                   </td>
-                  <td>S/ {Number(p.totalGenerado).toFixed(2)}</td>
-                  <td style={{ color: "#f4d35e", fontWeight: 700 }}>
-                    S/ {Number(p.totalComisionPendiente).toFixed(2)}
+                  <td>S/ {Number(p.totalGenerado || 0).toFixed(2)}</td>
+                  <td style={{ color: "#f4d35e", fontWeight: 800 }}>
+                    S/ {Number(p.totalComisionPendiente || 0).toFixed(2)}
                   </td>
-                  <td style={{ color: "#86efac", fontWeight: 700 }}>
-                    S/ {Number(p.totalComisionPagada).toFixed(2)}
+                  <td style={{ color: "#22c55e", fontWeight: 800 }}>
+                    S/ {Number(p.totalComisionPagada || 0).toFixed(2)}
                   </td>
                   <td style={{ minWidth: "260px" }}>
                     <input
@@ -669,7 +700,10 @@ function Pagos() {
                       onChange={(e) =>
                         cambiarMontoPago(p.idTrabajador, e.target.value)
                       }
-                      disabled={Number(p.totalComisionPendiente) <= 0}
+                      disabled={
+                        Number(p.totalComisionPendiente || 0) <= 0 ||
+                        procesandoPago === p.idTrabajador
+                      }
                     />
 
                     <div className="d-flex gap-2 mb-2">
@@ -677,11 +711,11 @@ function Pagos() {
                         className="btn btn-sm"
                         disabled={
                           procesandoPago === p.idTrabajador ||
-                          Number(p.totalComisionPendiente) <= 0 ||
+                          Number(p.totalComisionPendiente || 0) <= 0 ||
                           !obtenerMontoPago(p.idTrabajador) ||
                           obtenerMontoPago(p.idTrabajador) <= 0 ||
                           obtenerMontoPago(p.idTrabajador) >
-                            Number(p.totalComisionPendiente)
+                            Number(p.totalComisionPendiente || 0)
                         }
                         onClick={() =>
                           abrirConfirmacion(
@@ -689,7 +723,7 @@ function Pagos() {
                             () =>
                               pagarParcial(
                                 p.idTrabajador,
-                                Number(p.totalComisionPendiente)
+                                Number(p.totalComisionPendiente || 0)
                               )
                           )
                         }
@@ -697,36 +731,25 @@ function Pagos() {
                           background:
                             procesandoPago === p.idTrabajador
                               ? "#555"
-                              : Number(p.totalComisionPendiente) > 0 &&
+                              : Number(p.totalComisionPendiente || 0) > 0 &&
                                 obtenerMontoPago(p.idTrabajador) > 0 &&
                                 obtenerMontoPago(p.idTrabajador) <=
-                                  Number(p.totalComisionPendiente)
+                                  Number(p.totalComisionPendiente || 0)
                               ? "#d4af37"
                               : "#333",
                           color: "#111",
                           fontWeight: 700,
                           border: "none",
-                          cursor:
-                            procesandoPago === p.idTrabajador
-                              ? "wait"
-                              : Number(p.totalComisionPendiente) > 0 &&
-                                obtenerMontoPago(p.idTrabajador) > 0 &&
-                                obtenerMontoPago(p.idTrabajador) <=
-                                  Number(p.totalComisionPendiente)
-                              ? "pointer"
-                              : "not-allowed",
                         }}
                       >
-                        {procesandoPago === p.idTrabajador
-                          ? "Procesando..."
-                          : "Parcial"}
+                        {procesandoPago === p.idTrabajador ? "Procesando..." : "Parcial"}
                       </button>
 
                       <button
                         className="btn btn-sm"
                         disabled={
                           procesandoPago === p.idTrabajador ||
-                          Number(p.totalComisionPendiente) <= 0
+                          Number(p.totalComisionPendiente || 0) <= 0
                         }
                         onClick={() =>
                           abrirConfirmacion(
@@ -734,7 +757,7 @@ function Pagos() {
                             () =>
                               pagarTodo(
                                 p.idTrabajador,
-                                Number(p.totalComisionPendiente)
+                                Number(p.totalComisionPendiente || 0)
                               )
                           )
                         }
@@ -742,28 +765,20 @@ function Pagos() {
                           background:
                             procesandoPago === p.idTrabajador
                               ? "#555"
-                              : Number(p.totalComisionPendiente) > 0
+                              : Number(p.totalComisionPendiente || 0) > 0
                               ? "#22c55e"
                               : "#333",
                           color: "#fff",
                           fontWeight: 700,
                           border: "none",
-                          cursor:
-                            procesandoPago === p.idTrabajador
-                              ? "wait"
-                              : Number(p.totalComisionPendiente) > 0
-                              ? "pointer"
-                              : "not-allowed",
                         }}
                       >
-                        {procesandoPago === p.idTrabajador
-                          ? "Procesando..."
-                          : "Todo"}
+                        {procesandoPago === p.idTrabajador ? "Procesando..." : "Todo"}
                       </button>
                     </div>
 
                     {obtenerMontoPago(p.idTrabajador) >
-                      Number(p.totalComisionPendiente) && (
+                      Number(p.totalComisionPendiente || 0) && (
                       <small style={{ color: "#f87171" }}>
                         El monto excede lo pendiente
                       </small>
@@ -786,7 +801,7 @@ function Pagos() {
             <div>
               <h4 className="section-title">Historial de pagos</h4>
               <p className="section-subtitle">
-                Revisa cada pago registrado con sus filtros
+                Revisa cada pago registrado con sus filtros.
               </p>
             </div>
 
@@ -797,18 +812,20 @@ function Pagos() {
                 type="button"
                 className="btn btn-dark-outline export-btn d-flex align-items-center gap-2"
                 onClick={exportarPagosPDF}
+                disabled={pagosFiltrados.length === 0}
               >
                 <FaFilePdf size={16} />
-                Exportar PDF
+                PDF
               </button>
 
               <button
                 type="button"
                 className="btn btn-gold export-btn d-flex align-items-center gap-2"
                 onClick={exportarPagosExcel}
+                disabled={pagosFiltrados.length === 0}
               >
                 <FaFileExcel size={16} />
-                Exportar Excel
+                Excel
               </button>
             </div>
           </div>
@@ -821,13 +838,19 @@ function Pagos() {
               "Observación",
             ]}
           >
-            {pagosFiltrados.length > 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan="4" className="text-center py-4">
+                  Cargando historial...
+                </td>
+              </tr>
+            ) : pagosFiltrados.length > 0 ? (
               pagosFiltrados.map((p) => (
                 <tr key={p.idPago}>
-                  <td style={{ fontWeight: 600 }}>{p.trabajador}</td>
+                  <td style={{ fontWeight: 700 }}>{p.trabajador}</td>
                   <td>{new Date(p.fechaPago).toLocaleString()}</td>
-                  <td style={{ color: "#86efac", fontWeight: 700 }}>
-                    S/ {Number(p.montoPagado).toFixed(2)}
+                  <td style={{ color: "#22c55e", fontWeight: 800 }}>
+                    S/ {Number(p.montoPagado || 0).toFixed(2)}
                   </td>
                   <td>{p.observacion || "-"}</td>
                 </tr>
@@ -909,7 +932,7 @@ function Pagos() {
 
         <Toast
           mensaje={mensaje || error}
-          tipo={tipoMensaje}
+          tipo={error ? "error" : tipoMensaje}
           onClose={() => {
             setMensaje("");
             setError("");

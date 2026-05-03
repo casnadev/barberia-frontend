@@ -1,11 +1,12 @@
 import { Navigate } from "react-router-dom";
+import { getAuthData, clearAuthData } from "./authStorage";
 
-export default function AdminRoute({ children }) {
-  const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
-  const esAdmin = usuario?.rol?.toLowerCase() === "admin";
+export default function ProtectedRoute({ children }) {
+  const { token, usuario } = getAuthData();
 
-  if (!esAdmin) {
-    return <Navigate to="/" replace />;
+  if (!token || !usuario) {
+    clearAuthData();
+    return <Navigate to="/login" replace />;
   }
 
   return children;

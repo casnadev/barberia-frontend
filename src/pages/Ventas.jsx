@@ -35,33 +35,34 @@ function Ventas() {
   const [filtroServicio, setFiltroServicio] = useState("");
   const [filtroRapidoActivo, setFiltroRapidoActivo] = useState("");
   const [limpiandoActivo, setLimpiandoActivo] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const esMobile =
-    typeof window !== "undefined" && window.innerWidth < 768;
+  const esMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   const chartColors = {
     gold: "#d4af37",
-    white: "#f5f5f5",
-    axis: "#cfcfcf",
-    grid: "#333",
-    dark: "#111",
-    border: "rgba(212,175,55,0.25)",
+    text: "#111827",
+    axis: "#6b7280",
+    grid: "#e5e7eb",
+    bg: "#ffffff",
+    border: "rgba(15,23,42,0.08)",
   };
 
   const tooltipStyle = {
     contentStyle: {
-      backgroundColor: chartColors.dark,
+      backgroundColor: chartColors.bg,
       border: `1px solid ${chartColors.border}`,
-      borderRadius: "10px",
-      color: chartColors.white,
+      borderRadius: "12px",
+      color: chartColors.text,
+      boxShadow: "0 8px 20px rgba(15,23,42,.08)",
     },
-    labelStyle: { color: chartColors.gold },
-    itemStyle: { color: chartColors.white },
+    labelStyle: { color: chartColors.text, fontWeight: 800 },
+    itemStyle: { color: chartColors.text },
   };
 
   const legendStyle = {
     wrapperStyle: {
-      color: chartColors.white,
+      color: chartColors.text,
       paddingTop: "10px",
     },
   };
@@ -69,6 +70,9 @@ function Ventas() {
   useEffect(() => {
     const cargarDatos = async () => {
       try {
+        setLoading(true);
+        setError("");
+
         const [resVentas, resTrabajadores, resServicios] = await Promise.all([
           authFetch(`${API_BASE}/Ventas/completas`),
           authFetch(`${API_BASE}/Trabajadores`),
@@ -84,27 +88,51 @@ function Ventas() {
             resServicios.json(),
           ]);
 
-        setVentas(dataVentas);
-        setTrabajadores(dataTrabajadores);
-        setServicios(dataServicios);
+        if (!resVentas.ok) {
+          setTipoMensaje("error");
+          setError(dataVentas.mensaje || "Error al cargar ventas");
+          return;
+        }
+
+        if (!resTrabajadores.ok) {
+          setTipoMensaje("error");
+          setError(dataTrabajadores.mensaje || "Error al cargar trabajadores");
+          return;
+        }
+
+        if (!resServicios.ok) {
+          setTipoMensaje("error");
+          setError(dataServicios.mensaje || "Error al cargar servicios");
+          return;
+        }
+
+        setVentas(dataVentas || []);
+        setTrabajadores(dataTrabajadores || []);
+        setServicios(dataServicios || []);
       } catch (err) {
         console.error(err);
         setTipoMensaje("error");
         setError("Error al cargar análisis");
+      } finally {
+        setLoading(false);
       }
     };
 
     cargarDatos();
   }, []);
 
-  const aplicarFiltroHoy = () => {
-    const hoy = new Date();
-    const fechaHoy = `${hoy.getFullYear()}-${String(
-      hoy.getMonth() + 1
-    ).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
+  const obtenerFechaLocal = (fecha) => {
+    return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(fecha.getDate()).padStart(2, "0")}`;
+  };
 
-    setFechaDesde(fechaHoy);
-    setFechaHasta(fechaHoy);
+  const aplicarFiltroHoy = () => {
+    const hoy = obtenerFechaLocal(new Date());
+
+    setFechaDesde(hoy);
+    setFechaHasta(hoy);
     setFiltroRapidoActivo("hoy");
   };
 
@@ -116,16 +144,8 @@ function Ventas() {
     const lunes = new Date(hoy);
     lunes.setDate(hoy.getDate() - ajuste);
 
-    const fechaHoy = `${hoy.getFullYear()}-${String(
-      hoy.getMonth() + 1
-    ).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
-
-    const fechaLunes = `${lunes.getFullYear()}-${String(
-      lunes.getMonth() + 1
-    ).padStart(2, "0")}-${String(lunes.getDate()).padStart(2, "0")}`;
-
-    setFechaDesde(fechaLunes);
-    setFechaHasta(fechaHoy);
+    setFechaDesde(obtenerFechaLocal(lunes));
+    setFechaHasta(obtenerFechaLocal(hoy));
     setFiltroRapidoActivo("semana");
   };
 
@@ -133,16 +153,8 @@ function Ventas() {
     const hoy = new Date();
     const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
 
-    const fechaHoy = `${hoy.getFullYear()}-${String(
-      hoy.getMonth() + 1
-    ).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
-
-    const fechaPrimerDia = `${primerDia.getFullYear()}-${String(
-      primerDia.getMonth() + 1
-    ).padStart(2, "0")}-${String(primerDia.getDate()).padStart(2, "0")}`;
-
-    setFechaDesde(fechaPrimerDia);
-    setFechaHasta(fechaHoy);
+    setFechaDesde(obtenerFechaLocal(primerDia));
+    setFechaHasta(obtenerFechaLocal(hoy));
     setFiltroRapidoActivo("mes");
   };
 
@@ -160,13 +172,9 @@ function Ventas() {
         if (fechaVenta > hasta) return false;
       }
 
-      if (filtroTrabajador) {
-        if (v.trabajador !== filtroTrabajador) return false;
-      }
+      if (filtroTrabajador && v.trabajador !== filtroTrabajador) return false;
 
-      if (filtroServicio) {
-        if (v.servicio !== filtroServicio) return false;
-      }
+      if (filtroServicio && v.servicio !== filtroServicio) return false;
 
       return true;
     });
@@ -188,6 +196,11 @@ function Ventas() {
 
   const cantidadVentas = useMemo(
     () => new Set(ventasFiltradas.map((v) => `${v.idVenta}`)).size,
+    [ventasFiltradas]
+  );
+
+  const serviciosDistintos = useMemo(
+    () => new Set(ventasFiltradas.map((v) => v.servicio)).size,
     [ventasFiltradas]
   );
 
@@ -278,21 +291,25 @@ function Ventas() {
 
       <div className="container-fluid py-4">
         <CardDark className="mb-4">
-          <div className="d-flex justify-content-between align-items-center mb-4">
+          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <div>
               <h4 className="section-title">Filtros de análisis</h4>
               <p className="section-subtitle">
-                Ajusta el período y el detalle que deseas revisar
+                Ajusta el período, trabajador o servicio que deseas revisar.
               </p>
             </div>
-            <GoldBadge>{ventasFiltradas.length} registros</GoldBadge>
+
+            <GoldBadge>
+              {loading ? "Cargando..." : `${ventasFiltradas.length} registros`}
+            </GoldBadge>
           </div>
 
           <div className="filtros-rapidos mb-3">
             <button
               type="button"
-              className={`btn ${filtroRapidoActivo === "hoy" ? "btn-gold" : "btn-dark-outline"
-                }`}
+              className={`btn ${
+                filtroRapidoActivo === "hoy" ? "btn-gold" : "btn-dark-outline"
+              }`}
               onClick={aplicarFiltroHoy}
             >
               Hoy
@@ -300,10 +317,11 @@ function Ventas() {
 
             <button
               type="button"
-              className={`btn ${filtroRapidoActivo === "semana"
+              className={`btn ${
+                filtroRapidoActivo === "semana"
                   ? "btn-gold"
                   : "btn-dark-outline"
-                }`}
+              }`}
               onClick={aplicarFiltroSemana}
             >
               Semana
@@ -311,8 +329,9 @@ function Ventas() {
 
             <button
               type="button"
-              className={`btn ${filtroRapidoActivo === "mes" ? "btn-gold" : "btn-dark-outline"
-                }`}
+              className={`btn ${
+                filtroRapidoActivo === "mes" ? "btn-gold" : "btn-dark-outline"
+              }`}
               onClick={aplicarFiltroMes}
             >
               Mes
@@ -320,15 +339,16 @@ function Ventas() {
 
             <button
               type="button"
-              className={`btn ${limpiandoActivo ? "btn-gold" : "btn-dark-outline"
-                }`}
+              className={`btn ${
+                limpiandoActivo ? "btn-gold" : "btn-dark-outline"
+              }`}
               onClick={limpiarFiltros}
             >
               Limpiar
             </button>
           </div>
 
-          <div className="analisis-filtros mb-4">
+          <div className="analisis-filtros mb-1">
             <div className="filtro-item">
               <DateFilter
                 label="Desde"
@@ -355,10 +375,11 @@ function Ventas() {
             <div className="filtro-item">
               <label
                 className="form-label"
-                style={{ color: "#d4af37", fontWeight: 600 }}
+                style={{ color: "#d4af37", fontWeight: 700 }}
               >
                 Trabajador
               </label>
+
               <select
                 className="form-control input-dark"
                 value={filtroTrabajador}
@@ -379,10 +400,11 @@ function Ventas() {
             <div className="filtro-item">
               <label
                 className="form-label"
-                style={{ color: "#d4af37", fontWeight: 600 }}
+                style={{ color: "#d4af37", fontWeight: 700 }}
               >
                 Servicio
               </label>
+
               <select
                 className="form-control input-dark"
                 value={filtroServicio}
@@ -403,140 +425,149 @@ function Ventas() {
         </CardDark>
 
         <CardDark className="mb-4">
-          <div className="d-flex justify-content-between align-items-center mb-4">
+          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <div>
               <h4 className="section-title">Resumen del período</h4>
               <p className="section-subtitle">
-                Totales calculados según los filtros aplicados
+                Totales calculados según los filtros aplicados.
               </p>
             </div>
+
             <GoldBadge>{cantidadVentas} ventas</GoldBadge>
           </div>
 
-          <div className="row g-3">
-            <div className="col-lg-3 col-md-6">
-              <div
-                className="p-3 h-100"
+          <div className="dashboard-four-cols">
+            <CardDark className="h-100">
+              <p
+                className="text-uppercase fw-semibold mb-2"
                 style={{
-                  background: "rgba(212, 175, 55, 0.08)",
-                  borderRadius: "16px",
-                  border: "1px solid rgba(212, 175, 55, 0.22)",
+                  color: "#c9a227",
+                  fontSize: "0.85rem",
+                  letterSpacing: "1px",
                 }}
               >
-                <div
-                  style={{
-                    color: "#d4af37",
-                    fontWeight: 700,
-                    fontSize: "0.9rem",
-                    marginBottom: "8px",
-                  }}
-                >
-                  Total vendido
-                </div>
-                <div
-                  style={{
-                    color: "#ffffff",
-                    fontSize: "2rem",
-                    fontWeight: 800,
-                  }}
-                >
-                  S/ {totalFiltrado.toFixed(2)}
-                </div>
-              </div>
-            </div>
+                Total vendido
+              </p>
 
-            <div className="col-lg-3 col-md-6">
-              <div
-                className="p-3 h-100"
-                style={{
-                  background: "rgba(74, 222, 128, 0.08)",
-                  borderRadius: "16px",
-                  border: "1px solid rgba(74, 222, 128, 0.22)",
-                }}
+              <h2
+                className="fw-bold mb-3"
+                style={{ fontSize: "2.2rem", color: "#6b7280" }}
               >
-                <div
-                  style={{
-                    color: "#86efac",
-                    fontWeight: 700,
-                    fontSize: "0.9rem",
-                    marginBottom: "8px",
-                  }}
-                >
-                  Comisión generada
-                </div>
-                <div
-                  style={{
-                    color: "#ffffff",
-                    fontSize: "2rem",
-                    fontWeight: 800,
-                  }}
-                >
-                  S/ {totalComisionFiltrada.toFixed(2)}
-                </div>
-              </div>
-            </div>
+                S/ {totalFiltrado.toFixed(2)}
+              </h2>
 
-            <div className="col-lg-3 col-md-6">
               <div
-                className="p-3 h-100"
+                className="p-3"
                 style={{
-                  background: "rgba(192, 132, 252, 0.08)",
+                  background: "rgba(201, 162, 39, 0.08)",
                   borderRadius: "16px",
-                  border: "1px solid rgba(192, 132, 252, 0.22)",
+                  border: "1px solid rgba(201, 162, 39, 0.18)",
+                  color: "#8b6f10",
+                  fontWeight: 700,
                 }}
               >
-                <div
-                  style={{
-                    color: "#c084fc",
-                    fontWeight: 700,
-                    fontSize: "0.9rem",
-                    marginBottom: "8px",
-                  }}
-                >
-                  Servicios distintos
-                </div>
-                <div
-                  style={{
-                    color: "#ffffff",
-                    fontSize: "2rem",
-                    fontWeight: 800,
-                  }}
-                >
-                  {new Set(ventasFiltradas.map((v) => v.servicio)).size}
-                </div>
+                Ingresos filtrados
               </div>
-            </div>
+            </CardDark>
 
-            <div className="col-lg-3 col-md-6">
-              <div
-                className="p-3 h-100"
+            <CardDark className="h-100">
+              <p
+                className="text-uppercase fw-semibold mb-2"
                 style={{
-                  background: "rgba(96, 165, 250, 0.08)",
-                  borderRadius: "16px",
-                  border: "1px solid rgba(96, 165, 250, 0.22)",
+                  color: "#22c55e",
+                  fontSize: "0.85rem",
+                  letterSpacing: "1px",
                 }}
               >
-                <div
-                  style={{
-                    color: "#93c5fd",
-                    fontWeight: 700,
-                    fontSize: "0.9rem",
-                    marginBottom: "8px",
-                  }}
-                >
-                  Cantidad de ventas
-                </div>
-                <div
-                  style={{
-                    color: "#ffffff",
-                    fontSize: "2rem",
-                    fontWeight: 800,
-                  }}
-                >
-                  {cantidadVentas}
-                </div>
+                Comisión generada
+              </p>
+
+              <h2
+                className="fw-bold mb-3"
+                style={{ fontSize: "2.2rem", color: "#6b7280" }}
+              >
+                S/ {totalComisionFiltrada.toFixed(2)}
+              </h2>
+
+              <div
+                className="p-3"
+                style={{
+                  background: "rgba(34, 197, 94, 0.08)",
+                  borderRadius: "16px",
+                  border: "1px solid rgba(34, 197, 94, 0.18)",
+                  color: "#166534",
+                  fontWeight: 700,
+                }}
+              >
+                Total de comisiones
               </div>
-            </div>
+            </CardDark>
+
+            <CardDark className="h-100">
+              <p
+                className="text-uppercase fw-semibold mb-2"
+                style={{
+                  color: "#a855f7",
+                  fontSize: "0.85rem",
+                  letterSpacing: "1px",
+                }}
+              >
+                Servicios distintos
+              </p>
+
+              <h2
+                className="fw-bold mb-3"
+                style={{ fontSize: "2.2rem", color: "#6b7280" }}
+              >
+                {serviciosDistintos}
+              </h2>
+
+              <div
+                className="p-3"
+                style={{
+                  background: "rgba(168, 85, 247, 0.08)",
+                  borderRadius: "16px",
+                  border: "1px solid rgba(168, 85, 247, 0.18)",
+                  color: "#6b21a8",
+                  fontWeight: 700,
+                }}
+              >
+                Servicios vendidos
+              </div>
+            </CardDark>
+
+            <CardDark className="h-100">
+              <p
+                className="text-uppercase fw-semibold mb-2"
+                style={{
+                  color: "#38bdf8",
+                  fontSize: "0.85rem",
+                  letterSpacing: "1px",
+                }}
+              >
+                Cantidad de ventas
+              </p>
+
+              <h2
+                className="fw-bold mb-3"
+                style={{ fontSize: "2.2rem", color: "#6b7280" }}
+              >
+                {cantidadVentas}
+              </h2>
+
+              <div
+                className="p-3"
+                style={{
+                  background: "rgba(56, 189, 248, 0.08)",
+                  borderRadius: "16px",
+                  border: "1px solid rgba(56, 189, 248, 0.18)",
+                  color: "#075985",
+                  fontWeight: 700,
+                }}
+              >
+                Ventas únicas
+              </div>
+            </CardDark>
           </div>
         </CardDark>
 
@@ -547,9 +578,10 @@ function Ventas() {
                 <div>
                   <h4 className="section-title">Ventas por trabajador</h4>
                   <p className="section-subtitle">
-                    Comparación de ingresos generados
+                    Comparación de ingresos generados.
                   </p>
                 </div>
+
                 <GoldBadge>{ventasPorTrabajador.length} datos</GoldBadge>
               </div>
 
@@ -621,9 +653,10 @@ function Ventas() {
                 <div>
                   <h4 className="section-title">Comisiones por trabajador</h4>
                   <p className="section-subtitle">
-                    Comparación del total de comisiones generadas
+                    Comparación del total de comisiones generadas.
                   </p>
                 </div>
+
                 <GoldBadge>{comisionesPorTrabajador.length} datos</GoldBadge>
               </div>
 
@@ -691,11 +724,11 @@ function Ventas() {
         </div>
 
         <CardDark className="mb-4">
-          <div className="d-flex justify-content-between align-items-center mb-4">
+          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <div>
               <h4 className="section-title">Ventas por día</h4>
               <p className="section-subtitle">
-                Evolución del total vendido según el rango filtrado
+                Evolución del total vendido según el rango filtrado.
               </p>
             </div>
 
@@ -722,10 +755,7 @@ function Ventas() {
                   </linearGradient>
                 </defs>
 
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke={chartColors.grid}
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                 <XAxis
                   dataKey="fecha"
                   stroke={chartColors.axis}
@@ -759,13 +789,14 @@ function Ventas() {
         </CardDark>
 
         <CardDark>
-          <div className="d-flex justify-content-between align-items-center mb-4">
+          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <div>
               <h4 className="section-title">Detalle analítico</h4>
               <p className="section-subtitle">
-                Filtra y revisa el comportamiento de ventas del negocio
+                Revisa el comportamiento detallado de ventas del negocio.
               </p>
             </div>
+
             <GoldBadge>{ventasFiltradas.length} registros</GoldBadge>
           </div>
 
@@ -783,7 +814,13 @@ function Ventas() {
               "Total",
             ]}
           >
-            {ventasFiltradas.length > 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan="10" className="text-center py-4">
+                  Cargando análisis...
+                </td>
+              </tr>
+            ) : ventasFiltradas.length > 0 ? (
               ventasFiltradas.map((v) => (
                 <tr
                   key={`${v.idVenta}-${v.fechaVenta}-${v.servicio}-${v.trabajador}`}
@@ -795,23 +832,23 @@ function Ventas() {
                     <span className="table-pill">{v.trabajador}</span>
                   </td>
                   <td>{v.cantidad}</td>
-                  <td>S/ {Number(v.precioUnitario).toFixed(2)}</td>
-                  <td>S/ {Number(v.subtotal).toFixed(2)}</td>
-                  <td style={{ color: "#f4d35e", fontWeight: 700 }}>
+                  <td>S/ {Number(v.precioUnitario || 0).toFixed(2)}</td>
+                  <td>S/ {Number(v.subtotal || 0).toFixed(2)}</td>
+                  <td style={{ color: "#f4d35e", fontWeight: 800 }}>
                     {Number(v.porcentajeComisionAplicado || 0).toFixed(0)}%
                   </td>
-                  <td style={{ color: "#86efac", fontWeight: 700 }}>
+                  <td style={{ color: "#22c55e", fontWeight: 800 }}>
                     S/ {Number(v.montoComisionCalculado || 0).toFixed(2)}
                   </td>
-                  <td style={{ color: "#d4af37", fontWeight: 700 }}>
-                    S/ {Number(v.total).toFixed(2)}
+                  <td style={{ color: "#d4af37", fontWeight: 900 }}>
+                    S/ {Number(v.total || 0).toFixed(2)}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
                 <td colSpan="10" className="text-center py-4">
-                  No hay registros para el análisis
+                  No hay registros para el análisis.
                 </td>
               </tr>
             )}
@@ -821,7 +858,7 @@ function Ventas() {
 
       <Toast
         mensaje={mensaje || error}
-        tipo={tipoMensaje}
+        tipo={error ? "error" : tipoMensaje}
         onClose={() => {
           setMensaje("");
           setError("");
