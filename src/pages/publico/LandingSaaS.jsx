@@ -82,8 +82,8 @@ export default function LandingSaaS() {
             </Link>
 
             <a
-              href="https://wa.me/51999999999"
-              target="_blank"
+              href="#"
+              target=""
               rel="noreferrer"
               className="saas-nav-cta"
             >
@@ -110,8 +110,8 @@ export default function LandingSaaS() {
 
               <div className="saas-hero-actions">
                 <a
-                  href="https://wa.me/51999999999"
-                  target="_blank"
+                  href="#"
+                  target=""
                   rel="noreferrer"
                   className="saas-btn-primary"
                 >
@@ -329,8 +329,8 @@ export default function LandingSaaS() {
 
           <div className="saas-hero-actions center">
             <a
-              href="https://wa.me/51999999999"
-              target="_blank"
+              href="#"
+              target=""
               rel="noreferrer"
               className="saas-btn-primary"
             >

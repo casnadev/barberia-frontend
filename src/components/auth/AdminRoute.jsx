@@ -9,9 +9,9 @@ export default function AdminRoute({ children }) {
     return <Navigate to="/login" replace />;
   }
 
-  const esAdmin = usuario?.rol?.toLowerCase() === "admin";
+  const rol = String(usuario?.rol || "").trim().toLowerCase();
 
-  if (!esAdmin) {
+  if (rol !== "admin") {
     return <Navigate to="/trabajador" replace />;
   }
 

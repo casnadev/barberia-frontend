@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import API_BASE from "../services/api";
+import authFetch from "../services/authFetch";
+
 import CardDark from "../components/ui/CardDark";
 import PageHeader from "../components/ui/PageHeader";
 import GoldBadge from "../components/ui/GoldBadge";
 import TableDark from "../components/ui/TableDark";
+
 import {
   ResponsiveContainer,
   BarChart,
@@ -16,7 +19,6 @@ import {
   Area,
   AreaChart,
 } from "recharts";
-import authFetch from "../services/authFetch";
 
 function Dashboard() {
   const [dashboard, setDashboard] = useState({
@@ -69,35 +71,44 @@ function Dashboard() {
   const esNegativo = utilidad < 0;
   const esCero = utilidad === 0;
 
-  const esMobile =
-    typeof window !== "undefined" && window.innerWidth < 768;
+  const esMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   const chartColors = {
-    gold: "#c9a227",
-    white: "#111827",
-    axis: "#6b7280",
-    grid: "#e5e7eb",
-    dark: "#fff",
-    border: "rgba(15,23,42,0.08)",
+    gold: "#d4af37",
+    goldSoft: "#f0cf73",
+    axis: "#b8b8b8",
+    grid: "rgba(255,255,255,0.08)",
+    text: "#f5f5f5",
+    muted: "#9ca3af",
+    border: "rgba(212,175,55,0.18)",
   };
 
   const tooltipStyle = {
     contentStyle: {
-      backgroundColor: "#ffffff",
+      backgroundColor: "#111111",
       border: `1px solid ${chartColors.border}`,
-      borderRadius: "10px",
-      color: "#111827",
-      boxShadow: "0 8px 20px rgba(15, 23, 42, 0.08)",
+      borderRadius: "14px",
+      color: "#f5f5f5",
+      boxShadow: "0 14px 30px rgba(0,0,0,0.35)",
     },
-    labelStyle: { color: "#111827" },
-    itemStyle: { color: "#111827" },
+    labelStyle: { color: "#f0cf73" },
+    itemStyle: { color: "#f5f5f5" },
   };
 
   const legendStyle = {
     wrapperStyle: {
-      color: chartColors.white,
+      color: chartColors.text,
       paddingTop: "10px",
     },
+  };
+
+  const leerJsonSeguro = async (res, valorDefecto) => {
+    try {
+      if (!res || !res.ok) return valorDefecto;
+      return await res.json();
+    } catch {
+      return valorDefecto;
+    }
   };
 
   const obtenerFechaHoy = () => {
@@ -117,16 +128,13 @@ function Dashboard() {
         `${API_BASE}/Ventas/resumen-financiero?desde=${fechaHoy}&hasta=${fechaHoy}`
       );
 
-      if (!res) return;
+      const data = await leerJsonSeguro(res, null);
 
-      if (!res.ok) {
-        const textoError = await res.text();
-        console.error("Error resumen financiero:", textoError);
+      if (!res || !res.ok || !data) {
         setError("Error al cargar resumen financiero");
         return;
       }
 
-      const data = await res.json();
       setResumenFinanciero(data);
     } catch (err) {
       console.error(err);
@@ -138,14 +146,10 @@ function Dashboard() {
     try {
       setLoadingComisiones(true);
 
-      const resComisiones = await authFetch(
-        `${API_BASE}/Ventas/comisiones-dia`
-      );
+      const resComisiones = await authFetch(`${API_BASE}/Ventas/comisiones-dia`);
+      const dataComisiones = await leerJsonSeguro(resComisiones, []);
 
-      if (!resComisiones) return;
-
-      const dataComisiones = await resComisiones.json();
-      setComisiones(dataComisiones);
+      setComisiones(Array.isArray(dataComisiones) ? dataComisiones : []);
     } catch (err) {
       console.error(err);
       setError("Error al refrescar comisiones");
@@ -160,17 +164,13 @@ function Dashboard() {
         setLoadingResumen(true);
 
         const resDashboard = await authFetch(`${API_BASE}/Ventas/dashboard`);
+        const dataDashboard = await leerJsonSeguro(resDashboard, null);
 
-        if (!resDashboard) return;
-
-        if (!resDashboard.ok) {
-          const textoError = await resDashboard.text();
-          console.error("Error dashboard:", textoError);
+        if (!resDashboard || !resDashboard.ok || !dataDashboard) {
           setError("Error al cargar el resumen del dashboard");
           return;
         }
 
-        const dataDashboard = await resDashboard.json();
         setDashboard(dataDashboard);
       } catch (err) {
         console.error(err);
@@ -187,14 +187,12 @@ function Dashboard() {
     const cargarReservasPendientes = async () => {
       try {
         const res = await authFetch(`${API_BASE}/Reservas/mis-reservas`);
+        const data = await leerJsonSeguro(res, []);
 
-        if (!res) return;
-
-        const data = await res.json();
-
-        const pendientes = data.filter(
-          (r) => r.estado === "Pendiente"
-        ).length;
+        const pendientes = Array.isArray(data)
+          ? data.filter((r) => String(r.estado || "").toLowerCase() === "pendiente")
+              .length
+          : 0;
 
         setReservasPendientes(pendientes);
       } catch (err) {
@@ -223,16 +221,13 @@ function Dashboard() {
           `${API_BASE}/Ventas/resumen-financiero?desde=${fechaHoy}&hasta=${fechaHoy}`
         );
 
-        if (!res) return;
+        const data = await leerJsonSeguro(res, null);
 
-        if (!res.ok) {
-          const textoError = await res.text();
-          console.error("Error resumen financiero:", textoError);
+        if (!res || !res.ok || !data) {
           setError("Error al cargar resumen financiero");
           return;
         }
 
-        const data = await res.json();
         setResumenFinanciero(data);
       } catch (err) {
         console.error(err);
@@ -252,10 +247,9 @@ function Dashboard() {
           `${API_BASE}/Ventas/ventas-por-dia`
         );
 
-        if (!resVentasPorDia) return;
+        const dataVentasPorDia = await leerJsonSeguro(resVentasPorDia, []);
 
-        const dataVentasPorDia = await resVentasPorDia.json();
-        setVentasPorDia(dataVentasPorDia);
+        setVentasPorDia(Array.isArray(dataVentasPorDia) ? dataVentasPorDia : []);
       } catch (err) {
         console.error(err);
         setError("Error al cargar ventas por día");
@@ -277,6 +271,26 @@ function Dashboard() {
     return () => {
       window.removeEventListener("nombre-negocio-actualizado", actualizarNombre);
     };
+  }, []);
+
+  useEffect(() => {
+    const cargarNegocio = async () => {
+      try {
+        const res = await authFetch(`${API_BASE}/Negocios/mi-negocio`);
+        const data = await leerJsonSeguro(res, null);
+
+        if (!res || !res.ok || !data) return;
+
+        localStorage.setItem("slugNegocio", data.slug || "");
+        localStorage.setItem("nombreNegocio", data.nombre || "");
+
+        setNombreNegocio(data.nombre || "");
+      } catch (err) {
+        console.error("Error cargando negocio:", err);
+      }
+    };
+
+    cargarNegocio();
   }, []);
 
   const irAResumenDashboard = () => {
@@ -305,29 +319,6 @@ function Dashboard() {
 
     window.open(`/negocio/${slug}`, "_blank");
   };
-
-  useEffect(() => {
-    const cargarNegocio = async () => {
-      try {
-        const res = await authFetch(`${API_BASE}/Negocios/mi-negocio`);
-
-        if (!res) return;
-
-        const data = await res.json();
-
-        if (!res.ok) return;
-
-        localStorage.setItem("slugNegocio", data.slug || "");
-        localStorage.setItem("nombreNegocio", data.nombre || "");
-
-        setNombreNegocio(data.nombre || "");
-      } catch (err) {
-        console.error("Error cargando negocio:", err);
-      }
-    };
-
-    cargarNegocio();
-  }, []);
 
   const cambiarMontoPago = (idTrabajador, valor) => {
     setMontosPago((prev) => ({
@@ -380,11 +371,9 @@ function Dashboard() {
         }),
       });
 
-      if (!res) return;
+      const data = await leerJsonSeguro(res, {});
 
-      const data = await res.json();
-
-      if (!res.ok) {
+      if (!res || !res.ok) {
         setTipoMensajePago("error");
         setMensajePago(data.mensaje || "Error al registrar pago parcial");
         return;
@@ -392,7 +381,9 @@ function Dashboard() {
 
       setTipoMensajePago("success");
       setMensajePago(
-        `✅ Pago parcial registrado: S/ ${Number(data.totalPagado).toFixed(2)}`
+        `✅ Pago parcial registrado: S/ ${Number(data.totalPagado || monto).toFixed(
+          2
+        )}`
       );
 
       setMontosPago((prev) => ({
@@ -432,11 +423,9 @@ function Dashboard() {
         }
       );
 
-      if (!res) return;
+      const data = await leerJsonSeguro(res, {});
 
-      const data = await res.json();
-
-      if (!res.ok) {
+      if (!res || !res.ok) {
         setTipoMensajePago("error");
         setMensajePago(data.mensaje || "Error al pagar comisiones");
         return;
@@ -444,7 +433,9 @@ function Dashboard() {
 
       setTipoMensajePago("success");
       setMensajePago(
-        `✅ Pago total realizado: S/ ${Number(data.totalPagado).toFixed(2)}`
+        `✅ Pago total realizado: S/ ${Number(
+          data.totalPagado || totalPendiente
+        ).toFixed(2)}`
       );
 
       setMontosPago((prev) => ({
@@ -541,15 +532,9 @@ function Dashboard() {
       />
 
       <div className="container-fluid pt-2 pb-3 d-flex justify-content-between align-items-center">
-        <div style={{ color: "#9ca3af", fontSize: "0.9rem" }}>
-          Vista pública del negocio
-        </div>
+        <div className="section-subtitle">Vista pública del negocio</div>
 
-        <button
-          type="button"
-          className="btn btn-gold"
-          onClick={irSitioPublico}
-        >
+        <button type="button" className="btn btn-gold" onClick={irSitioPublico}>
           🌐 Ver sitio
         </button>
       </div>
@@ -598,15 +583,88 @@ function Dashboard() {
             overflow-x: auto;
           }
 
+          .dashboard-kpi-value {
+            font-size: 2.35rem;
+            font-weight: 900;
+            color: #f5f5f5;
+            margin-bottom: 1rem;
+          }
+
+          .dashboard-kpi-note {
+            padding: 14px;
+            border-radius: 16px;
+            background: rgba(212,175,55,0.08);
+            border: 1px solid rgba(212,175,55,0.16);
+            color: #d1d5db;
+            font-weight: 600;
+          }
+
+          .dashboard-worker-card {
+            border-radius: 20px;
+            padding: 22px;
+            height: 100%;
+            border: 1px solid rgba(212,175,55,0.18);
+            background:
+              radial-gradient(circle at top left, rgba(212,175,55,.18), transparent 32%),
+              linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+            box-shadow: 0 14px 30px rgba(0,0,0,.25);
+          }
+
+          .dashboard-worker-rank {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(212,175,55,.14);
+            color: #f0cf73;
+            font-weight: 800;
+            font-size: .85rem;
+          }
+
+          .dashboard-avatar-circle {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #d4af37, #f0cf73);
+            color: #111;
+            font-weight: 900;
+            box-shadow: 0 8px 18px rgba(212,175,55,.25);
+          }
+
+          .chart-scroll-mobile {
+            overflow-x: auto;
+            overflow-y: hidden;
+          }
+
+          .chart-legend-mobile {
+            margin-top: 12px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            color: #d1d5db;
+            font-size: .9rem;
+          }
+
+          .chart-legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .chart-legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+          }
+
           @media (min-width: 1200px) {
-            .dashboard-admin-layout {
-              gap: 0.85rem;
-            }
-
-            .dashboard-four-cols {
-              gap: 0.85rem;
-            }
-
+            .dashboard-admin-layout,
+            .dashboard-four-cols,
             .dashboard-two-cols {
               gap: 0.85rem;
             }
@@ -654,7 +712,7 @@ function Dashboard() {
             className="mb-4 px-4 py-3"
             style={{
               borderRadius: "16px",
-              fontWeight: 600,
+              fontWeight: 700,
               background:
                 tipoMensajePago === "success"
                   ? "rgba(34, 197, 94, 0.12)"
@@ -678,201 +736,67 @@ function Dashboard() {
             className="dashboard-full-row"
           >
             <div className="dashboard-four-cols">
-              <CardDark className="h-100">
-                <p
-                  className="text-uppercase fw-semibold mb-2"
-                  style={{
-                    color: "#c9a227",
-                    fontSize: "0.85rem",
-                    letterSpacing: "1px",
-                  }}
-                >
-                  Ventas del día
-                </p>
-
-                <h2
-                  className="fw-bold mb-3"
-                  style={{
-                    fontSize: "2.4rem",
-                    color: "#6b7280",
-                  }}
-                >
+              <CardDark className="h-100 kpi-card-pro">
+                <p className="section-subtitle mb-2">Ventas del día</p>
+                <h2 className="dashboard-kpi-value">
                   {loadingResumen
                     ? "Cargando..."
                     : `S/ ${Number(
-                      resumenFinanciero.totalVentas || dashboard.totalDia || 0
-                    ).toFixed(2)}`}
+                        resumenFinanciero.totalVentas || dashboard.totalDia || 0
+                      ).toFixed(2)}`}
                 </h2>
-
-                <div
-                  className="p-3"
-                  style={{
-                    background: "rgba(201, 162, 39, 0.08)",
-                    borderRadius: "16px",
-                    border: "1px solid rgba(201, 162, 39, 0.18)",
-                    color: "#8b6f10",
-                  }}
-                >
+                <div className="dashboard-kpi-note">
                   Rendimiento diario actualizado en tiempo real
                 </div>
               </CardDark>
 
-              <CardDark className="h-100">
-                <p
-                  className="text-uppercase fw-semibold mb-2"
-                  style={{
-                    color: "#f4d35e",
-                    fontSize: "0.85rem",
-                    letterSpacing: "1px",
-                  }}
-                >
-                  Pagos del día
-                </p>
-
-                <h2
-                  className="fw-bold mb-3"
-                  style={{
-                    fontSize: "2.4rem",
-                    color: "#6b7280",
-                  }}
-                >
+              <CardDark className="h-100 kpi-card-pro success">
+                <p className="section-subtitle mb-2">Pagos del día</p>
+                <h2 className="dashboard-kpi-value">
                   S/ {Number(resumenFinanciero.totalPagos || 0).toFixed(2)}
                 </h2>
-
-                <div
-                  className="p-3"
-                  style={{
-                    background: "rgba(245, 158, 11, 0.08)",
-                    borderRadius: "16px",
-                    border: "1px solid rgba(245, 158, 11, 0.18)",
-                    color: "#92400e",
-                  }}
-                >
+                <div className="dashboard-kpi-note">
                   Total pagado hoy a trabajadores
                 </div>
               </CardDark>
 
-              <CardDark className="h-100">
-                <p
-                  className="text-uppercase fw-semibold mb-2"
-                  style={{
-                    color: "#f87171",
-                    fontSize: "0.85rem",
-                    letterSpacing: "1px",
-                  }}
-                >
-                  Gastos del día
-                </p>
+              <CardDark className="h-100 kpi-card-pro purple">
 
-                <h2
-                  className="fw-bold mb-3"
-                  style={{
-                    fontSize: "2.4rem",
-                    color: "#6b7280",
-                  }}
-                >
+                <p className="section-subtitle mb-2">Gastos del día</p>
+                <h2 className="dashboard-kpi-value">
                   S/ {Number(resumenFinanciero.totalGastos || 0).toFixed(2)}
                 </h2>
-
-                <div
-                  className="p-3"
-                  style={{
-                    background: "rgba(239, 68, 68, 0.08)",
-                    borderRadius: "16px",
-                    border: "1px solid rgba(239, 68, 68, 0.18)",
-                    color: "#991b1b",
-                  }}
-                >
+                <div className="dashboard-kpi-note">
                   Total de egresos registrados hoy
                 </div>
               </CardDark>
 
-              <CardDark className="h-100">
-                <p
-                  className="text-uppercase fw-semibold mb-2"
-                  style={{
-                    color:
-                      Number(resumenFinanciero.utilidad || 0) >= 0
-                        ? "#4ade80"
-                        : "#f87171",
-                    fontSize: "0.85rem",
-                    letterSpacing: "1px",
-                  }}
-                >
-                  Utilidad del día
-                </p>
+              <CardDark className="h-100 kpi-card-pro info">
 
+                <p className="section-subtitle mb-2">Utilidad del día</p>
                 <h2
-                  className="fw-bold mb-3"
+                  className="dashboard-kpi-value"
                   style={{
-                    fontSize: "2.4rem",
-                    color: "#6b7280",
+                    color: esPositivo
+                      ? "#86efac"
+                      : esNegativo
+                      ? "#fca5a5"
+                      : "#f5f5f5",
                   }}
                 >
                   S/ {Number(resumenFinanciero.utilidad || 0).toFixed(2)}
                 </h2>
-
-                <div
-                  className="p-3"
-                  style={{
-                    background: esPositivo
-                      ? "rgba(34, 197, 94, 0.08)"
-                      : esNegativo
-                        ? "rgba(239, 68, 68, 0.08)"
-                        : "rgba(156, 163, 175, 0.08)",
-
-                    border: esPositivo
-                      ? "1px solid rgba(34, 197, 94, 0.2)"
-                      : esNegativo
-                        ? "1px solid rgba(239, 68, 68, 0.2)"
-                        : "1px solid rgba(156, 163, 175, 0.2)",
-
-                    color: esPositivo
-                      ? "#166534"
-                      : esNegativo
-                        ? "#991b1b"
-                        : "#374151",
-
-                    borderRadius: "16px",
-                  }}
-                >
+                <div className="dashboard-kpi-note">
                   {esPositivo && "Ganancia del negocio hoy"}
                   {esNegativo && "Pérdida del negocio hoy"}
                   {esCero && "Sin ganancia ni pérdida hoy"}
                 </div>
               </CardDark>
 
-              <CardDark className="h-100">
-                <p
-                  className="text-uppercase fw-semibold mb-2"
-                  style={{
-                    color: "#38bdf8",
-                    fontSize: "0.85rem",
-                    letterSpacing: "1px",
-                  }}
-                >
-                  Reservas pendientes
-                </p>
-
-                <h2
-                  className="fw-bold mb-3"
-                  style={{
-                    fontSize: "2.4rem",
-                    color: "#6b7280",
-                  }}
-                >
-                  {reservasPendientes}
-                </h2>
-
-                <div
-                  className="p-3"
-                  style={{
-                    background: "rgba(56,189,248,.08)",
-                    borderRadius: "16px",
-                    border: "1px solid rgba(56,189,248,.18)",
-                    color: "#075985",
-                  }}
-                >
+              <CardDark className="h-100 kpi-card-pro">
+                <p className="section-subtitle mb-2">Reservas pendientes</p>
+                <h2 className="dashboard-kpi-value">{reservasPendientes}</h2>
+                <div className="dashboard-kpi-note">
                   Citas pendientes por confirmar
                 </div>
 
@@ -880,8 +804,8 @@ function Dashboard() {
                   <div
                     style={{
                       marginTop: "14px",
-                      color: "#0ea5e9",
-                      fontWeight: 700,
+                      color: "#38bdf8",
+                      fontWeight: 800,
                     }}
                   >
                     🔔 Atención requerida
@@ -909,47 +833,31 @@ function Dashboard() {
               {loadingResumen ? (
                 <p className="section-subtitle mb-0">Cargando ranking...</p>
               ) : dashboard.topTrabajadores?.length > 0 ? (
-                <div id="top-trabajadores-mobile" className="row g-3">
+                <div className="row g-3">
                   {dashboard.topTrabajadores.map((item, index) => (
                     <div className="col-lg-4 col-md-6" key={index}>
-                      <div
-                        className="h-100 p-4"
-                        style={{
-                          borderRadius: "18px",
-                          background:
-                            index === 0
-                              ? "linear-gradient(135deg, #d4af37, #f5deb3)"
-                              : index === 1
-                                ? "linear-gradient(135deg, #2b2b2b, #3b3b3b)"
-                                : "linear-gradient(135deg, #4a3513, #7a5a1c)",
-                          color: index === 0 ? "#111" : "#fff",
-                          boxShadow: "0 12px 24px rgba(0,0,0,0.25)",
-                        }}
-                      >
-                        <div className="mb-2">
-                          <span
-                            className="px-2 py-1"
-                            style={{
-                              background:
-                                index === 0
-                                  ? "rgba(0,0,0,0.12)"
-                                  : "rgba(255,255,255,0.12)",
-                              borderRadius: "10px",
-                              fontSize: "0.85rem",
-                              fontWeight: 700,
-                            }}
-                          >
-                            {index + 1}° puesto
+                      <div className="dashboard-worker-card">
+                        <div className="d-flex align-items-center justify-content-between mb-3">
+                          <span className="dashboard-worker-rank">
+                            #{index + 1} puesto
                           </span>
+
+                          <div className="dashboard-avatar-circle">
+                            {String(item.trabajador || "T")
+                              .charAt(0)
+                              .toUpperCase()}
+                          </div>
                         </div>
 
-                        <h5 className="fw-bold mb-2">{item.trabajador}</h5>
+                        <h5 className="section-title mb-2">
+                          {item.trabajador}
+                        </h5>
 
-                        <p className="mb-1" style={{ opacity: 0.85 }}>
+                        <p className="section-subtitle mb-1">
                           Total generado hoy
                         </p>
 
-                        <h4 className="fw-bold mb-0">
+                        <h4 style={{ color: "#f0cf73", fontWeight: 900 }}>
                           S/ {Number(item.totalGenerado || 0).toFixed(2)}
                         </h4>
                       </div>
@@ -980,77 +888,44 @@ function Dashboard() {
               {loadingComisiones ? (
                 <p className="section-subtitle mb-0">Cargando gráfico...</p>
               ) : (
-                <>
-                  <div className="chart-scroll-mobile">
-                    <div
-                      className="dashboard-chart-box"
-                      style={{
-                        width: esMobile
-                          ? `${Math.max(comisiones.length * 90, 360)}px`
-                          : "100%",
-                      }}
-                    >
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={comisiones}>
-                          <defs>
-                            <linearGradient
-                              id="ventasTrabajadorGradient"
-                              x1="0"
-                              y1="0"
-                              x2="0"
-                              y2="1"
-                            >
-                              <stop
-                                offset="0%"
-                                stopColor="#f4d35e"
-                                stopOpacity={1}
-                              />
-                              <stop
-                                offset="100%"
-                                stopColor="#d4af37"
-                                stopOpacity={0.85}
-                              />
-                            </linearGradient>
-                          </defs>
-
-                          <CartesianGrid
-                            strokeDasharray="3 3"
-                            stroke={chartColors.grid}
-                          />
-                          <XAxis
-                            dataKey="trabajador"
-                            stroke={chartColors.axis}
-                            interval={0}
-                            tick={{ fontSize: 12 }}
-                          />
-                          <YAxis stroke={chartColors.axis} />
-                          <Tooltip {...tooltipStyle} />
-                          {!esMobile && <Legend {...legendStyle} />}
-
-                          <Bar
-                            dataKey="totalGenerado"
-                            name="Total generado hoy"
-                            fill="url(#ventasTrabajadorGradient)"
-                            radius={[8, 8, 0, 0]}
-                            animationDuration={900}
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
+                <div className="chart-scroll-mobile">
+                  <div
+                    className="dashboard-chart-box"
+                    style={{
+                      width: esMobile
+                        ? `${Math.max(comisiones.length * 90, 360)}px`
+                        : "100%",
+                    }}
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={comisiones}>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke={chartColors.grid}
+                        />
+                        <XAxis
+                          dataKey="trabajador"
+                          stroke={chartColors.axis}
+                          interval={0}
+                          tick={{ fontSize: 12, fill: chartColors.axis }}
+                        />
+                        <YAxis
+                          stroke={chartColors.axis}
+                          tick={{ fill: chartColors.axis }}
+                        />
+                        <Tooltip {...tooltipStyle} />
+                        {!esMobile && <Legend {...legendStyle} />}
+                        <Bar
+                          dataKey="totalGenerado"
+                          name="Total generado hoy"
+                          fill="#d4af37"
+                          radius={[8, 8, 0, 0]}
+                          animationDuration={900}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
-
-                  {esMobile && (
-                    <div className="chart-legend-mobile">
-                      <span className="chart-legend-item">
-                        <span
-                          className="chart-legend-color"
-                          style={{ background: "#d4af37" }}
-                        ></span>
-                        Total generado hoy
-                      </span>
-                    </div>
-                  )}
-                </>
+                </div>
               )}
             </CardDark>
 
@@ -1069,112 +944,51 @@ function Dashboard() {
               {loadingComisiones ? (
                 <p className="section-subtitle mb-0">Cargando gráfico...</p>
               ) : (
-                <>
-                  <div className="chart-scroll-mobile">
-                    <div
-                      className="dashboard-chart-box"
-                      style={{
-                        width: esMobile
-                          ? `${Math.max(comisiones.length * 90, 360)}px`
-                          : "100%",
-                      }}
-                    >
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={comisiones}>
-                          <defs>
-                            <linearGradient
-                              id="pendienteGradient"
-                              x1="0"
-                              y1="0"
-                              x2="0"
-                              y2="1"
-                            >
-                              <stop
-                                offset="0%"
-                                stopColor="#f8e16c"
-                                stopOpacity={1}
-                              />
-                              <stop
-                                offset="100%"
-                                stopColor="#d4af37"
-                                stopOpacity={0.85}
-                              />
-                            </linearGradient>
-
-                            <linearGradient
-                              id="pagadaGradient"
-                              x1="0"
-                              y1="0"
-                              x2="0"
-                              y2="1"
-                            >
-                              <stop
-                                offset="0%"
-                                stopColor="#4ade80"
-                                stopOpacity={1}
-                              />
-                              <stop
-                                offset="100%"
-                                stopColor="#22c55e"
-                                stopOpacity={0.85}
-                              />
-                            </linearGradient>
-                          </defs>
-
-                          <CartesianGrid
-                            strokeDasharray="3 3"
-                            stroke={chartColors.grid}
-                          />
-                          <XAxis
-                            dataKey="trabajador"
-                            stroke={chartColors.axis}
-                            interval={0}
-                            tick={{ fontSize: 12 }}
-                          />
-                          <YAxis stroke={chartColors.axis} />
-                          <Tooltip {...tooltipStyle} />
-                          {!esMobile && <Legend {...legendStyle} />}
-
-                          <Bar
-                            dataKey="totalComisionPendiente"
-                            name="Pendiente hoy"
-                            fill="url(#pendienteGradient)"
-                            radius={[8, 8, 0, 0]}
-                            animationDuration={900}
-                          />
-
-                          <Bar
-                            dataKey="totalComisionPagada"
-                            name="Pagada hoy"
-                            fill="url(#pagadaGradient)"
-                            radius={[8, 8, 0, 0]}
-                            animationDuration={900}
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
+                <div className="chart-scroll-mobile">
+                  <div
+                    className="dashboard-chart-box"
+                    style={{
+                      width: esMobile
+                        ? `${Math.max(comisiones.length * 90, 360)}px`
+                        : "100%",
+                    }}
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={comisiones}>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke={chartColors.grid}
+                        />
+                        <XAxis
+                          dataKey="trabajador"
+                          stroke={chartColors.axis}
+                          interval={0}
+                          tick={{ fontSize: 12, fill: chartColors.axis }}
+                        />
+                        <YAxis
+                          stroke={chartColors.axis}
+                          tick={{ fill: chartColors.axis }}
+                        />
+                        <Tooltip {...tooltipStyle} />
+                        {!esMobile && <Legend {...legendStyle} />}
+                        <Bar
+                          dataKey="totalComisionPendiente"
+                          name="Pendiente hoy"
+                          fill="#f0cf73"
+                          radius={[8, 8, 0, 0]}
+                          animationDuration={900}
+                        />
+                        <Bar
+                          dataKey="totalComisionPagada"
+                          name="Pagada hoy"
+                          fill="#22c55e"
+                          radius={[8, 8, 0, 0]}
+                          animationDuration={900}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
-
-                  {esMobile && (
-                    <div className="chart-legend-mobile">
-                      <span className="chart-legend-item">
-                        <span
-                          className="chart-legend-color"
-                          style={{ background: "#f8e16c" }}
-                        ></span>
-                        Pendiente hoy
-                      </span>
-
-                      <span className="chart-legend-item">
-                        <span
-                          className="chart-legend-color"
-                          style={{ background: "#22c55e" }}
-                        ></span>
-                        Pagada hoy
-                      </span>
-                    </div>
-                  )}
-                </>
+                </div>
               )}
             </CardDark>
           </section>
@@ -1200,27 +1014,6 @@ function Dashboard() {
                 <div className="dashboard-chart-box-large">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={ventasPorDiaProcesadas}>
-                      <defs>
-                        <linearGradient
-                          id="ventasDiaArea"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="0%"
-                            stopColor="#c084fc"
-                            stopOpacity={0.45}
-                          />
-                          <stop
-                            offset="100%"
-                            stopColor="#c084fc"
-                            stopOpacity={0.05}
-                          />
-                        </linearGradient>
-                      </defs>
-
                       <CartesianGrid
                         strokeDasharray="3 3"
                         stroke={chartColors.grid}
@@ -1228,10 +1021,14 @@ function Dashboard() {
                       <XAxis
                         dataKey="dia"
                         stroke={chartColors.axis}
+                        tick={{ fill: chartColors.axis }}
                         interval={0}
                         minTickGap={0}
                       />
-                      <YAxis stroke={chartColors.axis} />
+                      <YAxis
+                        stroke={chartColors.axis}
+                        tick={{ fill: chartColors.axis }}
+                      />
                       <Tooltip
                         {...tooltipStyle}
                         labelFormatter={(value, payload) => {
@@ -1247,14 +1044,13 @@ function Dashboard() {
                         ]}
                       />
                       <Legend {...legendStyle} />
-
                       <Area
                         type="monotone"
                         dataKey="total"
                         name="Gráfico semanal"
                         stroke="#c084fc"
                         strokeWidth={3}
-                        fill="url(#ventasDiaArea)"
+                        fill="rgba(192,132,252,0.20)"
                         dot={{ r: 4, fill: "#c084fc" }}
                         activeDot={{ r: 6 }}
                         animationDuration={1000}
@@ -1300,18 +1096,15 @@ function Dashboard() {
                   ) : comisiones.length > 0 ? (
                     comisiones.map((c, index) => (
                       <tr key={index}>
-                        <td style={{ fontWeight: 600 }}>{c.trabajador}</td>
-
-                        <td>S/ {Number(c.totalGenerado).toFixed(2)}</td>
-
-                        <td style={{ color: "#f0cf73", fontWeight: 700 }}>
-                          S/ {Number(c.totalComisionPendiente).toFixed(2)}
+                        <td style={{ fontWeight: 700 }}>{c.trabajador}</td>
+                        <td>S/ {Number(c.totalGenerado || 0).toFixed(2)}</td>
+                        <td style={{ color: "#f0cf73", fontWeight: 800 }}>
+                          S/{" "}
+                          {Number(c.totalComisionPendiente || 0).toFixed(2)}
                         </td>
-
-                        <td style={{ color: "#86efac", fontWeight: 700 }}>
-                          S/ {Number(c.totalComisionPagada).toFixed(2)}
+                        <td style={{ color: "#86efac", fontWeight: 800 }}>
+                          S/ {Number(c.totalComisionPagada || 0).toFixed(2)}
                         </td>
-
                         <td style={{ minWidth: "260px" }}>
                           <input
                             type="number"
@@ -1328,14 +1121,14 @@ function Dashboard() {
 
                           <div className="d-flex gap-2 mb-2">
                             <button
-                              className="btn btn-sm"
+                              className="btn btn-sm btn-gold"
                               disabled={
                                 procesandoPago === c.idTrabajador ||
                                 c.totalComisionPendiente <= 0 ||
                                 !obtenerMontoPago(c.idTrabajador) ||
                                 obtenerMontoPago(c.idTrabajador) <= 0 ||
                                 obtenerMontoPago(c.idTrabajador) >
-                                c.totalComisionPendiente
+                                  c.totalComisionPendiente
                               }
                               onClick={() =>
                                 abrirConfirmacion(
@@ -1347,29 +1140,6 @@ function Dashboard() {
                                     )
                                 )
                               }
-                              style={{
-                                background:
-                                  procesandoPago === c.idTrabajador
-                                    ? "#555"
-                                    : c.totalComisionPendiente > 0 &&
-                                      obtenerMontoPago(c.idTrabajador) > 0 &&
-                                      obtenerMontoPago(c.idTrabajador) <=
-                                      c.totalComisionPendiente
-                                      ? "#d4af37"
-                                      : "#333",
-                                color: "#111",
-                                fontWeight: 700,
-                                border: "none",
-                                cursor:
-                                  procesandoPago === c.idTrabajador
-                                    ? "wait"
-                                    : c.totalComisionPendiente > 0 &&
-                                      obtenerMontoPago(c.idTrabajador) > 0 &&
-                                      obtenerMontoPago(c.idTrabajador) <=
-                                      c.totalComisionPendiente
-                                      ? "pointer"
-                                      : "not-allowed",
-                              }}
                             >
                               {procesandoPago === c.idTrabajador
                                 ? "Procesando..."
@@ -1394,20 +1164,12 @@ function Dashboard() {
                               }
                               style={{
                                 background:
-                                  procesandoPago === c.idTrabajador
-                                    ? "#555"
-                                    : c.totalComisionPendiente > 0
-                                      ? "#22c55e"
-                                      : "#333",
+                                  c.totalComisionPendiente > 0
+                                    ? "#22c55e"
+                                    : "#333",
                                 color: "#fff",
-                                fontWeight: 700,
+                                fontWeight: 800,
                                 border: "none",
-                                cursor:
-                                  procesandoPago === c.idTrabajador
-                                    ? "wait"
-                                    : c.totalComisionPendiente > 0
-                                      ? "pointer"
-                                      : "not-allowed",
                               }}
                             >
                               {procesandoPago === c.idTrabajador
@@ -1418,10 +1180,10 @@ function Dashboard() {
 
                           {obtenerMontoPago(c.idTrabajador) >
                             c.totalComisionPendiente && (
-                              <small style={{ color: "#f87171" }}>
-                                El monto excede lo pendiente
-                              </small>
-                            )}
+                            <small style={{ color: "#f87171" }}>
+                              El monto excede lo pendiente
+                            </small>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -1443,7 +1205,7 @@ function Dashboard() {
             style={{
               position: "fixed",
               inset: 0,
-              background: "rgba(0,0,0,0.65)",
+              background: "rgba(0,0,0,0.72)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -1451,38 +1213,19 @@ function Dashboard() {
               padding: "20px",
             }}
           >
-            <div
+            <CardDark
               style={{
                 width: "100%",
                 maxWidth: "420px",
-                background: "#111",
-                border: "1px solid rgba(212,175,55,0.25)",
-                borderRadius: "20px",
-                boxShadow: "0 20px 50px rgba(0,0,0,0.45)",
-                padding: "24px",
               }}
             >
-              <h4
-                style={{
-                  color: "#d4af37",
-                  marginBottom: "12px",
-                  fontWeight: 800,
-                }}
-              >
-                Confirmar acción
-              </h4>
+              <h4 className="section-title mb-3">Confirmar acción</h4>
 
-              <p
-                style={{
-                  color: "#f5f5f5",
-                  marginBottom: "20px",
-                  lineHeight: 1.5,
-                }}
-              >
+              <p className="section-subtitle" style={{ lineHeight: 1.6 }}>
                 {textoConfirmacion}
               </p>
 
-              <div className="d-flex gap-2 justify-content-end">
+              <div className="d-flex gap-2 justify-content-end mt-4">
                 <button
                   type="button"
                   className="btn btn-dark-outline"
@@ -1499,7 +1242,7 @@ function Dashboard() {
                   Confirmar
                 </button>
               </div>
-            </div>
+            </CardDark>
           </div>
         )}
       </div>

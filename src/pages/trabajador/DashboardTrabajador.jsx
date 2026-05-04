@@ -13,29 +13,37 @@ export default function DashboardTrabajador() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
+  const leerJsonSeguro = async (res, valorDefecto) => {
+    try {
+      if (!res || !res.ok) return valorDefecto;
+      return await res.json();
+    } catch {
+      return valorDefecto;
+    }
+  };
 
   const cargarDatos = async () => {
     try {
       setLoading(true);
+      setError("");
 
-      const [perfilRes, pagosRes, serviciosRes] = await Promise.all([
-        authFetch(`${API_BASE}/Trabajadores/mi-perfil`),
-        authFetch(`${API_BASE}/Trabajadores/mis-pagos`),
-        authFetch(`${API_BASE}/Trabajadores/mis-servicios`),
-      ]);
+      const perfilRes = await authFetch(`${API_BASE}/Trabajadores/mi-perfil`);
 
-      if (!perfilRes) return;
+      if (!perfilRes || !perfilRes.ok) {
+        throw new Error("No se pudo cargar el perfil del trabajador");
+      }
 
-      const perfilData = await perfilRes.json();
-      const pagosData = pagosRes ? await pagosRes.json() : [];
-      const serviciosData = serviciosRes ? await serviciosRes.json() : [];
+      const perfilData = await leerJsonSeguro(perfilRes, null);
+
+      const pagosRes = await authFetch(`${API_BASE}/Trabajadores/mis-pagos`);
+      const serviciosRes = await authFetch(`${API_BASE}/Trabajadores/mis-servicios`);
+
+      const pagosData = await leerJsonSeguro(pagosRes, []);
+      const serviciosData = await leerJsonSeguro(serviciosRes, []);
 
       setPerfil(perfilData);
-      setPagos(pagosData);
-      setServicios(serviciosData);
+      setPagos(Array.isArray(pagosData) ? pagosData : []);
+      setServicios(Array.isArray(serviciosData) ? serviciosData : []);
     } catch (err) {
       console.error(err);
       setError("Error al cargar el dashboard del trabajador");
@@ -43,6 +51,10 @@ export default function DashboardTrabajador() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
 
   const hoy = new Date().toLocaleDateString("en-CA");
 
@@ -149,12 +161,12 @@ export default function DashboardTrabajador() {
                   </p>
                 </div>
 
-                <GoldBadge>{perfil?.porcentajeComision}% comisión</GoldBadge>
+                <GoldBadge>{perfil?.porcentajeComision || 0}% comisión</GoldBadge>
               </div>
 
               <div className="mb-3">
                 <p className="section-subtitle mb-1">Nombre</p>
-                <h5>{perfil?.nombre}</h5>
+                <h5>{perfil?.nombre || "-"}</h5>
               </div>
 
               <div className="mb-3">
@@ -204,14 +216,20 @@ export default function DashboardTrabajador() {
                 {servicios.length > 0 ? (
                   servicios.slice(0, 6).map((s, i) => (
                     <tr key={i}>
-                      <td>{new Date(s.fechaVenta).toLocaleDateString()}</td>
-                      <td style={{ fontWeight: 600 }}>{s.servicio}</td>
+                      <td>
+                        {s.fechaVenta
+                          ? new Date(s.fechaVenta).toLocaleDateString()
+                          : "-"}
+                      </td>
+                      <td style={{ fontWeight: 600 }}>{s.servicio || "-"}</td>
                       <td>S/ {Number(s.subtotal || 0).toFixed(2)}</td>
                       <td style={{ color: "#f0cf73", fontWeight: 700 }}>
                         S/ {Number(s.montoComisionCalculado || 0).toFixed(2)}
                       </td>
-                      <td>S/ {Number(s.montoComisionPendiente || 0).toFixed(2)}</td>
-                      <td>{s.estadoPago}</td>
+                      <td>
+                        S/ {Number(s.montoComisionPendiente || 0).toFixed(2)}
+                      </td>
+                      <td>{s.estadoPago || "-"}</td>
                     </tr>
                   ))
                 ) : (
@@ -244,7 +262,11 @@ export default function DashboardTrabajador() {
                 {pagos.length > 0 ? (
                   pagos.slice(0, 5).map((p, i) => (
                     <tr key={i}>
-                      <td>{new Date(p.fechaPago).toLocaleString()}</td>
+                      <td>
+                        {p.fechaPago
+                          ? new Date(p.fechaPago).toLocaleString()
+                          : "-"}
+                      </td>
                       <td style={{ color: "#f0cf73", fontWeight: 700 }}>
                         S/ {Number(p.montoPagado || 0).toFixed(2)}
                       </td>

@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import API_BASE from "../services/api";
 import authFetch from "../services/authFetch";
+
 import CardDark from "../components/ui/CardDark";
 import PageHeader from "../components/ui/PageHeader";
 import GoldBadge from "../components/ui/GoldBadge";
 import TableDark from "../components/ui/TableDark";
 import DateFilter from "../components/ui/DateFilter";
 import Toast from "../components/ui/Toast";
+
 import {
   ResponsiveContainer,
   BarChart,
@@ -41,22 +43,24 @@ function Ventas() {
 
   const chartColors = {
     gold: "#d4af37",
-    text: "#111827",
-    axis: "#6b7280",
-    grid: "#e5e7eb",
-    bg: "#ffffff",
-    border: "rgba(15,23,42,0.08)",
+    goldSoft: "#f0cf73",
+    text: "#f5f5f5",
+    muted: "#b8b8b8",
+    axis: "#b8b8b8",
+    grid: "rgba(255,255,255,0.08)",
+    bg: "#111111",
+    border: "rgba(212,175,55,0.18)",
   };
 
   const tooltipStyle = {
     contentStyle: {
       backgroundColor: chartColors.bg,
       border: `1px solid ${chartColors.border}`,
-      borderRadius: "12px",
+      borderRadius: "14px",
       color: chartColors.text,
-      boxShadow: "0 8px 20px rgba(15,23,42,.08)",
+      boxShadow: "0 14px 30px rgba(0,0,0,.35)",
     },
-    labelStyle: { color: chartColors.text, fontWeight: 800 },
+    labelStyle: { color: chartColors.goldSoft, fontWeight: 800 },
     itemStyle: { color: chartColors.text },
   };
 
@@ -65,6 +69,15 @@ function Ventas() {
       color: chartColors.text,
       paddingTop: "10px",
     },
+  };
+
+  const leerJsonSeguro = async (res, valorDefecto) => {
+    try {
+      if (!res || !res.ok) return valorDefecto;
+      return await res.json();
+    } catch {
+      return valorDefecto;
+    }
   };
 
   useEffect(() => {
@@ -79,36 +92,31 @@ function Ventas() {
           authFetch(`${API_BASE}/Servicios`),
         ]);
 
-        if (!resVentas || !resTrabajadores || !resServicios) return;
+        const dataVentas = await leerJsonSeguro(resVentas, []);
+        const dataTrabajadores = await leerJsonSeguro(resTrabajadores, []);
+        const dataServicios = await leerJsonSeguro(resServicios, []);
 
-        const [dataVentas, dataTrabajadores, dataServicios] =
-          await Promise.all([
-            resVentas.json(),
-            resTrabajadores.json(),
-            resServicios.json(),
-          ]);
-
-        if (!resVentas.ok) {
+        if (!resVentas || !resVentas.ok) {
           setTipoMensaje("error");
           setError(dataVentas.mensaje || "Error al cargar ventas");
           return;
         }
 
-        if (!resTrabajadores.ok) {
+        if (!resTrabajadores || !resTrabajadores.ok) {
           setTipoMensaje("error");
           setError(dataTrabajadores.mensaje || "Error al cargar trabajadores");
           return;
         }
 
-        if (!resServicios.ok) {
+        if (!resServicios || !resServicios.ok) {
           setTipoMensaje("error");
           setError(dataServicios.mensaje || "Error al cargar servicios");
           return;
         }
 
-        setVentas(dataVentas || []);
-        setTrabajadores(dataTrabajadores || []);
-        setServicios(dataServicios || []);
+        setVentas(Array.isArray(dataVentas) ? dataVentas : []);
+        setTrabajadores(Array.isArray(dataTrabajadores) ? dataTrabajadores : []);
+        setServicios(Array.isArray(dataServicios) ? dataServicios : []);
       } catch (err) {
         console.error(err);
         setTipoMensaje("error");
@@ -173,7 +181,6 @@ function Ventas() {
       }
 
       if (filtroTrabajador && v.trabajador !== filtroTrabajador) return false;
-
       if (filtroServicio && v.servicio !== filtroServicio) return false;
 
       return true;
@@ -290,6 +297,61 @@ function Ventas() {
       />
 
       <div className="container-fluid py-4">
+        <style>{`
+          .analisis-filtros {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 1rem;
+          }
+
+          .filtros-rapidos {
+            display: flex;
+            gap: .75rem;
+            flex-wrap: wrap;
+          }
+
+          .dashboard-four-cols {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 1rem;
+          }
+
+          .kpi-card-value {
+            font-size: 2.25rem;
+            font-weight: 900;
+            color: #f5f5f5;
+            margin-bottom: 1rem;
+          }
+
+          .kpi-card-note {
+            padding: 14px;
+            border-radius: 16px;
+            background: rgba(212,175,55,0.08);
+            border: 1px solid rgba(212,175,55,0.16);
+            color: #d1d5db;
+            font-weight: 700;
+          }
+
+          .chart-scroll-mobile {
+            overflow-x: auto;
+            overflow-y: hidden;
+          }
+
+          @media (max-width: 992px) {
+            .analisis-filtros,
+            .dashboard-four-cols {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+          }
+
+          @media (max-width: 576px) {
+            .analisis-filtros,
+            .dashboard-four-cols {
+              grid-template-columns: 1fr;
+            }
+          }
+        `}</style>
+
         <CardDark className="mb-4">
           <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <div>
@@ -318,9 +380,7 @@ function Ventas() {
             <button
               type="button"
               className={`btn ${
-                filtroRapidoActivo === "semana"
-                  ? "btn-gold"
-                  : "btn-dark-outline"
+                filtroRapidoActivo === "semana" ? "btn-gold" : "btn-dark-outline"
               }`}
               onClick={aplicarFiltroSemana}
             >
@@ -437,136 +497,30 @@ function Ventas() {
           </div>
 
           <div className="dashboard-four-cols">
-            <CardDark className="h-100">
-              <p
-                className="text-uppercase fw-semibold mb-2"
-                style={{
-                  color: "#c9a227",
-                  fontSize: "0.85rem",
-                  letterSpacing: "1px",
-                }}
-              >
-                Total vendido
-              </p>
-
-              <h2
-                className="fw-bold mb-3"
-                style={{ fontSize: "2.2rem", color: "#6b7280" }}
-              >
-                S/ {totalFiltrado.toFixed(2)}
-              </h2>
-
-              <div
-                className="p-3"
-                style={{
-                  background: "rgba(201, 162, 39, 0.08)",
-                  borderRadius: "16px",
-                  border: "1px solid rgba(201, 162, 39, 0.18)",
-                  color: "#8b6f10",
-                  fontWeight: 700,
-                }}
-              >
-                Ingresos filtrados
-              </div>
+            <CardDark className="h-100 kpi-card-pro">
+              <p className="section-subtitle mb-2">Total vendido</p>
+              <h2 className="kpi-card-value">S/ {totalFiltrado.toFixed(2)}</h2>
+              <div className="kpi-card-note">Ingresos filtrados</div>
             </CardDark>
 
-            <CardDark className="h-100">
-              <p
-                className="text-uppercase fw-semibold mb-2"
-                style={{
-                  color: "#22c55e",
-                  fontSize: "0.85rem",
-                  letterSpacing: "1px",
-                }}
-              >
-                Comisión generada
-              </p>
-
-              <h2
-                className="fw-bold mb-3"
-                style={{ fontSize: "2.2rem", color: "#6b7280" }}
-              >
+            <CardDark className="h-100 kpi-card-pro success">
+              <p className="section-subtitle mb-2">Comisión generada</p>
+              <h2 className="kpi-card-value" style={{ color: "#86efac" }}>
                 S/ {totalComisionFiltrada.toFixed(2)}
               </h2>
-
-              <div
-                className="p-3"
-                style={{
-                  background: "rgba(34, 197, 94, 0.08)",
-                  borderRadius: "16px",
-                  border: "1px solid rgba(34, 197, 94, 0.18)",
-                  color: "#166534",
-                  fontWeight: 700,
-                }}
-              >
-                Total de comisiones
-              </div>
+              <div className="kpi-card-note">Total de comisiones</div>
             </CardDark>
 
-            <CardDark className="h-100">
-              <p
-                className="text-uppercase fw-semibold mb-2"
-                style={{
-                  color: "#a855f7",
-                  fontSize: "0.85rem",
-                  letterSpacing: "1px",
-                }}
-              >
-                Servicios distintos
-              </p>
-
-              <h2
-                className="fw-bold mb-3"
-                style={{ fontSize: "2.2rem", color: "#6b7280" }}
-              >
-                {serviciosDistintos}
-              </h2>
-
-              <div
-                className="p-3"
-                style={{
-                  background: "rgba(168, 85, 247, 0.08)",
-                  borderRadius: "16px",
-                  border: "1px solid rgba(168, 85, 247, 0.18)",
-                  color: "#6b21a8",
-                  fontWeight: 700,
-                }}
-              >
-                Servicios vendidos
-              </div>
+            <CardDark className="h-100 kpi-card-pro purple">
+              <p className="section-subtitle mb-2">Servicios distintos</p>
+              <h2 className="kpi-card-value">{serviciosDistintos}</h2>
+              <div className="kpi-card-note">Servicios vendidos</div>
             </CardDark>
 
-            <CardDark className="h-100">
-              <p
-                className="text-uppercase fw-semibold mb-2"
-                style={{
-                  color: "#38bdf8",
-                  fontSize: "0.85rem",
-                  letterSpacing: "1px",
-                }}
-              >
-                Cantidad de ventas
-              </p>
-
-              <h2
-                className="fw-bold mb-3"
-                style={{ fontSize: "2.2rem", color: "#6b7280" }}
-              >
-                {cantidadVentas}
-              </h2>
-
-              <div
-                className="p-3"
-                style={{
-                  background: "rgba(56, 189, 248, 0.08)",
-                  borderRadius: "16px",
-                  border: "1px solid rgba(56, 189, 248, 0.18)",
-                  color: "#075985",
-                  fontWeight: 700,
-                }}
-              >
-                Ventas únicas
-              </div>
+            <CardDark className="h-100 kpi-card-pro info">
+              <p className="section-subtitle mb-2">Cantidad de ventas</p>
+              <h2 className="kpi-card-value">{cantidadVentas}</h2>
+              <div className="kpi-card-note">Ventas únicas</div>
             </CardDark>
           </div>
         </CardDark>
@@ -596,23 +550,6 @@ function Ventas() {
                 >
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={ventasPorTrabajador}>
-                      <defs>
-                        <linearGradient
-                          id="ventasTrabajadorGradientAnalisis"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop offset="0%" stopColor="#f4d35e" stopOpacity={1} />
-                          <stop
-                            offset="100%"
-                            stopColor="#d4af37"
-                            stopOpacity={0.85}
-                          />
-                        </linearGradient>
-                      </defs>
-
                       <CartesianGrid
                         strokeDasharray="3 3"
                         stroke={chartColors.grid}
@@ -621,9 +558,12 @@ function Ventas() {
                         dataKey="trabajador"
                         stroke={chartColors.axis}
                         interval={0}
-                        tick={{ fontSize: 12 }}
+                        tick={{ fontSize: 12, fill: chartColors.axis }}
                       />
-                      <YAxis stroke={chartColors.axis} />
+                      <YAxis
+                        stroke={chartColors.axis}
+                        tick={{ fill: chartColors.axis }}
+                      />
                       <Tooltip
                         {...tooltipStyle}
                         formatter={(value) => [
@@ -636,7 +576,7 @@ function Ventas() {
                       <Bar
                         dataKey="totalGenerado"
                         name="Total generado"
-                        fill="url(#ventasTrabajadorGradientAnalisis)"
+                        fill="#d4af37"
                         radius={[8, 8, 0, 0]}
                         animationDuration={900}
                       />
@@ -664,30 +604,16 @@ function Ventas() {
                 <div
                   style={{
                     width: esMobile
-                      ? `${Math.max(comisionesPorTrabajador.length * 90, 360)}px`
+                      ? `${Math.max(
+                          comisionesPorTrabajador.length * 90,
+                          360
+                        )}px`
                       : "100%",
                     height: 320,
                   }}
                 >
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={comisionesPorTrabajador}>
-                      <defs>
-                        <linearGradient
-                          id="comisionTrabajadorGradientAnalisis"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop offset="0%" stopColor="#4ade80" stopOpacity={1} />
-                          <stop
-                            offset="100%"
-                            stopColor="#22c55e"
-                            stopOpacity={0.85}
-                          />
-                        </linearGradient>
-                      </defs>
-
                       <CartesianGrid
                         strokeDasharray="3 3"
                         stroke={chartColors.grid}
@@ -696,9 +622,12 @@ function Ventas() {
                         dataKey="trabajador"
                         stroke={chartColors.axis}
                         interval={0}
-                        tick={{ fontSize: 12 }}
+                        tick={{ fontSize: 12, fill: chartColors.axis }}
                       />
-                      <YAxis stroke={chartColors.axis} />
+                      <YAxis
+                        stroke={chartColors.axis}
+                        tick={{ fill: chartColors.axis }}
+                      />
                       <Tooltip
                         {...tooltipStyle}
                         formatter={(value) => [
@@ -711,7 +640,7 @@ function Ventas() {
                       <Bar
                         dataKey="totalComision"
                         name="Comisión generada"
-                        fill="url(#comisionTrabajadorGradientAnalisis)"
+                        fill="#22c55e"
                         radius={[8, 8, 0, 0]}
                         animationDuration={900}
                       />
@@ -735,34 +664,21 @@ function Ventas() {
             <GoldBadge>{ventasPorDia.length} días</GoldBadge>
           </div>
 
-          <div style={{ width: "100%", height: 340 }}>
-            <ResponsiveContainer>
+          <div style={{ width: "100%", height: 340, minHeight: 340 }}>
+            <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={ventasPorDia}>
-                <defs>
-                  <linearGradient
-                    id="ventasDiaAreaAnalisis"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="0%" stopColor="#c084fc" stopOpacity={0.45} />
-                    <stop
-                      offset="100%"
-                      stopColor="#c084fc"
-                      stopOpacity={0.05}
-                    />
-                  </linearGradient>
-                </defs>
-
                 <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                 <XAxis
                   dataKey="fecha"
                   stroke={chartColors.axis}
+                  tick={{ fill: chartColors.axis }}
                   interval={0}
                   minTickGap={0}
                 />
-                <YAxis stroke={chartColors.axis} />
+                <YAxis
+                  stroke={chartColors.axis}
+                  tick={{ fill: chartColors.axis }}
+                />
                 <Tooltip
                   {...tooltipStyle}
                   formatter={(value) => [
@@ -778,7 +694,7 @@ function Ventas() {
                   name="Ventas por día"
                   stroke="#c084fc"
                   strokeWidth={3}
-                  fill="url(#ventasDiaAreaAnalisis)"
+                  fill="rgba(192,132,252,0.20)"
                   dot={{ r: 4, fill: "#c084fc" }}
                   activeDot={{ r: 6 }}
                   animationDuration={1000}

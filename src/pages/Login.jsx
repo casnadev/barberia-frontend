@@ -40,6 +40,7 @@ export default function Login() {
       });
 
       let data = {};
+
       try {
         data = await res.json();
       } catch {
@@ -58,28 +59,34 @@ export default function Login() {
         return;
       }
 
+      const rol = String(data.rol || "").trim().toLowerCase();
+
       const usuario = {
         idUsuario: data.idUsuario,
         idNegocio: data.idNegocio,
         idTrabajador: data.idTrabajador,
         nombre: data.nombre,
         correo: data.correo,
-        rol: data.rol,
+        rol: rol,
       };
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("usuario", JSON.stringify(usuario));
 
-      if (data.rol === "Trabajador") {
+      if (rol === "trabajador") {
         navigate("/trabajador", { replace: true });
-      } else if (data.rol === "Admin") {
-        navigate("/", { replace: true });
-      } else {
-        localStorage.removeItem("token");
-        localStorage.removeItem("usuario");
-        setTipoMensaje("error");
-        setError("Rol no autorizado.");
+        return;
       }
+
+      if (rol === "admin") {
+        navigate("/admin", { replace: true });
+        return;
+      }
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("usuario");
+      setTipoMensaje("error");
+      setError("Rol no autorizado.");
     } catch (err) {
       console.error(err);
       setTipoMensaje("error");

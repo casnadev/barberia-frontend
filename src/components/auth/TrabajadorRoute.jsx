@@ -9,9 +9,9 @@ export default function TrabajadorRoute({ children }) {
     return <Navigate to="/login" replace />;
   }
 
-  const esTrabajador = usuario?.rol?.toLowerCase() === "trabajador";
+  const rol = String(usuario?.rol || "").trim().toLowerCase();
 
-  if (!esTrabajador) {
+  if (rol !== "trabajador") {
     return <Navigate to="/" replace />;
   }
 

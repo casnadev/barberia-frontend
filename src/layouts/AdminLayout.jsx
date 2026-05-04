@@ -37,7 +37,8 @@ export default function AdminLayout() {
     usuario = null;
   }
 
-  const esAdmin = usuario?.rol?.toLowerCase() === "admin";
+  const rol = String(usuario?.rol || "").trim().toLowerCase();
+  const esAdmin = rol === "admin";
 
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [logoNegocio, setLogoNegocio] = useState(
@@ -157,65 +158,65 @@ export default function AdminLayout() {
 
         <nav className="sidebar-nav">
           <Item
-            to="/"
+            to="/admin"
             label="Dashboard"
-            active={location.pathname === "/"}
+            active={location.pathname === "/admin"}
             onClick={esMobile ? cerrarMenu : undefined}
           />
 
           <Item
-            to="/trabajadores"
+            to="/admin/trabajadores"
             label="Trabajadores"
-            active={location.pathname === "/trabajadores"}
+            active={location.pathname === "/admin/trabajadores"}
             onClick={esMobile ? cerrarMenu : undefined}
           />
 
           <Item
-            to="/servicios"
+            to="/admin/servicios"
             label="Servicios"
-            active={location.pathname === "/servicios"}
+            active={location.pathname === "/admin/servicios"}
             onClick={esMobile ? cerrarMenu : undefined}
           />
 
           <Item
-            to="/ventas/registrar"
+            to="/admin/ventas/registrar"
             label="Registrar Venta"
-            active={location.pathname === "/ventas/registrar"}
+            active={location.pathname === "/admin/ventas/registrar"}
             onClick={esMobile ? cerrarMenu : undefined}
           />
 
           <Item
-            to="/ventas/historial"
+            to="/admin/ventas/historial"
             label="Ventas/Análisis"
-            active={location.pathname === "/ventas/historial"}
+            active={location.pathname === "/admin/ventas/historial"}
             onClick={esMobile ? cerrarMenu : undefined}
           />
 
           <Item
-            to="/pagos"
+            to="/admin/pagos"
             label="Pagos por Trabajador"
-            active={location.pathname === "/pagos"}
+            active={location.pathname === "/admin/pagos"}
             onClick={esMobile ? cerrarMenu : undefined}
           />
 
           <Item
-            to="/gastos"
+            to="/admin/gastos"
             label="Gastos del Negocio"
-            active={location.pathname === "/gastos"}
+            active={location.pathname === "/admin/gastos"}
             onClick={esMobile ? cerrarMenu : undefined}
           />
 
           <Item
-            to="/reservas"
+            to="/admin/reservas"
             label="Reservas"
-            active={location.pathname === "/reservas"}
+            active={location.pathname === "/admin/reservas"}
             onClick={esMobile ? cerrarMenu : undefined}
           />
 
           <Item
-            to="/configuracion"
+            to="/admin/configuracion"
             label="Configuración"
-            active={location.pathname === "/configuracion"}
+            active={location.pathname === "/admin/configuracion"}
             onClick={esMobile ? cerrarMenu : undefined}
           />
         </nav>
