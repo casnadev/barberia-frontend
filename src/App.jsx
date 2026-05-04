@@ -1,4 +1,5 @@
 import { Routes, Route } from "react-router-dom";
+
 import AdminLayout from "./layouts/AdminLayout";
 import TrabajadorLayout from "./layouts/TrabajadorLayout";
 
@@ -24,6 +25,7 @@ import ReservarCita from "./pages/trabajador/ReservarCita";
 
 import LandingNegocio from "./pages/publico/LandingNegocio";
 import CatalogoServicios from "./pages/publico/CatalogoServicios";
+import LandingSaaS from "./pages/publico/LandingSaaS";
 
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminRoute from "./components/auth/AdminRoute";
@@ -32,28 +34,26 @@ import TrabajadorRoute from "./components/auth/TrabajadorRoute";
 function App() {
   return (
     <Routes>
+
+      {/* 🔥 LANDING PRINCIPAL */}
+      <Route path="/" element={<LandingSaaS />} />
+
       <Route path="/login" element={<Login />} />
 
-      {/* RUTAS PÚBLICAS */}
-      <Route
-        path="/trabajador-publico/:id"
-        element={<PerfilPublicoTrabajador />}
-      />
+      {/* 🔥 RUTAS PÚBLICAS */}
+      <Route path="/negocio/:slug" element={<LandingNegocio />} />
 
-      <Route
-        path="/catalogo-trabajadores/:idNegocio"
-        element={<CatalogoTrabajadores />}
-      />
+      <Route path="/catalogo-servicios/:idNegocio" element={<CatalogoServicios />} />
+
+      <Route path="/catalogo-trabajadores/:idNegocio" element={<CatalogoTrabajadores />} />
 
       <Route path="/reservar/:id" element={<ReservarCita />} />
-      <Route path="/negocio/:slug" element={<LandingNegocio />} />
-      <Route
-        path="/catalogo-servicios/:idNegocio"
-        element={<CatalogoServicios />}
-      />
 
-      {/* RUTAS ADMIN */}
+      <Route path="/trabajador-publico/:id" element={<PerfilPublicoTrabajador />} />
+
+      {/* 🔥 RUTAS ADMIN */}
       <Route
+        path="/admin"
         element={
           <ProtectedRoute>
             <AdminRoute>
@@ -62,18 +62,18 @@ function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/trabajadores" element={<Trabajadores />} />
-        <Route path="/ventas/registrar" element={<RegistrarVenta />} />
-        <Route path="/ventas/historial" element={<Ventas />} />
-        <Route path="/pagos" element={<Pagos />} />
-        <Route path="/gastos" element={<Gastos />} />
-        <Route path="/servicios" element={<Servicios />} />
-        <Route path="/reservas" element={<MisReservas />} />
-        <Route path="/configuracion" element={<ConfiguracionNegocio />} />
+        <Route index element={<Dashboard />} />
+        <Route path="trabajadores" element={<Trabajadores />} />
+        <Route path="ventas/registrar" element={<RegistrarVenta />} />
+        <Route path="ventas/historial" element={<Ventas />} />
+        <Route path="pagos" element={<Pagos />} />
+        <Route path="gastos" element={<Gastos />} />
+        <Route path="servicios" element={<Servicios />} />
+        <Route path="reservas" element={<MisReservas />} />
+        <Route path="configuracion" element={<ConfiguracionNegocio />} />
       </Route>
 
-      {/* RUTAS TRABAJADOR */}
+      {/* 🔥 RUTAS TRABAJADOR */}
       <Route
         path="/trabajador"
         element={
@@ -91,6 +91,7 @@ function App() {
         <Route path="reservas" element={<MisReservas />} />
         <Route path="disponibilidad" element={<MiDisponibilidad />} />
       </Route>
+
     </Routes>
   );
 }

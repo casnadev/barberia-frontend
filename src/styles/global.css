@@ -1514,3 +1514,594 @@ td:last-child {
   gap: 4px;
   font-size: 11px;
 }
+
+/* ==========================================================
+   LANDING SAAS BARBER.PE - NUEVO
+   ========================================================== */
+
+.saas-page {
+  min-height: 100vh;
+  background: #f4f6fb;
+  color: #101827;
+}
+
+.saas-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: rgba(16, 24, 39, 0.94);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.16);
+}
+
+.saas-navbar-inner {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.saas-brand {
+  color: #ffffff;
+  font-size: 1.35rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.saas-navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.saas-login-link {
+  color: #e5e7eb;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.saas-nav-cta,
+.saas-btn-primary,
+.saas-btn-secondary {
+  border-radius: 999px;
+  padding: 12px 20px;
+  font-weight: 900;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  transition: 0.25s ease;
+}
+
+.saas-nav-cta,
+.saas-btn-primary {
+  background: linear-gradient(135deg, #d4af37, #f0cf73);
+  color: #111827;
+  box-shadow: 0 12px 28px rgba(212, 175, 55, 0.22);
+}
+
+.saas-btn-primary.full {
+  width: 100%;
+}
+
+.saas-btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.22);
+}
+
+.saas-btn-primary:hover,
+.saas-btn-secondary:hover,
+.saas-nav-cta:hover {
+  transform: translateY(-2px);
+}
+
+.saas-hero {
+  background:
+    radial-gradient(circle at top left, rgba(212, 175, 55, 0.22), transparent 32%),
+    linear-gradient(135deg, #101827 0%, #161f33 48%, #0b0f1a 100%);
+  color: #ffffff;
+  padding: 86px 0 72px;
+}
+
+.saas-eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  background: rgba(212, 175, 55, 0.13);
+  color: #f0cf73;
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  font-weight: 900;
+  margin-bottom: 16px;
+}
+
+.saas-hero-title {
+  font-size: clamp(2.6rem, 6vw, 5rem);
+  line-height: 1.02;
+  font-weight: 950;
+  letter-spacing: -2px;
+  margin-bottom: 20px;
+}
+
+.saas-hero-text {
+  color: #d1d5db;
+  font-size: 1.12rem;
+  line-height: 1.75;
+  max-width: 620px;
+  margin-bottom: 28px;
+}
+
+.saas-hero-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.saas-hero-actions.center {
+  justify-content: center;
+}
+
+.saas-hero-trust {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+.saas-hero-trust span {
+  color: #e5e7eb;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.saas-dashboard-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.24);
+  border-radius: 32px;
+  padding: 24px;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.35);
+}
+
+.saas-dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.saas-dashboard-header span {
+  color: #d1d5db;
+  font-size: 0.9rem;
+}
+
+.saas-dashboard-header h3 {
+  color: #f0cf73;
+  font-weight: 950;
+  font-size: 2.2rem;
+  margin: 4px 0 0;
+}
+
+.saas-status-pill {
+  display: inline-flex;
+  width: fit-content;
+  background: rgba(185, 28, 28, 0.12);
+  color: #ff6b6b;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.saas-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.saas-metric-grid div {
+  background: #ffffff;
+  color: #111827;
+  border-radius: 20px;
+  padding: 18px;
+}
+
+.saas-metric-grid span {
+  display: block;
+  color: #6b7280;
+  font-size: 0.82rem;
+  margin-bottom: 6px;
+}
+
+.saas-metric-grid strong {
+  font-size: 1.45rem;
+  font-weight: 950;
+}
+
+.saas-whatsapp-card {
+  margin-top: 14px;
+  background: linear-gradient(135deg, rgba(127, 29, 29, 0.92), rgba(17, 24, 39, 0.95));
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  border-radius: 20px;
+  padding: 18px;
+}
+
+.saas-whatsapp-card div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+}
+
+.saas-whatsapp-card p {
+  color: #e5e7eb;
+  margin: 8px 0 0;
+}
+
+.saas-red-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ef4444, #f0cf73);
+  display: inline-block;
+}
+
+.saas-video-section {
+  background: #ffffff;
+  padding: 72px 0;
+}
+
+.saas-video-box {
+  border-radius: 32px;
+  overflow: hidden;
+  min-height: 360px;
+  background: #111827;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  box-shadow: 0 24px 60px rgba(17, 24, 39, 0.12);
+}
+
+.saas-video-box video {
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  object-fit: cover;
+  display: block;
+}
+
+.saas-video-section h2,
+.saas-section-head h2,
+.saas-dark-section h2,
+.saas-final-cta h2 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 950;
+  letter-spacing: -1px;
+  margin-bottom: 14px;
+}
+
+.saas-video-section p,
+.saas-section-head p,
+.saas-final-cta p {
+  color: #4b5563;
+  line-height: 1.75;
+  font-size: 1.02rem;
+}
+
+.saas-mini-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.saas-mini-list span {
+  background: #111827;
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 800;
+  font-size: 0.88rem;
+}
+
+.saas-section {
+  padding-top: 72px;
+  padding-bottom: 72px;
+}
+
+.saas-section-head {
+  text-align: center;
+  max-width: 780px;
+  margin: 0 auto 34px;
+}
+
+.saas-section-head.light h2,
+.saas-section-head.light p {
+  color: #ffffff;
+}
+
+.saas-section-head.light p {
+  color: #d1d5db;
+}
+
+.saas-benefit-card {
+  height: 100%;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 28px;
+  padding: 26px;
+  box-shadow: 0 16px 42px rgba(15, 23, 42, 0.06);
+  transition: 0.25s ease;
+}
+
+.saas-benefit-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(212, 175, 55, 0.35);
+}
+
+.saas-benefit-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.18), rgba(185, 28, 28, 0.12));
+  display: grid;
+  place-items: center;
+  font-size: 1.7rem;
+  margin-bottom: 18px;
+}
+
+.saas-benefit-card h4,
+.saas-step-card h4,
+.saas-demo-card h4 {
+  color: #111827;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+.saas-benefit-card p,
+.saas-step-card p,
+.saas-demo-card p {
+  color: #6b7280;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.saas-dark-section {
+  background:
+    radial-gradient(circle at bottom right, rgba(185, 28, 28, 0.18), transparent 30%),
+    linear-gradient(135deg, #111827, #0b0f1a);
+  color: #ffffff;
+  padding: 72px 0;
+}
+
+.saas-step-card {
+  height: 100%;
+  background: linear-gradient(145deg, #ffffff, #f8fafc);
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  border-radius: 28px;
+  padding: 24px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.18);
+}
+
+.saas-step-card span {
+  display: inline-flex;
+  background: #111827;
+  color: #f0cf73;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 950;
+  margin-bottom: 18px;
+}
+
+.saas-demo-scroll {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+.saas-demo-card {
+  background: #ffffff;
+  border-radius: 30px;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+}
+
+.saas-demo-cover {
+  height: 190px;
+  background:
+    linear-gradient(135deg, rgba(185, 28, 28, 0.8), rgba(17, 24, 39, 0.96)),
+    radial-gradient(circle at top, rgba(212, 175, 55, 0.22), transparent 35%);
+  display: grid;
+  place-items: center;
+}
+
+.saas-demo-cover span {
+  width: 82px;
+  height: 82px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(212, 175, 55, 0.14);
+  border: 3px solid #d4af37;
+  color: #f0cf73;
+  font-size: 2.2rem;
+  font-weight: 950;
+}
+
+.saas-demo-body {
+  padding: 20px;
+}
+
+.saas-demo-body p {
+  min-height: 72px;
+  margin-bottom: 18px;
+}
+
+.saas-whatsapp-panel {
+  background:
+    linear-gradient(135deg, #111827, #1f2937);
+  color: #ffffff;
+  border-radius: 34px;
+  padding: 34px;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 28px;
+  align-items: center;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  box-shadow: 0 26px 70px rgba(17, 24, 39, 0.18);
+}
+
+.saas-whatsapp-panel h2 {
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  font-weight: 950;
+  margin-bottom: 12px;
+}
+
+.saas-whatsapp-panel p {
+  color: #d1d5db;
+  line-height: 1.75;
+}
+
+.saas-phone-card {
+  background: #0b0f1a;
+  border-radius: 28px;
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.saas-phone-message {
+  padding: 14px 16px;
+  border-radius: 18px;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.saas-phone-message.incoming {
+  background: #ffffff;
+  color: #111827;
+  justify-self: start;
+}
+
+.saas-phone-message.outgoing {
+  background: #d4af37;
+  color: #111827;
+  justify-self: end;
+}
+
+.saas-phone-message.confirmed {
+  background: linear-gradient(135deg, #7f1d1d, #111827);
+  color: #ffffff;
+  border: 1px solid rgba(239, 68, 68, 0.24);
+}
+
+.saas-final-cta {
+  background:
+    radial-gradient(circle at top, rgba(212, 175, 55, 0.18), transparent 32%),
+    linear-gradient(135deg, #111827, #0b0f1a);
+  color: #ffffff;
+  border-radius: 36px;
+  padding: 48px 26px;
+  text-align: center;
+  border: 1px solid rgba(212, 175, 55, 0.22);
+}
+
+.saas-final-cta p {
+  color: #d1d5db;
+  max-width: 680px;
+  margin: 0 auto 24px;
+}
+
+@media (max-width: 768px) {
+  .saas-navbar-inner {
+    height: 64px;
+  }
+
+  .saas-navbar-actions {
+    gap: 8px;
+  }
+
+  .saas-login-link {
+    display: none;
+  }
+
+  .saas-nav-cta {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+  }
+
+  .saas-hero {
+    padding: 48px 0 42px;
+  }
+
+  .saas-hero-title {
+    font-size: 2.55rem;
+    letter-spacing: -1px;
+  }
+
+  .saas-hero-text {
+    font-size: 1rem;
+  }
+
+  .saas-hero-actions .saas-btn-primary,
+  .saas-hero-actions .saas-btn-secondary {
+    width: 100%;
+  }
+
+  .saas-dashboard-card {
+    border-radius: 26px;
+    padding: 18px;
+  }
+
+  .saas-metric-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .saas-video-section {
+    padding: 46px 0;
+  }
+
+  .saas-video-box,
+  .saas-video-box video {
+    min-height: 260px;
+  }
+
+  .saas-section {
+    padding-top: 46px;
+    padding-bottom: 46px;
+  }
+
+  .saas-demo-scroll {
+    display: flex;
+    overflow-x: auto;
+    gap: 16px;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 8px;
+  }
+
+  .saas-demo-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .saas-demo-card {
+    flex: 0 0 86%;
+    scroll-snap-align: start;
+  }
+
+  .saas-whatsapp-panel {
+    grid-template-columns: 1fr;
+    padding: 24px;
+    border-radius: 28px;
+  }
+
+  .saas-final-cta {
+    border-radius: 28px;
+    padding: 34px 18px;
+  }
+}
+
