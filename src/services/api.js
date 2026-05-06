@@ -1,3 +1,3 @@
-const API_BASE = "http://192.168.100.25:5084/api";
+const API_BASE = "https://api.barber.pe/api";
 
 export default API_BASE;

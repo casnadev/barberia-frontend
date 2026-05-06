@@ -17,7 +17,7 @@ import MiDisponibilidad from "./pages/trabajador/MiDisponibilidad";
 import DashboardTrabajador from "./pages/trabajador/DashboardTrabajador";
 import MisPagos from "./pages/trabajador/MisPagos";
 import MisServicios from "./pages/trabajador/MisServicios";
-import MisReservas from "./pages/trabajador/MisReservas";
+import MisReservas from "./pages/trabajador/MisReservas"; 
 import RegistrarServicio from "./pages/trabajador/RegistrarServicio";
 import PerfilPublicoTrabajador from "./pages/trabajador/PerfilPublicoTrabajador";
 import CatalogoTrabajadores from "./pages/trabajador/CatalogoTrabajadores";
@@ -26,7 +26,9 @@ import ReservarCita from "./pages/trabajador/ReservarCita";
 import LandingNegocio from "./pages/publico/LandingNegocio";
 import CatalogoServicios from "./pages/publico/CatalogoServicios";
 import LandingSaaS from "./pages/publico/LandingSaaS";
-
+import CambiarPassword from "./pages/CambiarPassword";
+import RecuperarPassword from "./pages/RecuperarPassword";
+import ResetPassword from "./pages/ResetPassword"
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminRoute from "./components/auth/AdminRoute";
 import TrabajadorRoute from "./components/auth/TrabajadorRoute";
@@ -50,6 +52,9 @@ function App() {
           </SuperAdminRoute>
         }
       />
+      <Route path="/cambiar-password" element={<CambiarPassword />} />
+      <Route path="/recuperar-password" element={<RecuperarPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* 🔥 RUTAS PÚBLICAS */}
       <Route path="/negocio/:slug" element={<LandingNegocio />} />

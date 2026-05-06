@@ -1,6 +1,6 @@
 import { useState } from "react";
 import API_BASE from "../services/api";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Toast from "../components/ui/Toast";
 import LogoAnimado from "../components/ui/LogoAnimado";
 const LOGIN_BACKGROUND =
@@ -256,15 +256,23 @@ export default function Login() {
 
         <div
           style={{
-            color: "#6b7280",
-            fontSize: "0.88rem",
-            marginBottom: "20px",
-            marginTop: "10px",
-            lineHeight: 1.45,
+            marginTop: "12px",
+            marginBottom: "24px",
+            textAlign: "right",
           }}
         >
-          ¿Olvidaste tu contraseña? Solicita al administrador restablecer tu
-          acceso.
+          <Link
+            to="/recuperar-password"
+            className="auth-link"
+            style={{
+              color: "#c89b2c",
+              fontWeight: 800,
+              textDecoration: "none",
+              fontSize: ".92rem",
+            }}
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
         </div>
 
         <button
