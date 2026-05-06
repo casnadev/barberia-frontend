@@ -1,353 +1,323 @@
-import { Link } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import API_BASE from "../../services/api";
+
+const FALLBACK_NEGOCIOS = [
+  {
+    idNegocio: 1,
+    nombre: "Kisha Barber Spa",
+    slug: "kisha-barber-spa",
+    logoUrl: "",
+    direccion: "Puente Piedra - Zapallal",
+    whatsappNegocio: "943811931",
+    descripcion: "Gestión profesional, reservas online y perfiles públicos.",
+  },
+];
+
+const getAssetUrl = (ruta) => {
+  if (!ruta) return "";
+  if (ruta.startsWith("http")) return ruta;
+  return `${API_BASE.replace("/api", "")}${ruta}`;
+};
 
 export default function LandingSaaS() {
-  const demos = [
-    {
-      nombre: "Melchor Styles",
-      descripcion: "Landing pública con servicios, trabajadores, reservas y redes sociales.",
-      slug: "melchor-styles",
-      estado: "Demo activa",
-    },
-    {
-      nombre: "Kisha Barber Spa",
-      descripcion: "Ejemplo de negocio con reservas online y catálogo de barberos.",
-      slug: "kisha-barber-spa",
-      estado: "Demo activa",
-    },
-    {
-      nombre: "Barber Demo",
-      descripcion: "Vista pública moderna para clientes desde celular.",
-      slug: "barber-demo",
-      estado: "Demo activa",
-    },
-  ];
+  const [negocios, setNegocios] = useState(FALLBACK_NEGOCIOS);
 
-  const beneficios = [
-    {
-      icono: "📅",
-      titulo: "Reservas online",
-      texto: "Tus clientes eligen servicio, barbero, fecha y hora desde el celular.",
-    },
-    {
-      icono: "👥",
-      titulo: "Trabajadores",
-      texto: "Administra barberos, disponibilidad, perfiles públicos y servicios realizados.",
-    },
-    {
-      icono: "💰",
-      titulo: "Ventas y comisiones",
-      texto: "Controla ingresos, pagos parciales, comisiones pendientes y pagadas.",
-    },
-    {
-      icono: "🌐",
-      titulo: "Landing por negocio",
-      texto: "Cada barbería tiene su propio link público con logo, fotos, servicios y redes.",
-    },
-  ];
+  useEffect(() => {
+    const cargarNegocios = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/Negocios/publicos`);
+        if (!res.ok) return;
 
-  const pasos = [
-    {
-      numero: "01",
-      titulo: "Configura tu negocio",
-      texto: "Sube logo, horarios, dirección, WhatsApp, redes sociales y fotos.",
-    },
-    {
-      numero: "02",
-      titulo: "Agrega trabajadores",
-      texto: "Crea perfiles para barberos y organiza sus servicios.",
-    },
-    {
-      numero: "03",
-      titulo: "Publica tus servicios",
-      texto: "Muestra precios, duración, imágenes y descripción para tus clientes.",
-    },
-    {
-      numero: "04",
-      titulo: "Recibe reservas",
-      texto: "Tus clientes reservan y reciben confirmación por correo.",
-    },
-  ];
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setNegocios(data);
+        }
+      } catch {
+        setNegocios(FALLBACK_NEGOCIOS);
+      }
+    };
+
+    cargarNegocios();
+  }, []);
+
+  const planes = useMemo(
+    () => [
+      {
+        titulo: "Plan Starter",
+        limite: "1 trabajador",
+        texto: "Ideal para barberías pequeñas que quieren ordenar reservas, servicios y comisiones.",
+      },
+      {
+        titulo: "Plan Growth",
+        limite: "5 trabajadores",
+        texto: "Para equipos en crecimiento con agenda pública, portafolio y control operativo.",
+      },
+      {
+        titulo: "Plan Pro",
+        limite: "10 trabajadores",
+        texto: "Pensado para negocios con mayor rotación, pagos parciales y analítica diaria.",
+      },
+      {
+        titulo: "Plan Enterprise",
+        limite: "Ilimitado",
+        texto: "Escalable para marcas con múltiples equipos, operación intensiva y expansión.",
+      },
+    ],
+    []
+  );
 
   return (
-    <div className="saas-page">
-      <header className="saas-navbar">
-        <div className="container saas-navbar-inner">
-          <Link to="/" className="saas-brand">
-            Barber.pe
-          </Link>
+    <div className="saas-landing">
+      <nav className="saas-navbar">
+        <a className="saas-brand" href="/">
+          barber<span>.pe</span>
+        </a>
 
-          <div className="saas-navbar-actions">
-            <Link to="/login" className="saas-login-link">
-              Ingresar
-            </Link>
+        <div className="saas-menu">
+          <a href="#negocios">Negocios</a>
+          <a href="#plataforma">Plataforma</a>
+          <a href="#planes">Planes</a>
+          <a className="saas-login-link" href="/login">
+            Acceso
+          </a>
+          <a className="btn btn-gold saas-demo-link" href="#demo">
+            Solicitar demo
+          </a>
+        </div>
+      </nav>
 
-            <a
-              href="#"
-              target=""
-              rel="noreferrer"
-              className="saas-nav-cta"
-            >
-              Solicitar acceso
+      <header className="saas-hero">
+        <div className="saas-hero-glow" />
+
+        <div className="saas-hero-content">
+          <div className="saas-badge">SaaS multi-negocio para barberías</div>
+
+          <h1>
+            Controla reservas, comisiones, pagos y perfiles públicos desde una
+            sola plataforma.
+          </h1>
+
+          <p>
+            Barber.pe centraliza la operación diaria de tu barbería con roles
+            Admin y Trabajador, agenda online, landing pública, reportes
+            financieros y control por negocio.
+          </p>
+
+          <div className="saas-hero-actions">
+            <a href="/login" className="btn btn-gold">
+              Acceder al sistema
             </a>
+
+            <a href="#demo" className="btn btn-dark-outline saas-outline-light">
+              Solicitar demo
+            </a>
+          </div>
+
+          <div className="saas-hero-metrics">
+            <div>
+              <strong>Multi-tenant</strong>
+              <span>cada negocio aislado por IdNegocio</span>
+            </div>
+
+            <div>
+              <strong>Roles seguros</strong>
+              <span>SuperAdmin, Admin y Trabajador</span>
+            </div>
+
+            <div>
+              <strong>Agenda pública</strong>
+              <span>reservas online por trabajador</span>
+            </div>
           </div>
         </div>
       </header>
 
-      <section className="saas-hero">
-        <div className="container">
-          <div className="row align-items-center g-5">
-            <div className="col-lg-6">
-              <span className="saas-eyebrow">Software para barberías</span>
-
-              <h1 className="saas-hero-title">
-                Administra tu barbería sin depender del cuaderno
-              </h1>
-
-              <p className="saas-hero-text">
-                Controla citas, clientes, trabajadores, reservas, ventas,
-                comisiones e historial desde un solo panel fácil de usar.
-              </p>
-
-              <div className="saas-hero-actions">
-                <a
-                  href="#"
-                  target=""
-                  rel="noreferrer"
-                  className="saas-btn-primary"
-                >
-                  Solicitar acceso
-                </a>
-
-                <a href="#demos" className="saas-btn-secondary">
-                  Ver negocios demo
-                </a>
-              </div>
-
-              <div className="saas-hero-trust">
-                <span>Multi-negocio</span>
-                <span>Correo Gmail</span>
-                <span>Contraseñas hasheadas</span>
-              </div>
-            </div>
-
-            <div className="col-lg-6">
-              <div className="saas-dashboard-card">
-                <div className="saas-dashboard-header">
-                  <div>
-                    <span>Resumen de hoy</span>
-                    <h3>S/ 1,240.00</h3>
-                  </div>
-
-                  <span className="saas-status-pill">En vivo</span>
-                </div>
-
-                <div className="saas-metric-grid">
-                  <div>
-                    <span>Reservas</span>
-                    <strong>18</strong>
-                  </div>
-
-                  <div>
-                    <span>Clientes</span>
-                    <strong>94</strong>
-                  </div>
-
-                  <div>
-                    <span>Trabajadores</span>
-                    <strong>6</strong>
-                  </div>
-
-                  <div>
-                    <span>Comisiones</span>
-                    <strong>S/ 320</strong>
-                  </div>
-                </div>
-
-                <div className="saas-whatsapp-card">
-                  <div>
-                    <span className="saas-red-dot"></span>
-                    <strong>Nueva reserva</strong>
-                  </div>
-                  <p>
-                    Carlos reservó Corte + Barba para hoy a las 5:30 PM.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="saas-video-section">
-        <div className="container">
-          <div className="row g-4 align-items-center">
-            <div className="col-lg-6">
-              <div className="saas-video-box">
-                <video
-                  src="/videos/barber-demo.mp4"
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  poster="/imagenes/barber-poster.jpg"
-                />
-              </div>
-            </div>
-
-            <div className="col-lg-6">
-              <span className="saas-eyebrow">Experiencia moderna</span>
-
-              <h2>Tus clientes reservan. Tú controlas todo.</h2>
-
-              <p>
-                Barber.pe convierte tu barbería en un negocio más ordenado:
-                tus clientes ven servicios, eligen barbero y reservan sin que
-                tengas que revisar mensajes todo el día.
-              </p>
-
-              <div className="saas-mini-list">
-                <span>Confirmación por correo</span>
-                <span>Reservas desde celular</span>
-                <span>Historial del negocio</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="container saas-section">
+      <section id="negocios" className="saas-section">
         <div className="saas-section-head">
-          <span className="saas-eyebrow">Todo en un solo lugar</span>
-          <h2>Simple para el dueño, rápido para el cliente</h2>
-          <p>
-            Diseñado para negocios que quieren orden, control y reservas sin complicarse.
-          </p>
-        </div>
-
-        <div className="row g-4">
-          {beneficios.map((item) => (
-            <div className="col-md-6 col-lg-3" key={item.titulo}>
-              <div className="saas-benefit-card">
-                <div className="saas-benefit-icon">{item.icono}</div>
-                <h4>{item.titulo}</h4>
-                <p>{item.texto}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="saas-dark-section">
-        <div className="container">
-          <div className="saas-section-head light">
-            <span className="saas-eyebrow">Empieza fácil</span>
-            <h2>En pocos pasos tu barbería ya puede recibir reservas</h2>
-            <p>
-              Sin instalar nada. Solo ingresas al panel, configuras tu negocio y compartes tu link.
-            </p>
-          </div>
-
-          <div className="row g-4">
-            {pasos.map((paso) => (
-              <div className="col-md-6 col-lg-3" key={paso.numero}>
-                <div className="saas-step-card">
-                  <span>{paso.numero}</span>
-                  <h4>{paso.titulo}</h4>
-                  <p>{paso.texto}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="demos" className="container saas-section">
-        <div className="saas-section-head">
-          <span className="saas-eyebrow">Negocios en demo</span>
-          <h2>Mira cómo se ve una barbería usando Barber.pe</h2>
-          <p>
-            Cada negocio tiene su propia landing pública con servicios, trabajadores y reservas.
-          </p>
-        </div>
-
-        <div className="saas-demo-scroll">
-          {demos.map((demo) => (
-            <div className="saas-demo-card" key={demo.slug}>
-              <div className="saas-demo-cover">
-                <span>{demo.nombre.charAt(0)}</span>
-              </div>
-
-              <div className="saas-demo-body">
-                <span className="saas-status-pill">{demo.estado}</span>
-                <h4>{demo.nombre}</h4>
-                <p>{demo.descripcion}</p>
-
-                <Link to={`/negocio/${demo.slug}`} className="saas-btn-primary full">
-                  Ver negocio
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="container saas-section">
-        <div className="saas-whatsapp-panel">
           <div>
-            <span className="saas-eyebrow">Sin perder mensajes</span>
-            <h2>Menos caos en WhatsApp, más reservas ordenadas</h2>
+            <span className="saas-eyebrow">Landings conectadas</span>
+            <h2>Negocios reales dentro del ecosistema Barber.pe</h2>
             <p>
-              Tus clientes pueden reservar desde la web y el negocio mantiene
-              toda la información organizada: servicio, trabajador, fecha, hora,
-              cliente y correo.
+              Cada barbería puede tener su propia landing pública con servicios,
+              trabajadores, portafolio, WhatsApp y reserva online.
             </p>
           </div>
 
-          <div className="saas-phone-card">
-            <div className="saas-phone-message incoming">
-              Hola, quiero reservar un corte.
-            </div>
+          <a href="/login" className="btn btn-dark-outline">
+            Ir al acceso
+          </a>
+        </div>
 
-            <div className="saas-phone-message outgoing">
-              Puedes reservar aquí: barber.pe/negocio/tu-barberia
-            </div>
+        <div className="saas-business-carousel">
+          {negocios.map((n) => {
+            const logo = getAssetUrl(n.logoUrl);
+            const landingUrl = n.slug ? `/negocio/${n.slug}` : "/login";
 
-            <div className="saas-phone-message confirmed">
-              Reserva registrada y confirmada por correo.
-            </div>
-          </div>
+            return (
+              <article className="saas-business-card" key={n.idNegocio}>
+                <div
+                  className="saas-business-cover"
+                  style={{
+                    backgroundImage: logo
+                      ? `linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.55)), url(${logo})`
+                      : "linear-gradient(135deg, #111, #2a2413)",
+                  }}
+                >
+                  <span>LIVE</span>
+                </div>
+
+                <div className="saas-business-body">
+                  <div className="saas-business-top">
+                    <small>⭐ Landing activa</small>
+                    <b>{n.whatsappNegocio ? "WhatsApp listo" : "Configurable"}</b>
+                  </div>
+
+                  <h3>{n.nombre}</h3>
+
+                  <p>{n.direccion || n.descripcion || "Negocio conectado a Barber.pe"}</p>
+
+                  <div className="saas-tags">
+                    <span>Reservas</span>
+                    <span>Servicios</span>
+                    <span>Trabajadores</span>
+                  </div>
+
+                  <a className="saas-card-link" href={landingUrl}>
+                    Visitar landing pública →
+                  </a>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
 
-      <section className="container saas-section">
-        <div className="saas-final-cta">
-          <span className="saas-eyebrow">Barber.pe</span>
-          <h2>Deja el cuaderno. Administra tu barbería desde el celular.</h2>
+      <section id="plataforma" className="saas-section saas-tech">
+        <div className="saas-section-center">
+          <span className="saas-eyebrow">Arquitectura SaaS</span>
+          <h2>Diseñado para operar, medir y escalar barberías</h2>
           <p>
-            Solicita acceso y empieza a probar el sistema con tu negocio.
+            No es solo una web de reservas. Es un sistema operativo comercial
+            para administrar equipos, controlar comisiones y convertir cada
+            trabajador en un perfil vendible.
           </p>
+        </div>
 
-          <div className="saas-hero-actions center">
-            <a
-              href="#"
-              target=""
-              rel="noreferrer"
-              className="saas-btn-primary"
-            >
-              Solicitar acceso
-            </a>
+        <div className="saas-feature-grid">
+          <div className="saas-feature-card">
+            <div className="saas-icon">📊</div>
+            <h3>Dashboard financiero</h3>
+            <p>
+              Ventas, gastos, pagos parciales, comisiones pendientes y lectura
+              operativa diaria para tomar mejores decisiones.
+            </p>
+            <ul>
+              <li>Resumen financiero por negocio</li>
+              <li>Comisiones por trabajador</li>
+              <li>Historial de pagos</li>
+            </ul>
+          </div>
 
-            <Link to="/login" className="saas-btn-secondary">
-              Ya tengo cuenta
-            </Link>
+          <div className="saas-feature-card">
+            <div className="saas-icon">💈</div>
+            <h3>Panel del trabajador</h3>
+            <p>
+              Cada trabajador puede tener su propio dashboard, disponibilidad,
+              reservas, servicios realizados y pagos.
+            </p>
+            <ul>
+              <li>Acceso individual seguro</li>
+              <li>Perfil público con portafolio</li>
+              <li>Control de disponibilidad</li>
+            </ul>
+          </div>
+
+          <div className="saas-feature-card">
+            <div className="saas-icon">🔐</div>
+            <h3>Multi-negocio seguro</h3>
+            <p>
+              Cada cuenta opera separada por negocio. El sistema valida el
+              IdNegocio desde el token y protege datos por rol.
+            </p>
+            <ul>
+              <li>JWT + roles</li>
+              <li>Admin por negocio</li>
+              <li>SuperAdmin global</li>
+            </ul>
           </div>
         </div>
       </section>
 
-      <footer className="landing-footer-simple">
-        <p>
-          <strong>Barber.pe</strong> | © 2026 Todos los derechos reservados
-        </p>
+      <section id="planes" className="saas-section">
+        <div className="saas-section-head">
+          <div>
+            <span className="saas-eyebrow">Planes por operación</span>
+            <h2>Crece por bloques de trabajadores</h2>
+            <p>
+              Barber.pe se adapta al tamaño real del negocio: desde una barbería
+              personal hasta equipos grandes con operación diaria.
+            </p>
+          </div>
+        </div>
+
+        <div className="saas-plans-carousel">
+          {planes.map((p) => (
+            <div className="saas-plan-card" key={p.titulo}>
+              <small>{p.limite}</small>
+              <h3>{p.titulo}</h3>
+              <p>{p.texto}</p>
+              <a href="#demo">Solicitar información →</a>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="demo" className="saas-cta">
+        <div>
+          <span className="saas-eyebrow">Demo controlada</span>
+          <h2>Activa una prueba para tu barbería</h2>
+          <p>
+            La demo se crea desde el panel SuperAdmin. Recibirás un usuario
+            administrador, contraseña temporal por correo y acceso para cambiarla
+            al primer ingreso.
+          </p>
+        </div>
+
+        <a href="#" onClick={(e) => e.preventDefault()} className="btn btn-gold">
+          Solicitar demo
+        </a>
+      </section>
+
+      <footer className="saas-footer">
+        <div>
+          <a className="saas-brand" href="/">
+            barber<span>.pe</span>
+          </a>
+          <p>
+            Plataforma SaaS para digitalizar barberías, ordenar la gestión
+            diaria y potenciar la presencia pública de cada negocio.
+          </p>
+        </div>
+
+        <div className="saas-footer-links">
+          <div>
+            <h4>Sistema</h4>
+            <a href="/login">Acceso Admin</a>
+            <a href="/login">Acceso Trabajador</a>
+            <a href="#planes">Planes</a>
+          </div>
+
+          <div>
+            <h4>Producto</h4>
+            <a href="#negocios">Negocios</a>
+            <a href="#plataforma">Características</a>
+            <a href="#demo">Demo</a>
+          </div>
+        </div>
+
+        <div className="saas-copy">
+          © 2026 Barber.pe — SaaS de gestión para barberías profesionales.
+        </div>
       </footer>
     </div>
   );

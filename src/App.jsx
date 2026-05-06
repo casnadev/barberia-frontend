@@ -30,6 +30,8 @@ import LandingSaaS from "./pages/publico/LandingSaaS";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminRoute from "./components/auth/AdminRoute";
 import TrabajadorRoute from "./components/auth/TrabajadorRoute";
+import SuperAdminDashboard from "./pages/superadmin/SuperAdminDashboard";
+import SuperAdminRoute from "./components/auth/SuperAdminRoute";
 
 function App() {
   return (
@@ -39,6 +41,15 @@ function App() {
       <Route path="/" element={<LandingSaaS />} />
 
       <Route path="/login" element={<Login />} />
+
+      <Route
+        path="/superadmin"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminDashboard />
+          </SuperAdminRoute>
+        }
+      />
 
       {/* 🔥 RUTAS PÚBLICAS */}
       <Route path="/negocio/:slug" element={<LandingNegocio />} />

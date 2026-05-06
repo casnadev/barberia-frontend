@@ -4,10 +4,7 @@ function PageHeader({ title, subtitle }) {
   return (
     <div className="header-dashboard">
       
-      {/* LOGO GRANDE */}
-      <div className="header-logo">
-        <LogoAnimado />
-      </div>
+     
 
       {/* TEXTO */}
       <div className="header-text">
