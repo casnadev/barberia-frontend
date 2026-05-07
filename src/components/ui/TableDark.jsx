@@ -4,11 +4,12 @@ function TableDark({ headers = [], children }) {
       <table className="table-dark-pro">
         <thead>
           <tr>
-            {headers.map((h, index) => (
-              <th key={index}>{h}</th>
+            {headers.map((h) => (
+              <th key={h}>{h}</th>
             ))}
           </tr>
         </thead>
+
         <tbody>{children}</tbody>
       </table>
     </div>

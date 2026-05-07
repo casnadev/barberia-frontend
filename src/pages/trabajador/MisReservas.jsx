@@ -5,6 +5,23 @@ import authFetch from "../../services/authFetch";
 import CardDark from "../../components/ui/CardDark";
 import PageHeader from "../../components/ui/PageHeader";
 import GoldBadge from "../../components/ui/GoldBadge";
+import Toast from "../../components/ui/Toast";
+import AvatarCircle from "../../components/ui/AvatarCircle";
+
+import { getImageUrl } from "../../utils/imageUrl";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Phone,
+  Mail,
+  MessageCircle,
+  Scissors,
+  CheckCircle2,
+  XCircle,
+  CircleCheckBig,
+} from "lucide-react";
 
 export default function MisReservas() {
   const [lista, setLista] = useState([]);
@@ -13,13 +30,8 @@ export default function MisReservas() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const baseUrl = API_BASE.replace("/api", "");
-
-  const obtenerUrl = (ruta) => {
-    if (!ruta) return "";
-    if (ruta.startsWith("http")) return ruta;
-    return `${baseUrl}${ruta}`;
-  };
+  const hoyISO = new Date().toISOString().substring(0, 10);
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(hoyISO);
 
   const cargarReservas = useCallback(async () => {
     try {
@@ -53,24 +65,6 @@ export default function MisReservas() {
     return () => clearTimeout(timer);
   }, [cargarReservas]);
 
-  const reservasAgrupadas = useMemo(() => {
-    const map = new Map();
-
-    lista.forEach((r) => {
-      const fecha = r.fechaReserva?.substring(0, 10) || "Sin fecha";
-
-      if (!map.has(fecha)) {
-        map.set(fecha, []);
-      }
-
-      map.get(fecha).push(r);
-    });
-
-    return Array.from(map.entries()).sort(
-      (a, b) => new Date(a[0]) - new Date(b[0])
-    );
-  }, [lista]);
-
   const cambiarEstado = async (id, accion) => {
     setWhatsappCliente("");
     setMensaje("");
@@ -103,27 +97,149 @@ export default function MisReservas() {
     }
   };
 
+  const fechaReservaISO = (r) => {
+    return r.fechaReserva?.substring(0, 10) || "";
+  };
+
+  const reservasDia = useMemo(() => {
+    return lista
+      .filter((r) => fechaReservaISO(r) === fechaSeleccionada)
+      .sort((a, b) => normalizarHora(a.horaReserva) - normalizarHora(b.horaReserva));
+  }, [lista, fechaSeleccionada]);
+
+  const reservasPorFecha = useMemo(() => {
+    const map = new Map();
+
+    lista.forEach((r) => {
+      const fecha = fechaReservaISO(r);
+      if (!fecha) return;
+
+      map.set(fecha, (map.get(fecha) || 0) + 1);
+    });
+
+    return map;
+  }, [lista]);
+
+  const trabajadoresDia = useMemo(() => {
+    const map = new Map();
+
+    reservasDia.forEach((r) => {
+      const key =
+        r.idTrabajador ||
+        r.idTrabajadorAsignado ||
+        r.trabajadorId ||
+        r.trabajador ||
+        "sin-asignar";
+
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          nombre: r.trabajador || "No asignado",
+          foto: imagenTrabajador(r),
+        });
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) =>
+      String(a.nombre).localeCompare(String(b.nombre))
+    );
+  }, [reservasDia]);
+
+  const horasAgenda = useMemo(() => {
+    const horasBase = [];
+    for (let h = 8; h <= 21; h += 1) {
+      horasBase.push(h);
+    }
+
+    const horasReservas = reservasDia
+      .map((r) => Math.floor(normalizarHora(r.horaReserva) / 60))
+      .filter((h) => !Number.isNaN(h));
+
+    const todas = Array.from(new Set([...horasBase, ...horasReservas])).sort(
+      (a, b) => a - b
+    );
+
+    return todas;
+  }, [reservasDia]);
+
+  const estadisticasDia = useMemo(() => {
+    const total = reservasDia.length;
+    const pendientes = reservasDia.filter((r) => r.estado === "Pendiente").length;
+    const confirmadas = reservasDia.filter((r) => r.estado === "Confirmada").length;
+    const atendidas = reservasDia.filter((r) => r.estado === "Atendida").length;
+    const canceladas = reservasDia.filter((r) => r.estado === "Cancelada").length;
+
+    return { total, pendientes, confirmadas, atendidas, canceladas };
+  }, [reservasDia]);
+
+  const reservasPorTrabajadorYHora = (trabajadorKey, hora) => {
+    return reservasDia.filter((r) => {
+      const key =
+        r.idTrabajador ||
+        r.idTrabajadorAsignado ||
+        r.trabajadorId ||
+        r.trabajador ||
+        "sin-asignar";
+
+      const horaReserva = Math.floor(normalizarHora(r.horaReserva) / 60);
+
+      return String(key) === String(trabajadorKey) && horaReserva === hora;
+    });
+  };
+
+  const cambiarDia = (dias) => {
+    const fecha = new Date(`${fechaSeleccionada}T00:00:00`);
+    fecha.setDate(fecha.getDate() + dias);
+    setFechaSeleccionada(fecha.toISOString().substring(0, 10));
+  };
+
+  const volverHoy = () => {
+    setFechaSeleccionada(hoyISO);
+  };
+
   const badgeColor = (estado) => {
     switch (estado) {
       case "Confirmada":
-        return "#22c55e";
+        return "#16a34a";
       case "Atendida":
-        return "#38bdf8";
+        return "#2563eb";
       case "Cancelada":
-        return "#ef4444";
+        return "#dc2626";
       default:
         return "#d4af37";
     }
   };
 
+  const estadoClass = (estado) => {
+    switch (estado) {
+      case "Confirmada":
+        return "confirmada";
+      case "Atendida":
+        return "atendida";
+      case "Cancelada":
+        return "cancelada";
+      default:
+        return "pendiente";
+    }
+  };
+
   const formatearFecha = (fecha) => {
-    if (!fecha || fecha === "Sin fecha") return "Sin fecha";
+    if (!fecha) return "Sin fecha";
 
     return new Date(`${fecha}T00:00:00`).toLocaleDateString("es-PE", {
       weekday: "long",
       day: "2-digit",
       month: "long",
       year: "numeric",
+    });
+  };
+
+  const formatearDiaCorto = (fecha) => {
+    if (!fecha) return "";
+
+    return new Date(`${fecha}T00:00:00`).toLocaleDateString("es-PE", {
+      day: "2-digit",
+      month: "short",
     });
   };
 
@@ -137,7 +253,7 @@ export default function MisReservas() {
     );
   };
 
-  const imagenTrabajador = (r) => {
+  function imagenTrabajador(r) {
     return (
       r.trabajadorFotoUrl ||
       r.fotoTrabajador ||
@@ -145,366 +261,359 @@ export default function MisReservas() {
       r.trabajadorImagen ||
       ""
     );
+  }
+
+  function normalizarHora(hora) {
+    if (!hora) return 0;
+
+    const limpio = String(hora).trim();
+
+    if (limpio.includes(":")) {
+      const [h, m] = limpio.split(":").map(Number);
+      return (Number(h) || 0) * 60 + (Number(m) || 0);
+    }
+
+    const numero = Number(limpio);
+    return Number.isNaN(numero) ? 0 : numero * 60;
+  }
+
+  const formatearHoraBloque = (hora) => {
+    return `${String(hora).padStart(2, "0")}:00`;
+  };
+
+  const ReservaCard = ({ reserva, compact = false }) => {
+    const imgServicio = imagenServicio(reserva);
+    const imgTrabajador = imagenTrabajador(reserva);
+
+    return (
+      <div className={`agenda-reserva-card ${estadoClass(reserva.estado)} ${compact ? "compact" : ""}`}>
+        <div className="agenda-reserva-head">
+          {imgServicio ? (
+            <img
+              src={getImageUrl(imgServicio)}
+              alt={reserva.servicio || "Servicio"}
+              className="agenda-service-img"
+            />
+          ) : (
+            <div className="agenda-service-placeholder">
+              <Scissors size={18} />
+            </div>
+          )}
+
+          <div className="agenda-reserva-main">
+            <div className="agenda-reserva-time">
+              <Clock size={13} />
+              {reserva.horaReserva || "--:--"}
+            </div>
+
+            <h5 title={reserva.nombreCliente}>
+              {reserva.nombreCliente || "Cliente sin nombre"}
+            </h5>
+
+            <p title={reserva.servicio}>
+              {reserva.servicio || "Servicio no especificado"}
+            </p>
+          </div>
+        </div>
+
+        <div className="agenda-reserva-worker">
+          {imgTrabajador ? (
+            <img
+              src={getImageUrl(imgTrabajador)}
+              alt={reserva.trabajador || "Trabajador"}
+            />
+          ) : (
+            <span>{reserva.trabajador?.charAt(0)?.toUpperCase() || "T"}</span>
+          )}
+
+          <b>{reserva.trabajador || "No asignado"}</b>
+        </div>
+
+        <div className="agenda-reserva-contact">
+          {reserva.telefonoCliente && (
+            <span>
+              <Phone size={13} />
+              {reserva.telefonoCliente}
+            </span>
+          )}
+
+          {reserva.correoCliente && (
+            <span>
+              <Mail size={13} />
+              {reserva.correoCliente}
+            </span>
+          )}
+        </div>
+
+        <div className="agenda-reserva-bottom">
+          <span
+            className="agenda-estado-pill"
+            style={{ background: badgeColor(reserva.estado) }}
+          >
+            {reserva.estado}
+          </span>
+        </div>
+
+        <div className="agenda-reserva-actions">
+          {reserva.estado === "Pendiente" && (
+            <>
+              <button
+                className="btn btn-gold btn-sm"
+                onClick={() => cambiarEstado(reserva.idReserva, "confirmar")}
+              >
+                <CheckCircle2 size={14} />
+                Confirmar
+              </button>
+
+              <button
+                className="btn btn-dark-outline btn-sm"
+                onClick={() => cambiarEstado(reserva.idReserva, "cancelar")}
+              >
+                <XCircle size={14} />
+                Cancelar
+              </button>
+            </>
+          )}
+
+          {reserva.estado === "Confirmada" && (
+            <button
+              className="btn btn-gold btn-sm w-100"
+              onClick={() => cambiarEstado(reserva.idReserva, "atendida")}
+            >
+              <CircleCheckBig size={14} />
+              Marcar atendida
+            </button>
+          )}
+
+          {(reserva.estado === "Atendida" || reserva.estado === "Cancelada") && (
+            <button className="btn btn-dark-outline btn-sm w-100" disabled>
+              Sin acciones pendientes
+            </button>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="page-shell">
-      <PageHeader
-        title="Agenda de Reservas"
-        subtitle="Gestiona tus citas de forma ordenada por día"
-      />
-
+    <div className="page-shell reservas-page">
       <div className="container-fluid py-4">
-        <style>{`
-          .agenda-day-section {
-            margin-bottom: 28px;
-          }
+        <CardDark className="mb-4 reservas-header-card">
+          <div className="reservas-header-row">
+            <PageHeader
+              title="Agenda de Reservas"
+              subtitle="Control diario de citas por trabajador, con historial pasado y futuro por fecha."
+            />
 
-          .agenda-scroll {
-            max-height: 430px;
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding-right: 6px;
-          }
+            <div className="reservas-header-actions">
+              <GoldBadge>{estadisticasDia.total} citas del día</GoldBadge>
 
-          .agenda-scroll::-webkit-scrollbar {
-            width: 6px;
-          }
+              <button className="btn btn-dark-outline" onClick={volverHoy}>
+                Hoy
+              </button>
+            </div>
+          </div>
+        </CardDark>
 
-          .agenda-scroll::-webkit-scrollbar-thumb {
-            background: #d4af37;
-            border-radius: 10px;
-          }
-
-          .reserva-card-pro {
-            background: #ffffff;
-            border: 1px solid rgba(212, 175, 55, 0.18);
-            border-radius: 20px;
-            padding: 16px;
-            height: 100%;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-          }
-
-          .reserva-card-top {
-            display: flex;
-            gap: 14px;
-            align-items: center;
-          }
-
-          .reserva-service-img {
-            width: 74px;
-            height: 74px;
-            border-radius: 16px;
-            object-fit: cover;
-            border: 1px solid rgba(212, 175, 55, 0.25);
-            background: rgba(212, 175, 55, 0.08);
-            flex-shrink: 0;
-          }
-
-          .reserva-placeholder-img {
-            width: 74px;
-            height: 74px;
-            border-radius: 16px;
-            border: 1px solid rgba(212, 175, 55, 0.25);
-            background: rgba(212, 175, 55, 0.08);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            flex-shrink: 0;
-          }
-
-          .reserva-cliente {
-            font-size: 1.08rem;
-            font-weight: 900;
-            color: #111827;
-            margin-bottom: 4px;
-          }
-
-          .reserva-servicio {
-            font-size: 0.92rem;
-            color: #6b7280;
-            font-weight: 600;
-          }
-
-          .reserva-info-box {
-            background: #f9fafb;
-            border-radius: 16px;
-            padding: 12px;
-            border: 1px solid rgba(15,23,42,0.06);
-          }
-
-          .reserva-info-row {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 8px;
-            font-size: 0.92rem;
-          }
-
-          .reserva-info-row:last-child {
-            margin-bottom: 0;
-          }
-
-          .reserva-info-row span {
-            color: #6b7280;
-            font-weight: 600;
-          }
-
-          .reserva-info-row b {
-            color: #111827;
-            text-align: right;
-          }
-
-          .trabajador-mini {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-          }
-
-          .trabajador-avatar {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid rgba(212, 175, 55, 0.45);
-            background: #111;
-          }
-
-          .trabajador-avatar-placeholder {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            border: 2px solid rgba(212, 175, 55, 0.45);
-            background: #111;
-            color: #d4af37;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 900;
-          }
-
-          .estado-pill {
-            display: inline-block;
-            padding: 7px 14px;
-            border-radius: 999px;
-            color: #fff;
-            font-weight: 800;
-            font-size: 0.82rem;
-          }
-
-          .reserva-actions {
-            margin-top: auto;
-            display: flex;
-            gap: 8px;
-          }
-
-          @media (max-width: 768px) {
-            .agenda-scroll {
-              max-height: 330px;
-              padding-right: 4px;
-            }
-
-            .reserva-card-pro {
-              padding: 14px;
-              border-radius: 18px;
-            }
-
-            .reserva-card-top {
-              align-items: flex-start;
-            }
-
-            .reserva-service-img,
-            .reserva-placeholder-img {
-              width: 62px;
-              height: 62px;
-              border-radius: 14px;
-            }
-
-            .reserva-actions {
-              flex-direction: column;
-            }
-
-            .reserva-actions .btn {
-              width: 100%;
-            }
-          }
-        `}</style>
-
-        {mensaje && <div className="alert alert-success">{mensaje}</div>}
+        <Toast mensaje={mensaje} tipo="success" onClose={() => setMensaje("")} />
+        <Toast mensaje={error} tipo="error" onClose={() => setError("")} />
 
         {whatsappCliente && (
           <a
             href={whatsappCliente}
             target="_blank"
             rel="noreferrer"
-            className="btn btn-gold mb-4"
+            className="btn btn-gold mb-4 reservas-whatsapp-btn"
           >
+            <MessageCircle size={16} />
             Enviar WhatsApp al cliente
           </a>
         )}
 
-        {error && <div className="alert alert-danger">{error}</div>}
+        <CardDark className="reservas-toolbar-card mb-4">
+          <div className="reservas-toolbar">
+            <div>
+              <h4 className="section-title text-capitalize mb-1">
+                {formatearFecha(fechaSeleccionada)}
+              </h4>
+              <p className="section-subtitle">
+                Cambia la fecha para revisar citas pasadas, actuales o futuras.
+              </p>
+            </div>
+
+            <div className="reservas-date-controls">
+              <button className="btn btn-dark-outline" onClick={() => cambiarDia(-1)}>
+                <ChevronLeft size={16} />
+              </button>
+
+              <div className="reservas-date-input-wrap">
+                <CalendarDays size={16} />
+                <input
+                  type="date"
+                  className="form-control input-dark"
+                  value={fechaSeleccionada}
+                  onChange={(e) => setFechaSeleccionada(e.target.value)}
+                />
+              </div>
+
+              <button className="btn btn-dark-outline" onClick={() => cambiarDia(1)}>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+
+          <div className="reservas-stats-grid">
+            <div className="reservas-stat-card">
+              <span>Total</span>
+              <b>{estadisticasDia.total}</b>
+            </div>
+
+            <div className="reservas-stat-card pendiente">
+              <span>Pendientes</span>
+              <b>{estadisticasDia.pendientes}</b>
+            </div>
+
+            <div className="reservas-stat-card confirmada">
+              <span>Confirmadas</span>
+              <b>{estadisticasDia.confirmadas}</b>
+            </div>
+
+            <div className="reservas-stat-card atendida">
+              <span>Atendidas</span>
+              <b>{estadisticasDia.atendidas}</b>
+            </div>
+
+            <div className="reservas-stat-card cancelada">
+              <span>Canceladas</span>
+              <b>{estadisticasDia.canceladas}</b>
+            </div>
+          </div>
+
+          {reservasPorFecha.size > 0 && (
+            <div className="reservas-history-strip">
+              {Array.from(reservasPorFecha.entries())
+                .sort((a, b) => new Date(b[0]) - new Date(a[0]))
+                .slice(0, 12)
+                .map(([fecha, cantidad]) => (
+                  <button
+                    key={fecha}
+                    className={fecha === fechaSeleccionada ? "active" : ""}
+                    onClick={() => setFechaSeleccionada(fecha)}
+                  >
+                    <span>{formatearDiaCorto(fecha)}</span>
+                    <b>{cantidad}</b>
+                  </button>
+                ))}
+            </div>
+          )}
+        </CardDark>
 
         {loading ? (
           <CardDark>
             <p className="text-center mb-0">Cargando reservas...</p>
           </CardDark>
-        ) : reservasAgrupadas.length > 0 ? (
-          reservasAgrupadas.map(([fecha, reservas]) => (
-            <section key={fecha} className="agenda-day-section">
-              <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <div>
-                  <h4 className="section-title mb-1 text-capitalize">
-                    {formatearFecha(fecha)}
-                  </h4>
-                  <p className="section-subtitle mb-0">
-                    Reservas programadas para este día
-                  </p>
-                </div>
-
-                <GoldBadge>{reservas.length} citas</GoldBadge>
+        ) : estadisticasDia.total > 0 ? (
+          <CardDark className="reservas-calendar-card">
+            <div className="reservas-calendar-head">
+              <div>
+                <h4 className="section-title mb-1">Calendario diario</h4>
+                <p className="section-subtitle">
+                  Visualiza cada cita por hora y por trabajador.
+                </p>
               </div>
 
-              <div className="agenda-scroll">
-                <div className="row g-3">
-                  {reservas.map((r) => {
-                    const imgServicio = imagenServicio(r);
-                    const imgTrabajador = imagenTrabajador(r);
+              <GoldBadge>{trabajadoresDia.length} trabajadores</GoldBadge>
+            </div>
 
-                    return (
-                      <div key={r.idReserva} className="col-xl-4 col-lg-6">
-                        <div className="reserva-card-pro">
-                          <div className="reserva-card-top">
-                            {imgServicio ? (
-                              <img
-                                src={obtenerUrl(imgServicio)}
-                                alt={r.servicio || "Servicio"}
-                                className="reserva-service-img"
-                              />
-                            ) : (
-                              <div className="reserva-placeholder-img">✂️</div>
-                            )}
+            <div className="agenda-desktop-board">
+              <div
+                className="agenda-calendar-grid"
+                style={{
+                  gridTemplateColumns: `88px repeat(${trabajadoresDia.length}, minmax(210px, 1fr))`,
+                }}
+              >
+                <div className="agenda-time-header">Hora</div>
 
-                            <div style={{ minWidth: 0 }}>
-                              <div className="reserva-cliente">
-                                {r.nombreCliente}
-                              </div>
-                              <div className="reserva-servicio">
-                                {r.servicio || "Servicio no especificado"}
-                              </div>
-                            </div>
-                          </div>
+                {trabajadoresDia.map((t) => (
+                  <div className="agenda-worker-header" key={t.key}>
+                    <AvatarCircle
+                      src={t.foto ? getImageUrl(t.foto) : ""}
+                      alt={t.nombre}
+                      fallback={t.nombre?.charAt(0)?.toUpperCase() || "T"}
+                      size="sm"
+                    />
+                    <span>{t.nombre}</span>
+                  </div>
+                ))}
 
-                          <div className="reserva-info-box">
-                            <div className="reserva-info-row">
-                              <span>Hora</span>
-                              <b>{r.horaReserva}</b>
-                            </div>
+                {horasAgenda.map((hora) => (
+                  <div className="agenda-grid-row" key={hora}>
+                    <div className="agenda-time-cell">
+                      {formatearHoraBloque(hora)}
+                    </div>
 
-                            <div className="reserva-info-row">
-                              <span>Trabajador</span>
-                              <b>
-                                <div className="trabajador-mini">
-                                  {imgTrabajador ? (
-                                    <img
-                                      src={obtenerUrl(imgTrabajador)}
-                                      alt={r.trabajador || "Trabajador"}
-                                      className="trabajador-avatar"
-                                    />
-                                  ) : (
-                                    <div className="trabajador-avatar-placeholder">
-                                      {r.trabajador?.charAt(0)?.toUpperCase() ||
-                                        "T"}
-                                    </div>
-                                  )}
-                                  <span>{r.trabajador || "No asignado"}</span>
-                                </div>
-                              </b>
-                            </div>
+                    {trabajadoresDia.map((t) => {
+                      const reservasCelda = reservasPorTrabajadorYHora(t.key, hora);
 
-                            {r.telefonoCliente && (
-                              <div className="reserva-info-row">
-                                <span>Teléfono</span>
-                                <b>{r.telefonoCliente}</b>
-                              </div>
-                            )}
-
-                            {r.correoCliente && (
-                              <div className="reserva-info-row">
-                                <span>Correo</span>
-                                <b>{r.correoCliente}</b>
-                              </div>
-                            )}
-                          </div>
-
-                          <div>
-                            <span
-                              className="estado-pill"
-                              style={{ background: badgeColor(r.estado) }}
-                            >
-                              {r.estado}
-                            </span>
-                          </div>
-
-                          <div className="reserva-actions">
-                            {r.estado === "Pendiente" && (
-                              <>
-                                <button
-                                  className="btn btn-gold"
-                                  onClick={() =>
-                                    cambiarEstado(r.idReserva, "confirmar")
-                                  }
-                                >
-                                  Confirmar
-                                </button>
-
-                                <button
-                                  className="btn btn-dark-outline"
-                                  onClick={() =>
-                                    cambiarEstado(r.idReserva, "cancelar")
-                                  }
-                                >
-                                  Cancelar
-                                </button>
-                              </>
-                            )}
-
-                            {r.estado === "Confirmada" && (
-                              <button
-                                className="btn btn-gold w-100"
-                                onClick={() =>
-                                  cambiarEstado(r.idReserva, "atendida")
-                                }
-                              >
-                                Marcar atendida
-                              </button>
-                            )}
-
-                            {(r.estado === "Atendida" ||
-                              r.estado === "Cancelada") && (
-                              <button
-                                className="btn btn-dark-outline w-100"
-                                disabled
-                              >
-                                Sin acciones pendientes
-                              </button>
-                            )}
-                          </div>
+                      return (
+                        <div className="agenda-worker-cell" key={`${t.key}-${hora}`}>
+                          {reservasCelda.map((r) => (
+                            <ReservaCard key={r.idReserva} reserva={r} compact />
+                          ))}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
-            </section>
-          ))
+            </div>
+
+            <div className="agenda-mobile-board">
+              {trabajadoresDia.map((t) => {
+                const reservasTrabajador = reservasDia.filter((r) => {
+                  const key =
+                    r.idTrabajador ||
+                    r.idTrabajadorAsignado ||
+                    r.trabajadorId ||
+                    r.trabajador ||
+                    "sin-asignar";
+
+                  return String(key) === String(t.key);
+                });
+
+                return (
+                  <div className="agenda-mobile-worker-card" key={t.key}>
+                    <div className="agenda-mobile-worker-head">
+                      <AvatarCircle
+                        src={t.foto ? getImageUrl(t.foto) : ""}
+                        alt={t.nombre}
+                        fallback={t.nombre?.charAt(0)?.toUpperCase() || "T"}
+                        size="sm"
+                      />
+
+                      <div>
+                        <h5>{t.nombre}</h5>
+                        <p>{reservasTrabajador.length} citas</p>
+                      </div>
+                    </div>
+
+                    <div className="agenda-mobile-reservas">
+                      {reservasTrabajador.map((r) => (
+                        <ReservaCard key={r.idReserva} reserva={r} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardDark>
         ) : (
-          <CardDark>
-            <p className="text-center mb-0">No hay reservas registradas.</p>
+          <CardDark className="reservas-empty-card">
+            <CalendarDays size={38} />
+            <h4>No hay reservas para esta fecha</h4>
+            <p>
+              Cambia el calendario para revisar citas pasadas o futuras.
+            </p>
           </CardDark>
         )}
       </div>

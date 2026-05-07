@@ -5,6 +5,9 @@ import authFetch from "../services/authFetch";
 import CardDark from "../components/ui/CardDark";
 import GoldBadge from "../components/ui/GoldBadge";
 import AvatarCircle from "../components/ui/AvatarCircle";
+import PageHeader from "../components/ui/PageHeader";
+import Toast from "../components/ui/Toast";
+import { getImageUrl } from "../utils/imageUrl";
 import { Pencil, Image, Key, Trash2, Plus, X, Upload } from "lucide-react";
 
 const Modal = ({ abierto, titulo, children, onClose, ancho = "760px" }) => {
@@ -66,9 +69,7 @@ function Trabajadores() {
   }, []);
 
   const obtenerUrl = (ruta) => {
-    if (!ruta) return "";
-    if (ruta.startsWith("http")) return ruta;
-    return `${API_BASE.replace("/api", "")}${ruta}`;
+    return ruta ? getImageUrl(ruta) : "";
   };
 
   const validarImagen = (archivo) => {
@@ -545,25 +546,14 @@ function Trabajadores() {
   return (
     <div className="page-shell">
       <div className="container-fluid py-4">
-        <CardDark className="mb-4">
-          <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
-            <div>
-              <h1
-                className="page-title mb-1"
-                style={{ color: "#d4af37", fontWeight: 900 }}
-              >
-                Gestión de Trabajadores
-              </h1>
+        <CardDark className="mb-4 trabajadores-header-card">
+          <div className="trabajadores-header-row">
+            <PageHeader
+              title="Gestión de Trabajadores"
+              subtitle="Administra perfiles públicos, portafolio, accesos y trabajadores destacados."
+            />
 
-              <p
-                className="page-subtitle"
-                style={{ color: "#111827", fontWeight: 700 }}
-              >
-                Administra perfiles públicos, portafolio, accesos y trabajadores destacados.
-              </p>
-            </div>
-
-            <div className="d-flex align-items-center gap-2 flex-wrap">
+            <div className="trabajadores-header-actions">
               <GoldBadge>{lista.length} trabajadores activos</GoldBadge>
 
               <button className="btn btn-gold" onClick={abrirCrearTrabajador}>
@@ -574,8 +564,8 @@ function Trabajadores() {
           </div>
         </CardDark>
 
-        {mensaje && <div className="alert alert-success shadow-sm">{mensaje}</div>}
-        {error && <div className="alert alert-danger shadow-sm">{error}</div>}
+        <Toast mensaje={mensaje} tipo="success" onClose={() => setMensaje("")} />
+        <Toast mensaje={error} tipo="error" onClose={() => setError("")} />
 
         <CardDark>
           <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
@@ -784,9 +774,8 @@ function Trabajadores() {
                 />
 
                 <label
-                  className="form-check-label fw-bold"
+                  className="form-check-label fw-bold label-gold"
                   htmlFor="swDestacadoModal"
-                  style={{ color: "#c9a227" }}
                 >
                   Destacado ⭐
                 </label>
@@ -972,146 +961,6 @@ function Trabajadores() {
           </div>
         </Modal>
 
-        <style>{`
-          .trabajadores-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 16px;
-          }
-
-          .trabajador-card-pro {
-            text-align: left;
-            min-height: 100%;
-            display: flex;
-            flex-direction: column;
-          }
-
-          .trabajador-bio {
-            min-height: 44px;
-          }
-
-          .trab-modal-backdrop {
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            background: rgba(0, 0, 0, 0.68);
-            backdrop-filter: blur(5px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 18px;
-          }
-
-          .trab-modal {
-            width: 100%;
-            max-height: 92vh;
-            overflow-y: auto;
-            border-radius: 24px;
-            background: #f5f7f4;
-            border: 1px solid rgba(212, 175, 55, 0.35);
-            box-shadow: 0 26px 80px rgba(0,0,0,.45);
-          }
-
-          .trab-modal-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 20px 22px;
-            border-bottom: 1px solid rgba(212, 175, 55, 0.18);
-          }
-
-          .trab-modal-header h4 {
-            color: #d4af37;
-            font-weight: 900;
-            margin: 0;
-          }
-
-          .trab-modal-body {
-            padding: 22px;
-          }
-
-          .trab-modal-close {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: 1px solid rgba(212, 175, 55, 0.35);
-            background: transparent;
-            color: #d4af37;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-
-          .btn-gold {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 7px;
-          }
-
-          @media (max-width: 991px) {
-            .trabajadores-grid {
-              display: flex;
-              overflow-x: auto;
-              scroll-snap-type: x mandatory;
-              gap: 14px;
-              padding-bottom: 12px;
-            }
-
-            .trabajador-card-wrap {
-              min-width: 86%;
-              scroll-snap-align: start;
-            }
-
-            .trabajador-card-pro {
-              min-height: 100%;
-            }
-
-            .trabajadores-grid::-webkit-scrollbar {
-              height: 6px;
-            }
-
-            .trabajadores-grid::-webkit-scrollbar-thumb {
-              background: #d4af37;
-              border-radius: 999px;
-            }
-
-            .trab-modal {
-              border-radius: 20px;
-              max-height: 94vh;
-            }
-
-            .trab-modal-header,
-            .trab-modal-body {
-              padding: 16px;
-            }
-
-            .actions-grid {
-              grid-template-columns: 1fr 1fr;
-            }
-          }
-
-          @media (max-width: 576px) {
-            .trabajador-card-wrap {
-              min-width: 92%;
-            }
-
-            .btn-gold,
-            .btn-dark-outline {
-              width: 100%;
-            }
-
-            .trab-modal-backdrop {
-              padding: 10px;
-              align-items: flex-end;
-            }
-
-            .trab-modal {
-              border-radius: 22px 22px 0 0;
-              max-height: 92vh;
-            }
-          }
-        `}</style>
       </div>
     </div>
   );

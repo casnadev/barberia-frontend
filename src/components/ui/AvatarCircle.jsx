@@ -7,7 +7,7 @@ export default function AvatarCircle({
 }) {
   const className = `avatar-circle ${size} ${selected ? "selected" : ""}`;
 
-  if (src) {
+  if (src?.trim()) {
     return <img src={src} alt={alt} className={className} />;
   }
 

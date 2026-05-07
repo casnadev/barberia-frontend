@@ -1,9 +1,43 @@
 import React, { useEffect, useState } from "react";
 import API_BASE from "../services/api";
 import authFetch from "../services/authFetch";
+
 import CardDark from "../components/ui/CardDark";
-import PageHeader from "../components/ui/PageHeader";
 import GoldBadge from "../components/ui/GoldBadge";
+import PageHeader from "../components/ui/PageHeader";
+import Toast from "../components/ui/Toast";
+
+import { getImageUrl } from "../utils/imageUrl";
+import {
+  Pencil,
+  Trash2,
+  Plus,
+  X,
+  Upload,
+  RotateCcw,
+  ImagePlus,
+  Scissors,
+} from "lucide-react";
+
+const Modal = ({ abierto, titulo, children, onClose, ancho = "760px" }) => {
+  if (!abierto) return null;
+
+  return (
+    <div className="trab-modal-backdrop">
+      <div className="trab-modal" style={{ maxWidth: ancho }}>
+        <div className="trab-modal-header">
+          <h4>{titulo}</h4>
+
+          <button className="trab-modal-close" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="trab-modal-body">{children}</div>
+      </div>
+    </div>
+  );
+};
 
 function Servicios() {
   const [lista, setLista] = useState([]);
@@ -19,15 +53,26 @@ function Servicios() {
   const [previewServicio, setPreviewServicio] = useState("");
 
   const [editando, setEditando] = useState(null);
+  const [modalServicio, setModalServicio] = useState(false);
+
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
 
-  const baseUrl = API_BASE.replace("/api", "");
-
   useEffect(() => {
     cargarInicial();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (previewServicio) URL.revokeObjectURL(previewServicio);
+    };
+  }, [previewServicio]);
+
+  const mostrarError = (msg) => {
+    setMensaje("");
+    setError(msg);
+  };
 
   const validarImagen = (archivo) => {
     if (!archivo) return true;
@@ -36,12 +81,12 @@ function Servicios() {
     const maxMB = 3;
 
     if (!permitidos.includes(archivo.type)) {
-      setError("Solo se permiten imágenes JPG, PNG o WEBP.");
+      mostrarError("Solo se permiten imágenes JPG, PNG o WEBP.");
       return false;
     }
 
     if (archivo.size > maxMB * 1024 * 1024) {
-      setError(`La imagen no debe superar ${maxMB} MB.`);
+      mostrarError(`La imagen no debe superar ${maxMB} MB.`);
       return false;
     }
 
@@ -70,6 +115,24 @@ function Servicios() {
   };
 
   const recargarServicios = cargarInicial;
+
+  const limpiarPreviewServicio = () => {
+    if (previewServicio) URL.revokeObjectURL(previewServicio);
+    setPreviewServicio("");
+  };
+
+  const seleccionarImagenServicio = (e) => {
+    const file = e.target.files?.[0] || null;
+
+    if (file && !validarImagen(file)) {
+      e.target.value = "";
+      return;
+    }
+
+    limpiarPreviewServicio();
+    setImagenServicio(file);
+    setPreviewServicio(file ? URL.createObjectURL(file) : "");
+  };
 
   const ejecutarSubidaImagen = async (id) => {
     if (!imagenServicio) return true;
@@ -176,7 +239,7 @@ function Servicios() {
       }
 
       setMensaje(editando ? "Servicio actualizado." : "Servicio registrado con éxito.");
-      limpiar();
+      cerrarModalServicio();
       await recargarServicios();
     } catch (err) {
       console.error(err);
@@ -207,7 +270,7 @@ function Servicios() {
     if (ok) {
       setMensaje("Imagen actualizada correctamente.");
       setImagenServicio(null);
-      setPreviewServicio("");
+      limpiarPreviewServicio();
       await recargarServicios();
     }
   };
@@ -239,12 +302,19 @@ function Servicios() {
 
       setMensaje("Imagen eliminada.");
       setImagenServicio(null);
-      setPreviewServicio("");
+      limpiarPreviewServicio();
       await recargarServicios();
     } catch (err) {
       console.error(err);
       setError("Error al eliminar imagen.");
     }
+  };
+
+  const abrirCrearServicio = () => {
+    setMensaje("");
+    setError("");
+    limpiar();
+    setModalServicio(true);
   };
 
   const editar = (s) => {
@@ -255,11 +325,10 @@ function Servicios() {
     setDuracionMinutos(s.duracionMinutos || "");
     setDestacado(!!s.destacado);
     setImagenServicio(null);
-    setPreviewServicio("");
+    limpiarPreviewServicio();
     setMensaje("");
     setError("");
-
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setModalServicio(true);
   };
 
   const eliminar = async (id) => {
@@ -298,7 +367,12 @@ function Servicios() {
     setDuracionMinutos("");
     setDestacado(false);
     setImagenServicio(null);
-    setPreviewServicio("");
+    limpiarPreviewServicio();
+  };
+
+  const cerrarModalServicio = () => {
+    limpiar();
+    setModalServicio(false);
   };
 
   const obtenerImagenServicio = () => {
@@ -306,281 +380,270 @@ function Servicios() {
 
     if (editando) {
       const s = lista.find((item) => item.idServicio === editando);
-      if (s?.imagenUrl) return `${baseUrl}${s.imagenUrl}`;
+      if (s?.imagenUrl) return getImageUrl(s.imagenUrl);
     }
 
     return "";
   };
 
   return (
-    <div className="page-shell">
-      <PageHeader
-        title="Gestión de Servicios"
-        subtitle="Registra y administra los servicios de tu barbería"
-      />
-
+    <div className="page-shell servicios-page">
       <div className="container-fluid py-4">
-        <div className="row justify-content-center">
-          <div className="col-12" style={{ maxWidth: "1200px" }}>
-            {mensaje && (
-              <div className="alert alert-success border-0 shadow-sm">
-                {mensaje}
-              </div>
-            )}
+        <CardDark className="mb-4 trabajadores-header-card servicios-header-card">
+          <div className="trabajadores-header-row">
+            <PageHeader
+              title="Gestión de Servicios"
+              subtitle="Registra, edita y destaca los servicios visibles para tus clientes."
+            />
 
-            {error && (
-              <div className="alert alert-danger border-0 shadow-sm">
-                {error}
-              </div>
-            )}
+            <div className="trabajadores-header-actions">
+              <GoldBadge>{lista.length} servicios activos</GoldBadge>
 
-            <div className="row g-4">
-              <div className="col-lg-4">
-                <CardDark className="h-100 shadow">
-                  <h4 className="section-title mb-4">
-                    {editando ? "Editar servicio" : "Nuevo servicio"}
-                  </h4>
-
-                  <div className="mb-3">
-                    <label className="form-label text-gold small fw-bold">
-                      Nombre
-                    </label>
-
-                    <input
-                      className="form-control input-dark"
-                      placeholder="Ej: Corte Degradado"
-                      value={nombre}
-                      maxLength={120}
-                      onChange={(e) => setNombre(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="row">
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label text-gold small fw-bold">
-                        Precio (S/)
-                      </label>
-
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className="form-control input-dark"
-                        placeholder="0.00"
-                        value={precioBase}
-                        onChange={(e) => setPrecioBase(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label text-gold small fw-bold">
-                        Duración (min)
-                      </label>
-
-                      <input
-                        type="number"
-                        min="1"
-                        max="480"
-                        className="form-control input-dark"
-                        placeholder="30"
-                        value={duracionMinutos}
-                        onChange={(e) => setDuracionMinutos(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label text-gold small fw-bold">
-                      Descripción corta
-                    </label>
-
-                    <textarea
-                      className="form-control input-dark"
-                      rows="2"
-                      placeholder="Breve descripción del servicio..."
-                      value={descripcionCorta}
-                      maxLength={250}
-                      onChange={(e) => setDescripcionCorta(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="form-check form-switch mb-4">
-                    <input
-                      type="checkbox"
-                      className="form-check-input"
-                      id="chkDestacado"
-                      checked={destacado}
-                      onChange={(e) => setDestacado(e.target.checked)}
-                    />
-
-                    <label
-                      className="form-check-label text-gold"
-                      htmlFor="chkDestacado"
-                    >
-                      Marcar como destacado ⭐
-                    </label>
-                  </div>
-
-                  <hr className="opacity-10" />
-
-                  <h5 className="text-gold mb-3 small fw-bold uppercase">
-                    Imagen del Servicio
-                  </h5>
-
-                  {obtenerImagenServicio() && (
-                    <div className="mb-3 text-center">
-                      <img
-                        src={obtenerImagenServicio()}
-                        alt="Preview"
-                        style={{
-                          width: "100%",
-                          height: "160px",
-                          objectFit: "cover",
-                          borderRadius: "12px",
-                          border: "1px solid rgba(212, 175, 55, 0.3)",
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  <input
-                    type="file"
-                    className="form-control input-dark mb-3"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-
-                      if (file && !validarImagen(file)) {
-                        e.target.value = "";
-                        return;
-                      }
-
-                      setImagenServicio(file);
-                      setPreviewServicio(file ? URL.createObjectURL(file) : "");
-                    }}
-                  />
-
-                  {editando && (
-                    <div className="d-flex gap-2 mb-4">
-                      <button
-                        className="btn btn-sm btn-dark-outline w-100"
-                        onClick={subirImagenDirecto}
-                        disabled={subiendoImagen || !imagenServicio}
-                      >
-                        {subiendoImagen ? "Subiendo..." : "Subir nueva"}
-                      </button>
-
-                      <button
-                        className="btn btn-sm btn-dark-outline w-100 text-danger"
-                        onClick={eliminarImagenServicio}
-                        disabled={subiendoImagen}
-                      >
-                        Quitar
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="d-flex gap-2 mt-4">
-                    <button
-                      className="btn btn-gold w-100 fw-bold"
-                      onClick={guardar}
-                      disabled={subiendoImagen || guardando}
-                    >
-                      {subiendoImagen || guardando
-                        ? "Procesando..."
-                        : editando
-                        ? "Actualizar"
-                        : "Registrar"}
-                    </button>
-
-                    <button
-                      className="btn btn-dark-outline w-100"
-                      onClick={limpiar}
-                      disabled={subiendoImagen || guardando}
-                    >
-                      Limpiar
-                    </button>
-                  </div>
-                </CardDark>
-              </div>
-
-              <div className="col-lg-8">
-                <CardDark className="shadow">
-                  <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-                    <h4 className="section-title mb-0">Servicios Activos</h4>
-                    <GoldBadge>{lista.length} servicios registrados</GoldBadge>
-                  </div>
-
-                  <div className="d-flex flex-column gap-3">
-                    {lista.length === 0 ? (
-                      <div className="text-center py-4 text-muted">
-                        No hay servicios registrados.
-                      </div>
-                    ) : (
-                      lista.map((s) => (
-                        <div key={s.idServicio} className="servicio-list-card">
-                          <div className="servicio-list-left">
-                            {s.imagenUrl ? (
-                              <img
-                                src={`${baseUrl}${s.imagenUrl}`}
-                                className="servicio-list-img"
-                                alt={s.nombre}
-                              />
-                            ) : (
-                              <div className="servicio-list-placeholder">✂</div>
-                            )}
-
-                            <div>
-                              <div className="servicio-list-name">
-                                {s.nombre}
-                              </div>
-
-                              <div className="servicio-list-desc">
-                                {s.descripcionCorta || "Sin descripción"}
-                              </div>
-
-                              <div className="servicio-list-meta">
-                                <span>⏱ {s.duracionMinutos || "-"} min</span>
-
-                                {s.destacado && (
-                                  <span className="servicio-list-badge">
-                                    ⭐ Destacado
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="servicio-list-right">
-                            <div className="servicio-list-price">
-                              S/ {Number(s.precioBase || 0).toFixed(2)}
-                            </div>
-
-                            <div className="d-flex gap-2">
-                              <button
-                                className="btn btn-sm btn-gold"
-                                onClick={() => editar(s)}
-                              >
-                                Editar
-                              </button>
-
-                              <button
-                                className="btn btn-sm btn-dark-outline"
-                                onClick={() => eliminar(s.idServicio)}
-                              >
-                                Borrar
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </CardDark>
-              </div>
+              <button className="btn btn-gold" onClick={abrirCrearServicio}>
+                <Plus size={17} />
+                <span>Nuevo servicio</span>
+              </button>
             </div>
           </div>
-        </div>
+        </CardDark>
+
+        <Toast mensaje={mensaje} tipo="success" onClose={() => setMensaje("")} />
+        <Toast mensaje={error} tipo="error" onClose={() => setError("")} />
+
+        <CardDark className="servicios-panel-card">
+          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+            <div>
+              <h4 className="section-title">Servicios Activos</h4>
+              <p className="section-subtitle">
+                Vista rápida de precio, duración, imagen pública y acciones.
+              </p>
+            </div>
+          </div>
+
+          <div className="servicios-grid">
+            {lista.map((s) => (
+              <div className="servicio-card-wrap" key={s.idServicio}>
+                <div className="servicio-card-dashboard h-100">
+                  <div className="servicio-thumb-box">
+                    {s.imagenUrl ? (
+                      <img
+                        src={getImageUrl(s.imagenUrl)}
+                        className="servicio-thumb-img"
+                        alt={s.nombre}
+                      />
+                    ) : (
+                      <div className="servicio-thumb-placeholder">
+                        <Scissors size={34} />
+                      </div>
+                    )}
+
+                    {s.destacado && (
+                      <span className="servicio-floating-badge">⭐ Destacado</span>
+                    )}
+                  </div>
+
+                  <div className="servicio-card-body">
+                    <div className="d-flex justify-content-between align-items-start gap-2 mb-2">
+                      <div className="min-w-0">
+                        <h5 className="servicio-card-title truncate-one-line" title={s.nombre}>
+                          {s.nombre}
+                        </h5>
+
+                        <p className="servicio-card-desc">
+                          {s.descripcionCorta || "Sin descripción registrada."}
+                        </p>
+                      </div>
+
+                      <div className="servicio-card-price">
+                        S/ {Number(s.precioBase || 0).toFixed(2)}
+                      </div>
+                    </div>
+
+                    <div className="servicio-card-meta">
+                      <span>⏱ {s.duracionMinutos || "-"} min</span>
+
+                      {!s.destacado && <span>Estándar</span>}
+                    </div>
+
+                    <div className="actions-grid servicios-actions-grid">
+                      <button
+                        className="btn-action-dark"
+                        onClick={() => editar(s)}
+                      >
+                        <Pencil size={16} />
+                        <span>Editar</span>
+                      </button>
+
+                      <button
+                        className="btn-action-danger"
+                        onClick={() => eliminar(s.idServicio)}
+                      >
+                        <Trash2 size={16} />
+                        <span>Eliminar</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {lista.length === 0 && (
+            <div className="servicios-empty">
+              <Scissors size={36} />
+              <p>Aún no tienes servicios registrados.</p>
+            </div>
+          )}
+        </CardDark>
+
+        <Modal
+          abierto={modalServicio}
+          titulo={editando ? "Editar servicio" : "Nuevo servicio"}
+          onClose={cerrarModalServicio}
+          ancho="820px"
+        >
+          <div className="row g-3">
+            <div className="col-md-6">
+              <label className="label-gold">Nombre</label>
+              <input
+                className="form-control input-dark"
+                placeholder="Ej: Corte Degradado"
+                value={nombre}
+                maxLength={120}
+                onChange={(e) => setNombre(e.target.value)}
+              />
+            </div>
+
+            <div className="col-md-3">
+              <label className="label-gold">Precio (S/)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="form-control input-dark"
+                placeholder="0.00"
+                value={precioBase}
+                onChange={(e) => setPrecioBase(e.target.value)}
+              />
+            </div>
+
+            <div className="col-md-3">
+              <label className="label-gold">Duración (min)</label>
+              <input
+                type="number"
+                min="1"
+                max="480"
+                className="form-control input-dark"
+                placeholder="30"
+                value={duracionMinutos}
+                onChange={(e) => setDuracionMinutos(e.target.value)}
+              />
+            </div>
+
+            <div className="col-12">
+              <label className="label-gold">Descripción corta</label>
+              <textarea
+                className="form-control input-dark"
+                rows="3"
+                placeholder="Breve descripción del servicio..."
+                value={descripcionCorta}
+                maxLength={250}
+                onChange={(e) => setDescripcionCorta(e.target.value)}
+              />
+            </div>
+
+            <div className="col-md-8">
+              <label className="label-gold">Imagen del servicio</label>
+              <input
+                type="file"
+                className="form-control input-dark"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={seleccionarImagenServicio}
+              />
+            </div>
+
+            <div className="col-md-4 d-flex align-items-end">
+              <div className="form-check form-switch mb-2">
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  id="chkDestacadoModal"
+                  checked={destacado}
+                  onChange={(e) => setDestacado(e.target.checked)}
+                />
+
+                <label
+                  className="form-check-label fw-bold label-gold"
+                  htmlFor="chkDestacadoModal"
+                >
+                  Destacado ⭐
+                </label>
+              </div>
+            </div>
+
+            <div className="col-12">
+              {obtenerImagenServicio() ? (
+                <div className="servicio-modal-preview">
+                  <img src={obtenerImagenServicio()} alt="Preview del servicio" />
+                </div>
+              ) : (
+                <div className="servicio-modal-preview-empty">
+                  <ImagePlus size={32} />
+                  <span>Sin imagen seleccionada</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {editando && (
+            <div className="d-flex gap-2 mt-3 flex-wrap">
+              <button
+                className="btn btn-dark-outline"
+                onClick={subirImagenDirecto}
+                disabled={subiendoImagen || !imagenServicio}
+              >
+                <Upload size={16} />
+                {subiendoImagen ? "Subiendo..." : "Subir nueva imagen"}
+              </button>
+
+              <button
+                className="btn btn-dark-outline text-danger"
+                onClick={eliminarImagenServicio}
+                disabled={subiendoImagen}
+              >
+                <Trash2 size={16} />
+                Quitar imagen
+              </button>
+            </div>
+          )}
+
+          <div className="d-flex justify-content-end gap-2 mt-4 flex-wrap">
+            <button className="btn btn-dark-outline" onClick={cerrarModalServicio}>
+              Cancelar
+            </button>
+
+            <button
+              className="btn btn-dark-outline"
+              onClick={limpiar}
+              disabled={subiendoImagen || guardando}
+            >
+              <RotateCcw size={16} />
+              Limpiar
+            </button>
+
+            <button
+              className="btn btn-gold"
+              onClick={guardar}
+              disabled={subiendoImagen || guardando}
+            >
+              {subiendoImagen || guardando
+                ? "Procesando..."
+                : editando
+                ? "Actualizar"
+                : "Registrar"}
+            </button>
+          </div>
+        </Modal>
       </div>
     </div>
   );

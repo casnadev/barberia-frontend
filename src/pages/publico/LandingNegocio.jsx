@@ -1,16 +1,54 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import API_BASE from "../../services/api";
 
 import CardDark from "../../components/ui/CardDark";
+import GoldBadge from "../../components/ui/GoldBadge";
+import AvatarCircle from "../../components/ui/AvatarCircle";
+
+import { getImageUrl } from "../../utils/imageUrl";
 
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Pagination, Navigation, FreeMode } from "swiper/modules";
+
+import {
+  CalendarDays,
+  Clock,
+  MapPin,
+  MessageCircle,
+  Scissors,
+  Star,
+  X,
+  CheckCircle2,
+  Globe,
+  Play,
+} from "lucide-react";
 
 import "swiper/css";
 import "swiper/css/pagination";
 import "swiper/css/navigation";
 import "swiper/css/free-mode";
+
+/*
+  Preparado para futuro backend:
+  Luego estos horarios pueden venir desde data.negocio.horariosAtencion.
+  Formato sugerido:
+  {
+    1: { abierto: true, inicio: "09:00", fin: "20:00" },
+    2: { abierto: true, inicio: "09:00", fin: "20:00" },
+    ...
+    0: { abierto: false, inicio: "", fin: "" }
+  }
+*/
+const HORARIOS_NEGOCIO = {
+  1: { abierto: true, inicio: "09:00", fin: "20:00", label: "Lunes" },
+  2: { abierto: true, inicio: "09:00", fin: "20:00", label: "Martes" },
+  3: { abierto: true, inicio: "09:00", fin: "20:00", label: "Miércoles" },
+  4: { abierto: true, inicio: "09:00", fin: "20:00", label: "Jueves" },
+  5: { abierto: true, inicio: "09:00", fin: "20:00", label: "Viernes" },
+  6: { abierto: true, inicio: "10:00", fin: "18:00", label: "Sábado" },
+  0: { abierto: false, inicio: "", fin: "", label: "Domingo" },
+};
 
 export default function LandingNegocio() {
   const { slug } = useParams();
@@ -67,14 +105,21 @@ export default function LandingNegocio() {
     cargarHorarios();
   }, [trabajadorSeleccionado, fechaReserva]);
 
+  const horarios = useMemo(() => {
+    return data?.negocio?.horariosAtencion || HORARIOS_NEGOCIO;
+  }, [data]);
+
   if (!data) return null;
 
-  const baseUrl = API_BASE.replace("/api", "");
-  const logo = data.negocio.logoUrl ? `${baseUrl}${data.negocio.logoUrl}` : "";
+  const logo = data.negocio.logoUrl ? getImageUrl(data.negocio.logoUrl) : "";
   const imagenesCarrusel = data.imagenes || [];
 
-  const whatsappUrl = `https://wa.me/${data.negocio.whatsappNegocio || ""}`;
+  const numeroWhatsApp = data.negocio.whatsappNegocio || data.negocio.telefono;
+  const whatsappUrl = `https://wa.me/${numeroWhatsApp || ""}`;
 
+  const mensajeWhatsAppLanding = encodeURIComponent(
+    `Hola, ${data.negocio.nombre}. Estoy interesado en sus servicios. ¿Me podrían brindar más información?`
+  );
 
   const cerrarModal = () => {
     setMostrarModalReserva(false);
@@ -159,51 +204,118 @@ export default function LandingNegocio() {
     }
   };
 
+  const convertirMinutos = (hora) => {
+    if (!hora) return 0;
+
+    const [h, m] = hora.split(":").map(Number);
+    return (h || 0) * 60 + (m || 0);
+  };
+
+  const formatearHora = (hora) => {
+    if (!hora) return "Cerrado";
+
+    const [h, m] = hora.split(":").map(Number);
+    const date = new Date();
+    date.setHours(h || 0, m || 0, 0, 0);
+
+    return date.toLocaleTimeString("es-PE", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
   const obtenerEstado = () => {
     const ahora = new Date();
     const dia = ahora.getDay();
-    const hora = ahora.getHours();
+    const minutosAhora = ahora.getHours() * 60 + ahora.getMinutes();
+    const horarioHoy = horarios[dia];
 
-    if (dia === 0) return { abierto: false, texto: "Cerrado hoy" };
-
-    if (dia === 6) {
-      if (hora >= 10 && hora < 18) {
-        return { abierto: true, texto: "Abierto hasta 6:00 PM" };
-      }
-
+    if (!horarioHoy || !horarioHoy.abierto) {
       return {
         abierto: false,
-        texto: "Horario sábado: 10:00 AM - 6:00 PM",
+        texto: "Cerrado hoy",
+        detalle: obtenerProximaApertura(dia, horarios),
       };
     }
 
-    if (hora >= 9 && hora < 20) {
-      return { abierto: true, texto: "Abierto hasta 8:00 PM" };
+    const inicio = convertirMinutos(horarioHoy.inicio);
+    const fin = convertirMinutos(horarioHoy.fin);
+
+    if (minutosAhora >= inicio && minutosAhora < fin) {
+      return {
+        abierto: true,
+        texto: `Abierto hasta ${formatearHora(horarioHoy.fin)}`,
+        detalle: `${formatearHora(horarioHoy.inicio)} - ${formatearHora(horarioHoy.fin)}`,
+      };
     }
 
-    return { abierto: false, texto: "Abre mañana 9:00 AM" };
+    if (minutosAhora < inicio) {
+      return {
+        abierto: false,
+        texto: `Abre hoy ${formatearHora(horarioHoy.inicio)}`,
+        detalle: `${formatearHora(horarioHoy.inicio)} - ${formatearHora(horarioHoy.fin)}`,
+      };
+    }
+
+    return {
+      abierto: false,
+      texto: obtenerProximaApertura(dia, horarios),
+      detalle: `${formatearHora(horarioHoy.inicio)} - ${formatearHora(horarioHoy.fin)}`,
+    };
+  };
+
+  const obtenerProximaApertura = (diaActual, horariosConfig) => {
+    for (let i = 1; i <= 7; i += 1) {
+      const siguiente = (diaActual + i) % 7;
+      const horario = horariosConfig[siguiente];
+
+      if (horario?.abierto) {
+        const nombreDia = i === 1 ? "mañana" : horario.label?.toLowerCase() || "próximamente";
+        return `Abre ${nombreDia} ${formatearHora(horario.inicio)}`;
+      }
+    }
+
+    return "Sin horarios disponibles";
   };
 
   const estado = obtenerEstado();
-  const numeroWhatsApp = data.negocio.whatsappNegocio || data.negocio.telefono;
 
-  const mensajeWhatsAppLanding = encodeURIComponent(
-    `Hola, ${data.negocio.nombre}. Estoy interesado en sus servicios. ¿Me podrían brindar más información?`
-  );
+  const obtenerImagenServicio = (s) => {
+    const imagenRaw = s.imagenUrl || s.ImagenUrl || "";
+    return imagenRaw ? getImageUrl(imagenRaw) : "";
+  };
+
+  const obtenerFotoTrabajador = (t) => {
+    return t.fotoPerfilUrl ? getImageUrl(t.fotoPerfilUrl) : "";
+  };
+
+  const horariosResumen = [
+    {
+      label: "Lun - Vie",
+      abierto: true,
+      inicio: horarios[1]?.inicio || "09:00",
+      fin: horarios[1]?.fin || "20:00",
+    },
+    {
+      label: "Sábado",
+      abierto: horarios[6]?.abierto,
+      inicio: horarios[6]?.inicio,
+      fin: horarios[6]?.fin,
+    },
+    {
+      label: "Domingo",
+      abierto: horarios[0]?.abierto,
+      inicio: horarios[0]?.inicio,
+      fin: horarios[0]?.fin,
+    },
+  ];
 
   return (
-    <div className="page-shell landing-public-page">
+    <div className="page-shell landing-public-page landing-pro-page">
       <div className="container py-4 landing-main-container">
         <CardDark>
-          <div
-            className="landing-hero-carousel landing-hero-mobile-full"
-            style={{
-              position: "relative",
-              borderRadius: "22px",
-              overflow: "hidden",
-              border: "1px solid rgba(212,175,55,0.18)",
-            }}
-          >
+          <div className="landing-hero-carousel landing-hero-mobile-full landing-pro-hero">
             {imagenesCarrusel.length > 0 ? (
               <Swiper
                 modules={[Autoplay, Pagination, Navigation]}
@@ -218,48 +330,17 @@ export default function LandingNegocio() {
               >
                 {imagenesCarrusel.map((img) => (
                   <SwiperSlide key={img.idImagen}>
-                    <div className="landing-hero-slide" style={{ background: "#111" }}>
+                    <div className="landing-hero-slide">
                       <img
-                        src={`${baseUrl}${img.urlImagen}`}
+                        src={getImageUrl(img.urlImagen)}
                         alt={img.descripcion || data.negocio.nombre}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                          display: "block",
-                        }}
+                        className="landing-hero-img"
                       />
 
                       {img.descripcion && (
-                        <div
-                          className="landing-img-description"
-                          style={{
-                            position: "absolute",
-                            left: "30px",
-                            bottom: "40px",
-                            zIndex: 6,
-                            color: "#fff",
-                            maxWidth: "600px",
-                            background: "rgba(0,0,0,.4)",
-                            backdropFilter: "blur(6px)",
-                            padding: "10px 16px",
-                            borderRadius: "12px",
-                          }}
-                        >
-                          <h4 style={{ fontWeight: 800, marginBottom: "4px" }}>
-                            {img.descripcion}
-                          </h4>
-
-                          <p
-                            style={{
-                              margin: 0,
-                              color: "#f0cf73",
-                              fontWeight: 600,
-                              fontSize: "14px",
-                            }}
-                          >
-                            Vive la experiencia en nuestro local
-                          </p>
+                        <div className="landing-img-description">
+                          <h4>{img.descripcion}</h4>
+                          <p>Vive la experiencia en nuestro local</p>
                         </div>
                       )}
                     </div>
@@ -267,169 +348,61 @@ export default function LandingNegocio() {
                 ))}
               </Swiper>
             ) : (
-              <div
-                className="landing-hero-slide"
-                style={{
-                  background:
-                    "linear-gradient(135deg, rgba(212,175,55,.25), rgba(0,0,0,.95))",
-                }}
-              />
+              <div className="landing-hero-slide landing-hero-empty" />
             )}
 
-            <div
-              className="landing-hero-overlay"
-              style={{
-                position: "absolute",
-                inset: 0,
-                zIndex: 5,
-                background:
-                  "linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,.72))",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                textAlign: "center",
-                padding: "30px",
-                pointerEvents: "none",
-              }}
-            >
-              <div className="landing-hero-content" style={{ maxWidth: "760px", pointerEvents: "auto" }}>
+            <div className="landing-hero-overlay landing-pro-overlay">
+              <div className="landing-hero-content landing-pro-content">
                 {logo && (
                   <img
                     src={logo}
                     alt="Logo"
-                    className="landing-hero-logo"
-                    style={{
-                      width: "160px",
-                      height: "160px",
-                      borderRadius: "50%",
-                      objectFit: "cover",
-                      border: "4px solid #d4af37",
-                      boxShadow: "0 15px 35px rgba(0,0,0,.45)",
-                      transform: "translateY(-8px)",
-                    }}
+                    className="landing-hero-logo landing-pro-logo"
                   />
                 )}
 
-                <h1
-                  className="mt-4 landing-hero-title"
-                  style={{
-                    color: "#fff",
-                    fontWeight: 900,
-                    fontSize: "clamp(2.8rem,6vw,5.2rem)",
-                    letterSpacing: "1px",
-                    textShadow: "0 6px 30px rgba(0,0,0,.45)",
-                  }}
-                >
+                <GoldBadge>{estado.abierto ? "Disponible ahora" : "Agenda disponible"}</GoldBadge>
+
+                <h1 className="landing-hero-title">
                   {data.negocio.nombre}
                 </h1>
 
-                <p
-                  className="landing-hero-address"
-                  style={{
-                    color: "#f0cf73",
-                    fontWeight: 700,
-                    fontSize: "1.1rem",
-                    marginBottom: "10px",
-                  }}
-                >
-                  📍 {data.negocio.direccion}
+                <p className="landing-hero-address">
+                  <MapPin size={18} />
+                  {data.negocio.direccion}
                 </p>
 
-                <div
-                  className="mt-4 landing-schedule-box"
-                  style={{
-                    maxWidth: "640px",
-                    margin: "0 auto",
-                    background: "rgba(0,0,0,.38)",
-                    backdropFilter: "blur(12px)",
-                    padding: "22px",
-                    borderRadius: "22px",
-                    border: "1px solid rgba(212,175,55,.2)",
-                  }}
-                >
-                  <div className="row g-3">
-                    <div className="col-md-5">
-                      <div
-                        className="landing-status-box"
-                        style={{
-                          background: estado.abierto
-                            ? "rgba(16,185,129,.15)"
-                            : "rgba(239,68,68,.15)",
-                          padding: "18px",
-                          borderRadius: "18px",
-                          height: "100%",
-                        }}
-                      >
-                        <h5
-                          style={{
-                            color: estado.abierto ? "#10b981" : "#ff6b6b",
-                            fontWeight: 800,
-                            marginBottom: "8px",
-                          }}
-                        >
-                          {estado.abierto ? "🟢 Abierto ahora" : "🔴 Cerrado"}
-                        </h5>
-
-                        <p style={{ margin: 0, color: "#ddd" }}>{estado.texto}</p>
-                      </div>
+                <div className="landing-schedule-box landing-pro-schedule">
+                  <div className={`landing-status-box landing-pro-status ${estado.abierto ? "open" : "closed"}`}>
+                    <div className="landing-status-dot" />
+                    <div>
+                      <h5>{estado.abierto ? "Abierto ahora" : "Cerrado"}</h5>
+                      <p>{estado.texto}</p>
                     </div>
+                  </div>
 
-                    <div className="col-md-7">
-                      <div
-                        className="landing-hours-box"
-                        style={{
-                          background: "rgba(255,255,255,.04)",
-                          padding: "18px",
-                          borderRadius: "18px",
-                          height: "100%",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            marginBottom: "10px",
-                            color: "#fff",
-                          }}
-                        >
-                          <span>Lun - Vie</span>
-                          <strong style={{ color: "#d4af37" }}>9:00 AM - 8:00 PM</strong>
-                        </div>
+                  <div className="landing-hours-box landing-pro-hours">
+                    {horariosResumen.map((h) => (
+                      <div className="landing-hour-row" key={h.label}>
+                        <span>{h.label}</span>
 
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            marginBottom: "10px",
-                            color: "#fff",
-                          }}
-                        >
-                          <span>Sábado</span>
-                          <strong style={{ color: "#d4af37" }}>10:00 AM - 6:00 PM</strong>
-                        </div>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            color: "#fff",
-                          }}
-                        >
-                          <span>Domingo</span>
-                          <strong style={{ color: "#ff7676" }}>Cerrado</strong>
-                        </div>
+                        <strong className={!h.abierto ? "closed" : ""}>
+                          {h.abierto
+                            ? `${formatearHora(h.inicio)} - ${formatearHora(h.fin)}`
+                            : "Cerrado"}
+                        </strong>
                       </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
 
-                <div className="d-flex gap-3 justify-content-center mt-4 flex-wrap landing-hero-buttons">
-                  <Link
-                    to={`/catalogo-servicios/${data.negocio.idNegocio}`}
+                <div className="landing-hero-buttons">
+                  <a
+                    href="#servicios"
                     className="btn btn-gold"
                   >
                     Reservar ahora
-                  </Link>
+                  </a>
 
                   <a
                     href={`https://wa.me/${numeroWhatsApp}?text=${mensajeWhatsAppLanding}`}
@@ -437,17 +410,17 @@ export default function LandingNegocio() {
                     target="_blank"
                     rel="noreferrer"
                   >
+                    <MessageCircle size={17} />
                     WhatsApp
                   </a>
-
                 </div>
               </div>
             </div>
           </div>
         </CardDark>
 
-        <CardDark className="mt-4">
-          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <CardDark className="mt-4" id="servicios">
+          <div className="landing-section-head">
             <div>
               <h3 className="section-title mb-1">Nuestros Servicios</h3>
               <p className="section-subtitle mb-0">
@@ -455,18 +428,7 @@ export default function LandingNegocio() {
               </p>
             </div>
 
-            <span
-              style={{
-                background: "rgba(212,175,55,.12)",
-                color: "#d4af37",
-                border: "1px solid rgba(212,175,55,.22)",
-                borderRadius: "999px",
-                padding: "8px 14px",
-                fontWeight: 800,
-              }}
-            >
-              {(data.servicios || []).length} servicios
-            </span>
+            <GoldBadge>{(data.servicios || []).length} servicios</GoldBadge>
           </div>
 
           <Swiper
@@ -476,198 +438,68 @@ export default function LandingNegocio() {
             freeMode={true}
             navigation={true}
             pagination={{ clickable: true }}
-            loop={true}
+            loop={(data.servicios || []).length > 3}
             breakpoints={{
               576: { slidesPerView: 1.4 },
               768: { slidesPerView: 2.15 },
               1024: { slidesPerView: 3.05 },
             }}
-            style={{ paddingBottom: "44px" }}
+            className="landing-services-swiper"
           >
             {(data.servicios || []).map((s) => {
-              const imagenRaw = s.imagenUrl || s.ImagenUrl || "";
-              const imagenServicio = imagenRaw ? `${baseUrl}${imagenRaw}` : "";
+              const imagenServicio = obtenerImagenServicio(s);
 
               return (
                 <SwiperSlide key={s.idServicio}>
-                  <div
-                    className="h-100"
-                    style={{
-                      position: "relative",
-                      borderRadius: "22px",
-                      overflow: "hidden",
-                      minHeight: "450px",
-                      border: s.destacado
-                        ? "1px solid rgba(212,175,55,.5)"
-                        : "1px solid rgba(255,255,255,.1)",
-                      boxShadow: s.destacado
-                        ? "0 18px 35px rgba(212,175,55,.12)"
-                        : "none",
-                      background: "#111",
-                    }}
-                  >
-                    <div style={{ position: "absolute", inset: 0, zIndex: 1 }}>
+                  <div className="landing-service-card">
+                    <div className="landing-service-bg">
                       {imagenServicio ? (
-                        <img
-                          src={imagenServicio}
-                          alt={s.nombre}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                          }}
-                        />
+                        <img src={imagenServicio} alt={s.nombre} />
                       ) : (
-                        <div
-                          style={{
-                            height: "100%",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "64px",
-                            color: "rgba(212,175,55,.2)",
-                          }}
-                        >
-                          ✂
+                        <div className="landing-service-empty">
+                          <Scissors size={64} />
                         </div>
                       )}
 
-                      <div
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          background:
-                            "linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.8) 70%, #000 100%)",
-                        }}
-                      />
+                      <div className="landing-service-gradient" />
                     </div>
 
-                    <div
-                      style={{
-                        position: "relative",
-                        zIndex: 2,
-                        padding: "20px",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                      }}
-                    >
+                    <div className="landing-service-top">
                       <div>
                         {s.destacado && (
-                          <span
-                            style={{
-                              background: "#d4af37",
-                              color: "#111",
-                              borderRadius: "999px",
-                              padding: "6px 12px",
-                              fontWeight: 900,
-                              fontSize: ".75rem",
-                              display: "inline-block",
-                            }}
-                          >
-                            🔥 DESTACADO
+                          <span className="landing-service-featured">
+                            <Star size={13} />
+                            Destacado
                           </span>
                         )}
                       </div>
 
-                      <div
-                        style={{
-                          background: "rgba(0,0,0,.6)",
-                          backdropFilter: "blur(8px)",
-                          color: "#f0cf73",
-                          borderRadius: "12px",
-                          padding: "6px 12px",
-                          fontWeight: 900,
-                          fontSize: "1.1rem",
-                          border: "1px solid rgba(212,175,55,.3)",
-                        }}
-                      >
+                      <div className="landing-service-price">
                         S/ {Number(s.precioBase || 0).toFixed(2)}
                       </div>
                     </div>
 
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        zIndex: 3,
-                        padding: "25px",
-                        textAlign: "center",
-                      }}
-                    >
-                      <h4
-                        style={{
-                          color: "#fff",
-                          fontWeight: 850,
-                          fontSize: "1.5rem",
-                          marginBottom: "8px",
-                          textShadow: "0 2px 4px rgba(0,0,0,0.5)",
-                        }}
-                      >
-                        {s.nombre}
-                      </h4>
+                    <div className="landing-service-content">
+                      <h4>{s.nombre}</h4>
 
-                      <div className="d-flex gap-2 justify-content-center mb-3">
+                      <div className="landing-service-meta">
                         {s.duracionMinutos && (
-                          <span
-                            style={{
-                              background: "rgba(255,255,255,.15)",
-                              backdropFilter: "blur(4px)",
-                              color: "#fff",
-                              borderRadius: "999px",
-                              padding: "4px 10px",
-                              fontSize: ".8rem",
-                              fontWeight: 700,
-                            }}
-                          >
-                            ⏱ {s.duracionMinutos} min
+                          <span>
+                            <Clock size={13} />
+                            {s.duracionMinutos} min
                           </span>
                         )}
 
-                        <span
-                          style={{
-                            background: "rgba(212,175,55,.25)",
-                            backdropFilter: "blur(4px)",
-                            color: "#f0cf73",
-                            borderRadius: "999px",
-                            padding: "4px 10px",
-                            fontSize: ".8rem",
-                            fontWeight: 700,
-                            border: "1px solid rgba(212,175,55,.3)",
-                          }}
-                        >
-                          Reserva online
-                        </span>
+                        <span>Reserva online</span>
                       </div>
 
-                      <p
-                        style={{
-                          color: "#e0e0e0",
-                          fontSize: "14px",
-                          lineHeight: "1.5",
-                          marginBottom: "20px",
-                          display: "-webkit-box",
-                          WebkitLineClamp: "2",
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                          minHeight: "42px",
-                        }}
-                      >
+                      <p>
                         {s.descripcionCorta ||
                           "Servicio profesional con atención personalizada."}
                       </p>
 
                       <button
                         className="btn btn-gold w-100"
-                        style={{
-                          borderRadius: "12px",
-                          padding: "12px",
-                          fontWeight: "800",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.5px",
-                        }}
                         onClick={() => {
                           setServicioSeleccionado(s);
                           setMostrarModalReserva(true);
@@ -684,103 +516,52 @@ export default function LandingNegocio() {
         </CardDark>
 
         <CardDark className="mt-4">
-          <h3 className="text-center mb-5">Nuestros Especialistas</h3>
+          <div className="landing-section-head center">
+            <div>
+              <h3 className="section-title mb-1">Nuestros Especialistas</h3>
+              <p className="section-subtitle mb-0">
+                Profesionales listos para atenderte.
+              </p>
+            </div>
+          </div>
 
-          <div className="row g-4">
+          <div className="landing-specialists-grid">
             {data.trabajadores.map((t) => {
-              const fotoTrabajador = t.fotoPerfilUrl ? `${baseUrl}${t.fotoPerfilUrl}` : "";
+              const fotoTrabajador = obtenerFotoTrabajador(t);
 
               return (
-                <div key={t.idTrabajador} className="col-md-4">
-                  <div
-                    className="especialista-card"
-                    style={{
-                      position: "relative",
-                      minHeight: "560px",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                    }}
+                <div key={t.idTrabajador} className="landing-specialist-card">
+                  {t.destacado && (
+                    <span className="landing-specialist-verified">
+                      🏆 Verificado
+                    </span>
+                  )}
+
+                  <AvatarCircle
+                    src={fotoTrabajador}
+                    alt={t.nombre}
+                    fallback={t.nombre?.charAt(0)?.toUpperCase() || "T"}
+                    selected={t.destacado}
+                    size="lg"
+                  />
+
+                  <h4>{t.nombre}</h4>
+
+                  <div className="landing-specialist-rating">⭐ 0.0</div>
+                  <span className="landing-specialist-reviews">0 reseñas</span>
+
+                  <p>
+                    ✂ {t.descripcion || "Especialista con atención profesional."}
+                  </p>
+
+                  <b>{t.totalServicios || 0} servicios realizados</b>
+
+                  <Link
+                    to={`/trabajador-publico/${t.idTrabajador}`}
+                    className="btn btn-gold w-100 mt-auto"
                   >
-                    {t.destacado && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: "18px",
-                          right: "18px",
-                          zIndex: 3,
-                        }}
-                      >
-                        <span
-                          style={{
-                            background: "rgba(212,175,55,.15)",
-                            border: "1px solid rgba(212,175,55,.35)",
-                            color: "#d4af37",
-                            padding: "8px 14px",
-                            borderRadius: "999px",
-                            fontWeight: 800,
-                            fontSize: ".78rem",
-                          }}
-                        >
-                          🏆 Verificado
-                        </span>
-                      </div>
-                    )}
-
-                    {fotoTrabajador ? (
-                      <img src={fotoTrabajador} alt={t.nombre} className="especialista-img" />
-                    ) : (
-                      <div
-                        className="especialista-img"
-                        style={{
-                          background: "rgba(212,175,55,.15)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "42px",
-                          fontWeight: 800,
-                          color: "#d4af37",
-                        }}
-                      >
-                        {t.nombre?.charAt(0)?.toUpperCase() || "T"}
-                      </div>
-                    )}
-
-                    <h4 className="mb-3">{t.nombre}</h4>
-
-                    <div style={{ color: "#d4af37", fontWeight: 800, marginBottom: "6px" }}>
-                      ⭐ 0.0
-                    </div>
-
-                    <div style={{ marginBottom: "18px", fontSize: "14px" }}>0 reseñas</div>
-
-                    {t.descripcion && (
-                      <p
-                        style={{
-                          color: "#cfcfcf",
-                          fontSize: "14px",
-                          lineHeight: "1.7",
-                          minHeight: "72px",
-                          marginBottom: "20px",
-                        }}
-                      >
-                        ✂ {t.descripcion}
-                      </p>
-                    )}
-
-                    <div style={{ fontWeight: 700, marginBottom: "28px" }}>
-                      {t.totalServicios || 0} servicios realizados
-                    </div>
-
-                    <div className="mt-auto w-100">
-                      <Link
-                        to={`/trabajador-publico/${t.idTrabajador}`}
-                        className="btn btn-gold w-100"
-                      >
-                        Ver perfil
-                      </Link>
-                    </div>
-                  </div>
+                    Ver perfil
+                  </Link>
                 </div>
               );
             })}
@@ -798,12 +579,25 @@ export default function LandingNegocio() {
               rel="noreferrer"
               aria-label={r.tipo}
             >
-              {r.tipo === "facebook" && "f"}
-              {r.tipo === "instagram" && "◎"}
-              {r.tipo === "whatsapp" && "☎"}
-              {r.tipo === "tiktok" && "♪"}
-              {r.tipo === "youtube" && "▶"}
-              {!["facebook", "instagram", "whatsapp", "tiktok", "youtube"].includes(r.tipo) && "🔗"}
+              {r.tipo === "facebook" && (
+                <span className="footer-social-letter">f</span>
+              )}
+
+              {r.tipo === "instagram" && (
+                <span className="footer-social-letter">◎</span>
+              )}
+
+              {r.tipo === "whatsapp" && <MessageCircle size={20} />}
+
+              {r.tipo === "tiktok" && (
+                <span className="footer-social-letter">♪</span>
+              )}
+
+              {r.tipo === "youtube" && <Play size={20} />}
+
+              {!["facebook", "instagram", "whatsapp", "tiktok", "youtube"].includes(r.tipo) && (
+                <Globe size={20} />
+              )}
             </a>
           ))}
         </div>
@@ -814,12 +608,9 @@ export default function LandingNegocio() {
       </footer>
 
       <div className="mobile-bottom-actions">
-        <Link
-          to={`/catalogo-servicios/${data.negocio.idNegocio}`}
-          className="mobile-action-btn mobile-action-reserva"
-        >
+        <a href="#servicios" className="mobile-action-btn mobile-action-reserva">
           Reservar
-        </Link>
+        </a>
 
         <a
           href={whatsappUrl}
@@ -832,11 +623,12 @@ export default function LandingNegocio() {
       </div>
 
       {mostrarModalReserva && (
-        <div className="modal-reserva-overlay">
-          <div className="modal-reserva">
+        <div className="modal-reserva-overlay landing-booking-overlay">
+          <div className="modal-reserva landing-booking-modal">
             {reservaConfirmada && datosReservaConfirmada ? (
               <>
                 <div className="modal-success-header">
+                  <CheckCircle2 size={42} />
                   <h2>Reserva registrada</h2>
                   <p>
                     Tu cita fue guardada correctamente. Recibirás la confirmación por correo.
@@ -845,7 +637,7 @@ export default function LandingNegocio() {
 
                 {datosReservaConfirmada.servicio?.imagenUrl && (
                   <img
-                    src={`${baseUrl}${datosReservaConfirmada.servicio.imagenUrl}`}
+                    src={getImageUrl(datosReservaConfirmada.servicio.imagenUrl)}
                     alt={datosReservaConfirmada.servicio.nombre}
                     className="modal-success-img"
                   />
@@ -871,16 +663,19 @@ export default function LandingNegocio() {
                 </div>
 
                 <div className="modal-success-worker">
-                  {datosReservaConfirmada.trabajador?.fotoPerfilUrl ? (
-                    <img
-                      src={`${baseUrl}${datosReservaConfirmada.trabajador.fotoPerfilUrl}`}
-                      alt={datosReservaConfirmada.trabajador.nombre}
-                    />
-                  ) : (
-                    <div className="modal-worker-placeholder">
-                      {datosReservaConfirmada.trabajador?.nombre?.charAt(0)?.toUpperCase() || "T"}
-                    </div>
-                  )}
+                  <AvatarCircle
+                    src={
+                      datosReservaConfirmada.trabajador?.fotoPerfilUrl
+                        ? getImageUrl(datosReservaConfirmada.trabajador.fotoPerfilUrl)
+                        : ""
+                    }
+                    alt={datosReservaConfirmada.trabajador?.nombre}
+                    fallback={
+                      datosReservaConfirmada.trabajador?.nombre?.charAt(0)?.toUpperCase() ||
+                      "T"
+                    }
+                    size="md"
+                  />
 
                   <div>
                     <p>Te atenderá</p>
@@ -939,47 +734,43 @@ export default function LandingNegocio() {
                   Regresar al inicio
                 </button>
               </>
-
             ) : (
               <>
-                <div className="d-flex justify-content-between align-items-start mb-3">
+                <div className="landing-booking-head">
                   <div>
-                    <h3 className="mb-1">Reservar cita</h3>
-                    <p className="section-subtitle mb-0">Confirma los datos de tu atención</p>
+                    <h3>Reservar cita</h3>
+                    <p>Confirma los datos de tu atención</p>
                   </div>
 
-                  <button className="btn btn-dark-outline btn-sm" onClick={cerrarModal}>
-                    ✕
+                  <button className="landing-booking-close" onClick={cerrarModal}>
+                    <X size={18} />
                   </button>
                 </div>
 
-                <div
-                  className="mb-3"
-                  style={{
-                    background: "rgba(212,175,55,.08)",
-                    border: "1px solid rgba(212,175,55,.18)",
-                    borderRadius: "16px",
-                    padding: "14px",
-                  }}
-                >
-                  <strong style={{ color: "#d4af37" }}>{servicioSeleccionado?.nombre}</strong>
-
-                  <div className="d-flex justify-content-between mt-2">
-                    <span>Precio</span>
-                    <b>S/ {Number(servicioSeleccionado?.precioBase || 0).toFixed(2)}</b>
-                  </div>
-
-                  {servicioSeleccionado?.duracionMinutos && (
-                    <div className="d-flex justify-content-between mt-1">
-                      <span>Duración</span>
-                      <b>{servicioSeleccionado.duracionMinutos} min</b>
+                <div className="landing-booking-service">
+                  {servicioSeleccionado?.imagenUrl ? (
+                    <img
+                      src={getImageUrl(servicioSeleccionado.imagenUrl)}
+                      alt={servicioSeleccionado.nombre}
+                    />
+                  ) : (
+                    <div className="landing-booking-service-placeholder">
+                      <Scissors size={26} />
                     </div>
                   )}
+
+                  <div>
+                    <strong>{servicioSeleccionado?.nombre}</strong>
+                    <span>
+                      S/ {Number(servicioSeleccionado?.precioBase || 0).toFixed(2)}
+                      {servicioSeleccionado?.duracionMinutos
+                        ? ` · ${servicioSeleccionado.duracionMinutos} min`
+                        : ""}
+                    </span>
+                  </div>
                 </div>
 
-                <label className="form-label mb-2" style={{ color: "#d4af37" }}>
-                  Especialista
-                </label>
+                <label className="label-gold">Especialista</label>
 
                 <Swiper
                   modules={[FreeMode]}
@@ -991,12 +782,10 @@ export default function LandingNegocio() {
                     768: { slidesPerView: 3.2 },
                     1024: { slidesPerView: 3.5 },
                   }}
-                  style={{ paddingBottom: "10px", marginBottom: "14px" }}
+                  className="landing-worker-swiper"
                 >
                   {(data.trabajadores || []).map((t) => {
-                    const fotoTrabajador = t.fotoPerfilUrl
-                      ? `${baseUrl}${t.fotoPerfilUrl}`
-                      : "";
+                    const fotoTrabajador = obtenerFotoTrabajador(t);
 
                     const seleccionado =
                       Number(trabajadorSeleccionado) === Number(t.idTrabajador);
@@ -1013,22 +802,15 @@ export default function LandingNegocio() {
                             setHorariosDisponibles([]);
                           }}
                         >
-                          {fotoTrabajador ? (
-                            <img
-                              src={fotoTrabajador}
-                              alt={t.nombre}
-                              className="worker-photo"
-                            />
-                          ) : (
-                            <div className="worker-photo-placeholder">
-                              {t.nombre?.charAt(0)?.toUpperCase() || "T"}
-                            </div>
-                          )}
+                          <AvatarCircle
+                            src={fotoTrabajador}
+                            alt={t.nombre}
+                            fallback={t.nombre?.charAt(0)?.toUpperCase() || "T"}
+                            selected={seleccionado}
+                            size="md"
+                          />
 
-                          <div
-                            className="worker-name"
-                            title={t.nombre}
-                          >
+                          <div className="worker-name" title={t.nombre}>
                             {t.nombre}
                           </div>
 
@@ -1041,16 +823,12 @@ export default function LandingNegocio() {
                   })}
                 </Swiper>
 
-                <div className="row g-3">
-                  <div className="col-md-6">
-
-                    <label className="form-label" style={{ color: "#d4af37" }}>
-                      Fecha
-                    </label>
-
+                <div className="landing-booking-grid">
+                  <div>
+                    <label className="label-gold">Fecha</label>
                     <input
                       type="date"
-                      className="form-control input-dark mb-3"
+                      className="form-control input-dark"
                       value={fechaReserva}
                       onChange={(e) => {
                         setFechaReserva(e.target.value);
@@ -1059,24 +837,21 @@ export default function LandingNegocio() {
                     />
                   </div>
 
-                  <div className="col-md-6">
-                    <label className="form-label" style={{ color: "#d4af37" }}>
-                      Hora
-                    </label>
-
+                  <div>
+                    <label className="label-gold">Hora</label>
                     <select
-                      className="form-control input-dark mb-3"
+                      className="form-control input-dark"
                       value={horaReserva}
                       onChange={(e) => setHoraReserva(e.target.value)}
                       disabled={!trabajadorSeleccionado || !fechaReserva}
                     >
                       <option value="">
                         {!trabajadorSeleccionado
-                          ? "Primero selecciona especialista"
+                          ? "Selecciona especialista"
                           : !fechaReserva
-                            ? "Primero selecciona fecha"
+                            ? "Selecciona fecha"
                             : horariosDisponibles.length === 0
-                              ? "Sin horarios disponibles"
+                              ? "Sin horarios"
                               : "Seleccionar horario"}
                       </option>
 
@@ -1089,42 +864,42 @@ export default function LandingNegocio() {
                   </div>
                 </div>
 
-                <label className="form-label" style={{ color: "#d4af37" }}>
-                  Tus datos
-                </label>
+                <label className="label-gold">Tus datos</label>
 
-                <input
-                  placeholder="Nombre completo"
-                  className="form-control input-dark mb-3"
-                  value={nombreCliente}
-                  onChange={(e) => setNombreCliente(e.target.value)}
-                />
+                <div className="landing-booking-grid">
+                  <input
+                    placeholder="Nombre completo"
+                    className="form-control input-dark"
+                    value={nombreCliente}
+                    onChange={(e) => setNombreCliente(e.target.value)}
+                  />
 
-                <input
-                  placeholder="Teléfono / WhatsApp"
-                  className="form-control input-dark mb-3"
-                  value={telefonoCliente}
-                  onChange={(e) => setTelefonoCliente(e.target.value)}
-                />
+                  <input
+                    placeholder="Teléfono / WhatsApp"
+                    className="form-control input-dark"
+                    value={telefonoCliente}
+                    onChange={(e) => setTelefonoCliente(e.target.value)}
+                  />
 
-                <input
-                  placeholder="Correo"
-                  className="form-control input-dark mb-3"
-                  value={correoCliente}
-                  onChange={(e) => setCorreoCliente(e.target.value)}
-                />
+                  <input
+                    placeholder="Correo"
+                    className="form-control input-dark"
+                    value={correoCliente}
+                    onChange={(e) => setCorreoCliente(e.target.value)}
+                  />
 
-                <textarea
-                  placeholder="Comentario adicional opcional"
-                  className="form-control input-dark mb-3"
-                  rows="3"
-                  value={comentario}
-                  onChange={(e) => setComentario(e.target.value)}
-                />
+                  <textarea
+                    placeholder="Comentario adicional opcional"
+                    className="form-control input-dark"
+                    rows="2"
+                    value={comentario}
+                    onChange={(e) => setComentario(e.target.value)}
+                  />
+                </div>
 
-                <div className="d-flex gap-2">
+                <div className="landing-booking-actions">
                   <button
-                    className="btn btn-gold w-100"
+                    className="btn btn-gold"
                     onClick={confirmarReserva}
                     disabled={guardandoReserva}
                   >
@@ -1132,7 +907,7 @@ export default function LandingNegocio() {
                   </button>
 
                   <button
-                    className="btn btn-dark-outline w-100"
+                    className="btn btn-dark-outline"
                     onClick={cerrarModal}
                     disabled={guardandoReserva}
                   >

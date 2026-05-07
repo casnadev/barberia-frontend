@@ -1,24 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import API_BASE from "../services/api";
 import authFetch from "../services/authFetch";
 import logo2 from "../assets/logo2.png";
+import { getBusinessCacheKeys, getImageUrl } from "../utils/imageUrl";
 
 function Item({ to, label, active, onClick }) {
   return (
     <Link
       to={to}
       onClick={onClick}
-      style={{
-        display: "block",
-        padding: "12px 16px",
-        borderRadius: "10px",
-        marginBottom: "8px",
-        background: active ? "rgba(212,175,55,.18)" : "transparent",
-        color: active ? "#b8860b" : "#1f2937",
-        textDecoration: "none",
-        fontWeight: 600,
-      }}
+      className={`sidebar-link ${active ? "active" : ""}`}
     >
       {label}
     </Link>
@@ -40,25 +32,29 @@ export default function AdminLayout() {
   const rol = String(usuario?.rol || "").trim().toLowerCase();
   const esAdmin = rol === "admin";
 
+  const cacheKeys = useMemo(
+    () => getBusinessCacheKeys(usuario?.idNegocio),
+    [usuario?.idNegocio]
+  );
+
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [logoNegocio, setLogoNegocio] = useState(
-    localStorage.getItem("logoNegocio") || ""
+    localStorage.getItem(cacheKeys.logo) || ""
   );
   const [nombreNegocio, setNombreNegocio] = useState(
-    localStorage.getItem("nombreNegocio") || ""
+    localStorage.getItem(cacheKeys.nombre) || ""
   );
 
   useEffect(() => {
     if (!usuario || !esAdmin) {
       localStorage.removeItem("token");
       localStorage.removeItem("usuario");
-      localStorage.removeItem("logoNegocio");
-      localStorage.removeItem("nombreNegocio");
-      localStorage.removeItem("slugNegocio");
 
       navigate("/login", { replace: true });
     }
   }, [navigate, esAdmin, usuario]);
+
+  
 
   useEffect(() => {
     const cargarNegocio = async () => {
@@ -77,9 +73,9 @@ export default function AdminLayout() {
         setLogoNegocio(nuevaRuta);
         setNombreNegocio(nuevoNombre);
 
-        localStorage.setItem("logoNegocio", nuevaRuta);
-        localStorage.setItem("nombreNegocio", nuevoNombre);
-        localStorage.setItem("slugNegocio", nuevoSlug);
+        localStorage.setItem(cacheKeys.logo, nuevaRuta);
+        localStorage.setItem(cacheKeys.nombre, nuevoNombre);
+        localStorage.setItem(cacheKeys.slug, nuevoSlug);
       } catch (err) {
         console.error(err);
       }
@@ -88,12 +84,12 @@ export default function AdminLayout() {
     if (esAdmin) {
       cargarNegocio();
     }
-  }, [esAdmin]);
+  }, [esAdmin, cacheKeys.logo, cacheKeys.nombre, cacheKeys.slug]);
 
   useEffect(() => {
     const actualizarBranding = () => {
-      const logoGuardado = localStorage.getItem("logoNegocio") || "";
-      const nombreGuardado = localStorage.getItem("nombreNegocio") || "";
+      const logoGuardado = localStorage.getItem(cacheKeys.logo) || "";
+      const nombreGuardado = localStorage.getItem(cacheKeys.nombre) || "";
 
       setLogoNegocio(logoGuardado);
       setNombreNegocio(nombreGuardado);
@@ -109,15 +105,11 @@ export default function AdminLayout() {
         actualizarBranding
       );
     };
-  }, []);
+  }, [cacheKeys.logo, cacheKeys.nombre]);
 
   const cerrarSesion = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("usuario");
-    localStorage.removeItem("logoNegocio");
-    localStorage.removeItem("nombreNegocio");
-    localStorage.removeItem("slugNegocio");
-
     navigate("/login", { replace: true });
   };
 
@@ -127,9 +119,7 @@ export default function AdminLayout() {
 
   const esMobile = typeof window !== "undefined" && window.innerWidth < 992;
 
-  const logoSrc = logoNegocio
-    ? `${API_BASE.replace("/api", "")}${logoNegocio}`
-    : logo2;
+  const logoSrc = logoNegocio ? getImageUrl(logoNegocio) : logo2;
 
   return (
     <div className="admin-shell">
@@ -238,7 +228,7 @@ export default function AdminLayout() {
             ☰
           </button>
 
-          <div className="brand-wrap">
+          <div className="brand-wrap mobile-brand-wrap">
             <img src={logoSrc} alt="Logo" className="sidebar-logo-img" />
             <span className="mobile-topbar-title">
               {nombreNegocio || "Barbería"}
