@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import API_BASE from "../../services/api";
 import authFetch from "../../services/authFetch";
 
@@ -7,31 +7,198 @@ import PageHeader from "../../components/ui/PageHeader";
 import GoldBadge from "../../components/ui/GoldBadge";
 import Toast from "../../components/ui/Toast";
 import AvatarCircle from "../../components/ui/AvatarCircle";
+import AnimatedNumber from "../../components/ui/AnimatedNumber";
 
 import { getImageUrl } from "../../utils/imageUrl";
+
 import {
   CalendarDays,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  CircleCheckBig,
   Clock,
-  Phone,
   Mail,
   MessageCircle,
+  Phone,
   Scissors,
-  CheckCircle2,
+  Search,
+  UserRound,
+  X,
   XCircle,
-  CircleCheckBig,
 } from "lucide-react";
 
-export default function MisReservas() {
+const ESTADOS = ["Todos", "Pendiente", "Confirmada", "Atendida", "Cancelada"];
+
+function ModalReserva({ abierto, reserva, onClose, onAccion, procesando }) {
+  if (!abierto || !reserva) return null;
+
+  const imgServicio =
+    reserva.servicioImagenUrl ||
+    reserva.imagenServicio ||
+    reserva.imagenUrlServicio ||
+    reserva.servicioImagen ||
+    "";
+
+  const imgTrabajador =
+    reserva.trabajadorFotoUrl ||
+    reserva.fotoTrabajador ||
+    reserva.fotoPerfilUrl ||
+    reserva.trabajadorImagen ||
+    "";
+
+  return (
+    <div className="admin-agenda-modal-backdrop">
+      <div className="admin-agenda-modal">
+        <div className="admin-agenda-modal-header">
+          <h4>Detalle de reserva</h4>
+
+          <button className="admin-agenda-modal-close" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="admin-agenda-modal-body">
+          <div className="admin-agenda-modal-cover">
+            {imgServicio ? (
+              <img src={getImageUrl(imgServicio)} alt={reserva.servicio || "Servicio"} />
+            ) : (
+              <Scissors size={42} />
+            )}
+
+            <span className={`admin-agenda-status ${estadoClass(reserva.estado)}`}>
+              {reserva.estado || "Pendiente"}
+            </span>
+          </div>
+
+          <div className="admin-agenda-modal-info">
+            <h3>{reserva.nombreCliente || "Cliente sin nombre"}</h3>
+            <p>{reserva.servicio || "Servicio no especificado"}</p>
+          </div>
+
+          <div className="admin-agenda-modal-grid">
+            <div>
+              <span>Fecha</span>
+              <b>
+                {reserva.fechaReserva
+                  ? new Date(reserva.fechaReserva).toLocaleDateString("es-PE")
+                  : "-"}
+              </b>
+            </div>
+
+            <div>
+              <span>Hora</span>
+              <b>{reserva.horaReserva || "--:--"}</b>
+            </div>
+
+            <div>
+              <span>Teléfono</span>
+              <b>{reserva.telefonoCliente || "-"}</b>
+            </div>
+
+            <div>
+              <span>Correo</span>
+              <b>{reserva.correoCliente || "-"}</b>
+            </div>
+          </div>
+
+          <div className="admin-agenda-worker-box">
+            <AvatarCircle
+              src={imgTrabajador ? getImageUrl(imgTrabajador) : ""}
+              alt={reserva.trabajador || "Trabajador"}
+              fallback={reserva.trabajador?.charAt(0)?.toUpperCase() || "T"}
+              size="md"
+            />
+
+            <div>
+              <span>Atiende</span>
+              <b>{reserva.trabajador || "No asignado"}</b>
+            </div>
+          </div>
+
+          <div className="admin-agenda-modal-actions">
+            {reserva.estado === "Pendiente" && (
+              <>
+                <button
+                  className="btn btn-gold"
+                  disabled={procesando}
+                  onClick={() => onAccion(reserva.idReserva, "confirmar")}
+                >
+                  <CheckCircle2 size={16} />
+                  Confirmar
+                </button>
+
+                <button
+                  className="btn btn-dark-outline"
+                  disabled={procesando}
+                  onClick={() => onAccion(reserva.idReserva, "cancelar")}
+                >
+                  <XCircle size={16} />
+                  Cancelar
+                </button>
+              </>
+            )}
+
+            {reserva.estado === "Confirmada" && (
+              <button
+                className="btn btn-gold w-100"
+                disabled={procesando}
+                onClick={() => onAccion(reserva.idReserva, "atendida")}
+              >
+                <CircleCheckBig size={16} />
+                Marcar como atendida
+              </button>
+            )}
+
+            {(reserva.estado === "Atendida" || reserva.estado === "Cancelada") && (
+              <button className="btn btn-dark-outline w-100" disabled>
+                Sin acciones pendientes
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function estadoClass(estado) {
+  switch (estado) {
+    case "Confirmada":
+      return "confirmada";
+    case "Atendida":
+      return "atendida";
+    case "Cancelada":
+      return "cancelada";
+    default:
+      return "pendiente";
+  }
+}
+
+export default function AgendaReservasAdmin() {
   const [lista, setLista] = useState([]);
   const [whatsappCliente, setWhatsappCliente] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [procesandoId, setProcesandoId] = useState(null);
 
   const hoyISO = new Date().toISOString().substring(0, 10);
   const [fechaSeleccionada, setFechaSeleccionada] = useState(hoyISO);
+  const [busqueda, setBusqueda] = useState("");
+  const [estadoFiltro, setEstadoFiltro] = useState("Todos");
+
+  const [modalReserva, setModalReserva] = useState(false);
+  const [reservaSeleccionada, setReservaSeleccionada] = useState(null);
+
+  const leerJsonSeguro = async (res, valorDefecto) => {
+    try {
+      if (!res) return valorDefecto;
+      return await res.json();
+    } catch {
+      return valorDefecto;
+    }
+  };
 
   const cargarReservas = useCallback(async () => {
     try {
@@ -41,34 +208,31 @@ export default function MisReservas() {
       const res = await authFetch(`${API_BASE}/Reservas/mis-reservas`);
       if (!res) return;
 
-      const data = await res.json();
+      const data = await leerJsonSeguro(res, []);
 
       if (!res.ok) {
-        setError(data.mensaje || "No se pudieron cargar las reservas");
+        setError(data.mensaje || "No se pudieron cargar las reservas.");
         return;
       }
 
-      setLista(data || []);
+      setLista(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
-      setError("Error al cargar reservas");
+      setError("Error al cargar reservas.");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      cargarReservas();
-    }, 0);
-
-    return () => clearTimeout(timer);
+    cargarReservas();
   }, [cargarReservas]);
 
   const cambiarEstado = async (id, accion) => {
     setWhatsappCliente("");
     setMensaje("");
     setError("");
+    setProcesandoId(id);
 
     try {
       const res = await authFetch(`${API_BASE}/Reservas/${accion}/${id}`, {
@@ -77,35 +241,68 @@ export default function MisReservas() {
 
       if (!res) return;
 
-      const data = await res.json();
+      const data = await leerJsonSeguro(res, {});
 
       if (!res.ok) {
-        setError(data.mensaje || "No se pudo procesar la reserva");
+        setError(data.mensaje || "No se pudo procesar la reserva.");
         return;
       }
 
-      setMensaje(data.mensaje || "Acción realizada correctamente");
+      setMensaje(data.mensaje || "Acción realizada correctamente.");
 
       if (data.whatsappUrl) {
         setWhatsappCliente(data.whatsappUrl);
       }
 
+      setModalReserva(false);
+      setReservaSeleccionada(null);
+
       await cargarReservas();
     } catch (err) {
       console.error(err);
-      setError("Error procesando reserva");
+      setError("Error procesando reserva.");
+    } finally {
+      setProcesandoId(null);
     }
   };
 
-  const fechaReservaISO = (r) => {
-    return r.fechaReserva?.substring(0, 10) || "";
+  const fechaReservaISO = (r) => r.fechaReserva?.substring(0, 10) || "";
+
+  const normalizarHora = (hora) => {
+    if (!hora) return 0;
+
+    const limpio = String(hora).trim();
+
+    if (limpio.includes(":")) {
+      const [h, m] = limpio.split(":").map(Number);
+      return (Number(h) || 0) * 60 + (Number(m) || 0);
+    }
+
+    const numero = Number(limpio);
+    return Number.isNaN(numero) ? 0 : numero * 60;
   };
 
-  const reservasDia = useMemo(() => {
+  const reservasDiaBase = useMemo(() => {
     return lista
       .filter((r) => fechaReservaISO(r) === fechaSeleccionada)
       .sort((a, b) => normalizarHora(a.horaReserva) - normalizarHora(b.horaReserva));
   }, [lista, fechaSeleccionada]);
+
+  const reservasDia = useMemo(() => {
+    return reservasDiaBase.filter((r) => {
+      if (estadoFiltro !== "Todos" && r.estado !== estadoFiltro) return false;
+
+      if (busqueda.trim()) {
+        const texto = `${r.nombreCliente || ""} ${r.servicio || ""} ${r.trabajador || ""} ${
+          r.telefonoCliente || ""
+        } ${r.correoCliente || ""}`.toLowerCase();
+
+        if (!texto.includes(busqueda.toLowerCase())) return false;
+      }
+
+      return true;
+    });
+  }, [reservasDiaBase, estadoFiltro, busqueda]);
 
   const reservasPorFecha = useMemo(() => {
     const map = new Map();
@@ -113,12 +310,25 @@ export default function MisReservas() {
     lista.forEach((r) => {
       const fecha = fechaReservaISO(r);
       if (!fecha) return;
-
       map.set(fecha, (map.get(fecha) || 0) + 1);
     });
 
     return map;
   }, [lista]);
+
+  const imagenTrabajador = (r) =>
+    r.trabajadorFotoUrl ||
+    r.fotoTrabajador ||
+    r.fotoPerfilUrl ||
+    r.trabajadorImagen ||
+    "";
+
+  const imagenServicio = (r) =>
+    r.servicioImagenUrl ||
+    r.imagenServicio ||
+    r.imagenUrlServicio ||
+    r.servicioImagen ||
+    "";
 
   const trabajadoresDia = useMemo(() => {
     const map = new Map();
@@ -147,6 +357,7 @@ export default function MisReservas() {
 
   const horasAgenda = useMemo(() => {
     const horasBase = [];
+
     for (let h = 8; h <= 21; h += 1) {
       horasBase.push(h);
     }
@@ -155,22 +366,18 @@ export default function MisReservas() {
       .map((r) => Math.floor(normalizarHora(r.horaReserva) / 60))
       .filter((h) => !Number.isNaN(h));
 
-    const todas = Array.from(new Set([...horasBase, ...horasReservas])).sort(
-      (a, b) => a - b
-    );
-
-    return todas;
+    return Array.from(new Set([...horasBase, ...horasReservas])).sort((a, b) => a - b);
   }, [reservasDia]);
 
   const estadisticasDia = useMemo(() => {
-    const total = reservasDia.length;
-    const pendientes = reservasDia.filter((r) => r.estado === "Pendiente").length;
-    const confirmadas = reservasDia.filter((r) => r.estado === "Confirmada").length;
-    const atendidas = reservasDia.filter((r) => r.estado === "Atendida").length;
-    const canceladas = reservasDia.filter((r) => r.estado === "Cancelada").length;
+    const total = reservasDiaBase.length;
+    const pendientes = reservasDiaBase.filter((r) => r.estado === "Pendiente").length;
+    const confirmadas = reservasDiaBase.filter((r) => r.estado === "Confirmada").length;
+    const atendidas = reservasDiaBase.filter((r) => r.estado === "Atendida").length;
+    const canceladas = reservasDiaBase.filter((r) => r.estado === "Cancelada").length;
 
     return { total, pendientes, confirmadas, atendidas, canceladas };
-  }, [reservasDia]);
+  }, [reservasDiaBase]);
 
   const reservasPorTrabajadorYHora = (trabajadorKey, hora) => {
     return reservasDia.filter((r) => {
@@ -197,32 +404,6 @@ export default function MisReservas() {
     setFechaSeleccionada(hoyISO);
   };
 
-  const badgeColor = (estado) => {
-    switch (estado) {
-      case "Confirmada":
-        return "#16a34a";
-      case "Atendida":
-        return "#2563eb";
-      case "Cancelada":
-        return "#dc2626";
-      default:
-        return "#d4af37";
-    }
-  };
-
-  const estadoClass = (estado) => {
-    switch (estado) {
-      case "Confirmada":
-        return "confirmada";
-      case "Atendida":
-        return "atendida";
-      case "Cancelada":
-        return "cancelada";
-      default:
-        return "pendiente";
-    }
-  };
-
   const formatearFecha = (fecha) => {
     if (!fecha) return "Sin fecha";
 
@@ -243,65 +424,42 @@ export default function MisReservas() {
     });
   };
 
-  const imagenServicio = (r) => {
-    return (
-      r.servicioImagenUrl ||
-      r.imagenServicio ||
-      r.imagenUrlServicio ||
-      r.servicioImagen ||
-      ""
-    );
-  };
+  const formatearHoraBloque = (hora) => `${String(hora).padStart(2, "0")}:00`;
 
-  function imagenTrabajador(r) {
-    return (
-      r.trabajadorFotoUrl ||
-      r.fotoTrabajador ||
-      r.fotoPerfilUrl ||
-      r.trabajadorImagen ||
-      ""
-    );
-  }
-
-  function normalizarHora(hora) {
-    if (!hora) return 0;
-
-    const limpio = String(hora).trim();
-
-    if (limpio.includes(":")) {
-      const [h, m] = limpio.split(":").map(Number);
-      return (Number(h) || 0) * 60 + (Number(m) || 0);
-    }
-
-    const numero = Number(limpio);
-    return Number.isNaN(numero) ? 0 : numero * 60;
-  }
-
-  const formatearHoraBloque = (hora) => {
-    return `${String(hora).padStart(2, "0")}:00`;
+  const abrirDetalle = (reserva) => {
+    setReservaSeleccionada(reserva);
+    setModalReserva(true);
   };
 
   const ReservaCard = ({ reserva, compact = false }) => {
     const imgServicio = imagenServicio(reserva);
     const imgTrabajador = imagenTrabajador(reserva);
+    const enProceso = procesandoId === reserva.idReserva;
 
     return (
-      <div className={`agenda-reserva-card ${estadoClass(reserva.estado)} ${compact ? "compact" : ""}`}>
-        <div className="agenda-reserva-head">
+      <div
+        className={`admin-agenda-reserva-card ${estadoClass(reserva.estado)} ${
+          compact ? "compact" : ""
+        }`}
+        onClick={() => abrirDetalle(reserva)}
+        role="button"
+        tabIndex={0}
+      >
+        <div className="admin-agenda-reserva-head">
           {imgServicio ? (
             <img
               src={getImageUrl(imgServicio)}
               alt={reserva.servicio || "Servicio"}
-              className="agenda-service-img"
+              className="admin-agenda-service-img"
             />
           ) : (
-            <div className="agenda-service-placeholder">
+            <div className="admin-agenda-service-placeholder">
               <Scissors size={18} />
             </div>
           )}
 
-          <div className="agenda-reserva-main">
-            <div className="agenda-reserva-time">
+          <div className="admin-agenda-reserva-main">
+            <div className="admin-agenda-reserva-time">
               <Clock size={13} />
               {reserva.horaReserva || "--:--"}
             </div>
@@ -310,18 +468,13 @@ export default function MisReservas() {
               {reserva.nombreCliente || "Cliente sin nombre"}
             </h5>
 
-            <p title={reserva.servicio}>
-              {reserva.servicio || "Servicio no especificado"}
-            </p>
+            <p title={reserva.servicio}>{reserva.servicio || "Servicio"}</p>
           </div>
         </div>
 
-        <div className="agenda-reserva-worker">
+        <div className="admin-agenda-reserva-worker">
           {imgTrabajador ? (
-            <img
-              src={getImageUrl(imgTrabajador)}
-              alt={reserva.trabajador || "Trabajador"}
-            />
+            <img src={getImageUrl(imgTrabajador)} alt={reserva.trabajador || "Trabajador"} />
           ) : (
             <span>{reserva.trabajador?.charAt(0)?.toUpperCase() || "T"}</span>
           )}
@@ -329,36 +482,36 @@ export default function MisReservas() {
           <b>{reserva.trabajador || "No asignado"}</b>
         </div>
 
-        <div className="agenda-reserva-contact">
-          {reserva.telefonoCliente && (
-            <span>
-              <Phone size={13} />
-              {reserva.telefonoCliente}
-            </span>
-          )}
+        {!compact && (
+          <div className="admin-agenda-reserva-contact">
+            {reserva.telefonoCliente && (
+              <span>
+                <Phone size={13} />
+                {reserva.telefonoCliente}
+              </span>
+            )}
 
-          {reserva.correoCliente && (
-            <span>
-              <Mail size={13} />
-              {reserva.correoCliente}
-            </span>
-          )}
-        </div>
+            {reserva.correoCliente && (
+              <span>
+                <Mail size={13} />
+                {reserva.correoCliente}
+              </span>
+            )}
+          </div>
+        )}
 
-        <div className="agenda-reserva-bottom">
-          <span
-            className="agenda-estado-pill"
-            style={{ background: badgeColor(reserva.estado) }}
-          >
-            {reserva.estado}
+        <div className="admin-agenda-reserva-bottom">
+          <span className={`admin-agenda-status ${estadoClass(reserva.estado)}`}>
+            {reserva.estado || "Pendiente"}
           </span>
         </div>
 
-        <div className="agenda-reserva-actions">
+        <div className="admin-agenda-reserva-actions" onClick={(e) => e.stopPropagation()}>
           {reserva.estado === "Pendiente" && (
             <>
               <button
                 className="btn btn-gold btn-sm"
+                disabled={enProceso}
                 onClick={() => cambiarEstado(reserva.idReserva, "confirmar")}
               >
                 <CheckCircle2 size={14} />
@@ -367,6 +520,7 @@ export default function MisReservas() {
 
               <button
                 className="btn btn-dark-outline btn-sm"
+                disabled={enProceso}
                 onClick={() => cambiarEstado(reserva.idReserva, "cancelar")}
               >
                 <XCircle size={14} />
@@ -378,6 +532,7 @@ export default function MisReservas() {
           {reserva.estado === "Confirmada" && (
             <button
               className="btn btn-gold btn-sm w-100"
+              disabled={enProceso}
               onClick={() => cambiarEstado(reserva.idReserva, "atendida")}
             >
               <CircleCheckBig size={14} />
@@ -387,7 +542,7 @@ export default function MisReservas() {
 
           {(reserva.estado === "Atendida" || reserva.estado === "Cancelada") && (
             <button className="btn btn-dark-outline btn-sm w-100" disabled>
-              Sin acciones pendientes
+              Sin acciones
             </button>
           )}
         </div>
@@ -396,16 +551,16 @@ export default function MisReservas() {
   };
 
   return (
-    <div className="page-shell reservas-page">
+    <div className="page-shell admin-agenda-page">
       <div className="container-fluid py-4">
-        <CardDark className="mb-4 reservas-header-card">
-          <div className="reservas-header-row">
+        <CardDark className="admin-agenda-header-card mb-4">
+          <div className="admin-agenda-header-row">
             <PageHeader
-              title="Agenda de Reservas"
-              subtitle="Control diario de citas por trabajador, con historial pasado y futuro por fecha."
+              title="Agenda de reservas"
+              subtitle="Control diario de citas por trabajador, con historial pasado y futuro."
             />
 
-            <div className="reservas-header-actions">
+            <div className="admin-agenda-header-actions">
               <GoldBadge>{estadisticasDia.total} citas del día</GoldBadge>
 
               <button className="btn btn-dark-outline" onClick={volverHoy}>
@@ -423,15 +578,61 @@ export default function MisReservas() {
             href={whatsappCliente}
             target="_blank"
             rel="noreferrer"
-            className="btn btn-gold mb-4 reservas-whatsapp-btn"
+            className="btn btn-gold mb-4 admin-agenda-whatsapp-btn"
           >
             <MessageCircle size={16} />
             Enviar WhatsApp al cliente
           </a>
         )}
 
-        <CardDark className="reservas-toolbar-card mb-4">
-          <div className="reservas-toolbar">
+        <section className="admin-agenda-kpi-grid mb-4">
+          <CardDark className="admin-agenda-kpi-card gold">
+            <div className="admin-agenda-kpi-icon">
+              <CalendarDays size={22} />
+            </div>
+            <p>Total citas</p>
+            <h2>
+              <AnimatedNumber value={estadisticasDia.total} decimals={0} />
+            </h2>
+            <span>Reservas del día seleccionado</span>
+          </CardDark>
+
+          <CardDark className="admin-agenda-kpi-card pending">
+            <div className="admin-agenda-kpi-icon">
+              <Clock size={22} />
+            </div>
+            <p>Pendientes</p>
+            <h2>
+              <AnimatedNumber value={estadisticasDia.pendientes} decimals={0} />
+            </h2>
+            <span>Esperan confirmación</span>
+          </CardDark>
+
+          <CardDark className="admin-agenda-kpi-card success">
+            <div className="admin-agenda-kpi-icon">
+              <CheckCircle2 size={22} />
+            </div>
+            <p>Confirmadas</p>
+            <h2>
+              <AnimatedNumber value={estadisticasDia.confirmadas} decimals={0} />
+            </h2>
+            <span>Listas para atender</span>
+          </CardDark>
+
+          <CardDark className="admin-agenda-kpi-card info">
+            <div className="admin-agenda-kpi-icon">
+              <UserRound size={22} />
+            </div>
+            <p>Trabajadores</p>
+            <h2>
+              <AnimatedNumber value={trabajadoresDia.length} decimals={0} />
+            </h2>
+            <span>Con agenda en esta fecha</span>
+          </CardDark>
+        </section>
+
+        <CardDark className="admin-agenda-toolbar-card mb-4">
+          <div className="admin-agenda-toolbar">
             <div>
               <h4 className="section-title text-capitalize mb-1">
                 {formatearFecha(fechaSeleccionada)}
@@ -441,12 +642,12 @@ export default function MisReservas() {
               </p>
             </div>
 
-            <div className="reservas-date-controls">
+            <div className="admin-agenda-date-controls">
               <button className="btn btn-dark-outline" onClick={() => cambiarDia(-1)}>
                 <ChevronLeft size={16} />
               </button>
 
-              <div className="reservas-date-input-wrap">
+              <div className="admin-agenda-date-input-wrap">
                 <CalendarDays size={16} />
                 <input
                   type="date"
@@ -462,38 +663,34 @@ export default function MisReservas() {
             </div>
           </div>
 
-          <div className="reservas-stats-grid">
-            <div className="reservas-stat-card">
-              <span>Total</span>
-              <b>{estadisticasDia.total}</b>
+          <div className="admin-agenda-filter-grid">
+            <div className="admin-agenda-search-box">
+              <Search size={16} />
+              <input
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscar cliente, servicio, trabajador..."
+              />
             </div>
 
-            <div className="reservas-stat-card pendiente">
-              <span>Pendientes</span>
-              <b>{estadisticasDia.pendientes}</b>
-            </div>
-
-            <div className="reservas-stat-card confirmada">
-              <span>Confirmadas</span>
-              <b>{estadisticasDia.confirmadas}</b>
-            </div>
-
-            <div className="reservas-stat-card atendida">
-              <span>Atendidas</span>
-              <b>{estadisticasDia.atendidas}</b>
-            </div>
-
-            <div className="reservas-stat-card cancelada">
-              <span>Canceladas</span>
-              <b>{estadisticasDia.canceladas}</b>
-            </div>
+            <select
+              className="form-control input-dark"
+              value={estadoFiltro}
+              onChange={(e) => setEstadoFiltro(e.target.value)}
+            >
+              {ESTADOS.map((estado) => (
+                <option key={estado} value={estado}>
+                  {estado}
+                </option>
+              ))}
+            </select>
           </div>
 
           {reservasPorFecha.size > 0 && (
-            <div className="reservas-history-strip">
+            <div className="admin-agenda-history-strip">
               {Array.from(reservasPorFecha.entries())
                 .sort((a, b) => new Date(b[0]) - new Date(a[0]))
-                .slice(0, 12)
+                .slice(0, 14)
                 .map(([fecha, cantidad]) => (
                   <button
                     key={fecha}
@@ -512,30 +709,30 @@ export default function MisReservas() {
           <CardDark>
             <p className="text-center mb-0">Cargando reservas...</p>
           </CardDark>
-        ) : estadisticasDia.total > 0 ? (
-          <CardDark className="reservas-calendar-card">
-            <div className="reservas-calendar-head">
+        ) : reservasDia.length > 0 ? (
+          <CardDark className="admin-agenda-calendar-card">
+            <div className="admin-agenda-calendar-head">
               <div>
                 <h4 className="section-title mb-1">Calendario diario</h4>
                 <p className="section-subtitle">
-                  Visualiza cada cita por hora y por trabajador.
+                  Visualiza citas por hora y trabajador. Al marcar atendida se mantiene el flujo hacia ventas, dashboard y pagos.
                 </p>
               </div>
 
-              <GoldBadge>{trabajadoresDia.length} trabajadores</GoldBadge>
+              <GoldBadge>{reservasDia.length} visibles</GoldBadge>
             </div>
 
-            <div className="agenda-desktop-board">
+            <div className="admin-agenda-desktop-board">
               <div
-                className="agenda-calendar-grid"
+                className="admin-agenda-calendar-grid"
                 style={{
-                  gridTemplateColumns: `88px repeat(${trabajadoresDia.length}, minmax(210px, 1fr))`,
+                  gridTemplateColumns: `88px repeat(${trabajadoresDia.length}, minmax(230px, 1fr))`,
                 }}
               >
-                <div className="agenda-time-header">Hora</div>
+                <div className="admin-agenda-time-header">Hora</div>
 
                 {trabajadoresDia.map((t) => (
-                  <div className="agenda-worker-header" key={t.key}>
+                  <div className="admin-agenda-worker-header" key={t.key}>
                     <AvatarCircle
                       src={t.foto ? getImageUrl(t.foto) : ""}
                       alt={t.nombre}
@@ -547,8 +744,8 @@ export default function MisReservas() {
                 ))}
 
                 {horasAgenda.map((hora) => (
-                  <div className="agenda-grid-row" key={hora}>
-                    <div className="agenda-time-cell">
+                  <div className="admin-agenda-grid-row" key={hora}>
+                    <div className="admin-agenda-time-cell">
                       {formatearHoraBloque(hora)}
                     </div>
 
@@ -556,7 +753,7 @@ export default function MisReservas() {
                       const reservasCelda = reservasPorTrabajadorYHora(t.key, hora);
 
                       return (
-                        <div className="agenda-worker-cell" key={`${t.key}-${hora}`}>
+                        <div className="admin-agenda-worker-cell" key={`${t.key}-${hora}`}>
                           {reservasCelda.map((r) => (
                             <ReservaCard key={r.idReserva} reserva={r} compact />
                           ))}
@@ -568,7 +765,7 @@ export default function MisReservas() {
               </div>
             </div>
 
-            <div className="agenda-mobile-board">
+            <div className="admin-agenda-mobile-board">
               {trabajadoresDia.map((t) => {
                 const reservasTrabajador = reservasDia.filter((r) => {
                   const key =
@@ -582,8 +779,8 @@ export default function MisReservas() {
                 });
 
                 return (
-                  <div className="agenda-mobile-worker-card" key={t.key}>
-                    <div className="agenda-mobile-worker-head">
+                  <div className="admin-agenda-mobile-worker-card" key={t.key}>
+                    <div className="admin-agenda-mobile-worker-head">
                       <AvatarCircle
                         src={t.foto ? getImageUrl(t.foto) : ""}
                         alt={t.nombre}
@@ -597,7 +794,7 @@ export default function MisReservas() {
                       </div>
                     </div>
 
-                    <div className="agenda-mobile-reservas">
+                    <div className="admin-agenda-mobile-reservas">
                       {reservasTrabajador.map((r) => (
                         <ReservaCard key={r.idReserva} reserva={r} />
                       ))}
@@ -608,14 +805,23 @@ export default function MisReservas() {
             </div>
           </CardDark>
         ) : (
-          <CardDark className="reservas-empty-card">
+          <CardDark className="admin-agenda-empty-card">
             <CalendarDays size={38} />
             <h4>No hay reservas para esta fecha</h4>
-            <p>
-              Cambia el calendario para revisar citas pasadas o futuras.
-            </p>
+            <p>Cambia el calendario o limpia filtros para revisar citas pasadas o futuras.</p>
           </CardDark>
         )}
+
+        <ModalReserva
+          abierto={modalReserva}
+          reserva={reservaSeleccionada}
+          onClose={() => {
+            setModalReserva(false);
+            setReservaSeleccionada(null);
+          }}
+          onAccion={cambiarEstado}
+          procesando={procesandoId === reservaSeleccionada?.idReserva}
+        />
       </div>
     </div>
   );

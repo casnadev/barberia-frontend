@@ -8,6 +8,7 @@ import GoldBadge from "../components/ui/GoldBadge";
 import TableDark from "../components/ui/TableDark";
 import DateFilter from "../components/ui/DateFilter";
 import Toast from "../components/ui/Toast";
+import AnimatedNumber from "../components/ui/AnimatedNumber";
 
 import {
   ResponsiveContainer,
@@ -21,6 +22,18 @@ import {
   AreaChart,
   Area,
 } from "recharts";
+
+import {
+  Banknote,
+  BriefcaseBusiness,
+  CalendarDays,
+  Eraser,
+  Filter,
+  ReceiptText,
+  Scissors,
+  TrendingUp,
+  UserRound,
+} from "lucide-react";
 
 function Ventas() {
   const [ventas, setVentas] = useState([]);
@@ -39,17 +52,32 @@ function Ventas() {
   const [limpiandoActivo, setLimpiandoActivo] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const esMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  const [esMobile, setEsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const onResize = () => {
+      setEsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener("resize", onResize);
+
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   const chartColors = {
     gold: "#d4af37",
     goldSoft: "#f0cf73",
-    text: "#f5f5f5",
-    muted: "#b8b8b8",
-    axis: "#b8b8b8",
-    grid: "rgba(255,255,255,0.08)",
-    bg: "#111111",
-    border: "rgba(212,175,55,0.18)",
+    green: "#16a34a",
+    purple: "#8b5cf6",
+    blue: "#2563eb",
+    text: "#111827",
+    muted: "#6b7280",
+    axis: "#6b7280",
+    grid: "rgba(15,23,42,0.08)",
+    bg: "#ffffff",
+    border: "rgba(212,175,55,0.22)",
   };
 
   const tooltipStyle = {
@@ -58,16 +86,17 @@ function Ventas() {
       border: `1px solid ${chartColors.border}`,
       borderRadius: "14px",
       color: chartColors.text,
-      boxShadow: "0 14px 30px rgba(0,0,0,.35)",
+      boxShadow: "0 14px 30px rgba(15,23,42,.18)",
     },
-    labelStyle: { color: chartColors.goldSoft, fontWeight: 800 },
-    itemStyle: { color: chartColors.text },
+    labelStyle: { color: "#8b6f10", fontWeight: 900 },
+    itemStyle: { color: chartColors.text, fontWeight: 700 },
   };
 
   const legendStyle = {
     wrapperStyle: {
       color: chartColors.text,
       paddingTop: "10px",
+      fontWeight: 700,
     },
   };
 
@@ -211,6 +240,11 @@ function Ventas() {
     [ventasFiltradas]
   );
 
+  const promedioVenta = useMemo(() => {
+    if (!cantidadVentas) return 0;
+    return totalFiltrado / cantidadVentas;
+  }, [cantidadVentas, totalFiltrado]);
+
   const ventasPorTrabajador = useMemo(() => {
     const mapa = new Map();
 
@@ -289,89 +323,103 @@ function Ventas() {
     setMensaje("Filtros restablecidos");
   };
 
+  const periodoTexto = useMemo(() => {
+    if (fechaDesde && fechaHasta) return `${fechaDesde} → ${fechaHasta}`;
+    if (fechaDesde) return `Desde ${fechaDesde}`;
+    if (fechaHasta) return `Hasta ${fechaHasta}`;
+    return "Todos los registros";
+  }, [fechaDesde, fechaHasta]);
+
+  const servicioTop = useMemo(() => {
+    const mapa = new Map();
+
+    ventasFiltradas.forEach((v) => {
+      const key = v.servicio || "Sin servicio";
+      mapa.set(key, (mapa.get(key) || 0) + Number(v.subtotal || 0));
+    });
+
+    return Array.from(mapa.entries())
+      .map(([servicio, total]) => ({ servicio, total }))
+      .sort((a, b) => b.total - a.total)[0];
+  }, [ventasFiltradas]);
+
+  const KpiAnalisis = ({
+    title,
+    value,
+    note,
+    icon: KpiIcon,
+    variant = "gold",
+    money = true,
+  }) => {
+
+    const IconComponent = KpiIcon;
+
+    return (
+      <CardDark className={`ventas-kpi-card ${variant}`}>
+
+        <div className="ventas-kpi-icon">
+          {IconComponent && <IconComponent size={22} />}
+        </div>
+
+        <p>{title}</p>
+
+        <h2>
+          {money ? (
+            <AnimatedNumber
+              value={Number(value || 0)}
+              prefix="S/ "
+              decimals={2}
+            />
+          ) : (
+            <AnimatedNumber
+              value={Number(value || 0)}
+              decimals={0}
+            />
+          )}
+        </h2>
+
+        <span>{note}</span>
+
+      </CardDark>
+    );
+  };
+
   return (
-    <div className="page-shell">
-      <PageHeader
-        title="Análisis"
-        subtitle="Analiza ventas, rendimiento y comportamiento del negocio"
-      />
-
+    <div className="page-shell ventas-page">
       <div className="container-fluid py-4">
-        <style>{`
-          .analisis-filtros {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 1rem;
-          }
+        <CardDark className="ventas-header-card mb-4">
+          <div className="ventas-header-row">
+            <PageHeader
+              title="Análisis de Ventas"
+              subtitle="Analiza ventas realizadas desde reservas atendidas, servicios manuales y rendimiento del negocio."
+            />
 
-          .filtros-rapidos {
-            display: flex;
-            gap: .75rem;
-            flex-wrap: wrap;
-          }
+            <div className="ventas-header-actions">
+              <GoldBadge>{periodoTexto}</GoldBadge>
+              <GoldBadge>{ventasFiltradas.length} registros</GoldBadge>
+            </div>
+          </div>
+        </CardDark>
 
-          .dashboard-four-cols {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 1rem;
-          }
-
-          .kpi-card-value {
-            font-size: 2.25rem;
-            font-weight: 900;
-            color: #f5f5f5;
-            margin-bottom: 1rem;
-          }
-
-          .kpi-card-note {
-            padding: 14px;
-            border-radius: 16px;
-            background: rgba(212,175,55,0.08);
-            border: 1px solid rgba(212,175,55,0.16);
-            color: #d1d5db;
-            font-weight: 700;
-          }
-
-          .chart-scroll-mobile {
-            overflow-x: auto;
-            overflow-y: hidden;
-          }
-
-          @media (max-width: 992px) {
-            .analisis-filtros,
-            .dashboard-four-cols {
-              grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-          }
-
-          @media (max-width: 576px) {
-            .analisis-filtros,
-            .dashboard-four-cols {
-              grid-template-columns: 1fr;
-            }
-          }
-        `}</style>
-
-        <CardDark className="mb-4">
-          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <CardDark className="mb-4 ventas-filter-card">
+          <div className="ventas-section-head">
             <div>
               <h4 className="section-title">Filtros de análisis</h4>
               <p className="section-subtitle">
-                Ajusta el período, trabajador o servicio que deseas revisar.
+                Ajusta el período, trabajador o servicio. Funciona también si el dueño es quien atiende.
               </p>
             </div>
 
             <GoldBadge>
-              {loading ? "Cargando..." : `${ventasFiltradas.length} registros`}
+              {loading ? "Cargando..." : `${cantidadVentas} ventas`}
             </GoldBadge>
           </div>
 
-          <div className="filtros-rapidos mb-3">
+          <div className="ventas-quick-filters">
             <button
               type="button"
-              className={`btn ${
-                filtroRapidoActivo === "hoy" ? "btn-gold" : "btn-dark-outline"
-              }`}
+              className={`btn ${filtroRapidoActivo === "hoy" ? "btn-gold" : "btn-dark-outline"
+                }`}
               onClick={aplicarFiltroHoy}
             >
               Hoy
@@ -379,9 +427,8 @@ function Ventas() {
 
             <button
               type="button"
-              className={`btn ${
-                filtroRapidoActivo === "semana" ? "btn-gold" : "btn-dark-outline"
-              }`}
+              className={`btn ${filtroRapidoActivo === "semana" ? "btn-gold" : "btn-dark-outline"
+                }`}
               onClick={aplicarFiltroSemana}
             >
               Semana
@@ -389,9 +436,8 @@ function Ventas() {
 
             <button
               type="button"
-              className={`btn ${
-                filtroRapidoActivo === "mes" ? "btn-gold" : "btn-dark-outline"
-              }`}
+              className={`btn ${filtroRapidoActivo === "mes" ? "btn-gold" : "btn-dark-outline"
+                }`}
               onClick={aplicarFiltroMes}
             >
               Mes
@@ -399,16 +445,16 @@ function Ventas() {
 
             <button
               type="button"
-              className={`btn ${
-                limpiandoActivo ? "btn-gold" : "btn-dark-outline"
-              }`}
+              className={`btn ${limpiandoActivo ? "btn-gold" : "btn-dark-outline"
+                }`}
               onClick={limpiarFiltros}
             >
+              <Eraser size={16} />
               Limpiar
             </button>
           </div>
 
-          <div className="analisis-filtros mb-1">
+          <div className="ventas-filter-grid">
             <div className="filtro-item">
               <DateFilter
                 label="Desde"
@@ -433,12 +479,7 @@ function Ventas() {
             </div>
 
             <div className="filtro-item">
-              <label
-                className="form-label"
-                style={{ color: "#d4af37", fontWeight: 700 }}
-              >
-                Trabajador
-              </label>
+              <label className="label-gold">Trabajador</label>
 
               <select
                 className="form-control input-dark"
@@ -458,12 +499,7 @@ function Ventas() {
             </div>
 
             <div className="filtro-item">
-              <label
-                className="form-label"
-                style={{ color: "#d4af37", fontWeight: 700 }}
-              >
-                Servicio
-              </label>
+              <label className="label-gold">Servicio</label>
 
               <select
                 className="form-control input-dark"
@@ -484,176 +520,218 @@ function Ventas() {
           </div>
         </CardDark>
 
-        <CardDark className="mb-4">
-          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-            <div>
-              <h4 className="section-title">Resumen del período</h4>
-              <p className="section-subtitle">
-                Totales calculados según los filtros aplicados.
-              </p>
+        <section className="ventas-kpi-grid mb-4">
+          <KpiAnalisis
+            title="Total vendido"
+            value={totalFiltrado}
+            note="Ingresos filtrados"
+            icon={Banknote}
+            variant="gold"
+          />
+
+          <KpiAnalisis
+            title="Comisión generada"
+            value={totalComisionFiltrada}
+            note="Comisiones calculadas"
+            icon={TrendingUp}
+            variant="success"
+          />
+
+          <KpiAnalisis
+            title="Servicios distintos"
+            value={serviciosDistintos}
+            note="Servicios vendidos"
+            icon={Scissors}
+            variant="info"
+            money={false}
+          />
+
+          <KpiAnalisis
+            title="Cantidad de ventas"
+            value={cantidadVentas}
+            note="Ventas únicas"
+            icon={ReceiptText}
+            variant="purple"
+            money={false}
+          />
+
+          <KpiAnalisis
+            title="Ticket promedio"
+            value={promedioVenta}
+            note={servicioTop ? `Top: ${servicioTop.servicio}` : "Sin datos"}
+            icon={BriefcaseBusiness}
+            variant="neutral"
+          />
+        </section>
+
+        <div className="ventas-insight-grid mb-4">
+          <CardDark className="ventas-insight-card">
+            <div className="ventas-insight-icon">
+              <UserRound size={24} />
             </div>
 
-            <GoldBadge>{cantidadVentas} ventas</GoldBadge>
-          </div>
+            <div>
+              <span>Mejor trabajador / dueño</span>
+              <b>{ventasPorTrabajador[0]?.trabajador || "Sin datos"}</b>
+              <p>
+                {ventasPorTrabajador[0]
+                  ? `S/ ${Number(ventasPorTrabajador[0].totalGenerado || 0).toFixed(2)} generado`
+                  : "Aún no hay ventas filtradas."}
+              </p>
+            </div>
+          </CardDark>
 
-          <div className="dashboard-four-cols">
-            <CardDark className="h-100 kpi-card-pro">
-              <p className="section-subtitle mb-2">Total vendido</p>
-              <h2 className="kpi-card-value">S/ {totalFiltrado.toFixed(2)}</h2>
-              <div className="kpi-card-note">Ingresos filtrados</div>
-            </CardDark>
+          <CardDark className="ventas-insight-card">
+            <div className="ventas-insight-icon">
+              <Scissors size={24} />
+            </div>
 
-            <CardDark className="h-100 kpi-card-pro success">
-              <p className="section-subtitle mb-2">Comisión generada</p>
-              <h2 className="kpi-card-value" style={{ color: "#86efac" }}>
-                S/ {totalComisionFiltrada.toFixed(2)}
-              </h2>
-              <div className="kpi-card-note">Total de comisiones</div>
-            </CardDark>
+            <div>
+              <span>Servicio más rentable</span>
+              <b>{servicioTop?.servicio || "Sin datos"}</b>
+              <p>
+                {servicioTop
+                  ? `S/ ${Number(servicioTop.total || 0).toFixed(2)} generado`
+                  : "Aún no hay servicios filtrados."}
+              </p>
+            </div>
+          </CardDark>
 
-            <CardDark className="h-100 kpi-card-pro purple">
-              <p className="section-subtitle mb-2">Servicios distintos</p>
-              <h2 className="kpi-card-value">{serviciosDistintos}</h2>
-              <div className="kpi-card-note">Servicios vendidos</div>
-            </CardDark>
+          <CardDark className="ventas-insight-card">
+            <div className="ventas-insight-icon">
+              <CalendarDays size={24} />
+            </div>
 
-            <CardDark className="h-100 kpi-card-pro info">
-              <p className="section-subtitle mb-2">Cantidad de ventas</p>
-              <h2 className="kpi-card-value">{cantidadVentas}</h2>
-              <div className="kpi-card-note">Ventas únicas</div>
-            </CardDark>
-          </div>
-        </CardDark>
-
-        <div className="row g-4 mb-4">
-          <div className="col-lg-6">
-            <CardDark className="h-100">
-              <div className="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                  <h4 className="section-title">Ventas por trabajador</h4>
-                  <p className="section-subtitle">
-                    Comparación de ingresos generados.
-                  </p>
-                </div>
-
-                <GoldBadge>{ventasPorTrabajador.length} datos</GoldBadge>
-              </div>
-
-              <div className="chart-scroll-mobile">
-                <div
-                  style={{
-                    width: esMobile
-                      ? `${Math.max(ventasPorTrabajador.length * 90, 360)}px`
-                      : "100%",
-                    height: 320,
-                  }}
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={ventasPorTrabajador}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke={chartColors.grid}
-                      />
-                      <XAxis
-                        dataKey="trabajador"
-                        stroke={chartColors.axis}
-                        interval={0}
-                        tick={{ fontSize: 12, fill: chartColors.axis }}
-                      />
-                      <YAxis
-                        stroke={chartColors.axis}
-                        tick={{ fill: chartColors.axis }}
-                      />
-                      <Tooltip
-                        {...tooltipStyle}
-                        formatter={(value) => [
-                          `S/ ${Number(value).toFixed(2)}`,
-                          "Total generado",
-                        ]}
-                      />
-                      {!esMobile && <Legend {...legendStyle} />}
-
-                      <Bar
-                        dataKey="totalGenerado"
-                        name="Total generado"
-                        fill="#d4af37"
-                        radius={[8, 8, 0, 0]}
-                        animationDuration={900}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </CardDark>
-          </div>
-
-          <div className="col-lg-6">
-            <CardDark className="h-100">
-              <div className="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                  <h4 className="section-title">Comisiones por trabajador</h4>
-                  <p className="section-subtitle">
-                    Comparación del total de comisiones generadas.
-                  </p>
-                </div>
-
-                <GoldBadge>{comisionesPorTrabajador.length} datos</GoldBadge>
-              </div>
-
-              <div className="chart-scroll-mobile">
-                <div
-                  style={{
-                    width: esMobile
-                      ? `${Math.max(
-                          comisionesPorTrabajador.length * 90,
-                          360
-                        )}px`
-                      : "100%",
-                    height: 320,
-                  }}
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={comisionesPorTrabajador}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke={chartColors.grid}
-                      />
-                      <XAxis
-                        dataKey="trabajador"
-                        stroke={chartColors.axis}
-                        interval={0}
-                        tick={{ fontSize: 12, fill: chartColors.axis }}
-                      />
-                      <YAxis
-                        stroke={chartColors.axis}
-                        tick={{ fill: chartColors.axis }}
-                      />
-                      <Tooltip
-                        {...tooltipStyle}
-                        formatter={(value) => [
-                          `S/ ${Number(value).toFixed(2)}`,
-                          "Comisión",
-                        ]}
-                      />
-                      {!esMobile && <Legend {...legendStyle} />}
-
-                      <Bar
-                        dataKey="totalComision"
-                        name="Comisión generada"
-                        fill="#22c55e"
-                        radius={[8, 8, 0, 0]}
-                        animationDuration={900}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </CardDark>
-          </div>
+            <div>
+              <span>Días con ventas</span>
+              <b>{ventasPorDia.length}</b>
+              <p>Según el rango actualmente filtrado.</p>
+            </div>
+          </CardDark>
         </div>
 
-        <CardDark className="mb-4">
-          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <section className="ventas-chart-grid mb-4">
+          <CardDark className="h-100 ventas-chart-card">
+            <div className="ventas-section-head">
+              <div>
+                <h4 className="section-title">Ventas por trabajador</h4>
+                <p className="section-subtitle">
+                  Comparación de ingresos generados.
+                </p>
+              </div>
+
+              <GoldBadge>{ventasPorTrabajador.length} datos</GoldBadge>
+            </div>
+
+            <div className="chart-scroll-mobile">
+              <div
+                className="ventas-chart-box"
+                style={{
+                  width: esMobile
+                    ? `${Math.max(ventasPorTrabajador.length * 92, 380)}px`
+                    : "100%",
+                }}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={ventasPorTrabajador}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={chartColors.grid}
+                    />
+                    <XAxis
+                      dataKey="trabajador"
+                      stroke={chartColors.axis}
+                      interval={0}
+                      tick={{ fontSize: 12, fill: chartColors.axis }}
+                    />
+                    <YAxis
+                      stroke={chartColors.axis}
+                      tick={{ fill: chartColors.axis }}
+                    />
+                    <Tooltip
+                      {...tooltipStyle}
+                      formatter={(value) => [
+                        `S/ ${Number(value).toFixed(2)}`,
+                        "Total generado",
+                      ]}
+                    />
+                    {!esMobile && <Legend {...legendStyle} />}
+
+                    <Bar
+                      dataKey="totalGenerado"
+                      name="Total generado"
+                      fill="#d4af37"
+                      radius={[10, 10, 0, 0]}
+                      animationDuration={900}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </CardDark>
+
+          <CardDark className="h-100 ventas-chart-card">
+            <div className="ventas-section-head">
+              <div>
+                <h4 className="section-title">Comisiones por trabajador</h4>
+                <p className="section-subtitle">
+                  Comparación del total de comisiones generadas.
+                </p>
+              </div>
+
+              <GoldBadge>{comisionesPorTrabajador.length} datos</GoldBadge>
+            </div>
+
+            <div className="chart-scroll-mobile">
+              <div
+                className="ventas-chart-box"
+                style={{
+                  width: esMobile
+                    ? `${Math.max(comisionesPorTrabajador.length * 92, 380)}px`
+                    : "100%",
+                }}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={comisionesPorTrabajador}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={chartColors.grid}
+                    />
+                    <XAxis
+                      dataKey="trabajador"
+                      stroke={chartColors.axis}
+                      interval={0}
+                      tick={{ fontSize: 12, fill: chartColors.axis }}
+                    />
+                    <YAxis
+                      stroke={chartColors.axis}
+                      tick={{ fill: chartColors.axis }}
+                    />
+                    <Tooltip
+                      {...tooltipStyle}
+                      formatter={(value) => [
+                        `S/ ${Number(value).toFixed(2)}`,
+                        "Comisión",
+                      ]}
+                    />
+                    {!esMobile && <Legend {...legendStyle} />}
+
+                    <Bar
+                      dataKey="totalComision"
+                      name="Comisión generada"
+                      fill="#16a34a"
+                      radius={[10, 10, 0, 0]}
+                      animationDuration={900}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </CardDark>
+        </section>
+
+        <CardDark className="mb-4 ventas-chart-card">
+          <div className="ventas-section-head">
             <div>
               <h4 className="section-title">Ventas por día</h4>
               <p className="section-subtitle">
@@ -664,9 +742,16 @@ function Ventas() {
             <GoldBadge>{ventasPorDia.length} días</GoldBadge>
           </div>
 
-          <div style={{ width: "100%", height: 340, minHeight: 340 }}>
+          <div className="ventas-chart-box-large">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={ventasPorDia}>
+                <defs>
+                  <linearGradient id="ventasAreaGold" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#d4af37" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#d4af37" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+
                 <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                 <XAxis
                   dataKey="fecha"
@@ -692,10 +777,10 @@ function Ventas() {
                   type="monotone"
                   dataKey="total"
                   name="Ventas por día"
-                  stroke="#c084fc"
+                  stroke="#d4af37"
                   strokeWidth={3}
-                  fill="rgba(192,132,252,0.20)"
-                  dot={{ r: 4, fill: "#c084fc" }}
+                  fill="url(#ventasAreaGold)"
+                  dot={{ r: 4, fill: "#d4af37" }}
                   activeDot={{ r: 6 }}
                   animationDuration={1000}
                 />
@@ -704,71 +789,125 @@ function Ventas() {
           </div>
         </CardDark>
 
-        <CardDark>
-          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <CardDark className="ventas-detail-card">
+          <div className="ventas-section-head">
             <div>
               <h4 className="section-title">Detalle analítico</h4>
               <p className="section-subtitle">
-                Revisa el comportamiento detallado de ventas del negocio.
+                Ventas registradas por servicios atendidos y confirmados.
               </p>
             </div>
 
             <GoldBadge>{ventasFiltradas.length} registros</GoldBadge>
           </div>
 
-          <TableDark
-            headers={[
-              "ID",
-              "Fecha",
-              "Servicio",
-              "Trabajador",
-              "Cantidad",
-              "Precio",
-              "Subtotal",
-              "% Comisión",
-              "Comisión",
-              "Total",
-            ]}
-          >
+          <div className="ventas-detail-mobile">
             {loading ? (
-              <tr>
-                <td colSpan="10" className="text-center py-4">
-                  Cargando análisis...
-                </td>
-              </tr>
+              <p className="section-subtitle mb-0">Cargando análisis...</p>
             ) : ventasFiltradas.length > 0 ? (
               ventasFiltradas.map((v) => (
-                <tr
+                <div
+                  className="ventas-detail-item"
                   key={`${v.idVenta}-${v.fechaVenta}-${v.servicio}-${v.trabajador}`}
                 >
-                  <td style={{ fontWeight: 700 }}>{v.idVenta}</td>
-                  <td>{new Date(v.fechaVenta).toLocaleString()}</td>
-                  <td>{v.servicio}</td>
-                  <td>
-                    <span className="table-pill">{v.trabajador}</span>
-                  </td>
-                  <td>{v.cantidad}</td>
-                  <td>S/ {Number(v.precioUnitario || 0).toFixed(2)}</td>
-                  <td>S/ {Number(v.subtotal || 0).toFixed(2)}</td>
-                  <td style={{ color: "#f4d35e", fontWeight: 800 }}>
-                    {Number(v.porcentajeComisionAplicado || 0).toFixed(0)}%
-                  </td>
-                  <td style={{ color: "#22c55e", fontWeight: 800 }}>
-                    S/ {Number(v.montoComisionCalculado || 0).toFixed(2)}
-                  </td>
-                  <td style={{ color: "#d4af37", fontWeight: 900 }}>
-                    S/ {Number(v.total || 0).toFixed(2)}
-                  </td>
-                </tr>
+                  <div className="ventas-detail-top">
+                    <div>
+                      <h5>{v.servicio}</h5>
+                      <span>{new Date(v.fechaVenta).toLocaleString()}</span>
+                    </div>
+
+                    <b>S/ {Number(v.total || 0).toFixed(2)}</b>
+                  </div>
+
+                  <div className="ventas-detail-info">
+                    <div>
+                      <span>Trabajador</span>
+                      <b>{v.trabajador || "Sin trabajador"}</b>
+                    </div>
+
+                    <div>
+                      <span>Cantidad</span>
+                      <b>{v.cantidad}</b>
+                    </div>
+
+                    <div>
+                      <span>Subtotal</span>
+                      <b>S/ {Number(v.subtotal || 0).toFixed(2)}</b>
+                    </div>
+
+                    <div>
+                      <span>Comisión</span>
+                      <b className="success">
+                        S/ {Number(v.montoComisionCalculado || 0).toFixed(2)}
+                      </b>
+                    </div>
+                  </div>
+                </div>
               ))
             ) : (
-              <tr>
-                <td colSpan="10" className="text-center py-4">
-                  No hay registros para el análisis.
-                </td>
-              </tr>
+              <p className="section-subtitle mb-0">
+                No hay registros para el análisis.
+              </p>
             )}
-          </TableDark>
+          </div>
+
+          <div className="ventas-table-wrap">
+            <TableDark
+              headers={[
+                "ID",
+                "Fecha",
+                "Servicio",
+                "Trabajador",
+                "Cantidad",
+                "Precio",
+                "Subtotal",
+                "% Comisión",
+                "Comisión",
+                "Total",
+              ]}
+            >
+              {loading ? (
+                <tr>
+                  <td colSpan="10" className="text-center py-4">
+                    Cargando análisis...
+                  </td>
+                </tr>
+              ) : ventasFiltradas.length > 0 ? (
+                ventasFiltradas.map((v) => (
+                  <tr
+                    key={`${v.idVenta}-${v.fechaVenta}-${v.servicio}-${v.trabajador}`}
+                  >
+                    <td className="ventas-id-cell">{v.idVenta}</td>
+                    <td>{new Date(v.fechaVenta).toLocaleString()}</td>
+                    <td>{v.servicio}</td>
+                    <td>
+                      <span className="table-pill">
+                        {v.trabajador || "Sin trabajador"}
+                      </span>
+                    </td>
+                    <td>{v.cantidad}</td>
+                    <td>S/ {Number(v.precioUnitario || 0).toFixed(2)}</td>
+                    <td>S/ {Number(v.subtotal || 0).toFixed(2)}</td>
+                    <td className="ventas-warning-cell">
+                      {Number(v.porcentajeComisionAplicado || 0).toFixed(0)}%
+                    </td>
+                    <td className="ventas-success-cell">
+                      S/ {Number(v.montoComisionCalculado || 0).toFixed(2)}
+                    </td>
+                    <td className="ventas-total-cell">
+                      S/ {Number(v.total || 0).toFixed(2)}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="10" className="text-center py-4">
+                    No hay registros para el análisis.
+                  </td>
+                </tr>
+              )}
+            </TableDark>
+          </div>
         </CardDark>
       </div>
 

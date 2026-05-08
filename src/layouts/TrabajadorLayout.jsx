@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import API_BASE from "../services/api";
 import authFetch from "../services/authFetch";
 import logo2 from "../assets/logo2.png";
+import { getImageUrl } from "../utils/imageUrl";
 
 function Item({ to, label, active, onClick }) {
   return (
@@ -131,8 +132,8 @@ export default function TrabajadorLayout() {
   const esMobile = typeof window !== "undefined" && window.innerWidth < 992;
 
   const logoSrc = logoNegocio
-    ? `${API_BASE.replace("/api", "")}${logoNegocio}`
-    : logo2;
+  ? getImageUrl(logoNegocio)
+  : logo2;
 
   return (
     <div className="admin-shell">

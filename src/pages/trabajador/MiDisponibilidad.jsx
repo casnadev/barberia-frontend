@@ -1,20 +1,89 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import API_BASE from "../../services/api";
 import authFetch from "../../services/authFetch";
 
 import CardDark from "../../components/ui/CardDark";
 import PageHeader from "../../components/ui/PageHeader";
 import GoldBadge from "../../components/ui/GoldBadge";
+import Toast from "../../components/ui/Toast";
+
+import {
+  CalendarOff,
+  CheckCircle2,
+  Clock,
+  Coffee,
+  Plus,
+  Save,
+  Trash2,
+  X,
+} from "lucide-react";
 
 const diasBase = [
-  { diaSemana: 1, nombre: "Lunes" },
-  { diaSemana: 2, nombre: "Martes" },
-  { diaSemana: 3, nombre: "Miércoles" },
-  { diaSemana: 4, nombre: "Jueves" },
-  { diaSemana: 5, nombre: "Viernes" },
-  { diaSemana: 6, nombre: "Sábado" },
-  { diaSemana: 7, nombre: "Domingo" },
+  { diaSemana: 1, nombre: "Lunes", corto: "Lun" },
+  { diaSemana: 2, nombre: "Martes", corto: "Mar" },
+  { diaSemana: 3, nombre: "Miércoles", corto: "Mié" },
+  { diaSemana: 4, nombre: "Jueves", corto: "Jue" },
+  { diaSemana: 5, nombre: "Viernes", corto: "Vie" },
+  { diaSemana: 6, nombre: "Sábado", corto: "Sáb" },
+  { diaSemana: 7, nombre: "Domingo", corto: "Dom" },
 ];
+
+const motivosRapidos = [
+  "Almuerzo",
+  "Descanso",
+  "Cita personal",
+  "Capacitación",
+  "Vacaciones",
+  "Otro",
+];
+
+const bloqueoInicial = {
+  fecha: "",
+  horaInicio: "13:00",
+  horaFin: "14:00",
+  motivo: "",
+};
+
+function ModalDisponibilidad({ abierto, titulo, children, onClose, ancho = "620px" }) {
+  if (!abierto) return null;
+
+  return (
+    <div className="disp-modal-backdrop">
+      <div className="disp-modal" style={{ maxWidth: ancho }}>
+        <div className="disp-modal-header">
+          <h4>{titulo}</h4>
+
+          <button className="disp-modal-close" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="disp-modal-body">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function Confirmacion({ abierto, texto, onCancel, onConfirm }) {
+  if (!abierto) return null;
+
+  return (
+    <ModalDisponibilidad abierto={abierto} titulo="Confirmar acción" onClose={onCancel} ancho="440px">
+      <p className="disp-confirm-text">{texto}</p>
+
+      <div className="disp-modal-actions">
+        <button type="button" className="btn btn-dark-outline" onClick={onCancel}>
+          Cancelar
+        </button>
+
+        <button type="button" className="btn disp-danger-btn" onClick={onConfirm}>
+          <Trash2 size={16} />
+          Eliminar
+        </button>
+      </div>
+    </ModalDisponibilidad>
+  );
+}
 
 export default function MiDisponibilidad() {
   const [dias, setDias] = useState(
@@ -30,16 +99,15 @@ export default function MiDisponibilidad() {
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
+
   const [bloqueos, setBloqueos] = useState([]);
-
-  const [bloqueoForm, setBloqueoForm] = useState({
-    fecha: "",
-    horaInicio: "13:00",
-    horaFin: "14:00",
-    motivo: "",
-  });
-
+  const [bloqueoForm, setBloqueoForm] = useState(bloqueoInicial);
   const [guardandoBloqueo, setGuardandoBloqueo] = useState(false);
+
+  const [modalBloqueo, setModalBloqueo] = useState(false);
+  const [modalEliminar, setModalEliminar] = useState(false);
+  const [bloqueoEliminar, setBloqueoEliminar] = useState(null);
+  const [eliminandoBloqueoId, setEliminandoBloqueoId] = useState(null);
 
   const leerJsonSeguro = async (res, valorDefecto) => {
     try {
@@ -48,6 +116,15 @@ export default function MiDisponibilidad() {
     } catch {
       return valorDefecto;
     }
+  };
+
+  const obtenerFechaHoy = () => {
+    const hoy = new Date();
+
+    return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(hoy.getDate()).padStart(2, "0")}`;
   };
 
   const cargarBloqueos = async () => {
@@ -66,14 +143,11 @@ export default function MiDisponibilidad() {
     try {
       setError("");
 
-      const res = await authFetch(
-        `${API_BASE}/Disponibilidad/mi-disponibilidad`
-      );
-
+      const res = await authFetch(`${API_BASE}/Disponibilidad/mi-disponibilidad`);
       const data = await leerJsonSeguro(res, []);
 
       if (!Array.isArray(data)) {
-        setError("Error al cargar disponibilidad");
+        setError("No se pudo cargar tu horario.");
         return;
       }
 
@@ -94,14 +168,36 @@ export default function MiDisponibilidad() {
       );
     } catch (err) {
       console.error(err);
-      setError("Error al cargar disponibilidad");
+      setError("No se pudo cargar tu horario.");
     }
   };
 
   useEffect(() => {
     cargarDisponibilidad();
     cargarBloqueos();
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const diasActivos = useMemo(() => dias.filter((d) => d.estado), [dias]);
+
+  const horasSemanales = useMemo(() => {
+    return diasActivos.reduce((acc, d) => {
+      const inicio = new Date(`2026-01-01T${d.horaInicio}`);
+      const fin = new Date(`2026-01-01T${d.horaFin}`);
+      const diff = Math.max(0, (fin - inicio) / 1000 / 60 / 60);
+
+      return acc + diff;
+    }, 0);
+  }, [diasActivos]);
+
+  const proximoBloqueo = useMemo(() => {
+    const hoy = obtenerFechaHoy();
+
+    return [...bloqueos]
+      .filter((b) => String(b.fecha || "").substring(0, 10) >= hoy)
+      .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))[0];
+  }, [bloqueos]);
 
   const actualizarDia = (diaSemana, campo, valor) => {
     setDias((prev) =>
@@ -116,27 +212,73 @@ export default function MiDisponibilidad() {
     );
   };
 
+  const activarSemanaLaboral = () => {
+    setDias((prev) =>
+      prev.map((d) => ({
+        ...d,
+        estado: d.diaSemana >= 1 && d.diaSemana <= 6,
+        horaInicio: d.diaSemana >= 1 && d.diaSemana <= 6 ? "09:00" : d.horaInicio,
+        horaFin: d.diaSemana >= 1 && d.diaSemana <= 6 ? "18:00" : d.horaFin,
+        intervaloMinutos: d.diaSemana >= 1 && d.diaSemana <= 6 ? 60 : d.intervaloMinutos,
+      }))
+    );
+  };
+
+  const copiarLunesATodos = () => {
+    const lunes = dias.find((d) => d.diaSemana === 1);
+
+    if (!lunes) return;
+
+    setDias((prev) =>
+      prev.map((d) =>
+        d.estado
+          ? {
+              ...d,
+              horaInicio: lunes.horaInicio,
+              horaFin: lunes.horaFin,
+              intervaloMinutos: lunes.intervaloMinutos,
+            }
+          : d
+      )
+    );
+  };
+
+  const validarRangos = () => {
+    const activos = dias.filter((d) => d.estado);
+
+    if (activos.length === 0) {
+      setError("Activa al menos un día de atención.");
+      return false;
+    }
+
+    const invalido = activos.find((d) => d.horaInicio >= d.horaFin);
+
+    if (invalido) {
+      setError(`Revisa el horario de ${invalido.nombre}. La hora final debe ser mayor.`);
+      return false;
+    }
+
+    return true;
+  };
+
   const guardar = async () => {
     setMensaje("");
     setError("");
 
-    const activos = dias.filter((d) => d.estado);
-
-    if (activos.length === 0) {
-      setError("Debes activar al menos un día de atención.");
-      return;
-    }
+    if (!validarRangos()) return;
 
     try {
       setGuardando(true);
 
-      const body = activos.map((d) => ({
-        diaSemana: d.diaSemana,
-        horaInicio: `${d.horaInicio}:00`,
-        horaFin: `${d.horaFin}:00`,
-        intervaloMinutos: Number(d.intervaloMinutos),
-        estado: true,
-      }));
+      const body = dias
+        .filter((d) => d.estado)
+        .map((d) => ({
+          diaSemana: d.diaSemana,
+          horaInicio: `${d.horaInicio}:00`,
+          horaFin: `${d.horaFin}:00`,
+          intervaloMinutos: Number(d.intervaloMinutos),
+          estado: true,
+        }));
 
       const res = await authFetch(`${API_BASE}/Disponibilidad/guardar`, {
         method: "POST",
@@ -149,17 +291,34 @@ export default function MiDisponibilidad() {
       const data = await leerJsonSeguro(res, {});
 
       if (!res || !res.ok) {
-        setError(data.mensaje || "No se pudo guardar la disponibilidad");
+        setError(data.mensaje || "No se pudo guardar tu horario.");
         return;
       }
 
-      setMensaje(data.mensaje || "Disponibilidad actualizada correctamente");
+      setMensaje(data.mensaje || "Horario actualizado correctamente.");
     } catch (err) {
       console.error(err);
-      setError("Error al guardar disponibilidad");
+      setError("No se pudo guardar tu horario.");
     } finally {
       setGuardando(false);
     }
+  };
+
+  const abrirBloqueo = () => {
+    setMensaje("");
+    setError("");
+
+    setBloqueoForm({
+      ...bloqueoInicial,
+      fecha: obtenerFechaHoy(),
+    });
+
+    setModalBloqueo(true);
+  };
+
+  const cerrarBloqueo = () => {
+    setModalBloqueo(false);
+    setBloqueoForm(bloqueoInicial);
   };
 
   const bloquearHorario = async () => {
@@ -167,214 +326,318 @@ export default function MiDisponibilidad() {
     setError("");
 
     if (!bloqueoForm.fecha || !bloqueoForm.horaInicio || !bloqueoForm.horaFin) {
-      setError("Completa los datos del bloqueo");
+      setError("Completa la fecha y el horario del bloqueo.");
+      return;
+    }
+
+    if (bloqueoForm.horaInicio >= bloqueoForm.horaFin) {
+      setError("La hora final del bloqueo debe ser mayor.");
       return;
     }
 
     try {
       setGuardandoBloqueo(true);
 
-      const res = await authFetch(
-        `${API_BASE}/Disponibilidad/bloquear-horario`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            fecha: bloqueoForm.fecha,
-            horaInicio: `${bloqueoForm.horaInicio}:00`,
-            horaFin: `${bloqueoForm.horaFin}:00`,
-            motivo: bloqueoForm.motivo,
-          }),
-        }
-      );
+      const res = await authFetch(`${API_BASE}/Disponibilidad/bloquear-horario`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fecha: bloqueoForm.fecha,
+          horaInicio: `${bloqueoForm.horaInicio}:00`,
+          horaFin: `${bloqueoForm.horaFin}:00`,
+          motivo: bloqueoForm.motivo,
+        }),
+      });
 
       const data = await leerJsonSeguro(res, {});
 
       if (!res || !res.ok) {
-        setError(data.mensaje || "No se pudo registrar el bloqueo");
+        setError(data.mensaje || "No se pudo registrar el bloqueo.");
         return;
       }
 
-      setMensaje(data.mensaje || "Bloqueo registrado correctamente");
-
-      setBloqueoForm({
-        fecha: "",
-        horaInicio: "13:00",
-        horaFin: "14:00",
-        motivo: "",
-      });
-
+      setMensaje(data.mensaje || "Bloqueo registrado correctamente.");
+      cerrarBloqueo();
       cargarBloqueos();
     } catch (err) {
       console.error(err);
-      setError("Error registrando bloqueo");
+      setError("No se pudo registrar el bloqueo.");
     } finally {
       setGuardandoBloqueo(false);
     }
   };
 
-  const eliminarBloqueo = async (id) => {
+  const abrirEliminarBloqueo = (bloqueo) => {
+    setBloqueoEliminar(bloqueo);
+    setModalEliminar(true);
+  };
+
+  const cerrarEliminarBloqueo = () => {
+    setBloqueoEliminar(null);
+    setModalEliminar(false);
+  };
+
+  const eliminarBloqueo = async () => {
+    if (!bloqueoEliminar) return;
+
     try {
+      setEliminandoBloqueoId(bloqueoEliminar.idBloqueo);
+
       const res = await authFetch(
-        `${API_BASE}/Disponibilidad/eliminar-bloqueo/${id}`,
+        `${API_BASE}/Disponibilidad/eliminar-bloqueo/${bloqueoEliminar.idBloqueo}`,
         {
           method: "PATCH",
         }
       );
 
       if (!res || !res.ok) {
-        setError("No se pudo eliminar el bloqueo");
+        setError("No se pudo eliminar el bloqueo.");
         return;
       }
 
+      setMensaje("Bloqueo eliminado correctamente.");
+      cerrarEliminarBloqueo();
       cargarBloqueos();
     } catch (err) {
       console.error(err);
-      setError("Error eliminando bloqueo");
+      setError("No se pudo eliminar el bloqueo.");
+    } finally {
+      setEliminandoBloqueoId(null);
     }
   };
 
   return (
-    <div className="page-shell">
-      <PageHeader
-        title="Mi Disponibilidad"
-        subtitle="Configura tus días y horarios de atención"
-      />
+    <div className="page-shell disp-page">
+      <div className="container-fluid py-4">
+        <CardDark className="disp-header-card mb-4">
+          <div className="disp-header-row">
+            <PageHeader
+              title="Mi disponibilidad"
+              subtitle="Define cuándo pueden reservar contigo y bloquea horarios puntuales."
+            />
 
-      <div className="container py-4">
-        {mensaje && <div className="alert alert-success">{mensaje}</div>}
-        {error && <div className="alert alert-danger">{error}</div>}
+            <div className="disp-header-actions">
+              <GoldBadge>{diasActivos.length} días activos</GoldBadge>
+              <GoldBadge>{bloqueos.length} bloqueos</GoldBadge>
 
-        <CardDark>
-          <div className="d-flex justify-content-between align-items-center mb-4">
+              <button type="button" className="btn btn-gold" onClick={abrirBloqueo}>
+                <Plus size={16} />
+                Bloquear horario
+              </button>
+            </div>
+          </div>
+        </CardDark>
+
+        <section className="disp-kpi-grid mb-4">
+          <CardDark className="disp-kpi-card gold">
+            <div className="disp-kpi-icon">
+              <Clock size={22} />
+            </div>
+            <p>Días activos</p>
+            <h2>{diasActivos.length}</h2>
+            <span>Días disponibles para reservas</span>
+          </CardDark>
+
+          <CardDark className="disp-kpi-card success">
+            <div className="disp-kpi-icon">
+              <CheckCircle2 size={22} />
+            </div>
+            <p>Horas semanales</p>
+            <h2>{horasSemanales.toFixed(0)}</h2>
+            <span>Horas aproximadas de atención</span>
+          </CardDark>
+
+          <CardDark className="disp-kpi-card info">
+            <div className="disp-kpi-icon">
+              <CalendarOff size={22} />
+            </div>
+            <p>Bloqueos</p>
+            <h2>{bloqueos.length}</h2>
+            <span>Pausas registradas</span>
+          </CardDark>
+
+          <CardDark className="disp-kpi-card purple">
+            <div className="disp-kpi-icon">
+              <Coffee size={22} />
+            </div>
+            <p>Próxima pausa</p>
+            <h2>{proximoBloqueo ? proximoBloqueo.fecha?.substring(5, 10) : "—"}</h2>
+            <span>{proximoBloqueo?.motivo || "Sin pausa próxima"}</span>
+          </CardDark>
+        </section>
+
+        <CardDark className="disp-section-card mb-4">
+          <div className="disp-section-head">
             <div>
               <h4 className="section-title">Horario semanal</h4>
               <p className="section-subtitle">
-                Los clientes solo podrán reservar en los horarios activos.
+                Activa los días que atiendes y ajusta tus horas.
               </p>
             </div>
 
-            <GoldBadge>{dias.filter((d) => d.estado).length} días activos</GoldBadge>
+            <div className="disp-actions-group">
+              <button type="button" className="btn btn-dark-outline" onClick={activarSemanaLaboral}>
+                Lun - Sáb
+              </button>
+
+              <button type="button" className="btn btn-dark-outline" onClick={copiarLunesATodos}>
+                Copiar lunes
+              </button>
+            </div>
           </div>
 
-          <div className="row g-3">
+          <div className="disp-days-grid">
             {dias.map((d) => (
-              <div className="col-lg-6" key={d.diaSemana}>
-                <div
-                  className="p-3"
-                  style={{
-                    borderRadius: "18px",
-                    border: d.estado
-                      ? "1px solid rgba(212,175,55,0.35)"
-                      : "1px solid rgba(255,255,255,0.08)",
-                    background: d.estado
-                      ? "rgba(212,175,55,0.08)"
-                      : "rgba(255,255,255,0.03)",
-                  }}
-                >
-                  <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h5 className="mb-0">{d.nombre}</h5>
+              <div className={`disp-day-card ${d.estado ? "active" : ""}`} key={d.diaSemana}>
+                <div className="disp-day-top">
+                  <div className="disp-day-badge">{d.corto}</div>
 
-                    <label style={{ color: "#d4af37", fontWeight: 700 }}>
-                      <input
-                        type="checkbox"
-                        checked={d.estado}
-                        onChange={(e) =>
-                          actualizarDia(d.diaSemana, "estado", e.target.checked)
-                        }
-                        style={{ marginRight: "8px" }}
-                      />
-                      Atiendo
-                    </label>
+                  <div>
+                    <h5>{d.nombre}</h5>
+                    <span>{d.estado ? "Disponible" : "No atiendo"}</span>
                   </div>
 
-                  <div className="row g-2">
-                    <div className="col-md-4">
-                      <label className="form-label" style={{ color: "#d4af37" }}>
-                        Inicio
-                      </label>
-                      <input
-                        type="time"
-                        className="form-control input-dark"
-                        value={d.horaInicio}
-                        disabled={!d.estado}
-                        onChange={(e) =>
-                          actualizarDia(d.diaSemana, "horaInicio", e.target.value)
-                        }
-                      />
-                    </div>
+                  <label className="disp-switch">
+                    <input
+                      type="checkbox"
+                      checked={d.estado}
+                      onChange={(e) => actualizarDia(d.diaSemana, "estado", e.target.checked)}
+                    />
+                    <span />
+                  </label>
+                </div>
 
-                    <div className="col-md-4">
-                      <label className="form-label" style={{ color: "#d4af37" }}>
-                        Fin
-                      </label>
-                      <input
-                        type="time"
-                        className="form-control input-dark"
-                        value={d.horaFin}
-                        disabled={!d.estado}
-                        onChange={(e) =>
-                          actualizarDia(d.diaSemana, "horaFin", e.target.value)
-                        }
-                      />
-                    </div>
+                <div className="disp-day-form">
+                  <div>
+                    <label>Inicio</label>
+                    <input
+                      type="time"
+                      className="form-control input-dark"
+                      value={d.horaInicio}
+                      disabled={!d.estado}
+                      onChange={(e) => actualizarDia(d.diaSemana, "horaInicio", e.target.value)}
+                    />
+                  </div>
 
-                    <div className="col-md-4">
-                      <label className="form-label" style={{ color: "#d4af37" }}>
-                        Intervalo
-                      </label>
-                      <select
-                        className="form-control input-dark"
-                        value={d.intervaloMinutos}
-                        disabled={!d.estado}
-                        onChange={(e) =>
-                          actualizarDia(
-                            d.diaSemana,
-                            "intervaloMinutos",
-                            e.target.value
-                          )
-                        }
-                      >
-                        <option value={30}>30 min</option>
-                        <option value={45}>45 min</option>
-                        <option value={60}>60 min</option>
-                      </select>
-                    </div>
+                  <div>
+                    <label>Fin</label>
+                    <input
+                      type="time"
+                      className="form-control input-dark"
+                      value={d.horaFin}
+                      disabled={!d.estado}
+                      onChange={(e) => actualizarDia(d.diaSemana, "horaFin", e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label>Cada</label>
+                    <select
+                      className="form-control input-dark"
+                      value={d.intervaloMinutos}
+                      disabled={!d.estado}
+                      onChange={(e) =>
+                        actualizarDia(d.diaSemana, "intervaloMinutos", e.target.value)
+                      }
+                    >
+                      <option value={30}>30 min</option>
+                      <option value={45}>45 min</option>
+                      <option value={60}>60 min</option>
+                    </select>
                   </div>
                 </div>
               </div>
             ))}
           </div>
 
-          <button
-            className="btn btn-gold w-100 mt-4"
-            onClick={guardar}
-            disabled={guardando}
-          >
+          <button className="btn btn-gold w-100 mt-4" onClick={guardar} disabled={guardando}>
+            <Save size={16} />
             {guardando ? "Guardando..." : "Guardar disponibilidad"}
           </button>
         </CardDark>
 
-        <CardDark className="mt-4">
-          <div className="d-flex justify-content-between align-items-center mb-4">
+        <CardDark className="disp-section-card">
+          <div className="disp-section-head">
             <div>
               <h4 className="section-title">Bloqueos puntuales</h4>
               <p className="section-subtitle">
-                Almuerzo, descanso, vacaciones o pausas.
+                Usa bloqueos para almuerzo, descansos, citas personales o vacaciones.
               </p>
             </div>
 
-            <GoldBadge>{bloqueos.length} bloqueos</GoldBadge>
+            <button type="button" className="btn btn-gold" onClick={abrirBloqueo}>
+              <Plus size={16} />
+              Nuevo bloqueo
+            </button>
           </div>
 
-          <div className="row g-3">
-            <div className="col-md-3">
-              <label className="form-label" style={{ color: "#d4af37" }}>
-                Fecha
-              </label>
+          {bloqueos.length > 0 ? (
+            <div className="disp-blocks-carousel">
+              {bloqueos.map((b) => (
+                <div className="disp-block-card" key={b.idBloqueo}>
+                  <div className="disp-block-icon">
+                    <CalendarOff size={22} />
+                  </div>
 
+                  <div className="disp-block-info">
+                    <h5>{b.motivo || "Bloqueo"}</h5>
+                    <span>{b.fecha?.substring(0, 10)}</span>
+                    <p>
+                      {b.horaInicio?.substring(0, 5)} - {b.horaFin?.substring(0, 5)}
+                    </p>
+                  </div>
+
+                  <button
+                    className="btn disp-danger-btn w-100"
+                    onClick={() => abrirEliminarBloqueo(b)}
+                    disabled={eliminandoBloqueoId === b.idBloqueo}
+                  >
+                    <Trash2 size={16} />
+                    {eliminandoBloqueoId === b.idBloqueo ? "Eliminando..." : "Eliminar"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="disp-empty">
+              <CalendarOff size={36} />
+              <h5>Sin bloqueos activos</h5>
+              <p>Cuando necesites pausar reservas, crea un bloqueo puntual.</p>
+            </div>
+          )}
+        </CardDark>
+
+        <ModalDisponibilidad
+          abierto={modalBloqueo}
+          titulo="Bloquear horario"
+          onClose={cerrarBloqueo}
+        >
+          <div className="disp-modal-intro">
+            <CalendarOff size={22} />
+            <div>
+              <h5>Pausa puntual</h5>
+              <p>Este horario no estará disponible para reservas.</p>
+            </div>
+          </div>
+
+          <div className="disp-reason-group">
+            {motivosRapidos.map((motivo) => (
+              <button
+                type="button"
+                key={motivo}
+                className={`disp-reason-chip ${bloqueoForm.motivo === motivo ? "selected" : ""}`}
+                onClick={() => setBloqueoForm({ ...bloqueoForm, motivo })}
+              >
+                {motivo}
+              </button>
+            ))}
+          </div>
+
+          <div className="row g-3 mt-1">
+            <div className="col-md-4">
+              <label className="label-gold">Fecha</label>
               <input
                 type="date"
                 className="form-control input-dark"
@@ -388,11 +651,8 @@ export default function MiDisponibilidad() {
               />
             </div>
 
-            <div className="col-md-3">
-              <label className="form-label" style={{ color: "#d4af37" }}>
-                Inicio
-              </label>
-
+            <div className="col-md-4">
+              <label className="label-gold">Inicio</label>
               <input
                 type="time"
                 className="form-control input-dark"
@@ -406,11 +666,8 @@ export default function MiDisponibilidad() {
               />
             </div>
 
-            <div className="col-md-3">
-              <label className="form-label" style={{ color: "#d4af37" }}>
-                Fin
-              </label>
-
+            <div className="col-md-4">
+              <label className="label-gold">Fin</label>
               <input
                 type="time"
                 className="form-control input-dark"
@@ -424,14 +681,13 @@ export default function MiDisponibilidad() {
               />
             </div>
 
-            <div className="col-md-3">
-              <label className="form-label" style={{ color: "#d4af37" }}>
-                Motivo
-              </label>
-
+            <div className="col-12">
+              <label className="label-gold">Motivo</label>
               <input
                 className="form-control input-dark"
                 value={bloqueoForm.motivo}
+                maxLength={120}
+                placeholder="Ej: Almuerzo"
                 onChange={(e) =>
                   setBloqueoForm({
                     ...bloqueoForm,
@@ -442,57 +698,33 @@ export default function MiDisponibilidad() {
             </div>
           </div>
 
-          <button
-            className="btn btn-gold mt-4"
-            onClick={bloquearHorario}
-            disabled={guardandoBloqueo}
-          >
-            {guardandoBloqueo ? "Guardando..." : "Bloquear horario"}
-          </button>
+          <div className="disp-modal-actions">
+            <button className="btn btn-dark-outline" onClick={cerrarBloqueo}>
+              Cancelar
+            </button>
 
-          <hr
-            style={{
-              borderColor: "rgba(255,255,255,.08)",
-              margin: "30px 0",
-            }}
-          />
-
-          <div className="row g-3">
-            {bloqueos.map((b) => (
-              <div className="col-md-6" key={b.idBloqueo}>
-                <div
-                  className="p-3"
-                  style={{
-                    background: "rgba(255,255,255,.03)",
-                    borderRadius: "18px",
-                  }}
-                >
-                  <h5>📌 {b.motivo || "Bloqueo"}</h5>
-
-                  <p>
-                    <b>Fecha:</b> {b.fecha?.substring(0, 10)}
-                  </p>
-
-                  <p>
-                    <b>Horario:</b> {b.horaInicio?.substring(0, 5)} -{" "}
-                    {b.horaFin?.substring(0, 5)}
-                  </p>
-
-                  <button
-                    className="btn btn-dark-outline"
-                    onClick={() => eliminarBloqueo(b.idBloqueo)}
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            {bloqueos.length === 0 && (
-              <p className="text-center">Sin bloqueos activos.</p>
-            )}
+            <button className="btn btn-gold" onClick={bloquearHorario} disabled={guardandoBloqueo}>
+              <Plus size={16} />
+              {guardandoBloqueo ? "Guardando..." : "Guardar bloqueo"}
+            </button>
           </div>
-        </CardDark>
+        </ModalDisponibilidad>
+
+        <Confirmacion
+          abierto={modalEliminar}
+          texto={`¿Eliminar el bloqueo "${bloqueoEliminar?.motivo || "Bloqueo"}"?`}
+          onCancel={cerrarEliminarBloqueo}
+          onConfirm={eliminarBloqueo}
+        />
+
+        <Toast
+          mensaje={mensaje || error}
+          tipo={error ? "error" : "success"}
+          onClose={() => {
+            setMensaje("");
+            setError("");
+          }}
+        />
       </div>
     </div>
   );
