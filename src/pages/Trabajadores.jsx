@@ -7,30 +7,48 @@ import GoldBadge from "../components/ui/GoldBadge";
 import AvatarCircle from "../components/ui/AvatarCircle";
 import PageHeader from "../components/ui/PageHeader";
 import Toast from "../components/ui/Toast";
+
 import { getImageUrl } from "../utils/imageUrl";
-import { Pencil, Image, Key, Trash2, Plus, X, Upload } from "lucide-react";
+
+import {
+  Pencil,
+  Image,
+  Key,
+  Trash2,
+  Plus,
+  X,
+  Upload,
+  UserRound,
+} from "lucide-react";
 
 const Modal = ({ abierto, titulo, children, onClose, ancho = "760px" }) => {
-    if (!abierto) return null;
+  if (!abierto) return null;
 
-    return (
-      <div className="trab-modal-backdrop">
-        <div className="trab-modal" style={{ maxWidth: ancho }}>
-          <div className="trab-modal-header">
-            <h4>{titulo}</h4>
-            <button className="trab-modal-close" onClick={onClose}>
-              <X size={18} />
-            </button>
-          </div>
+  return (
+    <div className="trab-modal-backdrop">
+      <div className="trab-modal" style={{ maxWidth: ancho }}>
+        <div className="trab-modal-header">
+          <h4>{titulo}</h4>
 
-          <div className="trab-modal-body">{children}</div>
+          <button
+            type="button"
+            className="trab-modal-close"
+            onClick={onClose}
+            aria-label="Cerrar modal"
+          >
+            <X size={18} />
+          </button>
         </div>
+
+        <div className="trab-modal-body">{children}</div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
 function Trabajadores() {
   const [lista, setLista] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
@@ -93,6 +111,7 @@ function Trabajadores() {
 
   const cargarInicial = async () => {
     try {
+      setLoading(true);
       setError("");
 
       const res = await authFetch(`${API_BASE}/Trabajadores`);
@@ -105,10 +124,12 @@ function Trabajadores() {
         return;
       }
 
-      setLista(data || []);
+      setLista(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
       setError("Error cargando trabajadores");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -126,7 +147,7 @@ function Trabajadores() {
         return;
       }
 
-      setImagenesTrabajo(data || []);
+      setImagenesTrabajo(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
       setImagenesTrabajo([]);
@@ -158,7 +179,7 @@ function Trabajadores() {
     setModalTrabajador(true);
   };
 
-  const abrirEditarTrabajador = async (t) => {
+  const abrirEditarTrabajador = (t) => {
     setMensaje("");
     setError("");
 
@@ -170,7 +191,7 @@ function Trabajadores() {
     setDescripcion(t.descripcion || "");
     setEspecialidad(t.especialidad || "");
     setExperiencia(t.experiencia || "");
-    setDestacado(!!t.destacado);
+    setDestacado(Boolean(t.destacado));
     setFotoPerfil(null);
 
     setModalTrabajador(true);
@@ -302,7 +323,6 @@ function Trabajadores() {
 
   const subirFotoPerfil = async (idTrabajador, mostrar = true) => {
     if (!fotoPerfil) return;
-
     if (!validarImagen(fotoPerfil)) return;
 
     try {
@@ -397,16 +417,12 @@ function Trabajadores() {
 
   const eliminarImagenTrabajo = async (idImagen) => {
     if (!trabajadorSeleccionado) return;
-
     if (!window.confirm("¿Eliminar imagen?")) return;
 
     try {
-      const res = await authFetch(
-        `${API_BASE}/Trabajadores/imagenes/${idImagen}`,
-        {
-          method: "DELETE",
-        }
-      );
+      const res = await authFetch(`${API_BASE}/Trabajadores/imagenes/${idImagen}`, {
+        method: "DELETE",
+      });
 
       if (!res) return;
 
@@ -485,6 +501,7 @@ function Trabajadores() {
       setMensaje(
         "Acceso creado correctamente. Se envió la contraseña temporal al correo."
       );
+
       cerrarAcceso();
       await recargarTrabajadores();
     } catch (err) {
@@ -515,12 +532,9 @@ function Trabajadores() {
     try {
       setReseteandoAcceso(true);
 
-      const res = await authFetch(
-        `${API_BASE}/Usuarios/resetear-password/${idUsuario}`,
-        {
-          method: "POST",
-        }
-      );
+      const res = await authFetch(`${API_BASE}/Usuarios/resetear-password/${idUsuario}`, {
+        method: "POST",
+      });
 
       if (!res) return;
 
@@ -541,22 +555,53 @@ function Trabajadores() {
     }
   };
 
-  
+  const renderSkeleton = () => (
+    <div className="trabajadores-grid">
+      {[1, 2, 3, 4, 5, 6].map((item) => (
+        <div className="trabajador-card-wrap" key={item}>
+          <div className="trabajador-card-pro trabajador-card-skeleton">
+            <div className="trabajador-skeleton-top">
+              <div className="trabajador-skeleton-avatar" />
+              <div>
+                <div className="trabajador-skeleton-line long" />
+                <div className="trabajador-skeleton-line short" />
+              </div>
+            </div>
+
+            <div className="trabajador-skeleton-line full" />
+            <div className="trabajador-skeleton-line full" />
+            <div className="trabajador-skeleton-actions">
+              <span />
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
-    <div className="page-shell">
-      <div className="container-fluid py-4">
-        <CardDark className="mb-4 trabajadores-header-card">
+    <div className="page-shell trabajadores-page">
+      <div className="container-fluid trabajadores-container">
+        <CardDark className="trabajadores-header-card">
           <div className="trabajadores-header-row">
-            <PageHeader
-              title="Gestión de Trabajadores"
-              subtitle="Administra perfiles públicos, portafolio, accesos y trabajadores destacados."
-            />
+            <div className="trabajadores-header-title">
+              <PageHeader
+                title="Gestión de Trabajadores"
+                subtitle="Administra perfiles públicos, portafolio, accesos y trabajadores destacados."
+              />
+            </div>
 
             <div className="trabajadores-header-actions">
-              <GoldBadge>{lista.length} trabajadores activos</GoldBadge>
+              <GoldBadge>{lista.length} activos</GoldBadge>
 
-              <button className="btn btn-gold" onClick={abrirCrearTrabajador}>
+              <button
+                type="button"
+                className="btn btn-gold trabajadores-add-btn"
+                onClick={abrirCrearTrabajador}
+              >
                 <Plus size={17} />
                 <span>Nuevo trabajador</span>
               </button>
@@ -567,107 +612,122 @@ function Trabajadores() {
         <Toast mensaje={mensaje} tipo="success" onClose={() => setMensaje("")} />
         <Toast mensaje={error} tipo="error" onClose={() => setError("")} />
 
-        <CardDark>
-          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <CardDark className="trabajadores-list-card">
+          <div className="trabajadores-list-head">
             <div>
-              <h4 className="section-title">Lista de Trabajadores</h4>
+              <h4 className="section-title">Lista de trabajadores</h4>
               <p className="section-subtitle">
-                Vista rápida de estado, especialidad, comisión y acciones.
+                Estado, especialidad, comisión y acciones principales.
               </p>
             </div>
           </div>
 
-          <div className="trabajadores-grid">
-            {lista.map((t) => (
-              <div className="trabajador-card-wrap" key={t.idTrabajador}>
-                <div className="worker-card trabajador-card-pro h-100">
-                  <div className="d-flex align-items-center gap-3 mb-3">
-                    <AvatarCircle
-                      src={obtenerUrl(t.fotoPerfilUrl)}
-                      alt={t.nombre}
-                      fallback={t.nombre?.charAt(0)?.toUpperCase() || "T"}
-                      selected={t.destacado}
-                      size="md"
-                    />
+          {loading ? (
+            renderSkeleton()
+          ) : lista.length > 0 ? (
+            <div className="trabajadores-grid">
+              {lista.map((t) => (
+                <div className="trabajador-card-wrap" key={t.idTrabajador}>
+                  <article className="trabajador-card-pro">
+                    <div className="trabajador-card-top">
+                      <AvatarCircle
+                        src={obtenerUrl(t.fotoPerfilUrl)}
+                        alt={t.nombre}
+                        fallback={t.nombre?.charAt(0)?.toUpperCase() || "T"}
+                        selected={t.destacado}
+                        size="md"
+                      />
 
-                    <div style={{ minWidth: 0 }}>
-                      <h5 className="mb-1 truncate-one-line" title={t.nombre}>
-                        {t.nombre}
-                      </h5>
+                      <div className="trabajador-card-main">
+                        <div className="trabajador-card-title-row">
+                          <h5 title={t.nombre}>{t.nombre}</h5>
 
-                      {t.destacado ? (
-                        <span className="table-pill">⭐ Destacado</span>
-                      ) : (
-                        <span className="badge bg-light text-secondary">
-                          Estándar
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                          {t.destacado ? (
+                            <span className="trabajador-pill destacado">Destacado</span>
+                          ) : (
+                            <span className="trabajador-pill normal">Estándar</span>
+                          )}
+                        </div>
 
-                  <p className="section-subtitle mb-3 trabajador-bio">
-                    {t.descripcion || "Sin biografía pública registrada."}
-                  </p>
-
-                  <div className="modal-success-details mb-3">
-                    <div className="modal-info-row">
-                      <span>Especialidad</span>
-                      <b>{t.especialidad || "No especificada"}</b>
+                        <p>
+                          {t.descripcion || "Sin biografía pública registrada."}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="modal-info-row">
-                      <span>Experiencia</span>
-                      <b>{t.experiencia || "No especificada"}</b>
+                    <div className="trabajador-info-grid">
+                      <div>
+                        <span>Especialidad</span>
+                        <b>{t.especialidad || "No especificada"}</b>
+                      </div>
+
+                      <div>
+                        <span>Experiencia</span>
+                        <b>{t.experiencia || "No especificada"}</b>
+                      </div>
+
+                      <div>
+                        <span>Comisión</span>
+                        <b>{t.porcentajeComision || 0}%</b>
+                      </div>
                     </div>
 
-                    <div className="modal-info-row">
-                      <span>Comisión</span>
-                      <b>{t.porcentajeComision || 0}%</b>
+                    <div className="trabajador-actions-grid">
+                      <button
+                        type="button"
+                        className="btn-action-dark"
+                        onClick={() => abrirEditarTrabajador(t)}
+                      >
+                        <Pencil size={16} />
+                        <span>Editar</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn-action-dark"
+                        onClick={() => abrirImagenes(t)}
+                      >
+                        <Image size={16} />
+                        <span>Imágenes</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn-action-dark"
+                        onClick={() => abrirAcceso(t)}
+                      >
+                        <Key size={16} />
+                        <span>Acceso</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn-action-danger"
+                        onClick={() => eliminar(t.idTrabajador)}
+                      >
+                        <Trash2 size={16} />
+                        <span>Eliminar</span>
+                      </button>
                     </div>
-                  </div>
-
-                  <div className="actions-grid">
-                    <button
-                      className="btn-action-dark"
-                      onClick={() => abrirEditarTrabajador(t)}
-                    >
-                      <Pencil size={16} />
-                      <span>Editar</span>
-                    </button>
-
-                    <button
-                      className="btn-action-dark"
-                      onClick={() => abrirImagenes(t)}
-                    >
-                      <Image size={16} />
-                      <span>Imágenes</span>
-                    </button>
-
-                    <button
-                      className="btn-action-dark"
-                      onClick={() => abrirAcceso(t)}
-                    >
-                      <Key size={16} />
-                      <span>Acceso</span>
-                    </button>
-
-                    <button
-                      className="btn-action-danger"
-                      onClick={() => eliminar(t.idTrabajador)}
-                    >
-                      <Trash2 size={16} />
-                      <span>Eliminar</span>
-                    </button>
-                  </div>
+                  </article>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="trabajadores-empty-state">
+              <UserRound size={42} />
+              <h4>Aún no tienes trabajadores</h4>
+              <p>Agrega tu primer profesional para mostrarlo en tu landing pública.</p>
 
-          {lista.length === 0 && (
-            <p className="text-center section-subtitle py-4">
-              Aún no tienes trabajadores registrados.
-            </p>
+              <button
+                type="button"
+                className="btn btn-gold"
+                onClick={abrirCrearTrabajador}
+              >
+                <Plus size={17} />
+                Nuevo trabajador
+              </button>
+            </div>
           )}
         </CardDark>
 
@@ -676,8 +736,8 @@ function Trabajadores() {
           titulo={editando ? "Editar trabajador" : "Nuevo trabajador"}
           onClose={cerrarModalTrabajador}
         >
-          <div className="row g-3">
-            <div className="col-md-6">
+          <div className="trab-form-grid">
+            <div>
               <label className="label-gold">Nombre completo</label>
               <input
                 className="form-control input-dark"
@@ -687,18 +747,18 @@ function Trabajadores() {
               />
             </div>
 
-            <div className="col-md-6">
+            <div>
               <label className="label-gold">Teléfono</label>
               <input
                 className="form-control input-dark"
                 value={telefono}
                 maxLength={9}
                 inputMode="numeric"
-                onChange={(e) => setTelefono(e.target.value)}
+                onChange={(e) => setTelefono(e.target.value.replace(/\D/g, ""))}
               />
             </div>
 
-            <div className="col-md-4">
+            <div>
               <label className="label-gold">% Comisión</label>
               <input
                 className="form-control input-dark"
@@ -711,7 +771,7 @@ function Trabajadores() {
               />
             </div>
 
-            <div className="col-md-4">
+            <div>
               <label className="label-gold">Especialidad</label>
               <input
                 className="form-control input-dark"
@@ -722,7 +782,7 @@ function Trabajadores() {
               />
             </div>
 
-            <div className="col-md-4">
+            <div>
               <label className="label-gold">Experiencia</label>
               <input
                 className="form-control input-dark"
@@ -733,7 +793,21 @@ function Trabajadores() {
               />
             </div>
 
-            <div className="col-12">
+            <div className="trab-form-switch">
+              <label className="label-gold">Estado destacado</label>
+
+              <label className="trab-switch-box" htmlFor="swDestacadoModal">
+                <input
+                  type="checkbox"
+                  checked={destacado}
+                  onChange={(e) => setDestacado(e.target.checked)}
+                  id="swDestacadoModal"
+                />
+                <span>{destacado ? "Destacado ⭐" : "Estándar"}</span>
+              </label>
+            </div>
+
+            <div className="trab-form-full">
               <label className="label-gold">Biografía pública</label>
               <textarea
                 rows="3"
@@ -745,7 +819,7 @@ function Trabajadores() {
               />
             </div>
 
-            <div className="col-md-8">
+            <div className="trab-form-full">
               <label className="label-gold">Foto de perfil</label>
               <input
                 type="file"
@@ -753,6 +827,7 @@ function Trabajadores() {
                 className="form-control input-dark"
                 onChange={(e) => {
                   const file = e.target.files?.[0] || null;
+
                   if (file && !validarImagen(file)) {
                     e.target.value = "";
                     return;
@@ -762,33 +837,19 @@ function Trabajadores() {
                 }}
               />
             </div>
-
-            <div className="col-md-4 d-flex align-items-end">
-              <div className="form-check form-switch mb-2">
-                <input
-                  type="checkbox"
-                  className="form-check-input"
-                  checked={destacado}
-                  onChange={(e) => setDestacado(e.target.checked)}
-                  id="swDestacadoModal"
-                />
-
-                <label
-                  className="form-check-label fw-bold label-gold"
-                  htmlFor="swDestacadoModal"
-                >
-                  Destacado ⭐
-                </label>
-              </div>
-            </div>
           </div>
 
-          <div className="d-flex justify-content-end gap-2 mt-4 flex-wrap">
-            <button className="btn btn-dark-outline" onClick={cerrarModalTrabajador}>
+          <div className="trab-modal-actions">
+            <button
+              type="button"
+              className="btn btn-dark-outline"
+              onClick={cerrarModalTrabajador}
+            >
               Cancelar
             </button>
 
             <button
+              type="button"
               className="btn btn-gold"
               onClick={guardar}
               disabled={subiendoFoto || guardando}
@@ -796,8 +857,8 @@ function Trabajadores() {
               {subiendoFoto || guardando
                 ? "Procesando..."
                 : editando
-                ? "Actualizar"
-                : "Registrar"}
+                  ? "Actualizar"
+                  : "Registrar"}
             </button>
           </div>
         </Modal>
@@ -812,52 +873,48 @@ function Trabajadores() {
           onClose={cerrarImagenes}
           ancho="920px"
         >
-          <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-            <p className="section-subtitle mb-0">
+          <div className="trab-portfolio-head">
+            <p className="section-subtitle">
               Agrega trabajos reales que aparecerán en el perfil público.
             </p>
 
             <GoldBadge>{imagenesTrabajo.length} / 10</GoldBadge>
           </div>
 
-          <div className="row g-2 mb-4">
-            <div className="col-md-5">
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="form-control input-dark"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] || null;
-                  if (file && !validarImagen(file)) {
-                    e.target.value = "";
-                    return;
-                  }
+          <div className="trab-upload-grid">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="form-control input-dark"
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
 
-                  setImagenTrabajo(file);
-                }}
-              />
-            </div>
+                if (file && !validarImagen(file)) {
+                  e.target.value = "";
+                  return;
+                }
 
-            <div className="col-md-5">
-              <input
-                className="form-control input-dark"
-                placeholder="¿Qué trabajo es?"
-                value={descripcionTrabajo}
-                maxLength={200}
-                onChange={(e) => setDescripcionTrabajo(e.target.value)}
-              />
-            </div>
+                setImagenTrabajo(file);
+              }}
+            />
 
-            <div className="col-md-2">
-              <button
-                className="btn btn-gold w-100"
-                onClick={subirImagenTrabajo}
-                disabled={subiendoTrabajo || imagenesTrabajo.length >= 10}
-              >
-                <Upload size={16} />
-                {subiendoTrabajo ? "..." : "Subir"}
-              </button>
-            </div>
+            <input
+              className="form-control input-dark"
+              placeholder="¿Qué trabajo es?"
+              value={descripcionTrabajo}
+              maxLength={200}
+              onChange={(e) => setDescripcionTrabajo(e.target.value)}
+            />
+
+            <button
+              type="button"
+              className="btn btn-gold"
+              onClick={subirImagenTrabajo}
+              disabled={subiendoTrabajo || imagenesTrabajo.length >= 10}
+            >
+              <Upload size={16} />
+              {subiendoTrabajo ? "Subiendo..." : "Subir"}
+            </button>
           </div>
 
           {imagenesTrabajo.length >= 10 && (
@@ -866,37 +923,36 @@ function Trabajadores() {
             </p>
           )}
 
-          <div className="row g-3">
-            {imagenesTrabajo.map((img) => (
-              <div className="col-md-4" key={img.idImagen}>
-                <div className="card-image-work">
+          {imagenesTrabajo.length > 0 ? (
+            <div className="trab-portfolio-grid">
+              {imagenesTrabajo.map((img) => (
+                <article className="card-image-work" key={img.idImagen}>
                   <img
                     className="img-work"
                     src={obtenerUrl(img.urlImagen)}
-                    alt="trabajo"
+                    alt={img.descripcion || "trabajo"}
                   />
 
-                  <div className="p-2">
-                    <p className="small text-muted mb-2 text-truncate">
-                      {img.descripcion}
-                    </p>
+                  <div className="trab-portfolio-info">
+                    <p title={img.descripcion}>{img.descripcion || "Trabajo realizado"}</p>
 
                     <button
+                      type="button"
                       className="btn btn-sm btn-outline-danger w-100"
                       onClick={() => eliminarImagenTrabajo(img.idImagen)}
                     >
                       Eliminar
                     </button>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {imagenesTrabajo.length === 0 && (
-            <p className="text-center section-subtitle py-4">
-              Aún no hay imágenes para este trabajador.
-            </p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="trabajadores-empty-state compact">
+              <Image size={34} />
+              <h4>Sin imágenes</h4>
+              <p>Aún no hay imágenes para este trabajador.</p>
+            </div>
           )}
         </Modal>
 
@@ -915,8 +971,9 @@ function Trabajadores() {
             y la enviará por Gmail.
           </p>
 
-          <div className="mb-3">
+          <div className="trab-access-form">
             <label className="label-gold">Correo del trabajador</label>
+
             <input
               className="form-control input-dark"
               value={correoAcceso}
@@ -925,33 +982,39 @@ function Trabajadores() {
             />
           </div>
 
-          <div className="modal-success-details mb-3">
-            <div className="modal-info-row">
+          <div className="trab-access-details">
+            <div>
               <span>Trabajador</span>
               <b>{trabajadorAcceso?.nombre}</b>
             </div>
 
-            <div className="modal-info-row">
+            <div>
               <span>Acción</span>
               <b>Crear acceso y enviar contraseña temporal</b>
             </div>
           </div>
 
-          <div className="d-flex justify-content-end gap-2 flex-wrap">
-            <button className="btn btn-dark-outline" onClick={cerrarAcceso}>
+          <div className="trab-modal-actions three">
+            <button
+              type="button"
+              className="btn btn-dark-outline"
+              onClick={cerrarAcceso}
+            >
               Cancelar
             </button>
 
             <button
+              type="button"
               className="btn btn-dark-outline"
               onClick={resetearAcceso}
               disabled={reseteandoAcceso}
               title="Disponible si el trabajador ya tiene usuario vinculado."
             >
-              {reseteandoAcceso ? "Enviando..." : "Resetear contraseña"}
+              {reseteandoAcceso ? "Enviando..." : "Resetear"}
             </button>
 
             <button
+              type="button"
               className="btn btn-gold"
               onClick={crearAcceso}
               disabled={creandoAcceso}
@@ -960,7 +1023,6 @@ function Trabajadores() {
             </button>
           </div>
         </Modal>
-
       </div>
     </div>
   );

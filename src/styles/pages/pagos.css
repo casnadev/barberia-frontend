@@ -1,0 +1,209 @@
+/* ==========================================================
+   PAGOS / COMISIONES
+   ========================================================== */
+
+.pagos-page,
+.comisiones-page {
+  width: 100%;
+}
+
+.pagos-header-card .header-dashboard,
+.comisiones-header-card .header-dashboard {
+  padding: 0;
+  margin-bottom: 0;
+}
+
+.pagos-header-row,
+.comisiones-header-row,
+.pagos-toolbar,
+.comisiones-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.pagos-header-actions,
+.comisiones-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pagos-grid,
+.comisiones-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.pago-card,
+.comision-card {
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.pago-card span,
+.comision-card span {
+  display: block;
+  color: #6b7280;
+  font-size: 0.8rem;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.pago-card b,
+.comision-card b {
+  color: #111827;
+  font-size: 1.55rem;
+  font-weight: 950;
+}
+
+.pago-card.success b,
+.comision-card.success b {
+  color: #16a34a;
+}
+
+.pago-card.warning b,
+.comision-card.warning b {
+  color: #d4af37;
+}
+
+.pago-card.danger b,
+.comision-card.danger b {
+  color: #dc2626;
+}
+
+.pagos-table-card,
+.comisiones-table-card {
+  overflow-x: auto;
+}
+
+.pagos-worker-card,
+.comision-worker-card {
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+
+.pagos-worker-info,
+.comision-worker-info {
+  min-width: 0;
+}
+
+.pagos-worker-info h5,
+.comision-worker-info h5 {
+  color: #111827;
+  font-weight: 950;
+  margin: 0 0 5px;
+}
+
+.pagos-worker-info p,
+.comision-worker-info p {
+  color: #6b7280;
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.pagos-worker-amount,
+.comision-worker-amount {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.pagos-worker-amount span,
+.comision-worker-amount span {
+  display: block;
+  color: #6b7280;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.pagos-worker-amount b,
+.comision-worker-amount b {
+  color: #d4af37;
+  font-size: 1.2rem;
+  font-weight: 950;
+}
+
+.pago-status-pill,
+.comision-status-pill {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 6px 11px;
+  font-size: 0.75rem;
+  font-weight: 950;
+}
+
+.pago-status-pill.pagado,
+.comision-status-pill.pagado {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.pago-status-pill.pendiente,
+.comision-status-pill.pendiente {
+  background: #fff8e1;
+  color: #8b6f10;
+}
+
+.pago-status-pill.parcial,
+.comision-status-pill.parcial {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+@media (max-width: 1200px) {
+  .pagos-grid,
+  .comisiones-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .pagos-grid,
+  .comisiones-grid {
+    display: flex;
+    overflow-x: auto;
+    gap: 14px;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 12px;
+  }
+
+  .pago-card,
+  .comision-card {
+    flex: 0 0 82%;
+    max-width: 82%;
+    scroll-snap-align: start;
+  }
+
+  .pagos-header-actions,
+  .pagos-header-actions .btn,
+  .comisiones-header-actions,
+  .comisiones-header-actions .btn {
+    width: 100%;
+  }
+
+  .pagos-worker-card,
+  .comision-worker-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pagos-worker-amount,
+  .comision-worker-amount {
+    text-align: left;
+  }
+}

@@ -1,46 +1,37 @@
-import { useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import API_BASE from "../../services/api";
 
-import CardDark from "../../components/ui/CardDark";
-import GoldBadge from "../../components/ui/GoldBadge";
 import AvatarCircle from "../../components/ui/AvatarCircle";
+import PublicHeader from "../../components/ui/PublicHeader";
+import PublicBottomNav from "../../components/ui/PublicBottomNav";
 import PageFooter from "../../components/ui/PageFooter";
-import FloatingActions from "../../components/ui/FloatingActions";
-import { getImageUrl } from "../../utils/imageUrl";
+import ModalReserva from "../../components/ui/ModalReserva";
 
-import { Swiper, SwiperSlide } from "swiper/react";
-import { FreeMode } from "swiper/modules";
+import { getImageUrl } from "../../utils/imageUrl";
 
 import {
   ArrowLeft,
-  Award,
-  BriefcaseBusiness,
-  CalendarDays,
-  CheckCircle2,
-  Clock,
   Eye,
-  Filter,
+  EyeOff,
+  LockKeyhole,
   Mail,
-  MessageCircle,
-  Phone,
   Scissors,
   Search,
-  Sparkles,
   Star,
   Trophy,
   UserRound,
   X,
 } from "lucide-react";
 
-import "swiper/css";
-import "swiper/css/free-mode";
+import "../../styles/pages/catalogotrabajadores.css";
 
 export default function CatalogoTrabajadores() {
   const { idNegocio } = useParams();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const idServicio = searchParams.get("servicio");
+
+  const destacadosRef = useRef(null);
 
   const [trabajadores, setTrabajadores] = useState([]);
   const [servicios, setServicios] = useState([]);
@@ -49,27 +40,18 @@ export default function CatalogoTrabajadores() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [filtroRating, setFiltroRating] = useState("todos");
-  const [orden, setOrden] = useState("rating");
   const [busqueda, setBusqueda] = useState("");
+  const [trabajadorDetalle, setTrabajadorDetalle] = useState(null);
+  const [imagenPreview, setImagenPreview] = useState(null);
 
-  const [modalAbierto, setModalAbierto] = useState(false);
-  const [trabajadorPreview, setTrabajadorPreview] = useState(null);
+  const [mostrarLoginModal, setMostrarLoginModal] = useState(false);
+  const [mostrarPassword, setMostrarPassword] = useState(false);
+  const [loginCorreo, setLoginCorreo] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
 
   const [mostrarModalReserva, setMostrarModalReserva] = useState(false);
   const [trabajadorSeleccionado, setTrabajadorSeleccionado] = useState(null);
   const [servicioSeleccionado, setServicioSeleccionado] = useState(null);
-  const [fechaReserva, setFechaReserva] = useState("");
-  const [horaReserva, setHoraReserva] = useState("");
-  const [nombreCliente, setNombreCliente] = useState("");
-  const [telefonoCliente, setTelefonoCliente] = useState("");
-  const [correoCliente, setCorreoCliente] = useState("");
-  const [comentario, setComentario] = useState("");
-  const [horariosDisponibles, setHorariosDisponibles] = useState([]);
-  const [guardandoReserva, setGuardandoReserva] = useState(false);
-  const [reservaConfirmada, setReservaConfirmada] = useState(false);
-  const [datosReservaConfirmada, setDatosReservaConfirmada] = useState(null);
-  const [mensajeErrorReserva, setMensajeErrorReserva] = useState("");
 
   useEffect(() => {
     const cargar = async () => {
@@ -85,7 +67,10 @@ export default function CatalogoTrabajadores() {
         const dataTrabajadores = await resTrabajadores.json().catch(() => []);
 
         if (!resTrabajadores.ok) {
-          setError(dataTrabajadores?.mensaje || "No se pudieron cargar los profesionales.");
+          setError(
+            dataTrabajadores?.mensaje ||
+              "No se pudieron cargar los profesionales."
+          );
           return;
         }
 
@@ -93,13 +78,17 @@ export default function CatalogoTrabajadores() {
 
         if (resNegocio.ok) {
           const dataNegocio = await resNegocio.json().catch(() => null);
-          const serviciosNegocio = Array.isArray(dataNegocio?.servicios)
-            ? dataNegocio.servicios
-            : Array.isArray(dataNegocio?.Servicios)
-              ? dataNegocio.Servicios
-              : [];
 
           setNegocio(dataNegocio?.negocio || dataNegocio?.Negocio || null);
+
+          setServicios(
+            Array.isArray(dataNegocio?.servicios)
+              ? dataNegocio.servicios
+              : Array.isArray(dataNegocio?.Servicios)
+                ? dataNegocio.Servicios
+                : []
+          );
+
           setRedesSociales(
             Array.isArray(dataNegocio?.redesSociales)
               ? dataNegocio.redesSociales
@@ -107,10 +96,9 @@ export default function CatalogoTrabajadores() {
                 ? dataNegocio.RedesSociales
                 : []
           );
-          setServicios(serviciosNegocio);
         }
       } catch (err) {
-        console.error("Error fetching trabajadores:", err);
+        console.error("Error cargando catálogo de trabajadores:", err);
         setError("No se pudo conectar con el catálogo.");
       } finally {
         setLoading(false);
@@ -120,345 +108,206 @@ export default function CatalogoTrabajadores() {
     if (idNegocio) cargar();
   }, [idNegocio]);
 
-  useEffect(() => {
-    if (!trabajadorSeleccionado?.idTrabajador || !fechaReserva) {
-      setHorariosDisponibles([]);
-      setHoraReserva("");
-      return;
-    }
+  const nombreNegocio = negocio?.nombre || negocio?.Nombre || "Negocio";
+  const slugNegocio = negocio?.slug || negocio?.Slug || idNegocio;
 
-    const cargarHorarios = async () => {
-      try {
-        setHoraReserva("");
+  const logoNegocio =
+    negocio?.logoUrl || negocio?.LogoUrl
+      ? getImageUrl(negocio.logoUrl || negocio.LogoUrl)
+      : "";
 
-        const res = await fetch(
-          `${API_BASE}/Reservas/horarios-disponibles/${trabajadorSeleccionado.idTrabajador}?fecha=${fechaReserva}`
-        );
+  const trabajadoresFiltrados = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
 
-        const data = await res.json().catch(() => []);
-        setHorariosDisponibles(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error("Error cargando horarios:", err);
-        setHorariosDisponibles([]);
-      }
-    };
+    return trabajadores
+      .filter((t) => {
+        const texto = `${t.nombre || t.Nombre || ""} ${
+          t.descripcion || t.Descripcion || ""
+        } ${t.especialidad || t.Especialidad || ""} ${
+          t.experiencia || t.Experiencia || ""
+        }`.toLowerCase();
 
-    cargarHorarios();
-  }, [trabajadorSeleccionado, fechaReserva]);
+        return texto.includes(q);
+      })
+      .sort((a, b) => {
+        const da = a.destacado || a.Destacado ? 0 : 1;
+        const db = b.destacado || b.Destacado ? 0 : 1;
+        return da - db;
+      });
+  }, [trabajadores, busqueda]);
 
-  const trabajadoresProcesados = useMemo(() => {
-    let data = [...trabajadores];
-
-    if (busqueda.trim()) {
-      const q = busqueda.toLowerCase();
-
-      data = data.filter((t) =>
-        `${t.nombre || ""} ${t.descripcion || ""} ${t.especialidad || ""} ${t.experiencia || ""} ${t.distincion || ""}`
-          .toLowerCase()
-          .includes(q)
-      );
-    }
-
-    if (filtroRating === "4") {
-      data = data.filter((t) => Number(t.calificacionPromedio || 0) >= 4);
-    } else if (filtroRating === "45") {
-      data = data.filter((t) => Number(t.calificacionPromedio || 0) >= 4.5);
-    }
-
-    data.sort((a, b) => {
-      if (orden === "rating") {
-        return Number(b.calificacionPromedio || 0) - Number(a.calificacionPromedio || 0);
-      }
-
-      if (orden === "servicios") {
-        return Number(b.totalServiciosRealizados || 0) - Number(a.totalServiciosRealizados || 0);
-      }
-
-      if (orden === "nombre") {
-        return (a.nombre || "").localeCompare(b.nombre || "");
-      }
-
-      return 0;
-    });
-
-    return data;
-  }, [trabajadores, filtroRating, orden, busqueda]);
-
-  const destacados = useMemo(() => {
-    return trabajadoresProcesados
-      .filter(
-        (t) =>
-          t.destacado ||
-          t.distincion ||
-          Number(t.calificacionPromedio || 0) >= 4.8 ||
-          Number(t.totalServiciosRealizados || 0) >= 50
-      )
-      .slice(0, 6);
-  }, [trabajadoresProcesados]);
+  const trabajadoresDestacados = useMemo(() => {
+    return trabajadores.filter(
+      (t) =>
+        t.destacado ||
+        t.Destacado ||
+        t.distincion ||
+        Number(t.calificacionPromedio || 0) >= 4.8 ||
+        Number(t.totalServiciosRealizados || 0) >= 50
+    );
+  }, [trabajadores]);
 
   const servicioPorUrl = useMemo(() => {
     if (!idServicio) return null;
 
-    return servicios.find((s) => Number(s.idServicio || s.IdServicio) === Number(idServicio)) || null;
+    return (
+      servicios.find(
+        (s) => Number(s.idServicio || s.IdServicio) === Number(idServicio)
+      ) || null
+    );
   }, [idServicio, servicios]);
 
-  const obtenerBadgeExtra = (t) => {
-    if (t.distincion) return t.distincion;
-    if (Number(t.calificacionPromedio || 0) >= 4.8) return "Mejor valorado";
-    if (Number(t.totalServiciosRealizados || 0) >= 50) return "Más solicitado";
-    if (t.destacado) return "Destacado";
-    return null;
-  };
+  const getIdTrabajador = (t) => t?.idTrabajador || t?.IdTrabajador;
+  const getNombreTrabajador = (t) => t?.nombre || t?.Nombre || "Profesional";
 
   const getTrabajadorFoto = (t) => {
-    return t?.fotoPerfilUrl ? getImageUrl(t.fotoPerfilUrl) : "";
+    const raw = t?.fotoPerfilUrl || t?.FotoPerfilUrl || "";
+    return raw ? getImageUrl(raw) : "";
   };
 
   const obtenerImagenServicio = (s) => {
-    const imagenRaw = s?.imagenUrl || s?.ImagenUrl || "";
-    return imagenRaw ? getImageUrl(imagenRaw) : "";
+    const raw = s?.imagenUrl || s?.ImagenUrl || "";
+    return raw ? getImageUrl(raw) : "";
   };
 
-  const abrirPreview = (trabajador) => {
-    setTrabajadorPreview(trabajador);
-    setModalAbierto(true);
+  const obtenerBadgeExtra = (t) => {
+    if (t.distincion) return t.distincion;
+    if (t.Distincion) return t.Distincion;
+    if (Number(t.calificacionPromedio || 0) >= 4.8) return "Mejor valorado";
+    if (Number(t.totalServiciosRealizados || 0) >= 50) return "Más solicitado";
+    if (t.destacado || t.Destacado) return "Destacado";
+    return "Profesional";
   };
 
-  const cerrarPreview = () => {
-    setTrabajadorPreview(null);
-    setModalAbierto(false);
+  const obtenerDescripcionTrabajador = (t) => {
+    return (
+      t?.descripcion ||
+      t?.Descripcion ||
+      t?.especialidad ||
+      t?.Especialidad ||
+      "Profesional disponible para atención personalizada."
+    );
   };
 
-  const limpiarReserva = () => {
-    setTrabajadorSeleccionado(null);
-    setServicioSeleccionado(null);
-    setFechaReserva("");
-    setHoraReserva("");
-    setNombreCliente("");
-    setTelefonoCliente("");
-    setCorreoCliente("");
-    setComentario("");
-    setHorariosDisponibles([]);
-    setGuardandoReserva(false);
-    setReservaConfirmada(false);
-    setDatosReservaConfirmada(null);
-    setMensajeErrorReserva("");
+  const obtenerEspecialidad = (t) => t?.especialidad || t?.Especialidad || "";
+  const obtenerExperiencia = (t) => t?.experiencia || t?.Experiencia || "";
+
+  const obtenerPortafolioTrabajador = (t) => {
+    const lista =
+      t?.imagenes ||
+      t?.Imagenes ||
+      t?.imagenesTrabajos ||
+      t?.ImagenesTrabajos ||
+      t?.trabajadorImagenes ||
+      t?.TrabajadorImagenes ||
+      t?.portafolio ||
+      t?.Portafolio ||
+      [];
+
+    return Array.isArray(lista) ? lista.slice(0, 10) : [];
   };
 
-  const cerrarModalReserva = () => {
-    setMostrarModalReserva(false);
-    limpiarReserva();
+  const obtenerImagenPortafolio = (img) => {
+    const raw =
+      img?.urlImagen || img?.UrlImagen || img?.imagenUrl || img?.ImagenUrl || "";
+
+    return raw ? getImageUrl(raw) : "";
+  };
+
+  const moverDestacados = (direction) => {
+    if (!destacadosRef.current) return;
+
+    destacadosRef.current.scrollBy({
+      left: direction === "next" ? 280 : -280,
+      behavior: "smooth",
+    });
+  };
+
+  const cargarDetalleTrabajador = async (trabajador) => {
+    const id = getIdTrabajador(trabajador);
+
+    try {
+      setTrabajadorDetalle(trabajador);
+
+      const res = await fetch(`${API_BASE}/Trabajadores/${id}/perfil-publico`);
+      const data = await res.json().catch(() => null);
+
+      if (res.ok && data) {
+        setTrabajadorDetalle({
+          ...trabajador,
+          ...data,
+        });
+      }
+    } catch (error) {
+      console.error("Error cargando detalle del trabajador:", error);
+    }
   };
 
   const abrirModalReserva = ({ trabajador = null, servicio = null } = {}) => {
     setTrabajadorSeleccionado(trabajador);
     setServicioSeleccionado(servicio || servicioPorUrl || null);
-    setFechaReserva("");
-    setHoraReserva("");
-    setNombreCliente("");
-    setTelefonoCliente("");
-    setCorreoCliente("");
-    setComentario("");
-    setHorariosDisponibles([]);
-    setGuardandoReserva(false);
-    setReservaConfirmada(false);
-    setDatosReservaConfirmada(null);
-    setMensajeErrorReserva("");
     setMostrarModalReserva(true);
   };
 
-  const validarReserva = () => {
-    const telefono = telefonoCliente.trim();
-    const correo = correoCliente.trim();
-
-    if (!trabajadorSeleccionado) return "Selecciona un profesional.";
-    if (!servicioSeleccionado) return "Selecciona un servicio.";
-    if (!fechaReserva) return "Selecciona una fecha.";
-    if (!horaReserva) return "Selecciona una hora.";
-    if (!nombreCliente.trim()) return "Ingresa tu nombre.";
-    if (!/^[0-9]{9}$/.test(telefono)) return "El teléfono debe tener 9 dígitos.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) return "Ingresa un correo válido.";
-
-    return "";
+  const cerrarModalReserva = () => {
+    setMostrarModalReserva(false);
+    setTrabajadorSeleccionado(null);
+    setServicioSeleccionado(null);
   };
 
-  const confirmarReserva = async () => {
-    const validacion = validarReserva();
-
-    if (validacion) {
-      setMensajeErrorReserva(validacion);
-      return;
-    }
-
-    try {
-      setGuardandoReserva(true);
-      setMensajeErrorReserva("");
-
-      const payload = {
-        idTrabajador: Number(trabajadorSeleccionado.idTrabajador),
-        idServicio: Number(servicioSeleccionado.idServicio || servicioSeleccionado.IdServicio),
-        nombreCliente: nombreCliente.trim(),
-        telefonoCliente: telefonoCliente.trim(),
-        correoCliente: correoCliente.trim(),
-        fechaReserva,
-        horaReserva: `${horaReserva}:00`,
-      };
-
-      const res = await fetch(`${API_BASE}/Reservas/crear`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const respuesta = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        setMensajeErrorReserva(respuesta.mensaje || "No se pudo registrar la reserva.");
-        return;
-      }
-
-      setDatosReservaConfirmada({
-        trabajador: trabajadorSeleccionado,
-        servicio: servicioSeleccionado,
-        fecha: fechaReserva,
-        hora: horaReserva,
-        cliente: nombreCliente.trim(),
-        telefono: telefonoCliente.trim(),
-        correo: correoCliente.trim(),
-        comentario: comentario.trim(),
-        estado: "Pendiente",
-        whatsappUrl: respuesta.whatsappUrl,
-      });
-
-      setReservaConfirmada(true);
-    } catch (err) {
-      console.error("Error registrando reserva:", err);
-      setMensajeErrorReserva("Error de conexión al registrar la reserva.");
-    } finally {
-      setGuardandoReserva(false);
-    }
-  };
-
-  
-
-  const whatsappRed =
-    redesSociales.find((r) => (r.tipo || r.Tipo || "").toLowerCase() === "whatsapp")?.url ||
-    redesSociales.find((r) => (r.tipo || r.Tipo || "").toLowerCase() === "whatsapp")?.Url ||
-    "#";
-
-  const textoWhatsApp = `Hola, ${negocio?.nombre || negocio?.Nombre || "Negocio"}. Quiero reservar una cita.`;
-
-  const renderHeader = (subtitulo) => {
-    const logoNegocio = negocio?.logoUrl || negocio?.LogoUrl
-      ? getImageUrl(negocio?.logoUrl || negocio?.LogoUrl)
-      : "";
-
-    return (
-      <div className="perfil-publico-header-shell container py-4">
-        <CardDark className="perfil-publico-brand-card perfil-publico-header-clean mb-4">
-          <div className="perfil-publico-header-layout">
-            <div className="perfil-publico-header-copy">
-              <span>Catálogo profesional</span>
-              <h2>{negocio?.nombre || negocio?.Nombre || "Profesionales disponibles"}</h2>
-              <p>{subtitulo}</p>
-            </div>
-
-            <div className="perfil-publico-header-logo">
-              <AvatarCircle
-                src={logoNegocio}
-                alt={negocio?.nombre || negocio?.Nombre || "Negocio"}
-                fallback={(negocio?.nombre || negocio?.Nombre || "N").charAt(0)}
-                selected
-                size="md"
-              />
-            </div>
-
-            <div className="perfil-publico-header-action">
-              <button
-                type="button"
-                className="btn btn-gold"
-                onClick={() => navigate(-1)}
-              >
-                <ArrowLeft size={16} />
-                Volver
-              </button>
-            </div>
-          </div>
-        </CardDark>
-      </div>
-    );
-  };
-
-  const renderCard = (t) => {
-    const badgeExtra = obtenerBadgeExtra(t);
+  const renderCard = (t, extraClass = "") => {
+    const id = getIdTrabajador(t);
+    const nombre = getNombreTrabajador(t);
     const foto = getTrabajadorFoto(t);
+    const badge = obtenerBadgeExtra(t);
+    const rating = Number(t.calificacionPromedio || 0).toFixed(1);
 
     return (
-      <article className="catalogo-trab-card" key={t.idTrabajador}>
-        <div className="catalogo-trab-card-top">
-          {badgeExtra ? (
-            <span className="catalogo-trab-ribbon">
-              <Trophy size={13} />
-              {badgeExtra}
-            </span>
+      <article className={`catalogo-trab-card ${extraClass}`} key={id}>
+        <button
+          type="button"
+          className="catalogo-trab-img"
+          onClick={() => foto && setImagenPreview({ url: foto, nombre })}
+        >
+          {foto ? (
+            <img src={foto} alt={nombre} loading="lazy" />
           ) : (
-            <span className="catalogo-trab-ribbon muted">
-              <UserRound size={13} />
-              Profesional
-            </span>
+            <UserRound size={42} />
           )}
-        </div>
 
-        <div className="catalogo-trab-avatar-wrap">
-          <AvatarCircle
-            src={foto}
-            alt={t.nombre || "Profesional"}
-            fallback={t.nombre?.charAt(0)?.toUpperCase() || "P"}
-            size="xl"
-          />
-        </div>
+          <span className="catalogo-trab-img-badge">
+            <Trophy size={12} />
+            {badge}
+          </span>
 
-        <div className="catalogo-trab-info">
-          <h3 title={t.nombre}>{t.nombre}</h3>
+          <strong className="catalogo-trab-img-rating">
+            <Star size={12} fill="currentColor" />
+            {rating}
+          </strong>
+        </button>
 
-          <div className="catalogo-trab-rating">
-            <Star size={17} fill="currentColor" />
-            <b>{Number(t.calificacionPromedio || 0).toFixed(1)}</b>
-            <span>{t.totalResenas || 0} reseñas</span>
+        <div className="catalogo-trab-body compact">
+          <div className="catalogo-trab-name-row">
+            <button
+              type="button"
+              className="catalogo-trab-title"
+              onClick={() => cargarDetalleTrabajador(t)}
+            >
+              {nombre}
+            </button>
+
+            <Link
+              to={`/trabajador-publico/${id}`}
+              className="catalogo-trab-view-btn"
+              aria-label={`Ver perfil de ${nombre}`}
+            >
+              <Eye size={16} />
+            </Link>
           </div>
-
-          <p>{t.descripcion || t.especialidad || "Profesional disponible para atención personalizada."}</p>
-        </div>
-
-        <div className="catalogo-trab-stats">
-          <div>
-            <BriefcaseBusiness size={16} />
-            <span>{t.totalServiciosRealizados || 0}</span>
-            <small>servicios</small>
-          </div>
-
-          <div>
-            <Award size={16} />
-            <span>{t.distincion || "Verificado"}</span>
-            <small>perfil</small>
-          </div>
-        </div>
-
-        <div className="catalogo-trab-actions">
-          <button
-            type="button"
-            className="btn btn-dark-outline"
-            onClick={() => abrirPreview(t)}
-          >
-            <Eye size={16} />
-            Ver
-          </button>
 
           <button
             type="button"
-            className="btn btn-gold"
+            className="catalogo-trab-cta"
             onClick={() => abrirModalReserva({ trabajador: t })}
           >
             Elegir
@@ -468,557 +317,377 @@ export default function CatalogoTrabajadores() {
     );
   };
 
-  const renderModalReserva = () => {
-    if (!mostrarModalReserva) return null;
+  const renderSkeleton = () => (
+    <div className="catalogo-trab-skeleton-grid">
+      {[1, 2, 3, 4].map((item) => (
+        <div className="catalogo-trab-skeleton-card" key={item}>
+          <div className="catalogo-trab-skeleton-img" />
+          <div className="catalogo-trab-skeleton-line long" />
+          <div className="catalogo-trab-skeleton-line short" />
+          <div className="catalogo-trab-skeleton-btn" />
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderImagenPreviewModal = () => {
+    if (!imagenPreview) return null;
 
     return (
-      <div className="modal-reserva-overlay landing-booking-overlay">
-        <div className="modal-reserva landing-booking-modal">
-          {reservaConfirmada && datosReservaConfirmada ? (
-            <>
-              <div className="modal-success-header">
-                <CheckCircle2 size={42} />
-                <h2>Reserva registrada</h2>
-                <p>Tu cita fue guardada correctamente. Revisa tu correo para confirmar o cancelar.</p>
-              </div>
+      <div
+        className="catalogo-trab-image-overlay"
+        onClick={() => setImagenPreview(null)}
+      >
+        <div
+          className="catalogo-trab-image-modal"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button type="button" onClick={() => setImagenPreview(null)}>
+            <X size={20} />
+          </button>
 
-              <div className="modal-success-card">
-                <h4>{datosReservaConfirmada.servicio?.nombre || datosReservaConfirmada.servicio?.Nombre}</h4>
-
-                <div className="modal-info-row">
-                  <span>Precio</span>
-                  <b>
-                    S/{" "}
-                    {Number(
-                      datosReservaConfirmada.servicio?.precioBase ||
-                        datosReservaConfirmada.servicio?.PrecioBase ||
-                        0
-                    ).toFixed(2)}
-                  </b>
-                </div>
-
-                <div className="modal-info-row">
-                  <span>Duración</span>
-                  <b>
-                    {datosReservaConfirmada.servicio?.duracionMinutos ||
-                      datosReservaConfirmada.servicio?.DuracionMinutos ||
-                      "-"}{" "}
-                    min
-                  </b>
-                </div>
-              </div>
-
-              <div className="modal-success-worker">
-                <AvatarCircle
-                  src={getTrabajadorFoto(datosReservaConfirmada.trabajador)}
-                  alt={datosReservaConfirmada.trabajador?.nombre}
-                  fallback={datosReservaConfirmada.trabajador?.nombre?.charAt(0)?.toUpperCase() || "T"}
-                  size="md"
-                />
-
-                <div>
-                  <p>Te atenderá</p>
-                  <h5>{datosReservaConfirmada.trabajador?.nombre}</h5>
-                </div>
-              </div>
-
-              <div className="modal-success-details">
-                <div className="modal-info-row">
-                  <span>Cliente</span>
-                  <b>{datosReservaConfirmada.cliente}</b>
-                </div>
-
-                <div className="modal-info-row">
-                  <span>Correo</span>
-                  <b>{datosReservaConfirmada.correo}</b>
-                </div>
-
-                <div className="modal-info-row">
-                  <span>Teléfono</span>
-                  <b>{datosReservaConfirmada.telefono}</b>
-                </div>
-
-                <div className="modal-info-row">
-                  <span>Fecha</span>
-                  <b>{datosReservaConfirmada.fecha}</b>
-                </div>
-
-                <div className="modal-info-row">
-                  <span>Hora</span>
-                  <b>{datosReservaConfirmada.hora}</b>
-                </div>
-
-                <div className="modal-info-row">
-                  <span>Estado</span>
-                  <b className="text-gold">Pendiente</b>
-                </div>
-              </div>
-
-              {datosReservaConfirmada?.whatsappUrl && (
-                <a
-                  href={datosReservaConfirmada.whatsappUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn btn-dark-outline w-100 mb-2"
-                >
-                  <MessageCircle size={16} />
-                  Enviar reserva por WhatsApp
-                </a>
-              )}
-
-              <button className="btn btn-gold w-100" onClick={cerrarModalReserva}>
-                Finalizar
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="landing-booking-head">
-                <div>
-                  <h3>Reservar cita</h3>
-                  <p>Elige servicio, especialista y horario.</p>
-                </div>
-
-                <button className="landing-booking-close" onClick={cerrarModalReserva}>
-                  <X size={18} />
-                </button>
-              </div>
-
-              {mensajeErrorReserva && (
-                <div className="catalogo-serv-modal-error">
-                  {mensajeErrorReserva}
-                </div>
-              )}
-
-              <label className="label-gold">Servicio</label>
-
-              <Swiper
-                modules={[FreeMode]}
-                spaceBetween={12}
-                slidesPerView={1.3}
-                freeMode
-                breakpoints={{
-                  576: { slidesPerView: 1.8 },
-                  768: { slidesPerView: 2.4 },
-                  1024: { slidesPerView: 3.1 },
-                }}
-                className="landing-reserva-service-swiper"
-              >
-                {servicios.map((s) => {
-                  const idServicioItem = s.idServicio || s.IdServicio;
-                  const nombre = s.nombre || s.Nombre;
-                  const precio = s.precioBase || s.PrecioBase || 0;
-                  const duracion = s.duracionMinutos || s.DuracionMinutos;
-                  const seleccionado =
-                    Number(servicioSeleccionado?.idServicio || servicioSeleccionado?.IdServicio) === Number(idServicioItem);
-                  const imagenServicio = obtenerImagenServicio(s);
-
-                  return (
-                    <SwiperSlide key={idServicioItem}>
-                      <button
-                        type="button"
-                        className={`landing-reserva-service-option ${seleccionado ? "selected" : ""}`}
-                        onClick={() => setServicioSeleccionado(s)}
-                      >
-                        <div className="landing-reserva-service-img">
-                          {imagenServicio ? (
-                            <img src={imagenServicio} alt={nombre} />
-                          ) : (
-                            <Scissors size={26} />
-                          )}
-                        </div>
-
-                        <h4>{nombre}</h4>
-
-                        <p>
-                          S/ {Number(precio).toFixed(2)}
-                          {duracion ? ` · ${duracion} min` : ""}
-                        </p>
-
-                        <span>{seleccionado ? "Seleccionado" : "Elegir"}</span>
-                      </button>
-                    </SwiperSlide>
-                  );
-                })}
-              </Swiper>
-
-              <label className="label-gold">Especialista</label>
-
-              <Swiper
-                modules={[FreeMode]}
-                spaceBetween={12}
-                slidesPerView={2.1}
-                freeMode
-                breakpoints={{
-                  576: { slidesPerView: 2.5 },
-                  768: { slidesPerView: 3.2 },
-                  1024: { slidesPerView: 3.5 },
-                }}
-                className="landing-worker-swiper"
-              >
-                {trabajadores.map((t) => {
-                  const fotoTrabajador = getTrabajadorFoto(t);
-                  const seleccionado =
-                    Number(trabajadorSeleccionado?.idTrabajador) === Number(t.idTrabajador);
-
-                  return (
-                    <SwiperSlide key={t.idTrabajador}>
-                      <button
-                        type="button"
-                        className={`worker-card ${seleccionado ? "selected" : ""}`}
-                        onClick={() => {
-                          setTrabajadorSeleccionado(t);
-                          setFechaReserva("");
-                          setHoraReserva("");
-                          setHorariosDisponibles([]);
-                        }}
-                      >
-                        <AvatarCircle
-                          src={fotoTrabajador}
-                          alt={t.nombre}
-                          fallback={t.nombre?.charAt(0)?.toUpperCase() || "T"}
-                          selected={seleccionado}
-                          size="md"
-                        />
-
-                        <div className="worker-name" title={t.nombre}>
-                          {t.nombre}
-                        </div>
-
-                        <div className="worker-status">
-                          {seleccionado ? "Seleccionado" : "Elegir"}
-                        </div>
-                      </button>
-                    </SwiperSlide>
-                  );
-                })}
-              </Swiper>
-
-              <div className="landing-booking-grid">
-                <div>
-                  <label className="label-gold">Fecha</label>
-                  <input
-                    type="date"
-                    className="form-control input-dark"
-                    value={fechaReserva}
-                    min={new Date().toISOString().split("T")[0]}
-                    onChange={(e) => {
-                      setFechaReserva(e.target.value);
-                      setHoraReserva("");
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label className="label-gold">Hora</label>
-                  <select
-                    className="form-control input-dark"
-                    value={horaReserva}
-                    onChange={(e) => setHoraReserva(e.target.value)}
-                    disabled={!trabajadorSeleccionado || !fechaReserva}
-                  >
-                    <option value="">
-                      {!trabajadorSeleccionado
-                        ? "Selecciona especialista"
-                        : !fechaReserva
-                          ? "Selecciona fecha"
-                          : horariosDisponibles.length === 0
-                            ? "Sin horarios"
-                            : "Seleccionar horario"}
-                    </option>
-
-                    {horariosDisponibles.map((h) => (
-                      <option key={h} value={h}>
-                        {h}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <label className="label-gold">Tus datos</label>
-
-              <div className="landing-booking-grid">
-                <div className="perfil-reserva-input-icon">
-                  <UserRound size={16} />
-                  <input
-                    placeholder="Nombre completo"
-                    value={nombreCliente}
-                    maxLength={120}
-                    onChange={(e) => setNombreCliente(e.target.value)}
-                  />
-                </div>
-
-                <div className="perfil-reserva-input-icon">
-                  <Phone size={16} />
-                  <input
-                    placeholder="Teléfono / WhatsApp"
-                    value={telefonoCliente}
-                    maxLength={9}
-                    inputMode="numeric"
-                    onChange={(e) => setTelefonoCliente(e.target.value.replace(/\D/g, ""))}
-                  />
-                </div>
-
-                <div className="perfil-reserva-input-icon">
-                  <Mail size={16} />
-                  <input
-                    placeholder="Correo"
-                    type="email"
-                    value={correoCliente}
-                    maxLength={150}
-                    onChange={(e) => setCorreoCliente(e.target.value)}
-                  />
-                </div>
-
-                <textarea
-                  placeholder="Comentario adicional opcional"
-                  className="form-control input-dark"
-                  rows="2"
-                  value={comentario}
-                  maxLength={250}
-                  onChange={(e) => setComentario(e.target.value)}
-                />
-              </div>
-
-              <div className="landing-booking-actions">
-                <button
-                  className="btn btn-gold"
-                  onClick={confirmarReserva}
-                  disabled={guardandoReserva}
-                >
-                  {guardandoReserva ? "Registrando..." : "Confirmar reserva"}
-                </button>
-
-                <button
-                  className="btn btn-dark-outline"
-                  onClick={cerrarModalReserva}
-                  disabled={guardandoReserva}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </>
-          )}
+          <img src={imagenPreview.url} alt={imagenPreview.nombre} />
+          <h3>{imagenPreview.nombre}</h3>
         </div>
       </div>
     );
   };
 
-  if (loading) {
+  const renderTrabajadorDetalle = () => {
+    if (!trabajadorDetalle) return null;
+
+    const nombre = getNombreTrabajador(trabajadorDetalle);
+    const descripcion = obtenerDescripcionTrabajador(trabajadorDetalle);
+    const especialidad = obtenerEspecialidad(trabajadorDetalle);
+    const experiencia = obtenerExperiencia(trabajadorDetalle);
+    const portafolio = obtenerPortafolioTrabajador(trabajadorDetalle);
+
     return (
-      <div className="page-shell catalogo-trab-page">
-        {renderHeader("Cargando profesionales disponibles...")}
+      <div className="catalogo-trab-details-overlay">
+        <div className="catalogo-trab-details-panel">
+          <div className="catalogo-trab-details-head">
+            <button type="button" onClick={() => setTrabajadorDetalle(null)}>
+              <ArrowLeft size={18} />
+            </button>
 
-        <div className="container pb-4">
-          <div className="catalogo-trab-skeleton-grid">
-            <CardDark className="catalogo-trab-skeleton" />
-            <CardDark className="catalogo-trab-skeleton" />
-            <CardDark className="catalogo-trab-skeleton" />
+            <span>{nombre}</span>
+
+            <button type="button" onClick={() => setTrabajadorDetalle(null)}>
+              <X size={18} />
+            </button>
           </div>
-        </div>
 
-        <PageFooter
-          nombreNegocio={negocio?.nombre || negocio?.Nombre || "Negocio"}
-          redesSociales={redesSociales}
-        />
-      </div>
-    );
-  }
+          <div className="catalogo-trab-details-content">
+            <h4>Descripción</h4>
+            <p>{descripcion}</p>
 
-  return (
-    <div className="page-shell catalogo-trab-page">
-      {renderHeader(
-        negocio?.nombre
-          ? `Selecciona quién te atenderá en ${negocio.nombre}.`
-          : "Selecciona el profesional que prefieras."
-      )}
+            <div className="catalogo-trab-detail-tags">
+              {especialidad && (
+                <div>
+                  <strong>Especialidad</strong>
+                  <span>{especialidad}</span>
+                </div>
+              )}
 
-      <div className="container pt-1 pb-4">
-        {error && (
-          <CardDark className="catalogo-trab-error-card mb-4">
-            <p>{error}</p>
-          </CardDark>
-        )}
-
-        {destacados.length > 0 && (
-          <section className="catalogo-trab-section mb-4">
-            <div className="catalogo-trab-section-head">
-              <div>
-                <h3 className="section-title">Destacados</h3>
-                <p className="section-subtitle">Profesionales con mejor desempeño</p>
-              </div>
-
-              <GoldBadge>{destacados.length} destacados</GoldBadge>
+              {experiencia && (
+                <div>
+                  <strong>Experiencia</strong>
+                  <span>{experiencia}</span>
+                </div>
+              )}
             </div>
 
-            <div className="catalogo-trab-featured-carousel">
-              {destacados.map(renderCard)}
+            {portafolio.length > 0 && (
+              <div className="catalogo-trab-portfolio">
+                <div className="catalogo-trab-portfolio-head">
+                  <h4>Trabajos realizados</h4>
+                  <span>{portafolio.length} trabajos</span>
+                </div>
+
+                <div className="catalogo-trab-portfolio-row">
+                  {portafolio.map((img) => {
+                    const url = obtenerImagenPortafolio(img);
+                    const descripcionImg =
+                      img?.descripcion || img?.Descripcion || "Trabajo realizado";
+
+                    if (!url) return null;
+
+                    return (
+                      <button
+                        type="button"
+                        key={img.idImagen || img.IdImagen || url}
+                        className="catalogo-trab-portfolio-item"
+                        onClick={() =>
+                          setImagenPreview({
+                            url,
+                            nombre: descripcionImg,
+                          })
+                        }
+                      >
+                        <img src={url} alt={descripcionImg} loading="lazy" />
+                        <span>{descripcionImg}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="catalogo-trab-details-bottom-row">
+              <Link
+                to={`/trabajador-publico/${getIdTrabajador(trabajadorDetalle)}`}
+                className="catalogo-trab-secondary-btn"
+              >
+                Ver perfil
+              </Link>
+
+              <button
+                type="button"
+                className="catalogo-trab-primary-btn"
+                onClick={() => {
+                  const trabajador = trabajadorDetalle;
+                  setTrabajadorDetalle(null);
+                  abrirModalReserva({ trabajador });
+                }}
+              >
+                Elegir
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderLoginModal = () => {
+    if (!mostrarLoginModal) return null;
+
+    return (
+      <div
+        className="catalogo-trab-login-overlay"
+        onClick={() => setMostrarLoginModal(false)}
+      >
+        <div
+          className="catalogo-trab-login-modal"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="catalogo-trab-login-close"
+            onClick={() => setMostrarLoginModal(false)}
+          >
+            <X size={18} />
+          </button>
+
+          <div className="catalogo-trab-login-logo">
+            {logoNegocio ? (
+              <img src={logoNegocio} alt={nombreNegocio} />
+            ) : (
+              <Scissors size={32} />
+            )}
+          </div>
+
+          <h2>Bienvenido</h2>
+          <p>Accede a tu panel de Barber.pe</p>
+
+          <div className="catalogo-trab-login-field">
+            <label>Correo</label>
+            <div>
+              <Mail size={16} />
+              <input
+                type="email"
+                placeholder="Email Here"
+                value={loginCorreo}
+                onChange={(e) => setLoginCorreo(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="catalogo-trab-login-field">
+            <label>Contraseña</label>
+            <div>
+              <LockKeyhole size={16} />
+              <input
+                type={mostrarPassword ? "text" : "password"}
+                placeholder="Password Here"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+              />
+
+              <button type="button" onClick={() => setMostrarPassword((v) => !v)}>
+                {mostrarPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                <span>{mostrarPassword ? "Ocultar" : "Mostrar"}</span>
+              </button>
+            </div>
+          </div>
+
+          <button type="button" className="catalogo-trab-login-forgot">
+            ¿Olvidaste tu contraseña?
+          </button>
+
+          <button type="button" className="catalogo-trab-login-submit">
+            Ingresar
+          </button>
+
+          <span className="catalogo-trab-login-copy">
+            Barber.pe SaaS · Gestión profesional para barberías
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="catalogo-trab-page">
+      <section className="catalogo-trab-desktop-public-header">
+        <PublicHeader
+          negocio={negocio}
+          idNegocio={idNegocio}
+          slugNegocio={slugNegocio}
+          onReservar={() =>
+            trabajadores[0] && abrirModalReserva({ trabajador: trabajadores[0] })
+          }
+        />
+      </section>
+
+      <header className="catalogo-trab-mobile-header">
+        <Link to={`/negocio/${slugNegocio}`} className="catalogo-trab-mobile-logo">
+          {logoNegocio ? (
+            <img src={logoNegocio} alt={nombreNegocio} />
+          ) : (
+            <Scissors size={22} />
+          )}
+        </Link>
+
+        <div className="catalogo-trab-mobile-search">
+          <Search size={17} />
+          <input
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar profesionales..."
+          />
+        </div>
+      </header>
+
+      <main className="catalogo-trab-main" id="profesionales">
+        {trabajadoresDestacados.length > 0 && (
+          <section className="catalogo-trab-featured-section">
+            <div className="catalogo-trab-section-head with-arrows">
+              <div>
+                <h2>Profesionales destacados</h2>
+                <p>Los más recomendados para reservar rápido.</p>
+              </div>
+
+              <div className="catalogo-trab-carousel-arrows">
+                <button type="button" onClick={() => moverDestacados("prev")}>
+                  ‹
+                </button>
+                <button type="button" onClick={() => moverDestacados("next")}>
+                  ›
+                </button>
+              </div>
+            </div>
+
+            <div className="catalogo-trab-featured-track" ref={destacadosRef}>
+              {trabajadoresDestacados.map((t) => renderCard(t, "featured"))}
             </div>
           </section>
         )}
 
-        <CardDark className="catalogo-trab-filter-card mb-4">
-          <div className="catalogo-trab-section-head">
-            <div>
-              <h3 className="section-title">Encuentra tu profesional</h3>
-              <p className="section-subtitle">Filtra por nombre, valoración o experiencia.</p>
-            </div>
+        <section className="catalogo-trab-mobile-title">
+          <h1>Todos nuestros profesionales</h1>
+          <p>Elige el especialista que prefieras.</p>
+        </section>
 
-            <div className="catalogo-trab-filter-badge">
-              <Filter size={16} />
-              {trabajadoresProcesados.length} resultados
-            </div>
-          </div>
-
-          <div className="catalogo-trab-filter-grid">
-            <div className="catalogo-trab-search">
-              <Search size={16} />
-              <input
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Buscar profesional, especialidad..."
-                maxLength={80}
-              />
-            </div>
-
-            <div>
-              <label className="form-label">Calificación</label>
-              <select
-                className="form-select input-dark"
-                value={filtroRating}
-                onChange={(e) => setFiltroRating(e.target.value)}
-              >
-                <option value="todos">Todos</option>
-                <option value="4">Desde 4.0 estrellas</option>
-                <option value="45">Desde 4.5 estrellas</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="form-label">Ordenar por</label>
-              <select
-                className="form-select input-dark"
-                value={orden}
-                onChange={(e) => setOrden(e.target.value)}
-              >
-                <option value="rating">Mejor calificación</option>
-                <option value="servicios">Más servicios realizados</option>
-                <option value="nombre">Nombre</option>
-              </select>
-            </div>
-          </div>
-        </CardDark>
-
-        <div className="catalogo-trab-section-head mb-3">
-          <div>
-            <h3 className="section-title">Todos los profesionales</h3>
-            <p className="section-subtitle">Elige quién realizará tu servicio.</p>
-          </div>
-
-          <GoldBadge>{trabajadoresProcesados.length} resultados</GoldBadge>
-        </div>
-
-        {trabajadoresProcesados.length > 0 ? (
-          <div className="catalogo-trab-grid">
-            {trabajadoresProcesados.map(renderCard)}
-          </div>
+        {loading ? (
+          renderSkeleton()
         ) : (
-          <CardDark className="catalogo-trab-empty-card">
-            <UserRound size={38} />
-            <h4>Sin profesionales disponibles</h4>
-            <p>No hay profesionales que coincidan con el filtro seleccionado.</p>
-          </CardDark>
+          <>
+            {error && <div className="catalogo-trab-error-msg">{error}</div>}
+
+            {trabajadoresFiltrados.length > 0 ? (
+              <div className="catalogo-trab-grid">
+                {trabajadoresFiltrados.map((t) => renderCard(t))}
+              </div>
+            ) : (
+              <div className="catalogo-trab-empty-card">
+                <UserRound size={38} />
+                <h4>Sin profesionales disponibles</h4>
+                <p>No hay profesionales que coincidan con tu búsqueda.</p>
+              </div>
+            )}
+          </>
         )}
+
+        {servicios.length > 0 && (
+          <section className="catalogo-mini-servicios-section">
+            <div className="catalogo-mini-servicios-head">
+              <div>
+                <h2>Nuestros servicios</h2>
+                <p>También puedes elegir primero el servicio.</p>
+              </div>
+
+              <Link to={`/catalogo-servicios/${idNegocio}`}>
+                Ver todos <span>→</span>
+              </Link>
+            </div>
+
+            <div className="catalogo-mini-servicios-row">
+              {servicios.map((s) => {
+                const id = s.idServicio || s.IdServicio;
+                const nombre = s.nombre || s.Nombre;
+                const imagen = obtenerImagenServicio(s);
+
+                return (
+                  <Link
+                    to={`/catalogo-servicios/${idNegocio}`}
+                    className="catalogo-mini-servicio"
+                    key={id}
+                  >
+                    <div>
+                      {imagen ? (
+                        <img src={imagen} alt={nombre} loading="lazy" />
+                      ) : (
+                        <Scissors size={22} />
+                      )}
+                    </div>
+
+                    <strong>{nombre}</strong>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+      </main>
+
+      <div id="contacto">
+        <PageFooter
+          nombreNegocio={nombreNegocio}
+          redesSociales={redesSociales || []}
+        />
       </div>
 
-      <PageFooter
-        nombreNegocio={negocio?.nombre || negocio?.Nombre || "Negocio"}
-        redesSociales={redesSociales}
+      <PublicBottomNav
+        idNegocio={idNegocio}
+        slugNegocio={slugNegocio}
+        active="trabajadores"
+        onPerfilClick={() => setMostrarLoginModal(true)}
       />
 
-      <FloatingActions
-        onReserve={() => abrirModalReserva()}
-        whatsappUrl={whatsappRed}
-        whatsappText={textoWhatsApp}
+      <ModalReserva
+        abierto={mostrarModalReserva}
+        onClose={cerrarModalReserva}
+        apiBase={API_BASE}
+        servicios={servicios}
+        trabajadores={trabajadores}
+        servicioInicial={servicioSeleccionado}
+        trabajadorInicial={trabajadorSeleccionado}
       />
 
-      {renderModalReserva()}
-
-      {modalAbierto && trabajadorPreview && (
-        <div className="catalogo-trab-modal-backdrop">
-          <div className="catalogo-trab-modal">
-            <div className="catalogo-trab-modal-header">
-              <h4>Perfil del profesional</h4>
-
-              <button onClick={cerrarPreview} className="catalogo-trab-modal-close">
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="catalogo-trab-modal-body">
-              <div className="catalogo-trab-modal-profile">
-                <AvatarCircle
-                  src={getTrabajadorFoto(trabajadorPreview)}
-                  alt={trabajadorPreview.nombre || "Profesional"}
-                  fallback={trabajadorPreview.nombre?.charAt(0)?.toUpperCase() || "P"}
-                  size="xl"
-                />
-
-                <h3>{trabajadorPreview.nombre}</h3>
-
-                <span>
-                  <Sparkles size={15} />
-                  {obtenerBadgeExtra(trabajadorPreview) || "Profesional verificado"}
-                </span>
-
-                <p>
-                  {trabajadorPreview.descripcion ||
-                    trabajadorPreview.especialidad ||
-                    "Profesional disponible para atención personalizada."}
-                </p>
-              </div>
-
-              <div className="catalogo-trab-modal-stats">
-                <div>
-                  <Star size={18} fill="currentColor" />
-                  <b>{Number(trabajadorPreview.calificacionPromedio || 0).toFixed(1)}</b>
-                  <span>calificación</span>
-                </div>
-
-                <div>
-                  <CheckCircle2 size={18} />
-                  <b>{trabajadorPreview.totalServiciosRealizados || 0}</b>
-                  <span>servicios</span>
-                </div>
-
-                <div>
-                  <Award size={18} />
-                  <b>{trabajadorPreview.totalResenas || 0}</b>
-                  <span>reseñas</span>
-                </div>
-              </div>
-
-              <div className="catalogo-trab-modal-actions">
-                <button className="btn btn-dark-outline" onClick={cerrarPreview}>
-                  Cancelar
-                </button>
-
-                <button
-                  type="button"
-                  className="btn btn-gold"
-                  onClick={() => {
-                    const trabajador = trabajadorPreview;
-                    cerrarPreview();
-                    abrirModalReserva({ trabajador });
-                  }}
-                >
-                  Elegir profesional
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {renderImagenPreviewModal()}
+      {renderTrabajadorDetalle()}
+      {renderLoginModal()}
     </div>
   );
 }

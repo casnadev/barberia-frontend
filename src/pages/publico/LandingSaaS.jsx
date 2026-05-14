@@ -4,23 +4,19 @@ import {
   BarChart3,
   CalendarCheck,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  Crown,
   Gauge,
-  LockKeyhole,
-  MessageCircle,
-  Rocket,
+  Menu,
+  PhoneCall,
   Scissors,
   ShieldCheck,
   Sparkles,
-  Star,
   Store,
   UsersRound,
+  X,
 } from "lucide-react";
 
 import API_BASE from "../../services/api";
-import "../../styles/LandingSaaS.css";
+import { getImageUrl } from "../../utils/imageUrl";
 
 const FALLBACK_NEGOCIOS = [
   {
@@ -34,11 +30,19 @@ const FALLBACK_NEGOCIOS = [
   },
 ];
 
-import { getImageUrl } from "../../utils/imageUrl";
-
 export default function LandingSaaS() {
   const [negocios, setNegocios] = useState(FALLBACK_NEGOCIOS);
   const [negocioActivo, setNegocioActivo] = useState(0);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll);
+    handleScroll();
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     const cargarNegocios = async () => {
@@ -52,8 +56,7 @@ export default function LandingSaaS() {
         if (Array.isArray(data) && data.length > 0) {
           setNegocios(data);
         }
-      } catch (error) {
-        console.error("Error cargando negocios públicos:", error);
+      } catch {
         setNegocios(FALLBACK_NEGOCIOS);
       }
     };
@@ -76,26 +79,22 @@ export default function LandingSaaS() {
       {
         titulo: "Starter",
         limite: "1 trabajador",
-        texto: "Para barberías pequeñas que desean ordenar reservas, servicios y comisiones desde el primer día.",
         features: ["Landing pública", "Servicios", "Reservas", "Panel Admin"],
       },
       {
         titulo: "Growth",
         limite: "Hasta 5 trabajadores",
-        texto: "Para equipos en crecimiento que necesitan agenda, perfiles, portafolios y control diario.",
         features: ["Perfiles públicos", "Dashboard", "Pagos parciales", "Roles"],
         featured: true,
       },
       {
         titulo: "Pro",
         limite: "Hasta 10 trabajadores",
-        texto: "Para negocios con alta rotación, más control financiero y operación constante.",
         features: ["Comisiones", "Reportes", "Portafolios", "Disponibilidad"],
       },
       {
         titulo: "Enterprise",
         limite: "Escalable",
-        texto: "Para marcas con varias sedes o equipos grandes que buscan centralizar su operación.",
         features: ["Multi-negocio", "SuperAdmin", "Escalabilidad", "Soporte"],
       },
     ],
@@ -107,310 +106,269 @@ export default function LandingSaaS() {
       {
         icon: <CalendarCheck size={26} />,
         title: "Reservas online",
-        text: "Tus clientes reservan desde una landing pública profesional conectada a cada negocio.",
+        text: "Tus clientes pueden reservar desde una landing profesional disponible las 24 horas.",
       },
       {
         icon: <UsersRound size={26} />,
         title: "Panel trabajador",
-        text: "Cada profesional tiene acceso a su perfil, servicios, reservas y pagos.",
+        text: "Cada trabajador ve sus servicios, pagos, perfil público y disponibilidad.",
       },
       {
         icon: <BarChart3 size={26} />,
-        title: "Dashboard financiero",
-        text: "Ventas, comisiones, gastos y pagos parciales en un solo lugar.",
+        title: "Finanzas",
+        text: "Controla ventas, comisiones, gastos y pagos desde un solo panel.",
       },
       {
         icon: <ShieldCheck size={26} />,
-        title: "Roles seguros",
-        text: "SuperAdmin, Admin y Trabajador con acceso separado según negocio.",
+        title: "Roles protegidos",
+        text: "Accesos separados para administrador y trabajador con seguridad por token.",
       },
       {
         icon: <Store size={26} />,
         title: "Landing por negocio",
-        text: "Cada barbería puede mostrar logo, servicios, trabajadores, redes y WhatsApp.",
+        text: "Cada barbería o salón tiene su propia página pública con logo, servicios y contacto.",
       },
       {
         icon: <Gauge size={26} />,
-        title: "Operación diaria",
-        text: "Pensado para administrar la barbería real: atención, servicios, pagos y seguimiento.",
+        title: "Control operativo",
+        text: "Una plataforma creada para gestionar el día a día de barberías y salones.",
       },
     ],
     []
   );
 
-  const negocioActual = negocios[negocioActivo] || negocios[0] || FALLBACK_NEGOCIOS[0];
+  const faqs = useMemo(
+    () => [
+      {
+        pregunta: "¿Sirve para barberías y salones de belleza?",
+        respuesta:
+          "Sí. Barber.pe está pensado para barberías, peluquerías, salones de belleza y negocios con trabajadores que brindan servicios.",
+      },
+      {
+        pregunta: "¿Cada negocio tiene su propia página?",
+        respuesta:
+          "Sí. Cada negocio puede tener su landing pública con logo, servicios, trabajadores, horarios y contacto.",
+      },
+      {
+        pregunta: "¿Puedo controlar pagos y comisiones?",
+        respuesta:
+          "Sí. El sistema permite registrar ventas, calcular comisiones y controlar pagos totales o parciales.",
+      },
+      {
+        pregunta: "¿Funciona en celular?",
+        respuesta:
+          "Sí. La plataforma está pensada para usarse desde computadora, tablet o celular.",
+      },
+    ],
+    []
+  );
 
-  const irNegocioAnterior = () => {
-    setNegocioActivo((actual) => (actual - 1 + negocios.length) % negocios.length);
+  const negocioActual = negocios[negocioActivo] || FALLBACK_NEGOCIOS[0];
+  const logoActual = getImageUrl(negocioActual?.logoUrl);
+
+  const cerrarMenu = () => setMenuOpen(false);
+
+  const irLogin = () => {
+    window.location.href = "/login";
   };
 
-  const irNegocioSiguiente = () => {
-    setNegocioActivo((actual) => (actual + 1) % negocios.length);
+  const irDemoWhatsapp = () => {
+    window.open("https://wa.me/51943811931?text=Hola,%20quiero%20una%20demo%20de%20Barber.pe", "_blank");
   };
 
-  const getLandingUrl = (negocio) => {
-    return negocio?.slug || negocio?.Slug ? `/negocio/${negocio.slug || negocio.Slug}` : "/login";
-  };
-
-  const renderNegocioCard = (negocio, index) => {
-    const logo = getImageUrl(negocio.logoUrl || negocio.LogoUrl);
-    const nombre = negocio.nombre || negocio.Nombre || "Negocio Barber.pe";
-    const direccion = negocio.direccion || negocio.Direccion || negocio.descripcion || negocio.Descripcion || "Negocio conectado a Barber.pe";
-    const whatsapp = negocio.whatsappNegocio || negocio.WhatsappNegocio || negocio.telefono || negocio.Telefono;
-    const activo = index === negocioActivo;
-
-    return (
-      <article
-        key={negocio.idNegocio || negocio.IdNegocio || nombre}
-        className={`saas2-business-card ${activo ? "active" : ""}`}
-      >
-        <div className="saas2-business-cover">
-          {logo ? (
-            <img src={logo} alt={nombre} loading="lazy" />
-          ) : (
-            <div className="saas2-business-cover-empty">
-              <Scissors size={38} />
-            </div>
-          )}
-
-          <div className="saas2-live-pill">
-            <span />
-            Activo en Barber.pe
-          </div>
-        </div>
-
-        <div className="saas2-business-content">
-          <div className="saas2-business-kicker">
-            <Star size={15} fill="currentColor" />
-            Landing conectada
-          </div>
-
-          <h3>{nombre}</h3>
-          <p>{direccion}</p>
-
-          <div className="saas2-business-tags">
-            <span>Landing</span>
-            <span>Servicios</span>
-            <span>Trabajadores</span>
-            {whatsapp && <span>WhatsApp</span>}
-          </div>
-
-          <a className="saas2-card-link" href={getLandingUrl(negocio)}>
-            Ver landing pública
-            <ArrowRight size={16} />
-          </a>
-        </div>
-      </article>
-    );
+  const scrollToSection = (id) => {
+    cerrarMenu();
+    const section = document.getElementById(id);
+    if (section) section.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
-    <main className="saas2-page">
-      <nav className="saas2-navbar">
-        <a className="saas2-brand" href="/">
-          barber<span>.pe</span>
-        </a>
+    <main className="saas-container">
+      <nav className={`saas-nav ${isScrolled ? "scrolled" : ""}`}>
+        <div className="nav-content">
+          <a className="brand-logo" href="/">
+            barber<span>.pe</span>
+          </a>
 
-        <div className="saas2-menu">
-          <a href="#ecosistema">Negocios</a>
-          <a href="#plataforma">Plataforma</a>
-          <a href="#planes">Planes</a>
-          <a href="/login" className="saas2-user-link">
-            Ya uso el sistema
-          </a>
-          <a
-            href="#demo"
-            className="saas2-nav-cta"
-            onClick={(e) => e.preventDefault()}
+          <div className="nav-links">
+            <button type="button" onClick={() => scrollToSection("ecosistema")}>
+              Negocios
+            </button>
+            <button type="button" onClick={() => scrollToSection("plataforma")}>
+              Módulos
+            </button>
+            <button type="button" onClick={() => scrollToSection("planes")}>
+              Planes
+            </button>
+            <a href="/login" className="btn-login">
+              Acceso
+            </a>
+            <button type="button" className="btn-gold-nav" onClick={irDemoWhatsapp}>
+              Agendar demo
+            </button>
+          </div>
+
+          <button
+            type="button"
+            className="mobile-menu-btn"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Abrir menú"
           >
-            Solicitar demo
+            {menuOpen ? <X size={27} /> : <Menu size={27} />}
+          </button>
+        </div>
+
+        <div className={`mobile-menu ${menuOpen ? "active" : ""}`}>
+          <button type="button" onClick={() => scrollToSection("ecosistema")}>
+            Negocios
+          </button>
+          <button type="button" onClick={() => scrollToSection("plataforma")}>
+            Módulos
+          </button>
+          <button type="button" onClick={() => scrollToSection("planes")}>
+            Planes
+          </button>
+          <a href="/login" onClick={cerrarMenu}>
+            Acceso
           </a>
+          <button type="button" className="mobile-demo-btn" onClick={irDemoWhatsapp}>
+            Agendar demo
+          </button>
         </div>
       </nav>
 
-      <section className="saas2-hero">
-        <div className="saas2-hero-bg" />
-        <div className="saas2-hero-grid">
-          <div className="saas2-hero-copy">
-            <div className="saas2-eyebrow">
-              <Sparkles size={16} />
-              SaaS premium para barberías y salones
-            </div>
+      <header className="hero-section">
+        <div className="hero-grid">
+          <div className="hero-text">
+            <span className="badge-gold">
+              <Sparkles size={14} />
+              SOFTWARE PARA BARBERÍAS Y SALONES
+            </span>
 
             <h1>
-              Convierte tu barbería en una operación digital, elegante y medible.
+              Convierte tu barbería en un negocio{" "}
+              <span className="text-gold">digital y profesional.</span>
             </h1>
 
             <p>
-              Barber.pe reúne landing pública, reservas, trabajadores, servicios,
-              comisiones, pagos y dashboard en una sola plataforma diseñada para
-              vender más y administrar mejor.
+              Barber.pe ayuda a dueños de barberías y salones de belleza a gestionar
+              reservas, trabajadores, servicios, ventas, comisiones y pagos desde una
+              plataforma moderna.
             </p>
 
-            <div className="saas2-hero-actions">
-              <a href="/login" className="saas2-btn-primary">
-                Ya uso el sistema
-                <ArrowRight size={18} />
-              </a>
+            <div className="hero-btns">
+              <button className="btn-gold" type="button" onClick={irDemoWhatsapp}>
+                Agendar demo <ArrowRight size={18} />
+              </button>
 
-              <a
-                href="#demo"
-                className="saas2-btn-secondary"
-                onClick={(e) => e.preventDefault()}
-              >
-                Solicitar demo
-              </a>
-
-              <a
-                href="#info"
-                className="saas2-btn-ghost"
-                onClick={(e) => e.preventDefault()}
-              >
-                Deseo más información
-              </a>
+              <button className="btn-outline" type="button" onClick={() => scrollToSection("plataforma")}>
+                Ver módulos
+              </button>
             </div>
 
-            <div className="saas2-hero-proof">
-              <div>
-                <strong>Multi-negocio</strong>
-                <span>Cada barbería con datos separados</span>
-              </div>
-              <div>
-                <strong>Perfiles públicos</strong>
-                <span>Trabajadores con portafolio propio</span>
-              </div>
-              <div>
-                <strong>Panel seguro</strong>
-                <span>Roles Admin y Trabajador</span>
-              </div>
+            <div className="hero-trust">
+              <span>Reservas online</span>
+              <span>Panel admin</span>
+              <span>Comisiones</span>
             </div>
           </div>
 
-          <div className="saas2-hero-showcase">
-            <div className="saas2-device-card">
-              <div className="saas2-device-top">
-                <div>
-                  <span>Barber.pe Live</span>
-                  <h3>{negocioActual?.nombre || negocioActual?.Nombre || "Negocio conectado"}</h3>
-                </div>
-                <Crown size={26} />
+          <div className="hero-visual">
+            <div className="device-mockup">
+              <div className="screen-header">
+                <div className="status-dot"></div>
+                <span>{negocioActual?.nombre || "Barbería premium"}</span>
               </div>
 
-              <div className="saas2-device-preview">
-                {getImageUrl(negocioActual?.logoUrl || negocioActual?.LogoUrl) ? (
-                  <img
-                    src={getImageUrl(negocioActual?.logoUrl || negocioActual?.LogoUrl)}
-                    alt={negocioActual?.nombre || negocioActual?.Nombre || "Negocio"}
-                  />
+              <div className="screen-content">
+                {logoActual ? (
+                  <img src={logoActual} alt={negocioActual?.nombre || "Logo"} />
                 ) : (
-                  <Scissors size={54} />
+                  <Scissors size={52} className="icon-gold" />
                 )}
-              </div>
 
-              <div className="saas2-device-bottom">
-                <div>
-                  <small>Landing pública</small>
-                  <strong>{negocioActual?.direccion || negocioActual?.Direccion || "Reservas, servicios y equipo"}</strong>
+                <h3>{negocioActual?.nombre || "Barbería premium"}</h3>
+
+                <p>
+                  {negocioActual?.descripcion ||
+                    "Reservas, servicios y gestión profesional para tu negocio."}
+                </p>
+
+                <div className="mock-stats">
+                  <div>
+                    <strong>24</strong>
+                    <span>Reservas</span>
+                  </div>
+                  <div>
+                    <strong>S/ 890</strong>
+                    <span>Ventas</span>
+                  </div>
+                  <div>
+                    <strong>5</strong>
+                    <span>Trabajadores</span>
+                  </div>
                 </div>
 
-                <a href={getLandingUrl(negocioActual)}>
-                  Ver
-                  <ArrowRight size={15} />
-                </a>
-              </div>
-            </div>
-
-            <div className="saas2-floating-card top">
-              <CalendarCheck size={20} />
-              <div>
-                <strong>Reservas online</strong>
-                <span>Flujo conectado al negocio</span>
-              </div>
-            </div>
-
-            <div className="saas2-floating-card bottom">
-              <BarChart3 size={20} />
-              <div>
-                <strong>Comisiones y pagos</strong>
-                <span>Control operativo diario</span>
+                <div className="mock-data">
+                  <div className="bar"></div>
+                  <div className="bar short"></div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </section>
+      </header>
 
-      <section id="ecosistema" className="saas2-section saas2-ecosystem">
-        <div className="saas2-section-head">
-          <div>
-            <div className="saas2-eyebrow dark">
-              <Rocket size={16} />
-              Ecosistema Barber.pe
-            </div>
-
-            <h2>Negocios reales conectados a tu red</h2>
-
-            <p>
-              Este carrusel muestra barberías o salones que ya existen dentro de
-              tu red. Cada tarjeta apunta a su landing pública funcionando en Barber.pe.
-            </p>
-          </div>
-
-          <div className="saas2-carousel-controls">
-            <button onClick={irNegocioAnterior} type="button" aria-label="Negocio anterior">
-              <ChevronLeft size={20} />
-            </button>
-            <button onClick={irNegocioSiguiente} type="button" aria-label="Negocio siguiente">
-              <ChevronRight size={20} />
-            </button>
-          </div>
-        </div>
-
-        <div className="saas2-business-feature">
-          <div className="saas2-business-main">
-            {renderNegocioCard(negocioActual, negocioActivo)}
-          </div>
-
-          <div className="saas2-business-strip">
-            {negocios.map((negocio, index) => {
-              const logo = getImageUrl(negocio.logoUrl || negocio.LogoUrl);
-              const nombre = negocio.nombre || negocio.Nombre || "Negocio";
-
-              return (
-                <button
-                  key={negocio.idNegocio || negocio.IdNegocio || nombre}
-                  className={`saas2-mini-business ${index === negocioActivo ? "active" : ""}`}
-                  type="button"
-                  onClick={() => setNegocioActivo(index)}
-                  title={nombre}
-                >
-                  {logo ? <img src={logo} alt={nombre} /> : <Scissors size={20} />}
-                  <span>{nombre}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section id="plataforma" className="saas2-section saas2-platform">
-        <div className="saas2-section-center">
-          <div className="saas2-eyebrow">
-            <LockKeyhole size={16} />
-            Plataforma operativa
-          </div>
-
-          <h2>Todo lo que necesita una barbería para verse profesional y operar mejor</h2>
-
+      <section id="ecosistema" className="section-padding">
+        <div className="section-header">
+          <span className="section-label">ECOSISTEMA</span>
+          <h2>Todo conectado para vender más y administrar mejor</h2>
           <p>
-            Una sola plataforma para presencia pública, gestión interna y control
-            de trabajadores. Sin mezclar datos entre negocios.
+            Tu landing pública atrae clientes, el panel administra el negocio y el portal
+            trabajador organiza servicios, comisiones y disponibilidad.
           </p>
         </div>
 
-        <div className="saas2-module-grid">
-          {modulos.map((modulo) => (
-            <article className="saas2-module-card" key={modulo.title}>
-              <div className="saas2-module-icon">{modulo.icon}</div>
+        <div className="preview-grid">
+          <article className="preview-card large">
+            <div className="preview-image dashboard-preview">
+              <div className="dashboard-top"></div>
+              <div className="dashboard-grid">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <div className="dashboard-line"></div>
+              <div className="dashboard-line small"></div>
+            </div>
+            <h3>Panel administrativo</h3>
+            <p>Controla ventas, servicios, trabajadores, pagos, gastos y reportes.</p>
+          </article>
+
+          <article className="preview-card">
+            <div className="phone-preview">
+              <div className="phone-notch"></div>
+              <Scissors size={36} className="icon-gold" />
+              <span>Reserva online</span>
+              <button type="button">Reservar</button>
+            </div>
+            <h3>Reservas desde celular</h3>
+            <p>El cliente puede consultar servicios y contactarte rápidamente.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="plataforma" className="section-padding">
+        <div className="section-header">
+          <span className="section-label">MÓDULOS</span>
+          <h2>Gestión de 360 grados</h2>
+          <p>Todo lo que tu negocio necesita en una sola herramienta.</p>
+        </div>
+
+        <div className="modules-grid">
+          {modulos.map((modulo, index) => (
+            <article className="module-card" key={index}>
+              <div className="module-icon">{modulo.icon}</div>
               <h3>{modulo.title}</h3>
               <p>{modulo.text}</p>
             </article>
@@ -418,137 +376,131 @@ export default function LandingSaaS() {
         </div>
       </section>
 
-      <section className="saas2-section saas2-comparison">
-        <div className="saas2-comparison-card">
-          <div>
-            <div className="saas2-eyebrow">
-              <ShieldCheck size={16} />
-              Diferencia clara
-            </div>
+      <section className="section-padding bg-dark">
+        <div className="section-header">
+          <span className="section-label">NEGOCIOS</span>
+          <h2>Tu barbería también puede verse así</h2>
+          <p>
+            Muestra tu marca, tus servicios y tus trabajadores en una página moderna
+            lista para compartir por WhatsApp, Instagram o Google.
+          </p>
+        </div>
 
-            <h2>No vendes solo turnos. Vendes una experiencia digital premium.</h2>
+        <div className="business-grid">
+          {negocios.slice(0, 3).map((negocio) => {
+            const logo = getImageUrl(negocio.logoUrl);
 
-            <p>
-              El cliente ve una landing seria. El dueño controla ventas y
-              comisiones. El trabajador tiene perfil y agenda. El negocio gana
-              orden y presencia.
-            </p>
-          </div>
+            return (
+              <article className="business-card" key={negocio.idNegocio}>
+                <div className="business-cover">
+                  {logo ? (
+                    <img src={logo} alt={negocio.nombre} />
+                  ) : (
+                    <Scissors size={42} className="icon-gold" />
+                  )}
+                </div>
 
-          <div className="saas2-check-list">
-            <div>
-              <CheckCircle2 size={19} />
-              Landing pública por negocio
-            </div>
-            <div>
-              <CheckCircle2 size={19} />
-              Catálogo de servicios y trabajadores
-            </div>
-            <div>
-              <CheckCircle2 size={19} />
-              Reservas con confirmación por correo
-            </div>
-            <div>
-              <CheckCircle2 size={19} />
-              Dashboard de ventas, comisiones y pagos
-            </div>
-            <div>
-              <CheckCircle2 size={19} />
-              Administración separada por negocio
-            </div>
-          </div>
+                <div className="business-info">
+                  <h3>{negocio.nombre}</h3>
+                  <p>{negocio.direccion || "Landing profesional para tu negocio"}</p>
+
+                  <a href={`/negocio/${negocio.slug}`} className="business-link">
+                    Ver landing <ArrowRight size={15} />
+                  </a>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
 
-      <section id="planes" className="saas2-section saas2-plans">
-        <div className="saas2-section-head">
-          <div>
-            <div className="saas2-eyebrow dark">
-              <Crown size={16} />
-              Planes por crecimiento
-            </div>
-            <h2>Escala según el tamaño de tu equipo</h2>
-            <p>
-              De una barbería pequeña a una marca con múltiples trabajadores.
-              Barber.pe puede crecer junto al negocio.
-            </p>
-          </div>
+      <section id="planes" className="section-padding">
+        <div className="section-header">
+          <span className="section-label">PLANES</span>
+          <h2>Planes a tu medida</h2>
+          <p>Empieza pequeño y escala cuando tu negocio crezca.</p>
         </div>
 
-        <div className="saas2-plan-grid">
-          {planes.map((plan) => (
-            <article className={`saas2-plan-card ${plan.featured ? "featured" : ""}`} key={plan.titulo}>
-              {plan.featured && <span className="saas2-plan-popular">Más recomendado</span>}
-              <small>{plan.limite}</small>
-              <h3>{plan.titulo}</h3>
-              <p>{plan.texto}</p>
+        <div className="plans-wrapper">
+          {planes.map((plan, index) => (
+            <article
+              className={`plan-card ${plan.featured ? "gold-border" : ""}`}
+              key={index}
+            >
+              {plan.featured && <span className="pop-badge">Popular</span>}
 
-              <ul>
-                {plan.features.map((feature) => (
-                  <li key={feature}>
-                    <CheckCircle2 size={16} />
+              <h4>{plan.titulo}</h4>
+              <span className="plan-limit">{plan.limite}</span>
+
+              <ul className="plan-list">
+                {plan.features.map((feature, idx) => (
+                  <li key={idx}>
+                    <CheckCircle2 size={15} className="icon-gold" />
                     {feature}
                   </li>
                 ))}
               </ul>
 
-              <a href="#demo" onClick={(e) => e.preventDefault()}>
-                Solicitar información
-                <ArrowRight size={16} />
-              </a>
+              <button
+                type="button"
+                className={plan.featured ? "btn-gold-full" : "btn-white-outline"}
+                onClick={irDemoWhatsapp}
+              >
+                Consultar
+              </button>
             </article>
           ))}
         </div>
       </section>
 
-      <section id="demo" className="saas2-final-cta">
-        <div>
-          <div className="saas2-eyebrow">
-            <MessageCircle size={16} />
-            Demo personalizada
-          </div>
-
-          <h2>Haz que tu barbería se vea como una marca premium.</h2>
-
-          <p>
-            Por ahora este botón queda preparado para conectar luego con WhatsApp,
-            formulario comercial o CRM.
-          </p>
+      <section className="section-padding bg-dark">
+        <div className="section-header">
+          <span className="section-label">FAQ</span>
+          <h2>Preguntas frecuentes</h2>
         </div>
 
-        <div className="saas2-final-actions">
-          <a href="/login" className="saas2-btn-primary">
-            Ya uso el sistema
-            <ArrowRight size={18} />
-          </a>
-
-          <a href="#demo" className="saas2-btn-secondary" onClick={(e) => e.preventDefault()}>
-            Solicitar demo
-          </a>
+        <div className="faq-wrapper">
+          {faqs.map((faq, index) => (
+            <details className="faq-item" key={index} open={index === 0}>
+              <summary>{faq.pregunta}</summary>
+              <p>{faq.respuesta}</p>
+            </details>
+          ))}
         </div>
       </section>
 
-      <footer className="saas2-footer">
-        <div>
-          <a className="saas2-brand footer" href="/">
-            barber<span>.pe</span>
-          </a>
+      <section id="demo" className="cta-section">
+        <div className="cta-content">
+          <span className="badge-gold">
+            <PhoneCall size={14} />
+            DEMO PERSONALIZADA
+          </span>
+
+          <h2>Moderniza tu barbería o salón con Barber.pe</h2>
+
           <p>
-            SaaS para digitalizar barberías, ordenar la gestión diaria y convertir
-            cada negocio en una marca pública profesional.
+            Agenda una demo y mira cómo tu negocio puede tener landing pública,
+            reservas, trabajadores, ventas, comisiones y pagos en una sola plataforma.
           </p>
-        </div>
 
-        <div className="saas2-footer-links">
-          <a href="/login">Ya uso el sistema</a>
-          <a href="#ecosistema">Negocios</a>
-          <a href="#plataforma">Plataforma</a>
-          <a href="#planes">Planes</a>
-        </div>
+          <div className="hero-btns center">
+            <button className="btn-gold" type="button" onClick={irDemoWhatsapp}>
+              Hablar por WhatsApp <ArrowRight size={18} />
+            </button>
 
-        <div className="saas2-copy">
-          © 2026 Barber.pe — Plataforma SaaS para barberías y salones.
+            <button className="btn-outline" type="button" onClick={irLogin}>
+              Acceso al sistema
+            </button>
+          </div>
         </div>
+      </section>
+
+      <footer className="footer-simple">
+        <a className="brand-logo" href="/">
+          barber<span>.pe</span>
+        </a>
+
+        <p>© 2026 Barber.pe - Software para barberías y salones de belleza.</p>
       </footer>
     </main>
   );

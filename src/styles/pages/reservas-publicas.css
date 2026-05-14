@@ -1,0 +1,29 @@
+/* ==========================================================
+   RESERVAS PÚBLICAS
+   ========================================================== */
+
+.reserva-public-card {
+  background: #ffffff;
+
+  border-radius: 28px;
+
+  border: 1px solid rgba(212, 175, 55, 0.18);
+
+  padding: 24px;
+
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+}
+
+.reserva-public-head {
+  margin-bottom: 22px;
+}
+
+.reserva-public-head h3 {
+  color: #111827;
+  font-weight: 950;
+}
+
+.reserva-public-head p {
+  color: #6b7280;
+  margin: 0;
+}

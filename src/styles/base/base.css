@@ -1,0 +1,90 @@
+/* ==========================================================
+   BASE
+   ========================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+
+  background: var(--color-page-bg);
+
+  color: var(--color-dark);
+
+  font-family: var(--font-main);
+
+  text-rendering: optimizeLegibility;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+img {
+  max-width: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+}
+
+.page-shell {
+  min-height: 100vh;
+
+  background: var(--color-page-bg);
+
+  color: var(--color-dark);
+}
+
+.container-pro {
+  width: 100%;
+  max-width: var(--container-width);
+
+  margin-inline: auto;
+
+  padding-inline: 18px;
+}
+
+.section-title {
+  color: var(--color-dark);
+
+  font-weight: 950;
+
+  margin-bottom: 8px;
+}
+
+.section-subtitle {
+  color: var(--color-muted);
+
+  margin-bottom: 0;
+}
+
+.section-spacing {
+  margin-top: 28px;
+}

@@ -1,0 +1,33 @@
+/* ==========================================================
+   PERFIL NEGOCIO
+   ========================================================== */
+
+.negocio-profile-card {
+  background: #ffffff;
+
+  border-radius: 28px;
+
+  border: 1px solid rgba(212, 175, 55, 0.18);
+
+  overflow: hidden;
+}
+
+.negocio-profile-cover {
+  height: 260px;
+  background: #111827;
+}
+
+.negocio-profile-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.negocio-profile-body {
+  padding: 24px;
+}
+
+.negocio-profile-body h2 {
+  color: #111827;
+  font-weight: 950;
+}

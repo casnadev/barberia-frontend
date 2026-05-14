@@ -390,16 +390,7 @@ function Dashboard() {
     });
   };
 
-  const irSitioPublico = () => {
-    const slug = localStorage.getItem("slugNegocio");
-
-    if (!slug) {
-      alert("No se pudo obtener el link público del negocio.");
-      return;
-    }
-
-    window.open(`/negocio/${slug}`, "_blank");
-  };
+  
 
   const cambiarMontoPago = (idTrabajador, valor) => {
     setMontosPago((prev) => ({
@@ -683,12 +674,14 @@ function Dashboard() {
             />
 
             <div className="dash-header-actions">
-              <GoldBadge>{obtenerFechaHoy()}</GoldBadge>
+              <GoldBadge>
+                {obtenerFechaHoy()} ·{" "}
+                {new Date().toLocaleTimeString("es-PE", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </GoldBadge>
 
-              <button type="button" className="btn btn-gold" onClick={irSitioPublico}>
-                <ExternalLink size={16} />
-                Ver sitio público
-              </button>
             </div>
           </div>
         </CardDark>

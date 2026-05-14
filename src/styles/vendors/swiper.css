@@ -1,0 +1,14 @@
+.landing-hero-carousel .swiper-pagination {
+  z-index: 8;
+}
+
+.landing-hero-carousel .swiper-button-next,
+.landing-hero-carousel .swiper-button-prev {
+  color: #d4af37;
+  z-index: 8;
+}
+
+.swiper-pagination-bullet,
+.landing-hero-carousel .swiper-pagination-bullet {
+  background: #d4af37 !important;
+}

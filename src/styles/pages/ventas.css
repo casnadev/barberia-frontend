@@ -1,0 +1,413 @@
+/* ==========================================================
+   VENTAS / REGISTRO / CAJA
+   ========================================================== */
+
+.ventas-page {
+  width: 100%;
+}
+
+.ventas-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 22px;
+  align-items: start;
+}
+
+.ventas-panel-card {
+  background: #ffffff;
+  border-radius: 24px;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  overflow: hidden;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
+}
+
+.ventas-panel-header {
+  padding: 22px 24px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+
+  background:
+    radial-gradient(circle at top right, rgba(212, 175, 55, 0.08), transparent 34%),
+    #fffdf7;
+}
+
+.ventas-panel-title {
+  margin: 0;
+  color: #111827;
+  font-size: 1.08rem;
+  font-weight: 950;
+}
+
+.ventas-panel-subtitle {
+  color: #6b7280;
+  margin-top: 6px;
+  font-size: 0.9rem;
+}
+
+.ventas-panel-body {
+  padding: 22px;
+}
+
+.venta-servicios-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.venta-servicio-card {
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  border-radius: 22px;
+  overflow: hidden;
+  cursor: pointer;
+
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease,
+    border-color 0.22s ease;
+}
+
+.venta-servicio-card:hover {
+  transform: translateY(-3px);
+
+  border-color: rgba(212, 175, 55, 0.42);
+
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.1);
+}
+
+.venta-servicio-img,
+.venta-servicio-placeholder {
+  width: 100%;
+  height: 190px;
+}
+
+.venta-servicio-img {
+  object-fit: cover;
+  display: block;
+}
+
+.venta-servicio-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background:
+    radial-gradient(circle at top, rgba(212, 175, 55, 0.18), transparent 50%),
+    #111827;
+
+  color: #d4af37;
+}
+
+.venta-servicio-info {
+  padding: 16px;
+}
+
+.venta-servicio-info h5 {
+  color: #111827;
+  font-weight: 950;
+  margin-bottom: 7px;
+}
+
+.venta-servicio-info p {
+  color: #6b7280;
+  line-height: 1.5;
+  font-size: 0.88rem;
+  margin-bottom: 12px;
+}
+
+.venta-servicio-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.venta-servicio-price {
+  color: #d4af37;
+  font-weight: 950;
+  font-size: 1rem;
+}
+
+.venta-servicio-tag {
+  background: rgba(212, 175, 55, 0.14);
+  color: #8b6f10;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.venta-trabajadores-carousel {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+}
+
+.venta-trabajador-card {
+  min-width: 150px;
+
+  background: #ffffff;
+
+  border: 1px solid rgba(212, 175, 55, 0.16);
+
+  border-radius: 22px;
+
+  padding: 16px;
+
+  text-align: center;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.venta-trabajador-card:hover {
+  transform: translateY(-2px);
+
+  border-color: rgba(212, 175, 55, 0.4);
+
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.venta-trabajador-card.selected {
+  border: 2px solid #d4af37;
+  background: #fffdf5;
+}
+
+.venta-trabajador-photo,
+.venta-trabajador-placeholder {
+  width: 72px;
+  height: 72px;
+
+  border-radius: 50%;
+
+  margin: 0 auto 12px;
+}
+
+.venta-trabajador-photo {
+  object-fit: cover;
+  display: block;
+}
+
+.venta-trabajador-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(212, 175, 55, 0.16);
+
+  color: #d4af37;
+
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.venta-trabajador-card h6 {
+  margin: 0;
+  color: #111827;
+  font-weight: 900;
+}
+
+.venta-trabajador-card p {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+
+.venta-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  background: rgba(0, 0, 0, 0.7);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 16px;
+}
+
+.venta-modal {
+  width: 100%;
+  max-width: 980px;
+  max-height: 92vh;
+
+  overflow-y: auto;
+
+  background: #f8fafc;
+
+  border-radius: 28px;
+
+  border: 1px solid rgba(212, 175, 55, 0.18);
+
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.34);
+
+  padding: 24px;
+}
+
+.venta-modal-main {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 24px;
+}
+
+.venta-modal-resumen-card {
+  background: #ffffff;
+
+  border-radius: 22px;
+
+  border: 1px solid rgba(212, 175, 55, 0.14);
+
+  padding: 20px;
+}
+
+.venta-modal-resumen-card h4 {
+  color: #111827;
+  font-weight: 950;
+  margin-bottom: 18px;
+}
+
+.venta-resumen-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 14px;
+
+  margin-bottom: 14px;
+}
+
+.venta-resumen-row span {
+  color: #6b7280;
+  font-weight: 700;
+}
+
+.venta-resumen-row b {
+  color: #111827;
+  font-weight: 950;
+}
+
+.venta-total-row {
+  border-top: 1px solid rgba(212, 175, 55, 0.14);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.venta-total-row b {
+  color: #d4af37;
+  font-size: 1.25rem;
+}
+
+.venta-cantidad-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.venta-cantidad-btn {
+  width: 36px;
+  height: 36px;
+
+  border-radius: 12px;
+
+  border: none;
+
+  background: rgba(212, 175, 55, 0.14);
+
+  color: #8b6f10;
+
+  font-weight: 900;
+}
+
+.venta-cantidad-input {
+  width: 70px;
+  text-align: center;
+}
+
+.venta-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.venta-actions .btn {
+  flex: 1;
+}
+
+.venta-empty {
+  min-height: 260px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+
+  border-radius: 22px;
+
+  border: 1px dashed rgba(212, 175, 55, 0.34);
+
+  background: rgba(212, 175, 55, 0.05);
+
+  color: #6b7280;
+
+  font-weight: 800;
+}
+
+@media (max-width: 1100px) {
+  .ventas-grid,
+  .venta-modal-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .venta-servicios-grid {
+    display: flex;
+    overflow-x: auto;
+    gap: 16px;
+
+    scroll-snap-type: x mandatory;
+
+    padding-bottom: 12px;
+  }
+
+  .venta-servicio-card {
+    flex: 0 0 85%;
+    max-width: 85%;
+
+    scroll-snap-align: start;
+  }
+
+  .venta-modal {
+    padding: 18px;
+  }
+
+  .venta-actions {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 576px) {
+  .venta-servicio-card {
+    flex-basis: 90%;
+    max-width: 90%;
+  }
+
+  .ventas-panel-header,
+  .ventas-panel-body {
+    padding: 18px;
+  }
+
+  .venta-modal {
+    border-radius: 24px 24px 0 0;
+
+    max-height: 90vh;
+
+    align-self: flex-end;
+  }
+}

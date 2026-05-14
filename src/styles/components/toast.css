@@ -1,0 +1,55 @@
+/* ==========================================================
+   TOAST
+   ========================================================== */
+
+.toast-pro {
+  position: fixed;
+
+  top: 20px;
+  right: 20px;
+
+  max-width: 340px;
+
+  padding: 15px 20px;
+
+  border-radius: 14px;
+
+  color: #ffffff;
+
+  font-weight: 800;
+
+  z-index: 3000;
+
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.28);
+
+  animation: fadeIn 0.3s ease;
+}
+
+.toast-success {
+  background: rgba(22, 163, 74, 0.96);
+  border: 1px solid #16a34a;
+}
+
+.toast-error {
+  background: rgba(220, 38, 38, 0.96);
+  border: 1px solid #dc2626;
+}
+
+.toast-info {
+  background: rgba(37, 99, 235, 0.96);
+  border: 1px solid #2563eb;
+}
+
+.toast-warning {
+  background: rgba(212, 175, 55, 0.96);
+  border: 1px solid #d4af37;
+  color: #111827;
+}
+
+@media (max-width: 768px) {
+  .toast-pro {
+    left: 16px;
+    right: 16px;
+    max-width: none;
+  }
+}

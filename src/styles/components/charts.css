@@ -1,0 +1,47 @@
+/* ==========================================================
+   CHARTS
+   ========================================================== */
+
+.chart-card {
+  background: #ffffff;
+
+  border-radius: 26px;
+
+  border: 1px solid rgba(212, 175, 55, 0.18);
+
+  padding: 24px;
+
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+
+  overflow: hidden;
+}
+
+.chart-card.compact {
+  padding: 18px;
+}
+
+.chart-title {
+  color: #111827;
+  font-weight: 950;
+  margin-bottom: 18px;
+}
+
+.chart-subtitle {
+  color: var(--color-muted);
+  margin-top: -10px;
+  margin-bottom: 18px;
+  font-size: 0.9rem;
+}
+
+.chart-container {
+  min-height: 340px;
+  width: 100%;
+}
+
+.chart-container.sm {
+  min-height: 220px;
+}
+
+.chart-container.lg {
+  min-height: 440px;
+}

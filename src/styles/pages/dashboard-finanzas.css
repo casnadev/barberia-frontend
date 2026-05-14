@@ -1,0 +1,65 @@
+/* ==========================================================
+   DASHBOARD FINANZAS
+   ========================================================== */
+
+.finanzas-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.finanza-card {
+  background: #ffffff;
+  border-radius: 22px;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  padding: 18px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.finanza-card span {
+  display: block;
+  color: #6b7280;
+  font-size: 0.8rem;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.finanza-card b {
+  color: #111827;
+  font-size: 1.55rem;
+  font-weight: 950;
+}
+
+.finanza-card.success b {
+  color: #16a34a;
+}
+
+.finanza-card.warning b {
+  color: #d4af37;
+}
+
+.finanza-card.danger b {
+  color: #dc2626;
+}
+
+@media (max-width: 1200px) {
+  .finanzas-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .finanzas-grid {
+    display: flex;
+    overflow-x: auto;
+    gap: 14px;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 12px;
+  }
+
+  .finanza-card {
+    flex: 0 0 82%;
+    max-width: 82%;
+    scroll-snap-align: start;
+  }
+}

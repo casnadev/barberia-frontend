@@ -116,6 +116,13 @@ function ModalReserva({ abierto, reserva, onClose, onAccion, procesando }) {
             </div>
           </div>
 
+          {reserva.estado === "Cancelada" && reserva.motivoCancelacionCliente && (
+            <div className="admin-agenda-cancel-box">
+              <span>Motivo de cancelación</span>
+              <b>{reserva.motivoCancelacionCliente}</b>
+            </div>
+          )}
+
           <div className="admin-agenda-modal-actions">
             {reserva.estado === "Pendiente" && (
               <>
@@ -500,6 +507,12 @@ export default function AgendaReservasAdmin() {
           </div>
         )}
 
+        {reserva.estado === "Cancelada" && reserva.motivoCancelacionCliente && (
+          <div className="admin-agenda-cancel-mini">
+            ⚠ {reserva.motivoCancelacionCliente}
+          </div>
+        )}
+
         <div className="admin-agenda-reserva-bottom">
           <span className={`admin-agenda-status ${estadoClass(reserva.estado)}`}>
             {reserva.estado || "Pendiente"}
@@ -642,7 +655,7 @@ export default function AgendaReservasAdmin() {
               </p>
             </div>
 
-            <div className="admin-agenda-date-controls">
+            <div className="admin-agenda-date-controls admin-agenda-date-controls-row">
               <button className="btn btn-dark-outline" onClick={() => cambiarDia(-1)}>
                 <ChevronLeft size={16} />
               </button>

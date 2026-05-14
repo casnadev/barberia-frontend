@@ -1,0 +1,60 @@
+/* ==========================================================
+   HORARIOS
+   ========================================================== */
+
+.horarios-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.horario-card {
+  background: #ffffff;
+  border-radius: 22px;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  padding: 18px;
+  text-align: center;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.horario-card h5 {
+  color: #111827;
+  font-weight: 950;
+  margin-bottom: 12px;
+}
+
+.horario-card span {
+  color: #6b7280;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.horario-card.active {
+  border-color: rgba(22, 163, 74, 0.4);
+  background: #f0fdf4;
+}
+
+.horario-card.closed {
+  border-color: rgba(220, 38, 38, 0.25);
+  background: #fef2f2;
+}
+
+@media (max-width: 1200px) {
+  .horarios-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .horarios-grid {
+    display: flex;
+    overflow-x: auto;
+    gap: 14px;
+    scroll-snap-type: x mandatory;
+  }
+
+  .horario-card {
+    flex: 0 0 72%;
+    max-width: 72%;
+  }
+}

@@ -1,0 +1,51 @@
+/* ==========================================================
+   NOTIFICACIONES
+   ========================================================== */
+
+.notificaciones-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.notificacion-card {
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  padding: 18px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.notificacion-card.unread {
+  border-color: rgba(212, 175, 55, 0.4);
+  background: #fffdf7;
+}
+
+.notificacion-info h5 {
+  color: #111827;
+  font-weight: 950;
+  margin: 0 0 6px;
+}
+
+.notificacion-info p {
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.55;
+}
+
+.notificacion-time {
+  color: #9ca3af;
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .notificacion-card {
+    flex-direction: column;
+  }
+}

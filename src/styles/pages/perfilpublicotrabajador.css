@@ -1,0 +1,588 @@
+:root {
+  --gold: #d4af37;
+  --gold-light: #f3d56b;
+  --gold-dark: #bd8f2f;
+  --cream: #fffdf5;
+  --dark: #111827;
+  --muted: #6b7280;
+  --border: rgba(212, 175, 55, 0.18);
+  --shadow: 0 12px 28px rgba(17, 24, 39, 0.08);
+  --shadow-lg: 0 24px 60px rgba(17, 24, 39, 0.18);
+}
+
+.perfil-publico-page {
+  min-height: 100vh;
+  background: #ffffff;
+  color: var(--dark);
+  padding-bottom: 96px;
+}
+
+/* HEADER REUTILIZABLE */
+
+.perfil-publico-desktop-public-header {
+  display: none;
+}
+
+/* MOBILE HEADER */
+
+.perfil-publico-mobile-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  height: 76px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.perfil-publico-mobile-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--cream);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--gold-dark);
+  flex-shrink: 0;
+}
+
+.perfil-publico-mobile-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 5px;
+}
+
+.perfil-publico-mobile-search {
+  flex: 1;
+  height: 52px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px;
+  color: #667085;
+  font-weight: 850;
+}
+
+.perfil-publico-mobile-search span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.perfil-publico-main {
+  padding: 14px 18px;
+}
+
+/* HERO PREMIUM */
+
+.perfil-publico-pro-hero {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  box-shadow: var(--shadow);
+}
+
+.perfil-publico-pro-photo-area {
+  position: relative;
+  min-height: 260px;
+  padding: 28px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.perfil-publico-pro-photo-area::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(180deg, rgba(17, 24, 39, 0.18), rgba(17, 24, 39, 0.78)),
+    var(--perfil-bg);
+  background-size: cover;
+  background-position: center;
+  filter: blur(8px) scale(1.08);
+  transform: scale(1.06);
+}
+
+.perfil-publico-pro-photo {
+  position: relative;
+  z-index: 2;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  border: 7px solid rgba(255, 255, 255, 0.92);
+  outline: 4px solid rgba(212, 175, 55, 0.55);
+  overflow: hidden;
+  background: #111827;
+  color: var(--gold);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  box-shadow: 0 24px 55px rgba(0, 0, 0, 0.35);
+}
+
+.perfil-publico-pro-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.perfil-publico-pro-info {
+  padding: 22px 20px 24px;
+  text-align: center;
+}
+
+.perfil-publico-pro-kicker {
+  display: inline-flex;
+  background: var(--cream);
+  color: var(--gold-dark);
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.74rem;
+  font-weight: 950;
+  margin-bottom: 10px;
+}
+
+.perfil-publico-pro-info h1 {
+  margin: 0;
+  color: var(--dark);
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 950;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.perfil-publico-pro-subtitle {
+  margin: 8px 0 10px;
+  color: #344054;
+  font-size: 0.98rem;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.perfil-publico-pro-description {
+  margin: 0 auto 14px;
+  max-width: 520px;
+  color: #667085;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  text-align: center;
+
+  display: -webkit-box;
+  line-clamp: 3;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.perfil-publico-pro-rating {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--dark);
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+.perfil-publico-pro-rating div {
+  display: inline-flex;
+  gap: 2px;
+  color: var(--gold-dark);
+}
+
+.perfil-publico-pro-rating strong {
+  font-weight: 950;
+}
+
+.perfil-publico-pro-rating span {
+  color: #667085;
+}
+
+.perfil-publico-pro-specialties {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 18px;
+}
+
+.perfil-publico-pro-specialties article {
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  border-radius: 16px;
+  padding: 10px 6px;
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
+  text-align: center;
+}
+
+.perfil-publico-pro-specialties svg {
+  color: var(--gold-dark);
+  margin-bottom: 6px;
+}
+
+.perfil-publico-pro-specialties h3 {
+  margin: 0 0 4px;
+  color: var(--dark);
+  font-size: 0.58rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  line-height: 1.05;
+}
+
+.perfil-publico-pro-specialties p {
+  margin: 0;
+  color: #475467;
+  font-size: 0.62rem;
+  line-height: 1.15;
+
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.perfil-publico-pro-cta {
+  width: 100%;
+  min-height: 40px;
+  border: none;
+  border-radius: 13px;
+  background: linear-gradient(135deg, var(--gold-light), var(--gold));
+  color: var(--dark);
+  font-size: 0.82rem;
+  font-weight: 950;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 14px 28px rgba(212, 175, 55, 0.28);
+}
+
+/* SECTIONS */
+
+.perfil-publico-card {
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.perfil-publico-section-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.perfil-publico-section-head h2 {
+  margin: 0 0 4px;
+  color: var(--dark);
+  font-size: 1.45rem;
+  line-height: 1.05;
+  font-weight: 950;
+}
+
+.perfil-publico-section-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.perfil-publico-section-head > span,
+.perfil-publico-section-head > a {
+  color: var(--gold-dark);
+  text-decoration: none;
+  font-weight: 950;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.perfil-publico-work-card {
+  margin-top: 18px;
+  padding: 18px;
+}
+
+.perfil-publico-services-card {
+  margin-top: 22px;
+  padding: 20px 0 8px;
+  border: none;
+  border-top: 1px solid rgba(212, 175, 55, 0.18);
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.perfil-publico-work-row,
+.perfil-publico-services-row {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  scroll-snap-type: x mandatory;
+}
+
+.perfil-publico-work-item {
+  flex: 0 0 178px;
+  border: none;
+  background: #ffffff;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.1);
+  text-align: left;
+  padding: 0;
+  scroll-snap-align: start;
+}
+
+.perfil-publico-work-item div {
+  height: 136px;
+  background: #111827;
+  display: grid;
+  place-items: center;
+  color: var(--gold);
+}
+
+.perfil-publico-work-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.perfil-publico-work-item span {
+  display: block;
+  padding: 10px;
+  color: var(--dark);
+  font-size: 0.78rem;
+  font-weight: 850;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.perfil-publico-service-mini {
+  width: 88px;
+  flex: 0 0 88px;
+  border: none;
+  background: transparent;
+  text-align: center;
+  padding: 0;
+  scroll-snap-align: start;
+}
+
+.perfil-publico-service-mini div {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 8px;
+  border-radius: 50%;
+  border: 3px solid var(--gold);
+  background: var(--cream);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  color: var(--gold-dark);
+}
+
+.perfil-publico-service-mini img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.perfil-publico-service-mini strong {
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  min-height: 34px;
+  overflow: hidden;
+  color: var(--dark);
+  font-size: 0.74rem;
+  line-height: 1.15;
+  font-weight: 950;
+}
+
+.perfil-publico-empty,
+.perfil-publico-loading,
+.perfil-publico-error {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: var(--muted);
+  font-weight: 750;
+  padding: 20px;
+}
+
+.perfil-publico-empty svg,
+.perfil-publico-loading svg {
+  color: var(--gold);
+}
+
+/* MODAL RESERVA */
+
+.perfil-reserva-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  background: rgba(17, 24, 39, 0.72);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+}
+
+.perfil-reserva-modal {
+  width: calc(100% - 24px);
+  max-width: 430px;
+  max-height: 92vh;
+  margin: 0 auto;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 28px 28px 0 0;
+  padding: 22px 18px 28px;
+}
+
+/* ... RESTO DEL CSS DE MODALES, LOGIN Y PREVIEW SE MANTIENE IGUAL ... */
+
+/* DESKTOP */
+
+@media (min-width: 768px) {
+  .perfil-publico-page {
+    background:
+      radial-gradient(circle at top left, rgba(212, 175, 55, 0.12), transparent 32%),
+      #f5f7fb;
+    padding-bottom: 0;
+  }
+
+  .perfil-publico-desktop-public-header {
+    display: block;
+  }
+
+  .perfil-publico-mobile-header {
+    display: none;
+  }
+
+  .perfil-publico-main {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 40px 32px 36px;
+    background: #ffffff;
+    border-left: 1px solid rgba(212, 175, 55, 0.16);
+    border-right: 1px solid rgba(212, 175, 55, 0.16);
+  }
+
+  .perfil-publico-pro-hero {
+    max-width: 980px;
+    margin: 0 auto;
+  }
+
+  .perfil-publico-pro-photo-area {
+    min-height: 320px;
+  }
+
+  .perfil-publico-pro-photo {
+    width: 190px;
+    height: 190px;
+  }
+
+  .perfil-publico-pro-info {
+    padding: 30px 44px 34px;
+  }
+
+  .perfil-publico-pro-info h1 {
+    font-size: 2.8rem;
+  }
+
+  .perfil-publico-pro-description {
+    font-size: 0.95rem;
+  }
+
+  .perfil-publico-pro-specialties {
+    max-width: 720px;
+    margin: 0 auto 18px;
+    gap: 12px;
+  }
+
+  .perfil-publico-pro-specialties article {
+    padding: 12px;
+  }
+
+  .perfil-publico-pro-specialties h3 {
+    font-size: 0.9rem;
+  }
+
+  .perfil-publico-pro-specialties p {
+    font-size: 0.78rem;
+  }
+
+  .perfil-publico-pro-cta {
+    max-width: 460px;
+    min-height: 54px;
+    font-size: 1rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .perfil-publico-work-row {
+    gap: 18px;
+  }
+
+  .perfil-publico-work-item {
+    flex-basis: 240px;
+  }
+
+  .perfil-publico-work-item div {
+    height: 170px;
+  }
+
+  .perfil-publico-service-mini {
+    width: 104px;
+    flex-basis: 104px;
+  }
+
+  .perfil-reserva-overlay {
+    align-items: center;
+    padding: 24px;
+  }
+
+  .perfil-reserva-modal {
+    max-width: 850px;
+    border-radius: 28px;
+    box-shadow: 0 28px 70px rgba(17, 24, 39, 0.24);
+  }
+}
+
+@media (max-width: 380px) {
+  .perfil-publico-main {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .perfil-publico-pro-info h1 {
+    font-size: 1.65rem;
+  }
+
+  .perfil-publico-section-head h2 {
+    font-size: 1.28rem;
+  }
+}

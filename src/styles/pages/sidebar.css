@@ -1,0 +1,62 @@
+/* ==========================================================
+   SIDEBAR
+   ========================================================== */
+
+.sidebar-admin {
+  width: 280px;
+  min-height: 100vh;
+
+  background: #111827;
+
+  border-right: 1px solid rgba(212, 175, 55, 0.12);
+
+  position: sticky;
+  top: 0;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-brand {
+  padding: 22px;
+
+  border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+
+  color: #ffffff;
+  font-weight: 950;
+  font-size: 1.25rem;
+}
+
+.sidebar-menu {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 14px 16px;
+
+  border-radius: 16px;
+
+  color: #d1d5db;
+  text-decoration: none;
+
+  font-weight: 800;
+
+  transition: 0.22s ease;
+}
+
+.sidebar-link:hover {
+  background: rgba(212, 175, 55, 0.12);
+  color: #ffffff;
+}
+
+.sidebar-link.active {
+  background: #d4af37;
+  color: #111827;
+}
