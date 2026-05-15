@@ -807,3 +807,53 @@
     height: 66px;
   }
 }
+/* =========================================================
+   FECHA PREMIUM - MODAL RESERVA
+========================================================= */
+
+.modal-booking-form input[type="date"] {
+  height: 52px !important;
+  min-height: 52px !important;
+
+  border: none !important;
+  border-radius: 16px !important;
+
+  background: linear-gradient(135deg, #d4af37, #c49a19) !important;
+
+  color: #ffffff !important;
+
+  font-size: 0.92rem !important;
+  font-weight: 950 !important;
+
+  text-align: center;
+
+  padding: 0 42px !important;
+
+  box-shadow: 0 10px 24px rgba(212, 175, 55, 0.22);
+}
+
+.modal-booking-form input[type="date"]:focus {
+  border: none !important;
+  box-shadow:
+    0 10px 24px rgba(212, 175, 55, 0.22),
+    0 0 0 4px rgba(212, 175, 55, 0.16) !important;
+}
+
+.modal-booking-form input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.95;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .modal-booking-form input[type="date"] {
+    height: 46px !important;
+    min-height: 46px !important;
+
+    border-radius: 14px !important;
+
+    font-size: 0.78rem !important;
+
+    padding: 0 34px !important;
+  }
+}

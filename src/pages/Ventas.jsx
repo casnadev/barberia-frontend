@@ -3,12 +3,16 @@ import API_BASE from "../services/api";
 import authFetch from "../services/authFetch";
 
 import CardDark from "../components/ui/CardDark";
-import PageHeader from "../components/ui/PageHeader";
 import GoldBadge from "../components/ui/GoldBadge";
 import TableDark from "../components/ui/TableDark";
 import DateFilter from "../components/ui/DateFilter";
 import Toast from "../components/ui/Toast";
 import AnimatedNumber from "../components/ui/AnimatedNumber";
+
+import { exportarPDF } from "../utils/exportPdf";
+import { exportarExcel } from "../utils/exportExcel";
+
+import { FaFilePdf, FaFileExcel } from "react-icons/fa";
 
 import {
   ResponsiveContainer,
@@ -18,21 +22,20 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   AreaChart,
   Area,
 } from "recharts";
 
 import {
   Banknote,
-  BriefcaseBusiness,
   CalendarDays,
+  ChevronDown,
   Eraser,
-  Filter,
   ReceiptText,
   Scissors,
   TrendingUp,
   UserRound,
+  WalletCards,
 } from "lucide-react";
 
 function Ventas() {
@@ -50,31 +53,26 @@ function Ventas() {
   const [filtroServicio, setFiltroServicio] = useState("");
   const [filtroRapidoActivo, setFiltroRapidoActivo] = useState("");
   const [limpiandoActivo, setLimpiandoActivo] = useState(false);
+
   const [loading, setLoading] = useState(true);
+  const [limiteDetalle, setLimiteDetalle] = useState(10);
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
 
   const [esMobile, setEsMobile] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth < 768 : false
   );
 
   useEffect(() => {
-    const onResize = () => {
-      setEsMobile(window.innerWidth < 768);
-    };
-
+    const onResize = () => setEsMobile(window.innerWidth < 768);
     window.addEventListener("resize", onResize);
-
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
   const chartColors = {
     gold: "#d4af37",
-    goldSoft: "#f0cf73",
     green: "#16a34a",
-    purple: "#8b5cf6",
-    blue: "#2563eb",
     text: "#111827",
-    muted: "#6b7280",
-    axis: "#6b7280",
+    axis: "#667085",
     grid: "rgba(15,23,42,0.08)",
     bg: "#ffffff",
     border: "rgba(212,175,55,0.22)",
@@ -90,14 +88,6 @@ function Ventas() {
     },
     labelStyle: { color: "#8b6f10", fontWeight: 900 },
     itemStyle: { color: chartColors.text, fontWeight: 700 },
-  };
-
-  const legendStyle = {
-    wrapperStyle: {
-      color: chartColors.text,
-      paddingTop: "10px",
-      fontWeight: 700,
-    },
   };
 
   const leerJsonSeguro = async (res, valorDefecto) => {
@@ -127,19 +117,19 @@ function Ventas() {
 
         if (!resVentas || !resVentas.ok) {
           setTipoMensaje("error");
-          setError(dataVentas.mensaje || "Error al cargar ventas");
+          setError(dataVentas?.mensaje || "Error al cargar ventas");
           return;
         }
 
         if (!resTrabajadores || !resTrabajadores.ok) {
           setTipoMensaje("error");
-          setError(dataTrabajadores.mensaje || "Error al cargar trabajadores");
+          setError(dataTrabajadores?.mensaje || "Error al cargar trabajadores");
           return;
         }
 
         if (!resServicios || !resServicios.ok) {
           setTipoMensaje("error");
-          setError(dataServicios.mensaje || "Error al cargar servicios");
+          setError(dataServicios?.mensaje || "Error al cargar servicios");
           return;
         }
 
@@ -165,25 +155,27 @@ function Ventas() {
     )}-${String(fecha.getDate()).padStart(2, "0")}`;
   };
 
+  const resetDetalle = () => setLimiteDetalle(10);
+
   const aplicarFiltroHoy = () => {
     const hoy = obtenerFechaLocal(new Date());
-
     setFechaDesde(hoy);
     setFechaHasta(hoy);
     setFiltroRapidoActivo("hoy");
+    resetDetalle();
   };
 
   const aplicarFiltroSemana = () => {
     const hoy = new Date();
     const dia = hoy.getDay();
     const ajuste = dia === 0 ? 6 : dia - 1;
-
     const lunes = new Date(hoy);
     lunes.setDate(hoy.getDate() - ajuste);
 
     setFechaDesde(obtenerFechaLocal(lunes));
     setFechaHasta(obtenerFechaLocal(hoy));
     setFiltroRapidoActivo("semana");
+    resetDetalle();
   };
 
   const aplicarFiltroMes = () => {
@@ -193,6 +185,22 @@ function Ventas() {
     setFechaDesde(obtenerFechaLocal(primerDia));
     setFechaHasta(obtenerFechaLocal(hoy));
     setFiltroRapidoActivo("mes");
+    resetDetalle();
+  };
+
+  const limpiarFiltros = () => {
+    setFechaDesde("");
+    setFechaHasta("");
+    setFiltroTrabajador("");
+    setFiltroServicio("");
+    setFiltroRapidoActivo("");
+    resetDetalle();
+
+    setLimpiandoActivo(true);
+    setTimeout(() => setLimpiandoActivo(false), 400);
+
+    setTipoMensaje("info");
+    setMensaje("Filtros restablecidos");
   };
 
   const ventasFiltradas = useMemo(() => {
@@ -215,6 +223,13 @@ function Ventas() {
       return true;
     });
   }, [ventas, fechaDesde, fechaHasta, filtroTrabajador, filtroServicio]);
+
+  const ventasDetalleVisible = useMemo(
+    () => ventasFiltradas.slice(0, limiteDetalle),
+    [ventasFiltradas, limiteDetalle]
+  );
+
+  const hayMasDetalle = ventasFiltradas.length > limiteDetalle;
 
   const totalFiltrado = useMemo(
     () => ventasFiltradas.reduce((acc, v) => acc + Number(v.total || 0), 0),
@@ -288,46 +303,76 @@ function Ventas() {
 
     ventasFiltradas.forEach((v) => {
       const fecha = new Date(v.fechaVenta);
-      const key = fecha.toLocaleDateString("es-PE");
+      const sortKey = fecha.toISOString().slice(0, 10);
+      const label = fecha.toLocaleDateString("es-PE", {
+        day: "2-digit",
+        month: "2-digit",
+      });
 
-      const actual = mapa.get(key) || {
-        fecha: key,
+      const actual = mapa.get(sortKey) || {
+        fecha: label,
+        sortKey,
         total: 0,
       };
 
       actual.total += Number(v.subtotal || 0);
-      mapa.set(key, actual);
+      mapa.set(sortKey, actual);
     });
 
-    return Array.from(mapa.values()).sort((a, b) => {
-      const [da, ma, ya] = a.fecha.split("/");
-      const [db, mb, yb] = b.fecha.split("/");
-      return new Date(`${ya}-${ma}-${da}`) - new Date(`${yb}-${mb}-${db}`);
-    });
+    return Array.from(mapa.values()).sort(
+      (a, b) => new Date(a.sortKey) - new Date(b.sortKey)
+    );
   }, [ventasFiltradas]);
 
-  const limpiarFiltros = () => {
-    setFechaDesde("");
-    setFechaHasta("");
-    setFiltroTrabajador("");
-    setFiltroServicio("");
-    setFiltroRapidoActivo("");
+  const agruparTopConOtros = (data, keyName, valueName, limite = 5) => {
+    if (!Array.isArray(data)) return [];
 
-    setLimpiandoActivo(true);
+    const ordenado = [...data].sort(
+      (a, b) => Number(b[valueName] || 0) - Number(a[valueName] || 0)
+    );
 
-    setTimeout(() => {
-      setLimpiandoActivo(false);
-    }, 400);
+    const top = ordenado.slice(0, limite);
+    const resto = ordenado.slice(limite);
 
-    setTipoMensaje("info");
-    setMensaje("Filtros restablecidos");
+    if (resto.length === 0) return top;
+
+    const totalOtros = resto.reduce(
+      (acc, item) => acc + Number(item[valueName] || 0),
+      0
+    );
+
+    return [
+      ...top,
+      {
+        [keyName]: "Otros",
+        [valueName]: totalOtros,
+      },
+    ];
   };
+
+  const ventasPorTrabajadorChart = useMemo(() => {
+    return agruparTopConOtros(
+      ventasPorTrabajador,
+      "trabajador",
+      "totalGenerado",
+      5
+    );
+  }, [ventasPorTrabajador]);
+
+  const comisionesPorTrabajadorChart = useMemo(() => {
+    return agruparTopConOtros(
+      comisionesPorTrabajador,
+      "trabajador",
+      "totalComision",
+      5
+    );
+  }, [comisionesPorTrabajador]);
 
   const periodoTexto = useMemo(() => {
     if (fechaDesde && fechaHasta) return `${fechaDesde} → ${fechaHasta}`;
     if (fechaDesde) return `Desde ${fechaDesde}`;
     if (fechaHasta) return `Hasta ${fechaHasta}`;
-    return "Todos los registros";
+    return "Todos";
   }, [fechaDesde, fechaHasta]);
 
   const servicioTop = useMemo(() => {
@@ -343,83 +388,224 @@ function Ventas() {
       .sort((a, b) => b.total - a.total)[0];
   }, [ventasFiltradas]);
 
-  const KpiAnalisis = ({
-    title,
-    value,
-    note,
-    icon: KpiIcon,
-    variant = "gold",
-    money = true,
-  }) => {
+  const formatearFecha = (fecha) => {
+    if (!fecha) return "-";
 
-    const IconComponent = KpiIcon;
+    return new Date(fecha).toLocaleString("es-PE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const exportarVentasPDF = async () => {
+    if (ventasFiltradas.length === 0) {
+      setTipoMensaje("error");
+      setError("No hay ventas para exportar.");
+      return;
+    }
+
+    const columnas = [
+      "Fecha",
+      "Servicio",
+      "Trabajador",
+      "Cantidad",
+      "Subtotal",
+      "Comisión",
+      "Total",
+    ];
+
+    const filas = ventasFiltradas.map((v) => [
+      formatearFecha(v.fechaVenta),
+      v.servicio,
+      v.trabajador || "Sin trabajador",
+      v.cantidad,
+      `S/ ${Number(v.subtotal || 0).toFixed(2)}`,
+      `S/ ${Number(v.montoComisionCalculado || 0).toFixed(2)}`,
+      `S/ ${Number(v.total || 0).toFixed(2)}`,
+    ]);
+
+    await exportarPDF({
+      titulo: "Reporte de Ventas",
+      columnas,
+      filas,
+      nombreArchivo: "Reporte_Ventas",
+    });
+
+    setTipoMensaje("success");
+    setMensaje("PDF generado correctamente.");
+  };
+
+  const exportarVentasExcel = async () => {
+    if (ventasFiltradas.length === 0) {
+      setTipoMensaje("error");
+      setError("No hay ventas para exportar.");
+      return;
+    }
+
+    const columnas = [
+      { header: "Fecha", key: "fecha", width: 24 },
+      { header: "Servicio", key: "servicio", width: 30 },
+      { header: "Trabajador", key: "trabajador", width: 28 },
+      { header: "Cantidad", key: "cantidad", width: 12 },
+      { header: "Subtotal", key: "subtotal", width: 16 },
+      { header: "Comisión", key: "comision", width: 16 },
+      { header: "Total", key: "total", width: 16 },
+    ];
+
+    const filas = ventasFiltradas.map((v) => ({
+      fecha: formatearFecha(v.fechaVenta),
+      servicio: v.servicio,
+      trabajador: v.trabajador || "Sin trabajador",
+      cantidad: v.cantidad,
+      subtotal: Number(v.subtotal || 0).toFixed(2),
+      comision: Number(v.montoComisionCalculado || 0).toFixed(2),
+      total: Number(v.total || 0).toFixed(2),
+    }));
+
+    await exportarExcel({
+      titulo: "Reporte de Ventas",
+      columnas,
+      filas,
+      nombreArchivo: "Reporte_Ventas",
+      nombreHoja: "Ventas",
+    });
+
+    setTipoMensaje("success");
+    setMensaje("Excel generado correctamente.");
+  };
+
+  const BotonVerMas = () => {
+    if (!hayMasDetalle) return null;
 
     return (
-      <CardDark className={`ventas-kpi-card ${variant}`}>
+      <div className="ventas-load-more">
+        <button
+          type="button"
+          className="btn btn-dark-outline"
+          onClick={() => setLimiteDetalle((prev) => prev + 10)}
+        >
+          Ver más movimientos
+        </button>
 
-        <div className="ventas-kpi-icon">
-          {IconComponent && <IconComponent size={22} />}
-        </div>
-
-        <p>{title}</p>
-
-        <h2>
-          {money ? (
-            <AnimatedNumber
-              value={Number(value || 0)}
-              prefix="S/ "
-              decimals={2}
-            />
-          ) : (
-            <AnimatedNumber
-              value={Number(value || 0)}
-              decimals={0}
-            />
-          )}
-        </h2>
-
-        <span>{note}</span>
-
-      </CardDark>
+        <span>
+          {ventasDetalleVisible.length} de {ventasFiltradas.length}
+        </span>
+      </div>
     );
   };
 
   return (
     <div className="page-shell ventas-page">
       <div className="container-fluid py-4">
-        <CardDark className="ventas-header-card mb-4">
-          <div className="ventas-header-row">
-            <PageHeader
-              title="Análisis de Ventas"
-              subtitle="Analiza ventas realizadas desde reservas atendidas, servicios manuales y rendimiento del negocio."
-            />
-
-            <div className="ventas-header-actions">
-              <GoldBadge>{periodoTexto}</GoldBadge>
-              <GoldBadge>{ventasFiltradas.length} registros</GoldBadge>
-            </div>
+        <section className="ventas-topbar">
+          <div>
+            <h1>Ventas</h1>
+            <p>Resumen financiero y movimientos del negocio.</p>
           </div>
-        </CardDark>
 
-        <CardDark className="mb-4 ventas-filter-card">
-          <div className="ventas-section-head">
+          <div className="ventas-topbar-badges">
+            <GoldBadge>{periodoTexto}</GoldBadge>
+            <GoldBadge>{ventasFiltradas.length} registros</GoldBadge>
+          </div>
+        </section>
+
+        <section className="ventas-finance-grid">
+          <article className="ventas-finance-card gold">
+            <span className="ventas-finance-icon">
+              <TrendingUp size={20} />
+            </span>
+
             <div>
-              <h4 className="section-title">Filtros de análisis</h4>
-              <p className="section-subtitle">
-                Ajusta el período, trabajador o servicio. Funciona también si el dueño es quien atiende.
-              </p>
+              <p>Total vendido</p>
+              <h2>
+                <AnimatedNumber
+                  value={Number(totalFiltrado || 0)}
+                  prefix="S/ "
+                  decimals={2}
+                />
+              </h2>
+              <small>Ingresos filtrados</small>
+            </div>
+          </article>
+
+          <article className="ventas-finance-card green">
+            <span className="ventas-finance-icon">
+              <WalletCards size={20} />
+            </span>
+
+            <div>
+              <p>Comisión generada</p>
+              <h2>S/ {Number(totalComisionFiltrada || 0).toFixed(2)}</h2>
+              <small>Comisiones calculadas</small>
+            </div>
+          </article>
+
+          <article className="ventas-finance-card blue">
+            <span className="ventas-finance-icon">
+              <ReceiptText size={20} />
+            </span>
+
+            <div>
+              <p>Ventas</p>
+              <h2>{cantidadVentas}</h2>
+              <small>Operaciones únicas</small>
+            </div>
+          </article>
+
+          <article className="ventas-finance-card purple">
+            <span className="ventas-finance-icon">
+              <Banknote size={20} />
+            </span>
+
+            <div>
+              <p>Ticket promedio</p>
+              <h2>S/ {Number(promedioVenta || 0).toFixed(2)}</h2>
+              <small>Promedio por venta</small>
+            </div>
+          </article>
+
+          <article className="ventas-finance-card soft">
+            <span className="ventas-finance-icon">
+              <Scissors size={20} />
+            </span>
+
+            <div>
+              <p>Servicios</p>
+              <h2>{serviciosDistintos}</h2>
+              <small>Servicios vendidos</small>
+            </div>
+          </article>
+        </section>
+
+        <CardDark className="ventas-filter-card">
+          <div className="ventas-filter-top">
+            <div>
+              <h4>Filtros</h4>
+              <span>{loading ? "Cargando..." : `${cantidadVentas} ventas`}</span>
             </div>
 
-            <GoldBadge>
-              {loading ? "Cargando..." : `${cantidadVentas} ventas`}
-            </GoldBadge>
+            <button
+              type="button"
+              className="ventas-filter-toggle"
+              onClick={() => setFiltrosAbiertos((prev) => !prev)}
+            >
+              Más filtros
+              <ChevronDown
+                size={15}
+                className={filtrosAbiertos ? "rotate" : ""}
+              />
+            </button>
           </div>
 
           <div className="ventas-quick-filters">
             <button
               type="button"
-              className={`btn ${filtroRapidoActivo === "hoy" ? "btn-gold" : "btn-dark-outline"
-                }`}
+              className={`btn ${
+                filtroRapidoActivo === "hoy" ? "btn-gold" : "btn-dark-outline"
+              }`}
               onClick={aplicarFiltroHoy}
             >
               Hoy
@@ -427,8 +613,9 @@ function Ventas() {
 
             <button
               type="button"
-              className={`btn ${filtroRapidoActivo === "semana" ? "btn-gold" : "btn-dark-outline"
-                }`}
+              className={`btn ${
+                filtroRapidoActivo === "semana" ? "btn-gold" : "btn-dark-outline"
+              }`}
               onClick={aplicarFiltroSemana}
             >
               Semana
@@ -436,8 +623,9 @@ function Ventas() {
 
             <button
               type="button"
-              className={`btn ${filtroRapidoActivo === "mes" ? "btn-gold" : "btn-dark-outline"
-                }`}
+              className={`btn ${
+                filtroRapidoActivo === "mes" ? "btn-gold" : "btn-dark-outline"
+              }`}
               onClick={aplicarFiltroMes}
             >
               Mes
@@ -445,16 +633,17 @@ function Ventas() {
 
             <button
               type="button"
-              className={`btn ${limpiandoActivo ? "btn-gold" : "btn-dark-outline"
-                }`}
+              className={`btn ${
+                limpiandoActivo ? "btn-gold" : "btn-dark-outline"
+              }`}
               onClick={limpiarFiltros}
             >
-              <Eraser size={16} />
+              <Eraser size={14} />
               Limpiar
             </button>
           </div>
 
-          <div className="ventas-filter-grid">
+          <div className={`ventas-filter-grid ${filtrosAbiertos ? "open" : ""}`}>
             <div className="filtro-item">
               <DateFilter
                 label="Desde"
@@ -462,6 +651,7 @@ function Ventas() {
                 onChange={(valor) => {
                   setFechaDesde(valor);
                   setFiltroRapidoActivo("");
+                  resetDetalle();
                 }}
               />
             </div>
@@ -473,6 +663,7 @@ function Ventas() {
                 onChange={(valor) => {
                   setFechaHasta(valor);
                   setFiltroRapidoActivo("");
+                  resetDetalle();
                 }}
                 minDate={fechaDesde}
               />
@@ -487,9 +678,11 @@ function Ventas() {
                 onChange={(e) => {
                   setFiltroTrabajador(e.target.value);
                   setFiltroRapidoActivo("");
+                  resetDetalle();
                 }}
               >
                 <option value="">Todos</option>
+
                 {trabajadores.map((t) => (
                   <option key={t.idTrabajador} value={t.nombre}>
                     {t.nombre}
@@ -507,9 +700,11 @@ function Ventas() {
                 onChange={(e) => {
                   setFiltroServicio(e.target.value);
                   setFiltroRapidoActivo("");
+                  resetDetalle();
                 }}
               >
                 <option value="">Todos</option>
+
                 {servicios.map((s) => (
                   <option key={s.idServicio} value={s.nombre}>
                     {s.nombre}
@@ -520,107 +715,35 @@ function Ventas() {
           </div>
         </CardDark>
 
-        <section className="ventas-kpi-grid mb-4">
-          <KpiAnalisis
-            title="Total vendido"
-            value={totalFiltrado}
-            note="Ingresos filtrados"
-            icon={Banknote}
-            variant="gold"
-          />
+        <section className="ventas-insight-strip">
+          <article>
+            <UserRound size={16} />
+            <span>Top trabajador</span>
+            <b>{ventasPorTrabajador[0]?.trabajador || "Sin datos"}</b>
+          </article>
 
-          <KpiAnalisis
-            title="Comisión generada"
-            value={totalComisionFiltrada}
-            note="Comisiones calculadas"
-            icon={TrendingUp}
-            variant="success"
-          />
+          <article>
+            <Scissors size={16} />
+            <span>Servicio top</span>
+            <b>{servicioTop?.servicio || "Sin datos"}</b>
+          </article>
 
-          <KpiAnalisis
-            title="Servicios distintos"
-            value={serviciosDistintos}
-            note="Servicios vendidos"
-            icon={Scissors}
-            variant="info"
-            money={false}
-          />
-
-          <KpiAnalisis
-            title="Cantidad de ventas"
-            value={cantidadVentas}
-            note="Ventas únicas"
-            icon={ReceiptText}
-            variant="purple"
-            money={false}
-          />
-
-          <KpiAnalisis
-            title="Ticket promedio"
-            value={promedioVenta}
-            note={servicioTop ? `Top: ${servicioTop.servicio}` : "Sin datos"}
-            icon={BriefcaseBusiness}
-            variant="neutral"
-          />
+          <article>
+            <CalendarDays size={16} />
+            <span>Días con ventas</span>
+            <b>{ventasPorDia.length}</b>
+          </article>
         </section>
 
-        <div className="ventas-insight-grid mb-4">
-          <CardDark className="ventas-insight-card">
-            <div className="ventas-insight-icon">
-              <UserRound size={24} />
-            </div>
-
-            <div>
-              <span>Mejor trabajador / dueño</span>
-              <b>{ventasPorTrabajador[0]?.trabajador || "Sin datos"}</b>
-              <p>
-                {ventasPorTrabajador[0]
-                  ? `S/ ${Number(ventasPorTrabajador[0].totalGenerado || 0).toFixed(2)} generado`
-                  : "Aún no hay ventas filtradas."}
-              </p>
-            </div>
-          </CardDark>
-
-          <CardDark className="ventas-insight-card">
-            <div className="ventas-insight-icon">
-              <Scissors size={24} />
-            </div>
-
-            <div>
-              <span>Servicio más rentable</span>
-              <b>{servicioTop?.servicio || "Sin datos"}</b>
-              <p>
-                {servicioTop
-                  ? `S/ ${Number(servicioTop.total || 0).toFixed(2)} generado`
-                  : "Aún no hay servicios filtrados."}
-              </p>
-            </div>
-          </CardDark>
-
-          <CardDark className="ventas-insight-card">
-            <div className="ventas-insight-icon">
-              <CalendarDays size={24} />
-            </div>
-
-            <div>
-              <span>Días con ventas</span>
-              <b>{ventasPorDia.length}</b>
-              <p>Según el rango actualmente filtrado.</p>
-            </div>
-          </CardDark>
-        </div>
-
-        <section className="ventas-chart-grid mb-4">
-          <CardDark className="h-100 ventas-chart-card">
+        <section className="ventas-chart-grid">
+          <CardDark className="ventas-chart-card">
             <div className="ventas-section-head">
               <div>
                 <h4 className="section-title">Ventas por trabajador</h4>
-                <p className="section-subtitle">
-                  Comparación de ingresos generados.
-                </p>
+                <p className="section-subtitle">Top ingresos generados.</p>
               </div>
 
-              <GoldBadge>{ventasPorTrabajador.length} datos</GoldBadge>
+              <GoldBadge>Top {ventasPorTrabajadorChart.length}</GoldBadge>
             </div>
 
             <div className="chart-scroll-mobile">
@@ -628,26 +751,32 @@ function Ventas() {
                 className="ventas-chart-box"
                 style={{
                   width: esMobile
-                    ? `${Math.max(ventasPorTrabajador.length * 92, 380)}px`
+                    ? `${Math.max(ventasPorTrabajadorChart.length * 94, 420)}px`
                     : "100%",
                 }}
               >
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={ventasPorTrabajador}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke={chartColors.grid}
-                    />
+                  <BarChart data={ventasPorTrabajadorChart}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+
                     <XAxis
                       dataKey="trabajador"
                       stroke={chartColors.axis}
                       interval={0}
-                      tick={{ fontSize: 12, fill: chartColors.axis }}
+                      tick={{
+                        fontSize: esMobile ? 10 : 12,
+                        fill: chartColors.axis,
+                      }}
                     />
+
                     <YAxis
                       stroke={chartColors.axis}
-                      tick={{ fill: chartColors.axis }}
+                      tick={{
+                        fill: chartColors.axis,
+                        fontSize: esMobile ? 10 : 12,
+                      }}
                     />
+
                     <Tooltip
                       {...tooltipStyle}
                       formatter={(value) => [
@@ -655,7 +784,6 @@ function Ventas() {
                         "Total generado",
                       ]}
                     />
-                    {!esMobile && <Legend {...legendStyle} />}
 
                     <Bar
                       dataKey="totalGenerado"
@@ -670,16 +798,14 @@ function Ventas() {
             </div>
           </CardDark>
 
-          <CardDark className="h-100 ventas-chart-card">
+          <CardDark className="ventas-chart-card">
             <div className="ventas-section-head">
               <div>
-                <h4 className="section-title">Comisiones por trabajador</h4>
-                <p className="section-subtitle">
-                  Comparación del total de comisiones generadas.
-                </p>
+                <h4 className="section-title">Comisiones</h4>
+                <p className="section-subtitle">Top comisiones generadas.</p>
               </div>
 
-              <GoldBadge>{comisionesPorTrabajador.length} datos</GoldBadge>
+              <GoldBadge>Top {comisionesPorTrabajadorChart.length}</GoldBadge>
             </div>
 
             <div className="chart-scroll-mobile">
@@ -687,26 +813,35 @@ function Ventas() {
                 className="ventas-chart-box"
                 style={{
                   width: esMobile
-                    ? `${Math.max(comisionesPorTrabajador.length * 92, 380)}px`
+                    ? `${Math.max(
+                        comisionesPorTrabajadorChart.length * 94,
+                        420
+                      )}px`
                     : "100%",
                 }}
               >
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={comisionesPorTrabajador}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke={chartColors.grid}
-                    />
+                  <BarChart data={comisionesPorTrabajadorChart}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+
                     <XAxis
                       dataKey="trabajador"
                       stroke={chartColors.axis}
                       interval={0}
-                      tick={{ fontSize: 12, fill: chartColors.axis }}
+                      tick={{
+                        fontSize: esMobile ? 10 : 12,
+                        fill: chartColors.axis,
+                      }}
                     />
+
                     <YAxis
                       stroke={chartColors.axis}
-                      tick={{ fill: chartColors.axis }}
+                      tick={{
+                        fill: chartColors.axis,
+                        fontSize: esMobile ? 10 : 12,
+                      }}
                     />
+
                     <Tooltip
                       {...tooltipStyle}
                       formatter={(value) => [
@@ -714,7 +849,6 @@ function Ventas() {
                         "Comisión",
                       ]}
                     />
-                    {!esMobile && <Legend {...legendStyle} />}
 
                     <Bar
                       dataKey="totalComision"
@@ -730,125 +864,157 @@ function Ventas() {
           </CardDark>
         </section>
 
-        <CardDark className="mb-4 ventas-chart-card">
+        <CardDark className="ventas-chart-card ventas-chart-full">
           <div className="ventas-section-head">
             <div>
               <h4 className="section-title">Ventas por día</h4>
-              <p className="section-subtitle">
-                Evolución del total vendido según el rango filtrado.
-              </p>
+              <p className="section-subtitle">Evolución por fecha.</p>
             </div>
 
             <GoldBadge>{ventasPorDia.length} días</GoldBadge>
           </div>
 
-          <div className="ventas-chart-box-large">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={ventasPorDia}>
-                <defs>
-                  <linearGradient id="ventasAreaGold" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#d4af37" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#d4af37" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
+          <div className="chart-scroll-mobile ventas-dia-scroll">
+            <div
+              className="ventas-chart-box-large"
+              style={{
+                width: esMobile
+                  ? `${Math.max(ventasPorDia.length * 78, 580)}px`
+                  : "100%",
+              }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={ventasPorDia}>
+                  <defs>
+                    <linearGradient
+                      id="ventasAreaGold"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="5%" stopColor="#d4af37" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#d4af37" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
 
-                <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-                <XAxis
-                  dataKey="fecha"
-                  stroke={chartColors.axis}
-                  tick={{ fill: chartColors.axis }}
-                  interval={0}
-                  minTickGap={0}
-                />
-                <YAxis
-                  stroke={chartColors.axis}
-                  tick={{ fill: chartColors.axis }}
-                />
-                <Tooltip
-                  {...tooltipStyle}
-                  formatter={(value) => [
-                    `S/ ${Number(value).toFixed(2)}`,
-                    "Ventas",
-                  ]}
-                />
-                <Legend {...legendStyle} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
 
-                <Area
-                  type="monotone"
-                  dataKey="total"
-                  name="Ventas por día"
-                  stroke="#d4af37"
-                  strokeWidth={3}
-                  fill="url(#ventasAreaGold)"
-                  dot={{ r: 4, fill: "#d4af37" }}
-                  activeDot={{ r: 6 }}
-                  animationDuration={1000}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+                  <XAxis
+                    dataKey="fecha"
+                    stroke={chartColors.axis}
+                    tick={{
+                      fill: chartColors.axis,
+                      fontSize: esMobile ? 10 : 12,
+                    }}
+                    interval={esMobile ? "preserveStartEnd" : 0}
+                    minTickGap={esMobile ? 24 : 0}
+                  />
+
+                  <YAxis
+                    stroke={chartColors.axis}
+                    tick={{
+                      fill: chartColors.axis,
+                      fontSize: esMobile ? 10 : 12,
+                    }}
+                  />
+
+                  <Tooltip
+                    {...tooltipStyle}
+                    formatter={(value) => [
+                      `S/ ${Number(value).toFixed(2)}`,
+                      "Ventas",
+                    ]}
+                  />
+
+                  <Area
+                    type="monotone"
+                    dataKey="total"
+                    name="Ventas por día"
+                    stroke="#d4af37"
+                    strokeWidth={3}
+                    fill="url(#ventasAreaGold)"
+                    dot={{ r: esMobile ? 3 : 4, fill: "#d4af37" }}
+                    activeDot={{ r: 6 }}
+                    animationDuration={1000}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </CardDark>
 
         <CardDark className="ventas-detail-card">
           <div className="ventas-section-head">
             <div>
-              <h4 className="section-title">Detalle analítico</h4>
-              <p className="section-subtitle">
-                Ventas registradas por servicios atendidos y confirmados.
-              </p>
+              <h4 className="section-title">Movimientos</h4>
+              <p className="section-subtitle">Ventas registradas.</p>
             </div>
 
-            <GoldBadge>{ventasFiltradas.length} registros</GoldBadge>
+            <div className="ventas-export-actions">
+              <GoldBadge>{ventasFiltradas.length} registros</GoldBadge>
+
+              <button
+                type="button"
+                className="btn btn-dark-outline export-btn"
+                onClick={exportarVentasPDF}
+                disabled={ventasFiltradas.length === 0}
+              >
+                <FaFilePdf size={16} />
+                PDF
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-gold export-btn"
+                onClick={exportarVentasExcel}
+                disabled={ventasFiltradas.length === 0}
+              >
+                <FaFileExcel size={16} />
+                Excel
+              </button>
+            </div>
           </div>
 
-          <div className="ventas-detail-mobile">
+          <div className="ventas-detail-mobile-list">
             {loading ? (
-              <p className="section-subtitle mb-0">Cargando análisis...</p>
-            ) : ventasFiltradas.length > 0 ? (
-              ventasFiltradas.map((v) => (
-                <div
-                  className="ventas-detail-item"
+              <div className="ventas-empty-state">
+                <ReceiptText size={32} />
+                <p>Cargando análisis...</p>
+              </div>
+            ) : ventasDetalleVisible.length > 0 ? (
+              ventasDetalleVisible.map((v) => (
+                <article
+                  className="ventas-mobile-row"
                   key={`${v.idVenta}-${v.fechaVenta}-${v.servicio}-${v.trabajador}`}
                 >
-                  <div className="ventas-detail-top">
+                  <div className="ventas-mobile-row-main">
                     <div>
                       <h5>{v.servicio}</h5>
-                      <span>{new Date(v.fechaVenta).toLocaleString()}</span>
+                      <span>{v.trabajador || "Sin trabajador"}</span>
                     </div>
 
                     <b>S/ {Number(v.total || 0).toFixed(2)}</b>
                   </div>
 
-                  <div className="ventas-detail-info">
-                    <div>
-                      <span>Trabajador</span>
-                      <b>{v.trabajador || "Sin trabajador"}</b>
-                    </div>
-
-                    <div>
-                      <span>Cantidad</span>
-                      <b>{v.cantidad}</b>
-                    </div>
-
-                    <div>
-                      <span>Subtotal</span>
-                      <b>S/ {Number(v.subtotal || 0).toFixed(2)}</b>
-                    </div>
-
-                    <div>
-                      <span>Comisión</span>
-                      <b className="success">
-                        S/ {Number(v.montoComisionCalculado || 0).toFixed(2)}
-                      </b>
-                    </div>
+                  <div className="ventas-mobile-row-meta">
+                    <span>{formatearFecha(v.fechaVenta)}</span>
+                    <span>Cant. {v.cantidad}</span>
+                    <span>
+                      Comisión S/{" "}
+                      {Number(v.montoComisionCalculado || 0).toFixed(2)}
+                    </span>
                   </div>
-                </div>
+                </article>
               ))
             ) : (
-              <p className="section-subtitle mb-0">
-                No hay registros para el análisis.
-              </p>
+              <div className="ventas-empty-state">
+                <ReceiptText size={32} />
+                <p>No hay registros.</p>
+              </div>
             )}
+
+            <BotonVerMas />
           </div>
 
           <div className="ventas-table-wrap">
@@ -872,13 +1038,13 @@ function Ventas() {
                     Cargando análisis...
                   </td>
                 </tr>
-              ) : ventasFiltradas.length > 0 ? (
-                ventasFiltradas.map((v) => (
+              ) : ventasDetalleVisible.length > 0 ? (
+                ventasDetalleVisible.map((v) => (
                   <tr
                     key={`${v.idVenta}-${v.fechaVenta}-${v.servicio}-${v.trabajador}`}
                   >
                     <td className="ventas-id-cell">{v.idVenta}</td>
-                    <td>{new Date(v.fechaVenta).toLocaleString()}</td>
+                    <td>{formatearFecha(v.fechaVenta)}</td>
                     <td>{v.servicio}</td>
                     <td>
                       <span className="table-pill">
@@ -902,11 +1068,13 @@ function Ventas() {
               ) : (
                 <tr>
                   <td colSpan="10" className="text-center py-4">
-                    No hay registros para el análisis.
+                    No hay registros.
                   </td>
                 </tr>
               )}
             </TableDark>
+
+            <BotonVerMas />
           </div>
         </CardDark>
       </div>

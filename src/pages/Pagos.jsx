@@ -3,25 +3,24 @@ import API_BASE from "../services/api";
 import authFetch from "../services/authFetch";
 
 import CardDark from "../components/ui/CardDark";
-import PageHeader from "../components/ui/PageHeader";
 import GoldBadge from "../components/ui/GoldBadge";
 import TableDark from "../components/ui/TableDark";
 import Toast from "../components/ui/Toast";
 import DateFilter from "../components/ui/DateFilter";
-import AnimatedNumber from "../components/ui/AnimatedNumber";
 
 import { exportarPDF } from "../utils/exportPdf";
 import { exportarExcel } from "../utils/exportExcel";
 
 import { FaFilePdf, FaFileExcel } from "react-icons/fa";
+
 import {
   Banknote,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock,
   Eraser,
-  Search,
   Wallet,
   X,
   Users,
@@ -124,6 +123,7 @@ function Pagos() {
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
   const [filtroTrabajador, setFiltroTrabajador] = useState("");
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
 
   const [filtroRapidoActivo, setFiltroRapidoActivo] = useState("");
   const [limpiandoActivo, setLimpiandoActivo] = useState(false);
@@ -198,7 +198,6 @@ function Pagos() {
 
   useEffect(() => {
     cargarPagos();
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -235,6 +234,21 @@ function Pagos() {
     setPaginaHistorial(1);
   };
 
+  const limpiarFiltros = () => {
+    setFechaDesde("");
+    setFechaHasta("");
+    setFiltroTrabajador("");
+    setFiltroRapidoActivo("");
+
+    setLimpiandoActivo(true);
+    setTimeout(() => {
+      setLimpiandoActivo(false);
+    }, 400);
+
+    setTipoMensaje("info");
+    setMensaje("Filtros restablecidos");
+  };
+
   const pagosFiltrados = useMemo(() => {
     return historialPagos.filter((p) => {
       const fechaPago = new Date(p.fechaPago);
@@ -250,13 +264,9 @@ function Pagos() {
       }
 
       if (filtroTrabajador.trim()) {
-        if (
-          !String(p.trabajador || "")
-            .toLowerCase()
-            .includes(filtroTrabajador.toLowerCase())
-        ) {
-          return false;
-        }
+        return String(p.trabajador || "")
+          .toLowerCase()
+          .includes(filtroTrabajador.toLowerCase());
       }
 
       return true;
@@ -266,13 +276,9 @@ function Pagos() {
   const pendientesFiltrados = useMemo(() => {
     return comisionesPendientes.filter((p) => {
       if (filtroTrabajador.trim()) {
-        if (
-          !String(p.trabajador || "")
-            .toLowerCase()
-            .includes(filtroTrabajador.toLowerCase())
-        ) {
-          return false;
-        }
+        return String(p.trabajador || "")
+          .toLowerCase()
+          .includes(filtroTrabajador.toLowerCase());
       }
 
       return true;
@@ -317,29 +323,26 @@ function Pagos() {
   }, [filtroTrabajador, fechaDesde, fechaHasta]);
 
   useEffect(() => {
-    const maxPendientes = Math.max(1, Math.ceil(pendientesFiltrados.length / pageSizePendientes));
-    if (paginaPendientes > maxPendientes) setPaginaPendientes(maxPendientes);
+    const maxPendientes = Math.max(
+      1,
+      Math.ceil(pendientesFiltrados.length / pageSizePendientes)
+    );
+
+    if (paginaPendientes > maxPendientes) {
+      setPaginaPendientes(maxPendientes);
+    }
   }, [pendientesFiltrados.length, pageSizePendientes, paginaPendientes]);
 
   useEffect(() => {
-    const maxHistorial = Math.max(1, Math.ceil(pagosFiltrados.length / pageSizeHistorial));
-    if (paginaHistorial > maxHistorial) setPaginaHistorial(maxHistorial);
+    const maxHistorial = Math.max(
+      1,
+      Math.ceil(pagosFiltrados.length / pageSizeHistorial)
+    );
+
+    if (paginaHistorial > maxHistorial) {
+      setPaginaHistorial(maxHistorial);
+    }
   }, [pagosFiltrados.length, pageSizeHistorial, paginaHistorial]);
-
-  const limpiarFiltros = () => {
-    setFechaDesde("");
-    setFechaHasta("");
-    setFiltroTrabajador("");
-    setFiltroRapidoActivo("");
-
-    setLimpiandoActivo(true);
-    setTimeout(() => {
-      setLimpiandoActivo(false);
-    }, 400);
-
-    setTipoMensaje("info");
-    setMensaje("Filtros restablecidos");
-  };
 
   const cambiarMontoPago = (idTrabajador, valor) => {
     const limpio = String(valor).replace(",", ".");
@@ -550,60 +553,81 @@ function Pagos() {
     setMensaje("Excel generado correctamente.");
   };
 
-  const KpiPago = ({ title, value, note, icon: KpiIcon, variant = "gold", money = true }) => {
-    const IconComponent = KpiIcon;
-
-    return (
-      <CardDark className={`pagos-kpi-card ${variant}`}>
-        <div className="pagos-kpi-icon">
-          {IconComponent && <IconComponent size={22} />}
-        </div>
-
-        <p>{title}</p>
-
-        <h2>
-          {money ? (
-            <AnimatedNumber value={Number(value || 0)} prefix="S/ " decimals={2} />
-          ) : (
-            <AnimatedNumber value={Number(value || 0)} decimals={0} />
-          )}
-        </h2>
-
-        <span>{note}</span>
-      </CardDark>
-    );
-  };
-
   return (
     <div className="page-shell pagos-page">
       <div className="container-fluid py-4">
-        <CardDark className="pagos-header-card mb-4">
-          <div className="pagos-header-row">
-            <PageHeader
-              title="Pagos"
-              subtitle="Gestiona comisiones pendientes, pagos parciales, pagos totales e historial."
-            />
-
-            <div className="pagos-header-actions">
-              <GoldBadge>{loading ? "Cargando..." : `${pendientesFiltrados.length} pendientes`}</GoldBadge>
-              <GoldBadge>{pagosFiltrados.length} pagos</GoldBadge>
-            </div>
+        <section className="pagos-topbar">
+          <div>
+            <h1>Pagos</h1>
+            <p>Comisiones pendientes, pagos parciales e historial.</p>
           </div>
-        </CardDark>
 
-        <CardDark className="mb-4 pagos-filter-card">
-          <div className="pagos-section-head">
+          <div className="pagos-topbar-badges">
+            <GoldBadge>{loading ? "Cargando..." : `${pendientesFiltrados.length} pendientes`}</GoldBadge>
+            <GoldBadge>{pagosFiltrados.length} pagos</GoldBadge>
+          </div>
+        </section>
+
+        <section className="pagos-finance-grid">
+          <article className="pagos-finance-card gold">
+            <span className="pagos-finance-icon">
+              <Clock size={20} />
+            </span>
+
+            <p>Total pendiente</p>
+            <h2>S/ {Number(totalPendiente || 0).toFixed(2)}</h2>
+            <small>Comisiones por pagar</small>
+          </article>
+
+          <article className="pagos-finance-card green">
+            <span className="pagos-finance-icon">
+              <Wallet size={20} />
+            </span>
+
+            <p>Total pagado</p>
+            <h2>S/ {Number(totalPagado || 0).toFixed(2)}</h2>
+            <small>Pagos filtrados</small>
+          </article>
+
+          <article className="pagos-finance-card blue">
+            <span className="pagos-finance-icon">
+              <Users size={20} />
+            </span>
+
+            <p>Con saldo</p>
+            <h2>{trabajadoresConSaldo}</h2>
+            <small>Trabajadores por pagar</small>
+          </article>
+
+          <article className="pagos-finance-card purple">
+            <span className="pagos-finance-icon">
+              <Banknote size={20} />
+            </span>
+
+            <p>Pagos registrados</p>
+            <h2>{pagosFiltrados.length}</h2>
+            <small>Historial filtrado</small>
+          </article>
+        </section>
+
+        <CardDark className="pagos-filter-card">
+          <div className="pagos-filter-top">
             <div>
-              <h4 className="section-title">Filtros de pagos</h4>
-              <p className="section-subtitle">
-                Busca por fecha o trabajador para revisar pagos e historial.
-              </p>
+              <h4>Filtros</h4>
+              <span>{filtroTrabajador ? "Búsqueda activa" : "Sin búsqueda"}</span>
             </div>
 
-            <div className="pagos-search-badge">
-              <Search size={16} />
-              {filtroTrabajador ? "Búsqueda activa" : "Sin búsqueda"}
-            </div>
+            <button
+              type="button"
+              className="pagos-filter-toggle"
+              onClick={() => setFiltrosAbiertos((prev) => !prev)}
+            >
+              Más filtros
+              <ChevronDown
+                size={15}
+                className={filtrosAbiertos ? "rotate" : ""}
+              />
+            </button>
           </div>
 
           <div className="pagos-quick-filters">
@@ -636,12 +660,12 @@ function Pagos() {
               className={`btn ${limpiandoActivo ? "btn-gold" : "btn-dark-outline"}`}
               onClick={limpiarFiltros}
             >
-              <Eraser size={16} />
-              {limpiandoActivo ? "Limpiando..." : "Limpiar"}
+              <Eraser size={14} />
+              Limpiar
             </button>
           </div>
 
-          <div className="pagos-filter-grid">
+          <div className={`pagos-filter-grid ${filtrosAbiertos ? "open" : ""}`}>
             <div className="filtro-item">
               <DateFilter
                 label="Desde"
@@ -692,43 +716,7 @@ function Pagos() {
           </div>
         </CardDark>
 
-        <section className="pagos-kpi-grid mb-4">
-          <KpiPago
-            title="Total pendiente"
-            value={totalPendiente}
-            note="Comisiones por pagar"
-            icon={Clock}
-            variant="gold"
-          />
-
-          <KpiPago
-            title="Total pagado"
-            value={totalPagado}
-            note="Pagos filtrados"
-            icon={Wallet}
-            variant="success"
-          />
-
-          <KpiPago
-            title="Con saldo"
-            value={trabajadoresConSaldo}
-            note="Trabajadores por pagar"
-            icon={Users}
-            variant="info"
-            money={false}
-          />
-
-          <KpiPago
-            title="Pagos registrados"
-            value={pagosFiltrados.length}
-            note="Registros en historial"
-            icon={Banknote}
-            variant="purple"
-            money={false}
-          />
-        </section>
-
-        <CardDark className="mb-4 pagos-section-card">
+        <CardDark className="pagos-section-card">
           <div className="pagos-section-head">
             <div>
               <h4 className="section-title">Pendientes por trabajador</h4>

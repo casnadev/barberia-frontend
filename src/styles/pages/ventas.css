@@ -1,413 +1,880 @@
 /* ==========================================================
-   VENTAS / REGISTRO / CAJA
-   ========================================================== */
+   VENTAS / ANÁLISIS - PREMIUM FINANCIAL DASHBOARD
+========================================================== */
 
 .ventas-page {
   width: 100%;
 }
 
-.ventas-grid {
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 22px;
-  align-items: start;
+.ventas-page .container-fluid {
+  padding: 18px 18px 110px !important;
 }
 
-.ventas-panel-card {
-  background: #ffffff;
-  border-radius: 24px;
-  border: 1px solid rgba(212, 175, 55, 0.18);
-  overflow: hidden;
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
-}
+/* TOP */
 
-.ventas-panel-header {
-  padding: 22px 24px;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.12);
-
-  background:
-    radial-gradient(circle at top right, rgba(212, 175, 55, 0.08), transparent 34%),
-    #fffdf7;
-}
-
-.ventas-panel-title {
-  margin: 0;
-  color: #111827;
-  font-size: 1.08rem;
-  font-weight: 950;
-}
-
-.ventas-panel-subtitle {
-  color: #6b7280;
-  margin-top: 6px;
-  font-size: 0.9rem;
-}
-
-.ventas-panel-body {
-  padding: 22px;
-}
-
-.venta-servicios-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.venta-servicio-card {
-  background: #ffffff;
-  border: 1px solid rgba(212, 175, 55, 0.18);
-  border-radius: 22px;
-  overflow: hidden;
-  cursor: pointer;
-
-  transition:
-    transform 0.22s ease,
-    box-shadow 0.22s ease,
-    border-color 0.22s ease;
-}
-
-.venta-servicio-card:hover {
-  transform: translateY(-3px);
-
-  border-color: rgba(212, 175, 55, 0.42);
-
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.1);
-}
-
-.venta-servicio-img,
-.venta-servicio-placeholder {
-  width: 100%;
-  height: 190px;
-}
-
-.venta-servicio-img {
-  object-fit: cover;
-  display: block;
-}
-
-.venta-servicio-placeholder {
+.ventas-topbar {
   display: flex;
-  align-items: center;
-  justify-content: center;
-
-  background:
-    radial-gradient(circle at top, rgba(212, 175, 55, 0.18), transparent 50%),
-    #111827;
-
-  color: #d4af37;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.venta-servicio-info {
-  padding: 16px;
-}
-
-.venta-servicio-info h5 {
+.ventas-topbar h1 {
+  margin: 0 0 4px;
   color: #111827;
+  font-size: 1.75rem;
   font-weight: 950;
-  margin-bottom: 7px;
+  letter-spacing: -0.8px;
 }
 
-.venta-servicio-info p {
-  color: #6b7280;
-  line-height: 1.5;
-  font-size: 0.88rem;
+.ventas-topbar p {
+  margin: 0;
+  color: #667085;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.ventas-topbar-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* FINANCE CARDS */
+
+.ventas-finance-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.ventas-finance-card {
+  position: relative;
+  min-height: 146px;
+  overflow: hidden;
+  border-radius: 28px;
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.13);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.ventas-finance-card::after {
+  content: "";
+  position: absolute;
+  right: -38px;
+  bottom: -52px;
+  width: 128px;
+  height: 128px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.09);
+}
+
+.ventas-finance-card.gold {
+  background:
+    radial-gradient(circle at top right, rgba(212, 175, 55, 0.14), transparent 35%),
+    #ffffff;
+}
+
+.ventas-finance-card.green {
+  background:
+    radial-gradient(circle at top right, rgba(22, 163, 74, 0.13), transparent 35%),
+    #ffffff;
+}
+
+.ventas-finance-card.blue {
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.13), transparent 35%),
+    #ffffff;
+}
+
+.ventas-finance-card.purple {
+  background:
+    radial-gradient(circle at top right, rgba(139, 92, 246, 0.12), transparent 35%),
+    #ffffff;
+}
+
+.ventas-finance-card.soft {
+  background:
+    radial-gradient(circle at top right, rgba(107, 114, 128, 0.1), transparent 35%),
+    #ffffff;
+}
+
+.ventas-finance-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 17px;
+  display: grid;
+  place-items: center;
   margin-bottom: 12px;
+  background: rgba(212, 175, 55, 0.13);
+  color: #b88918;
 }
 
-.venta-servicio-footer {
+.ventas-finance-card.green .ventas-finance-icon {
+  background: rgba(22, 163, 74, 0.1);
+  color: #16a34a;
+}
+
+.ventas-finance-card.blue .ventas-finance-icon {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+}
+
+.ventas-finance-card.purple .ventas-finance-icon {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+}
+
+.ventas-finance-card p {
+  margin: 0 0 8px;
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.ventas-finance-card h2 {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: clamp(1.15rem, 1.5vw, 1.55rem);
+  font-weight: 950;
+  letter-spacing: -0.5px;
+  line-height: 1.05;
+}
+
+.ventas-finance-card small {
+  color: #667085;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+/* SHARED CARDS */
+
+.ventas-filter-card,
+.ventas-chart-card,
+.ventas-detail-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(212, 175, 55, 0.12) !important;
+  border-radius: 28px !important;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.055) !important;
+}
+
+/* FILTER */
+
+.ventas-filter-card {
+  margin-bottom: 14px !important;
+  padding: 16px !important;
+}
+
+.ventas-filter-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 14px;
+  margin-bottom: 12px;
 }
 
-.venta-servicio-price {
-  color: #d4af37;
-  font-weight: 950;
+.ventas-filter-top h4 {
+  margin: 0;
+  color: #111827;
   font-size: 1rem;
+  font-weight: 950;
 }
 
-.venta-servicio-tag {
-  background: rgba(212, 175, 55, 0.14);
-  color: #8b6f10;
+.ventas-filter-top span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
   border-radius: 999px;
-  padding: 6px 10px;
+  background: rgba(212, 175, 55, 0.1);
+  color: #8b6f10;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.ventas-filter-toggle {
+  border: none;
+  background: #111827;
+  color: #ffffff;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 0.74rem;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ventas-filter-toggle svg {
+  transition: transform 0.18s ease;
+}
+
+.ventas-filter-toggle svg.rotate {
+  transform: rotate(180deg);
+}
+
+.ventas-quick-filters {
+  display: grid;
+  grid-template-columns: repeat(4, max-content);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ventas-quick-filters .btn {
+  min-height: 38px;
+  border-radius: 13px !important;
+  padding: 0 16px !important;
+  font-size: 0.82rem !important;
+  font-weight: 900 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ventas-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ventas-filter-grid .label-gold {
+  font-size: 0.76rem;
+  margin-bottom: 5px;
+}
+
+.ventas-filter-grid .form-control,
+.ventas-filter-grid .input-dark {
+  min-height: 44px;
+  height: 44px;
+  border-radius: 14px !important;
+}
+
+/* INSIGHTS */
+
+.ventas-insight-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.ventas-insight-strip article {
+  min-height: 60px;
+  border-radius: 22px;
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.045);
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
+}
+
+.ventas-insight-strip svg {
+  grid-row: span 2;
+  width: 34px;
+  height: 34px;
+  padding: 8px;
+  border-radius: 13px;
+  background: rgba(212, 175, 55, 0.13);
+  color: #8b6f10;
+}
+
+.ventas-insight-strip span {
+  color: #667085;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.ventas-insight-strip b {
+  color: #111827;
+  font-size: 0.88rem;
+  font-weight: 950;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* CHARTS */
+
+.ventas-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.ventas-section-head .section-title {
+  margin: 0 0 4px;
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.ventas-section-head .section-subtitle {
+  margin: 0;
+  color: #667085;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.ventas-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.ventas-chart-card {
+  padding: 18px !important;
+  overflow: hidden;
+}
+
+.ventas-chart-full {
+  margin-bottom: 14px !important;
+}
+
+.ventas-chart-box {
+  width: 100%;
+  height: 300px;
+}
+
+.ventas-chart-box-large {
+  width: 100%;
+  height: 330px;
+}
+
+.chart-scroll-mobile {
+  width: 100%;
+}
+
+/* DETAIL */
+
+.ventas-detail-card {
+  padding: 18px !important;
+  overflow: hidden;
+}
+
+.ventas-detail-mobile-list {
+  display: none;
+}
+
+.ventas-table-wrap {
+  overflow-x: auto;
+}
+
+.ventas-id-cell {
+  font-weight: 950;
+  color: #111827;
+}
+
+.ventas-warning-cell {
+  color: #b88918;
+  font-weight: 950;
+}
+
+.ventas-success-cell {
+  color: #16a34a;
+  font-weight: 950;
+}
+
+.ventas-total-cell {
+  color: #111827;
+  font-weight: 950;
+}
+
+.table-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.1);
+  color: #8b6f10;
   font-size: 0.74rem;
   font-weight: 900;
 }
 
-.venta-trabajadores-carousel {
-  display: flex;
-  gap: 14px;
-  overflow-x: auto;
-  padding-bottom: 10px;
-}
+/* LOAD MORE */
 
-.venta-trabajador-card {
-  min-width: 150px;
-
-  background: #ffffff;
-
-  border: 1px solid rgba(212, 175, 55, 0.16);
-
-  border-radius: 22px;
-
-  padding: 16px;
-
-  text-align: center;
-
-  cursor: pointer;
-
-  transition:
-    transform 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.venta-trabajador-card:hover {
-  transform: translateY(-2px);
-
-  border-color: rgba(212, 175, 55, 0.4);
-
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
-}
-
-.venta-trabajador-card.selected {
-  border: 2px solid #d4af37;
-  background: #fffdf5;
-}
-
-.venta-trabajador-photo,
-.venta-trabajador-placeholder {
-  width: 72px;
-  height: 72px;
-
-  border-radius: 50%;
-
-  margin: 0 auto 12px;
-}
-
-.venta-trabajador-photo {
-  object-fit: cover;
-  display: block;
-}
-
-.venta-trabajador-placeholder {
+.ventas-load-more {
+  margin-top: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  background: rgba(212, 175, 55, 0.16);
-
-  color: #d4af37;
-
-  font-size: 28px;
-  font-weight: 900;
-}
-
-.venta-trabajador-card h6 {
-  margin: 0;
-  color: #111827;
-  font-weight: 900;
-}
-
-.venta-trabajador-card p {
-  margin: 4px 0 0;
-  color: #6b7280;
-  font-size: 0.8rem;
-}
-
-.venta-modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-
-  background: rgba(0, 0, 0, 0.7);
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  padding: 16px;
-}
-
-.venta-modal {
-  width: 100%;
-  max-width: 980px;
-  max-height: 92vh;
-
-  overflow-y: auto;
-
-  background: #f8fafc;
-
-  border-radius: 28px;
-
-  border: 1px solid rgba(212, 175, 55, 0.18);
-
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.34);
-
-  padding: 24px;
-}
-
-.venta-modal-main {
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 24px;
-}
-
-.venta-modal-resumen-card {
-  background: #ffffff;
-
-  border-radius: 22px;
-
-  border: 1px solid rgba(212, 175, 55, 0.14);
-
-  padding: 20px;
-}
-
-.venta-modal-resumen-card h4 {
-  color: #111827;
-  font-weight: 950;
-  margin-bottom: 18px;
-}
-
-.venta-resumen-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  gap: 14px;
-
-  margin-bottom: 14px;
-}
-
-.venta-resumen-row span {
-  color: #6b7280;
-  font-weight: 700;
-}
-
-.venta-resumen-row b {
-  color: #111827;
-  font-weight: 950;
-}
-
-.venta-total-row {
-  border-top: 1px solid rgba(212, 175, 55, 0.14);
-  padding-top: 16px;
-  margin-top: 16px;
-}
-
-.venta-total-row b {
-  color: #d4af37;
-  font-size: 1.25rem;
-}
-
-.venta-cantidad-control {
-  display: flex;
-  align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-.venta-cantidad-btn {
-  width: 36px;
-  height: 36px;
-
-  border-radius: 12px;
-
-  border: none;
-
-  background: rgba(212, 175, 55, 0.14);
-
-  color: #8b6f10;
-
-  font-weight: 900;
+.ventas-load-more .btn {
+  min-height: 40px;
+  border-radius: 13px !important;
+  font-weight: 900 !important;
 }
 
-.venta-cantidad-input {
-  width: 70px;
-  text-align: center;
-}
-
-.venta-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 24px;
-}
-
-.venta-actions .btn {
-  flex: 1;
-}
-
-.venta-empty {
-  min-height: 260px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  text-align: center;
-
-  border-radius: 22px;
-
-  border: 1px dashed rgba(212, 175, 55, 0.34);
-
-  background: rgba(212, 175, 55, 0.05);
-
-  color: #6b7280;
-
+.ventas-load-more span {
+  color: #667085;
+  font-size: 0.78rem;
   font-weight: 800;
 }
 
-@media (max-width: 1100px) {
-  .ventas-grid,
-  .venta-modal-main {
+/* EMPTY */
+
+.ventas-empty-state {
+  min-height: 140px;
+  border-radius: 18px;
+  border: 1px dashed rgba(212, 175, 55, 0.3);
+  background: rgba(212, 175, 55, 0.05);
+  color: #667085;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-weight: 800;
+  padding: 18px;
+}
+
+.ventas-empty-state svg {
+  color: #d4af37;
+  margin-bottom: 8px;
+}
+
+/* TABLET */
+
+@media (max-width: 1200px) {
+  .ventas-finance-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ventas-chart-grid {
     grid-template-columns: 1fr;
   }
+
+  .ventas-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
+
+/* MOBILE */
 
 @media (max-width: 768px) {
-  .venta-servicios-grid {
-    display: flex;
+  .ventas-page .container-fluid {
+    padding: 8px 10px 96px !important;
+  }
+
+  .ventas-topbar {
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .ventas-topbar h1 {
+    font-size: 1.2rem;
+    margin-bottom: 2px;
+  }
+
+  .ventas-topbar p {
+    font-size: 0.68rem;
+  }
+
+  .ventas-topbar-badges {
+    margin-top: 6px;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  .ventas-topbar-badges .gold-badge {
+    min-height: 22px;
+    padding: 0 7px;
+    font-size: 0.56rem;
+  }
+
+  .ventas-finance-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin-bottom: 8px;
+  }
+
+  .ventas-finance-card {
+    min-height: 82px;
+    border-radius: 18px;
+    padding: 9px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+  }
+
+  .ventas-finance-card::after {
+    width: 78px;
+    height: 78px;
+    right: -32px;
+    bottom: -38px;
+  }
+
+  .ventas-finance-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+  }
+
+  .ventas-finance-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .ventas-finance-card p {
+    font-size: 0.56rem;
+    margin-bottom: 3px;
+  }
+
+  .ventas-finance-card h2 {
+    font-size: 0.76rem;
+    margin-bottom: 3px;
+    letter-spacing: -0.2px;
+  }
+
+  .ventas-finance-card small {
+    font-size: 0.52rem;
+  }
+
+  .ventas-filter-card {
+    padding: 9px !important;
+    border-radius: 18px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .ventas-filter-top {
+    margin-bottom: 7px;
+  }
+
+  .ventas-filter-top h4 {
+    font-size: 0.82rem;
+  }
+
+  .ventas-filter-top span {
+    min-height: 22px;
+    padding: 0 7px;
+    font-size: 0.56rem;
+  }
+
+  .ventas-filter-toggle {
+    min-height: 30px;
+    padding: 0 9px;
+    border-radius: 10px;
+    font-size: 0.62rem;
+  }
+
+  .ventas-quick-filters {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    margin-bottom: 0;
+  }
+
+  .ventas-quick-filters .btn {
+    min-height: 30px !important;
+    padding: 0 3px !important;
+    font-size: 0.6rem !important;
+    border-radius: 10px !important;
+  }
+
+  .ventas-quick-filters .btn svg {
+    display: none;
+  }
+
+  .ventas-filter-grid {
+    display: none;
+    grid-template-columns: 1fr !important;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .ventas-filter-grid.open {
+    display: grid;
+  }
+
+  .ventas-filter-grid .label-gold {
+    font-size: 0.6rem !important;
+    margin-bottom: 2px !important;
+  }
+
+  .ventas-filter-grid .form-control,
+  .ventas-filter-grid .input-dark {
+    min-height: 34px !important;
+    height: 34px !important;
+    border-radius: 11px !important;
+    font-size: 0.7rem !important;
+    padding: 0 9px !important;
+  }
+
+  .ventas-insight-strip {
+    grid-template-columns: 1fr;
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+
+  .ventas-insight-strip article {
+    min-height: 36px;
+    border-radius: 14px;
+    padding: 6px 8px;
+    grid-template-columns: 24px 86px minmax(0, 1fr);
+    column-gap: 7px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.035);
+  }
+
+  .ventas-insight-strip svg {
+    grid-row: auto;
+    width: 24px;
+    height: 24px;
+    padding: 6px;
+    border-radius: 9px;
+  }
+
+  .ventas-insight-strip span {
+    font-size: 0.54rem;
+  }
+
+  .ventas-insight-strip b {
+    font-size: 0.66rem;
+  }
+
+  .ventas-chart-grid {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .ventas-chart-card {
+    padding: 10px !important;
+    border-radius: 20px !important;
+  }
+
+  .ventas-chart-card .ventas-section-head {
+    margin-bottom: 6px;
+  }
+
+  .ventas-chart-card .section-title {
+    font-size: 0.82rem;
+  }
+
+  .ventas-chart-card .section-subtitle {
+    font-size: 0.6rem;
+  }
+
+  .ventas-chart-card .gold-badge {
+    min-height: 22px;
+    padding: 0 7px;
+    font-size: 0.56rem;
+  }
+
+  .ventas-chart-box {
+    height: 215px;
+  }
+
+  .ventas-chart-box-large {
+    height: 245px;
+  }
+
+  .chart-scroll-mobile {
     overflow-x: auto;
-    gap: 16px;
-
-    scroll-snap-type: x mandatory;
-
-    padding-bottom: 12px;
+    overflow-y: hidden;
+    padding-bottom: 4px;
   }
 
-  .venta-servicio-card {
-    flex: 0 0 85%;
-    max-width: 85%;
-
-    scroll-snap-align: start;
+  .ventas-dia-scroll {
+    margin-inline: -4px;
+    padding-inline: 4px;
   }
 
-  .venta-modal {
-    padding: 18px;
+  .ventas-detail-card {
+    padding: 10px !important;
+    border-radius: 20px !important;
   }
 
-  .venta-actions {
-    flex-direction: column;
+  .ventas-detail-card .ventas-section-head {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .ventas-detail-card .section-title {
+    font-size: 0.86rem;
+  }
+
+  .ventas-detail-card .section-subtitle {
+    display: none;
+  }
+
+  .ventas-detail-card .gold-badge {
+    min-height: 22px;
+    padding: 0 7px;
+    font-size: 0.56rem;
+  }
+
+  .ventas-table-wrap {
+    display: none !important;
+  }
+
+  .ventas-detail-mobile-list {
+    display: block;
+    overflow: hidden;
+    border-radius: 15px;
+    background: #ffffff;
+    border: 1px solid rgba(212, 175, 55, 0.1);
+  }
+
+  .ventas-mobile-row {
+    padding: 8px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+    background: #ffffff;
+  }
+
+  .ventas-mobile-row:last-child {
+    border-bottom: none;
+  }
+
+  .ventas-mobile-row-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: start;
+  }
+
+  .ventas-mobile-row-main h5 {
+    margin: 0 0 2px;
+    color: #111827;
+    font-size: 0.76rem;
+    font-weight: 950;
+    line-height: 1.12;
+  }
+
+  .ventas-mobile-row-main span {
+    color: #667085;
+    font-size: 0.6rem;
+    font-weight: 800;
+  }
+
+  .ventas-mobile-row-main b {
+    color: #111827;
+    font-size: 0.74rem;
+    font-weight: 950;
+    white-space: nowrap;
+  }
+
+  .ventas-mobile-row-meta {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 5px;
+  }
+
+  .ventas-mobile-row-meta span {
+    min-height: 19px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #f8fafc;
+    color: #667085;
+    font-size: 0.52rem;
+    font-weight: 850;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .ventas-mobile-row-meta span:last-child {
+    color: #16a34a;
+    background: rgba(22, 163, 74, 0.08);
+  }
+
+  .ventas-load-more {
+    margin-top: 8px;
+    padding: 8px;
+    display: grid;
+    gap: 6px;
+    text-align: center;
+  }
+
+  .ventas-load-more .btn {
+    width: 100%;
+    min-height: 34px;
+    border-radius: 11px !important;
+    font-size: 0.7rem !important;
+  }
+
+  .ventas-load-more span {
+    font-size: 0.6rem;
+  }
+
+  .ventas-empty-state {
+    min-height: 110px;
+    padding: 14px;
   }
 }
 
-@media (max-width: 576px) {
-  .venta-servicio-card {
-    flex-basis: 90%;
-    max-width: 90%;
+@media (max-width: 390px) {
+  .ventas-page .container-fluid {
+    padding-inline: 8px !important;
   }
 
-  .ventas-panel-header,
-  .ventas-panel-body {
-    padding: 18px;
+  .ventas-finance-card h2 {
+    font-size: 0.7rem;
   }
 
-  .venta-modal {
-    border-radius: 24px 24px 0 0;
+  .ventas-insight-strip article {
+    grid-template-columns: 22px 78px minmax(0, 1fr);
+  }
 
-    max-height: 90vh;
+  .ventas-mobile-row-main h5 {
+    font-size: 0.72rem;
+  }
 
-    align-self: flex-end;
+  .ventas-mobile-row-main b {
+    font-size: 0.68rem;
+  }
+}
+@media (max-width: 768px) {
+  .ventas-export-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .ventas-export-actions .gold-badge,
+  .ventas-export-actions .export-btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 36px;
+    height: 36px;
+
+    border-radius: 12px !important;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 8px !important;
+    margin: 0 !important;
+
+    font-size: 0.68rem !important;
+    font-weight: 900 !important;
+  }
+
+  .ventas-export-actions .gold-badge {
+    text-align: center;
+    line-height: 1.1;
+  }
+
+  .ventas-export-actions .export-btn svg {
+    width: 13px;
+    height: 13px;
   }
 }

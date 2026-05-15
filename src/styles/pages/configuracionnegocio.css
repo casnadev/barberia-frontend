@@ -1,0 +1,943 @@
+/* ==========================================================
+   CONFIGURACIÓN NEGOCIO - PREMIUM SETTINGS
+========================================================== */
+
+.config-page {
+  width: 100%;
+}
+
+.config-page .container-fluid {
+  padding: 18px 18px 110px !important;
+}
+
+/* TOPBAR */
+
+.config-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.config-topbar h1 {
+  margin: 0 0 4px;
+  color: #111827;
+  font-size: 1.75rem;
+  font-weight: 950;
+  letter-spacing: -0.8px;
+}
+
+.config-topbar p {
+  margin: 0;
+  color: #667085;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.config-topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* BRAND HERO */
+
+.config-brand-hero {
+  background:
+    radial-gradient(circle at top right, rgba(212, 175, 55, 0.18), transparent 35%),
+    linear-gradient(145deg, #ffffff, #fffdf7);
+  border: 1px solid rgba(212, 175, 55, 0.13);
+  border-radius: 30px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+  padding: 22px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.config-brand-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.config-logo-orb {
+  width: 92px;
+  height: 92px;
+  border-radius: 28px;
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+  display: grid;
+  place-items: center;
+  color: #b88918;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.config-logo-orb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.config-brand-info {
+  min-width: 0;
+}
+
+.config-brand-info span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.12);
+  color: #8b6f10;
+  font-size: 0.68rem;
+  font-weight: 950;
+  margin-bottom: 8px;
+}
+
+.config-brand-info h2 {
+  margin: 0 0 5px;
+  color: #111827;
+  font-size: clamp(1.45rem, 2vw, 2rem);
+  font-weight: 950;
+  letter-spacing: -0.8px;
+  line-height: 1.05;
+}
+
+.config-brand-info p {
+  margin: 0;
+  color: #667085;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.config-brand-meta {
+  margin-top: 10px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.config-brand-meta b {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.13);
+  color: #111827;
+  font-size: 0.7rem;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+}
+
+.config-public-pill {
+  min-width: 260px;
+  max-width: 360px;
+  border-radius: 22px;
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.13);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.config-public-pill svg {
+  color: #b88918;
+  flex-shrink: 0;
+}
+
+.config-public-pill span {
+  display: block;
+  color: #667085;
+  font-size: 0.66rem;
+  font-weight: 900;
+  margin-bottom: 2px;
+}
+
+.config-public-pill b {
+  display: block;
+  color: #111827;
+  font-size: 0.78rem;
+  font-weight: 950;
+  word-break: break-all;
+}
+
+/* QUICK ACTIONS */
+
+.config-action-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.config-action-card {
+  min-height: 92px;
+  border: 1px solid rgba(212, 175, 55, 0.13);
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.045);
+  padding: 15px;
+  text-align: left;
+  transition: 0.18s ease;
+}
+
+.config-action-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(212, 175, 55, 0.35);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+}
+
+.config-action-card svg {
+  color: #b88918;
+  margin-bottom: 10px;
+}
+
+.config-action-card span {
+  display: block;
+  color: #667085;
+  font-size: 0.68rem;
+  font-weight: 900;
+  margin-bottom: 3px;
+}
+
+.config-action-card b {
+  display: block;
+  color: #111827;
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
+/* CONTENT */
+
+.config-content-grid {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.config-preview-card,
+.config-social-card,
+.config-carousel-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(212, 175, 55, 0.12) !important;
+  border-radius: 28px !important;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.055) !important;
+  padding: 18px !important;
+  overflow: hidden;
+}
+
+.config-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.config-section-head .section-title {
+  margin: 0 0 4px;
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.config-section-head .section-subtitle {
+  margin: 0;
+  color: #667085;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+/* PREVIEW PHONE */
+
+.config-preview-phone {
+  max-width: 280px;
+  margin: 0 auto;
+  border-radius: 30px;
+  background: #f8fafc;
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  padding: 10px;
+  box-shadow: inset 0 0 0 4px #ffffff;
+}
+
+.config-preview-cover {
+  height: 150px;
+  border-radius: 24px;
+  background: rgba(212, 175, 55, 0.08);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  color: #b88918;
+}
+
+.config-preview-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.config-preview-cover-empty {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.config-preview-body {
+  position: relative;
+  padding: 34px 12px 14px;
+  text-align: center;
+}
+
+.config-preview-logo {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 58px;
+  height: 58px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 2px solid #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  display: grid;
+  place-items: center;
+  color: #b88918;
+  overflow: hidden;
+}
+
+.config-preview-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.config-preview-body h5 {
+  margin: 0 0 4px;
+  color: #111827;
+  font-size: 0.96rem;
+  font-weight: 950;
+}
+
+.config-preview-body p {
+  margin: 0 0 10px;
+  color: #667085;
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.config-preview-socials {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.config-preview-socials span {
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: rgba(212, 175, 55, 0.12);
+  color: #8b6f10;
+  font-weight: 950;
+  font-size: 0.78rem;
+}
+
+.config-preview-socials small {
+  color: #667085;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+/* SOCIAL */
+
+.config-social-grid {
+  display: grid;
+  gap: 9px;
+}
+
+.config-social-item {
+  border-radius: 18px;
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  background: #ffffff;
+  padding: 11px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.config-social-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 15px;
+  background: rgba(212, 175, 55, 0.12);
+  color: #8b6f10;
+  display: grid;
+  place-items: center;
+  font-weight: 950;
+  font-size: 1rem;
+}
+
+.config-social-info {
+  min-width: 0;
+}
+
+.config-social-info b {
+  display: block;
+  color: #111827;
+  font-size: 0.84rem;
+  font-weight: 950;
+  text-transform: capitalize;
+}
+
+.config-social-info a {
+  display: block;
+  color: #667085;
+  font-size: 0.7rem;
+  font-weight: 750;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.config-social-info span {
+  display: block;
+  color: #8b6f10;
+  font-size: 0.62rem;
+  font-weight: 850;
+  margin-top: 2px;
+}
+
+.config-social-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* CAROUSEL */
+
+.config-carousel-card {
+  margin-bottom: 14px !important;
+}
+
+.config-carousel-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.config-carousel-item {
+  height: 170px;
+  border-radius: 22px;
+  overflow: hidden;
+  position: relative;
+  background: #f8fafc;
+  border: 1px solid rgba(212, 175, 55, 0.12);
+}
+
+.config-carousel-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.config-carousel-item span {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  min-height: 30px;
+  border-radius: 999px;
+  padding: 0 10px;
+  background: rgba(17, 24, 39, 0.74);
+  color: #ffffff;
+  font-size: 0.66rem;
+  font-weight: 850;
+  display: flex;
+  align-items: center;
+}
+
+/* EMPTY */
+
+.config-empty-card {
+  min-height: 140px;
+  border-radius: 18px;
+  border: 1px dashed rgba(212, 175, 55, 0.3);
+  background: rgba(212, 175, 55, 0.05);
+  color: #667085;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-weight: 800;
+  padding: 18px;
+  grid-column: 1 / -1;
+}
+
+.config-empty-card svg {
+  color: #d4af37;
+  margin-bottom: 8px;
+}
+
+/* MODAL */
+
+.config-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.config-modal {
+  width: 100%;
+  max-height: calc(100vh - 36px);
+  overflow: hidden;
+  border-radius: 26px;
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.28);
+  display: flex;
+  flex-direction: column;
+}
+
+.config-modal-header {
+  min-height: 62px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  flex-shrink: 0;
+}
+
+.config-modal-header h4 {
+  margin: 0;
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.config-modal-close {
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 13px;
+  background: #111827;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+}
+
+.config-modal-body {
+  padding: 18px;
+  overflow-y: auto;
+}
+
+.config-modal-actions {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* LOGO MODAL */
+
+.config-logo-modal-preview {
+  width: 150px;
+  height: 150px;
+  border-radius: 34px;
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: #8b6f10;
+  font-weight: 950;
+}
+
+.config-logo-modal-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* MODAL LIST */
+
+.config-modal-list {
+  display: grid;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.config-modal-carousel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.config-image-card-pro {
+  border-radius: 20px;
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  background: #ffffff;
+  padding: 10px;
+}
+
+.config-image-card-pro img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 16px;
+}
+
+/* TABLET */
+
+@media (max-width: 1200px) {
+  .config-content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .config-carousel-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* MOBILE */
+
+@media (max-width: 768px) {
+  .config-page .container-fluid {
+    padding: 8px 10px 96px !important;
+  }
+
+  .config-topbar {
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .config-topbar h1 {
+    font-size: 1.2rem;
+    margin-bottom: 2px;
+  }
+
+  .config-topbar p {
+    font-size: 0.68rem;
+  }
+
+  .config-topbar-actions {
+    margin-top: 7px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+  }
+
+  .config-topbar-actions .gold-badge,
+  .config-topbar-actions .btn {
+    width: 100%;
+    min-height: 34px;
+    border-radius: 12px !important;
+    font-size: 0.62rem !important;
+    justify-content: center;
+    padding-inline: 6px !important;
+  }
+
+  .config-brand-hero {
+    display: block;
+    border-radius: 20px;
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+
+  .config-brand-main {
+    align-items: center;
+    gap: 10px;
+  }
+
+  .config-logo-orb {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+  }
+
+  .config-brand-info span {
+    min-height: 22px;
+    padding: 0 8px;
+    font-size: 0.56rem;
+    margin-bottom: 5px;
+  }
+
+  .config-brand-info h2 {
+    font-size: 1rem;
+    margin-bottom: 3px;
+  }
+
+  .config-brand-info p {
+    font-size: 0.62rem;
+  }
+
+  .config-brand-meta {
+    margin-top: 6px;
+    gap: 4px;
+  }
+
+  .config-brand-meta b {
+    min-height: 22px;
+    padding: 0 7px;
+    font-size: 0.54rem;
+  }
+
+  .config-public-pill {
+    margin-top: 10px;
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+    padding: 9px;
+    border-radius: 15px;
+  }
+
+  .config-public-pill span {
+    font-size: 0.54rem;
+  }
+
+  .config-public-pill b {
+    font-size: 0.64rem;
+  }
+
+  .config-action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin-bottom: 8px;
+  }
+
+  .config-action-card {
+    min-height: 74px;
+    border-radius: 16px;
+    padding: 10px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.035);
+  }
+
+  .config-action-card svg {
+    width: 17px;
+    height: 17px;
+    margin-bottom: 5px;
+  }
+
+  .config-action-card span {
+    font-size: 0.54rem;
+  }
+
+  .config-action-card b {
+    font-size: 0.66rem;
+  }
+
+  .config-content-grid {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .config-preview-card,
+  .config-social-card,
+  .config-carousel-card {
+    padding: 10px !important;
+    border-radius: 20px !important;
+  }
+
+  .config-section-head {
+    margin-bottom: 8px;
+  }
+
+  .config-section-head .section-title {
+    font-size: 0.86rem;
+  }
+
+  .config-section-head .section-subtitle {
+    display: none;
+  }
+
+  .config-section-head .btn {
+    min-height: 34px;
+    border-radius: 11px !important;
+    font-size: 0.68rem !important;
+  }
+
+  .config-preview-phone {
+    max-width: 220px;
+    border-radius: 24px;
+    padding: 8px;
+  }
+
+  .config-preview-cover {
+    height: 116px;
+    border-radius: 18px;
+  }
+
+  .config-preview-body {
+    padding: 28px 8px 10px;
+  }
+
+  .config-preview-logo {
+    width: 48px;
+    height: 48px;
+    top: -24px;
+    border-radius: 16px;
+  }
+
+  .config-preview-body h5 {
+    font-size: 0.78rem;
+  }
+
+  .config-preview-body p {
+    font-size: 0.58rem;
+  }
+
+  .config-preview-socials span {
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    font-size: 0.66rem;
+  }
+
+  .config-social-item {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    border-radius: 15px;
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .config-social-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    font-size: 0.82rem;
+  }
+
+  .config-social-info b {
+    font-size: 0.72rem;
+  }
+
+  .config-social-info a {
+    font-size: 0.58rem;
+  }
+
+  .config-social-info span {
+    font-size: 0.52rem;
+  }
+
+  .config-social-actions {
+    gap: 4px;
+  }
+
+  .config-carousel-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .config-carousel-item {
+    height: 124px;
+    border-radius: 16px;
+  }
+
+  .config-carousel-item span {
+    min-height: 24px;
+    font-size: 0.52rem;
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+  }
+
+  .config-empty-card {
+    min-height: 105px;
+    padding: 14px;
+  }
+
+  .config-modal {
+    border-radius: 22px;
+    max-height: calc(100vh - 24px);
+  }
+
+  .config-modal-header {
+    min-height: 54px;
+    padding: 0 14px;
+  }
+
+  .config-modal-body {
+    padding: 14px;
+  }
+
+  .config-modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .config-modal-actions .btn {
+    width: 100%;
+    min-height: 38px;
+    font-size: 0.7rem !important;
+  }
+
+  .config-logo-modal-preview {
+    width: 118px;
+    height: 118px;
+    border-radius: 26px;
+  }
+
+  .config-modal-carousel-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .config-image-card-pro {
+    border-radius: 16px;
+    padding: 8px;
+  }
+
+  .config-image-card-pro img {
+    height: 150px;
+    border-radius: 13px;
+  }
+}
+
+/* SMALL MOBILE */
+
+@media (max-width: 390px) {
+  .config-page .container-fluid {
+    padding-inline: 8px !important;
+  }
+
+  .config-topbar-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .config-brand-info h2 {
+    font-size: 0.92rem;
+  }
+
+  .config-action-card b {
+    font-size: 0.62rem;
+  }
+}

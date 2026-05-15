@@ -3,24 +3,24 @@ import API_BASE from "../services/api";
 import authFetch from "../services/authFetch";
 
 import CardDark from "../components/ui/CardDark";
-import PageHeader from "../components/ui/PageHeader";
 import Toast from "../components/ui/Toast";
 import GoldBadge from "../components/ui/GoldBadge";
 
 import { getImageUrl, getBusinessCacheKeys } from "../utils/imageUrl";
+
 import {
   Building2,
   Camera,
   ExternalLink,
   Globe,
   ImagePlus,
-  Link as LinkIcon,
   Pencil,
   Plus,
   Save,
   Trash2,
   Upload,
   X,
+  Link as LinkIcon,
 } from "lucide-react";
 
 const Modal = ({ abierto, titulo, children, onClose, ancho = "760px" }) => {
@@ -87,10 +87,22 @@ export default function ConfiguracionNegocio() {
   const [modalCarrusel, setModalCarrusel] = useState(false);
 
   const logoActual = negocio?.logoUrl ? getImageUrl(negocio.logoUrl) : "";
+  const publicUrl = slug ? `/negocio/${slug}` : "Sin slug configurado";
+
+  const mostrarError = (msg) => {
+    setTipoMensaje("error");
+    setError(msg);
+  };
+
+  const mostrarSuccess = (msg) => {
+    setTipoMensaje("success");
+    setMensaje(msg);
+  };
 
   const cargarImagenesCarrusel = useCallback(async () => {
     try {
       const res = await authFetch(`${API_BASE}/Negocios/mis-imagenes-carrusel`);
+
       if (res && res.ok) {
         const data = await res.json();
         setImagenesCarrusel(data || []);
@@ -103,6 +115,7 @@ export default function ConfiguracionNegocio() {
   const cargarRedes = useCallback(async () => {
     try {
       const res = await authFetch(`${API_BASE}/Negocios/mis-redes-sociales`);
+
       if (res && res.ok) {
         const data = await res.json();
         setRedes(data || []);
@@ -159,16 +172,6 @@ export default function ConfiguracionNegocio() {
       if (preview) URL.revokeObjectURL(preview);
     };
   }, [preview]);
-
-  const mostrarError = (msg) => {
-    setTipoMensaje("error");
-    setError(msg);
-  };
-
-  const mostrarSuccess = (msg) => {
-    setTipoMensaje("success");
-    setMensaje(msg);
-  };
 
   const validarImagen = (archivo) => {
     if (!archivo) return false;
@@ -369,12 +372,9 @@ export default function ConfiguracionNegocio() {
       }
 
       mostrarSuccess("Red social eliminada");
-
       cargarRedes();
 
-      if (editandoRedId === id) {
-        limpiarFormularioRed();
-      }
+      if (editandoRedId === id) limpiarFormularioRed();
     } catch (err) {
       mostrarError(err.message);
     }
@@ -455,7 +455,6 @@ export default function ConfiguracionNegocio() {
       }
 
       mostrarSuccess("Imagen actualizada");
-
       cargarImagenesCarrusel();
     } catch (error) {
       mostrarError(error.message);
@@ -477,7 +476,6 @@ export default function ConfiguracionNegocio() {
       }
 
       mostrarSuccess("Imagen eliminada");
-
       cargarImagenesCarrusel();
     } catch (error) {
       mostrarError(error.message);
@@ -495,100 +493,96 @@ export default function ConfiguracionNegocio() {
     setModalLogo(true);
   };
 
-  const publicUrl = slug ? `/negocio/${slug}` : "Sin slug configurado";
-
   return (
     <div className="page-shell config-page">
       <div className="container-fluid py-4">
-        <CardDark className="mb-4 config-header-card">
-          <div className="config-header-row">
-            <PageHeader
-              title="Configuración"
-              subtitle="Administra identidad, imagen pública, redes y carrusel de tu negocio."
-            />
-
-            <div className="config-header-actions">
-              <GoldBadge>{redes.length} redes</GoldBadge>
-              <GoldBadge>{imagenesCarrusel.length} imágenes</GoldBadge>
-            </div>
+        <section className="config-topbar">
+          <div>
+            <h1>Configuración</h1>
+            <p>Marca, redes y presencia pública del negocio.</p>
           </div>
-        </CardDark>
 
-        <div className="config-overview-grid">
-          <CardDark className="config-main-card">
-            <div className="config-business-top">
-              <div className="config-logo-orb">
-                {logoActual ? (
-                  <img src={logoActual} alt="Logo del negocio" />
-                ) : (
-                  <Building2 size={38} />
-                )}
-              </div>
+          <div className="config-topbar-actions">
+            <GoldBadge>{redes.length} redes</GoldBadge>
+            <GoldBadge>{imagenesCarrusel.length} imágenes</GoldBadge>
 
-              <div className="config-business-info">
-                <h3>{negocio?.nombre || nombre || "Mi negocio"}</h3>
-                <p>{direccion || "Dirección no configurada"}</p>
+            {slug && (
+              <a
+                href={`/negocio/${slug}`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-dark-outline"
+              >
+                <ExternalLink size={15} />
+                Ver sitio
+              </a>
+            )}
+          </div>
+        </section>
 
-                <div className="config-business-badges">
-                  <span>{telefono || "Sin teléfono"}</span>
-                  <span>{whatsappNegocio || "Sin WhatsApp"}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="config-public-link">
-              <div>
-                <span>Link público</span>
-                <b>{publicUrl}</b>
-              </div>
-
-              {slug && (
-                <a
-                  href={`/negocio/${slug}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn btn-dark-outline"
-                >
-                  <ExternalLink size={15} />
-                  Ver
-                </a>
+        <section className="config-brand-hero">
+          <div className="config-brand-main">
+            <div className="config-logo-orb">
+              {logoActual ? (
+                <img src={logoActual} alt="Logo del negocio" />
+              ) : (
+                <Building2 size={38} />
               )}
             </div>
 
-            <div className="config-action-grid">
-              <button className="config-action-card" onClick={() => setModalDatos(true)}>
-                <Building2 size={22} />
-                <span>Datos</span>
-                <b>Editar negocio</b>
-              </button>
+            <div className="config-brand-info">
+              <span>Identidad pública</span>
+              <h2>{negocio?.nombre || nombre || "Mi negocio"}</h2>
+              <p>{direccion || "Dirección no configurada"}</p>
 
-              <button className="config-action-card" onClick={abrirModalLogo}>
-                <Camera size={22} />
-                <span>Logo</span>
-                <b>Actualizar imagen</b>
-              </button>
-
-              <button className="config-action-card" onClick={abrirModalRedes}>
-                <Globe size={22} />
-                <span>Redes</span>
-                <b>Gestionar enlaces</b>
-              </button>
-
-              <button className="config-action-card" onClick={() => setModalCarrusel(true)}>
-                <ImagePlus size={22} />
-                <span>Carrusel</span>
-                <b>Fotos públicas</b>
-              </button>
+              <div className="config-brand-meta">
+                <b>{telefono || "Sin teléfono"}</b>
+                <b>{whatsappNegocio || "Sin WhatsApp"}</b>
+              </div>
             </div>
-          </CardDark>
+          </div>
 
+          <div className="config-public-pill">
+            <LinkIcon size={16} />
+            <div>
+              <span>Link público</span>
+              <b>{publicUrl}</b>
+            </div>
+          </div>
+        </section>
+
+        <section className="config-action-grid">
+          <button className="config-action-card" onClick={() => setModalDatos(true)}>
+            <Building2 size={22} />
+            <span>Datos</span>
+            <b>Editar negocio</b>
+          </button>
+
+          <button className="config-action-card" onClick={abrirModalLogo}>
+            <Camera size={22} />
+            <span>Logo</span>
+            <b>Actualizar imagen</b>
+          </button>
+
+          <button className="config-action-card" onClick={abrirModalRedes}>
+            <Globe size={22} />
+            <span>Redes</span>
+            <b>Gestionar enlaces</b>
+          </button>
+
+          <button className="config-action-card" onClick={() => setModalCarrusel(true)}>
+            <ImagePlus size={22} />
+            <span>Carrusel</span>
+            <b>Fotos públicas</b>
+          </button>
+        </section>
+
+        <div className="config-content-grid">
           <CardDark className="config-preview-card">
             <div className="config-section-head">
               <div>
                 <h4 className="section-title">Vista rápida</h4>
-                <p className="section-subtitle">
-                  Revisa cómo está quedando la identidad pública.
-                </p>
+                <p className="section-subtitle">Así se percibe tu negocio públicamente.</p>
               </div>
             </div>
 
@@ -608,11 +602,7 @@ export default function ConfiguracionNegocio() {
 
               <div className="config-preview-body">
                 <div className="config-preview-logo">
-                  {logoActual ? (
-                    <img src={logoActual} alt="Logo" />
-                  ) : (
-                    <Building2 size={22} />
-                  )}
+                  {logoActual ? <img src={logoActual} alt="Logo" /> : <Building2 size={22} />}
                 </div>
 
                 <h5>{nombre || "Nombre del negocio"}</h5>
@@ -628,9 +618,59 @@ export default function ConfiguracionNegocio() {
               </div>
             </div>
           </CardDark>
+
+          <CardDark className="config-social-card">
+            <div className="config-section-head">
+              <div>
+                <h4 className="section-title">Redes sociales</h4>
+                <p className="section-subtitle">Canales visibles para tus clientes.</p>
+              </div>
+
+              <button className="btn btn-gold" onClick={abrirModalRedes}>
+                <Plus size={16} />
+                Agregar
+              </button>
+            </div>
+
+            <div className="config-social-grid">
+              {redes.length === 0 ? (
+                <div className="config-empty-card">
+                  <Globe size={30} />
+                  <p>No hay redes sociales registradas.</p>
+                </div>
+              ) : (
+                redes.map((red) => (
+                  <div className="config-social-item" key={red.idRedSocial}>
+                    <div className="config-social-icon">{iconoRed(red.tipo)}</div>
+
+                    <div className="config-social-info">
+                      <b>{red.tipo}</b>
+                      <a href={red.url} target="_blank" rel="noreferrer">
+                        {red.url}
+                      </a>
+                      <span>{red.activo ? "Activo" : "Oculto"} · Orden {red.orden}</span>
+                    </div>
+
+                    <div className="config-social-actions">
+                      <button className="btn-action-dark" onClick={() => editarRed(red)}>
+                        <Pencil size={15} />
+                      </button>
+
+                      <button
+                        className="btn-action-danger"
+                        onClick={() => eliminarRed(red.idRedSocial)}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardDark>
         </div>
 
-        <CardDark className="mt-4 config-carousel-card">
+        <CardDark className="config-carousel-card">
           <div className="config-section-head">
             <div>
               <h4 className="section-title">Carrusel público</h4>
@@ -641,7 +681,7 @@ export default function ConfiguracionNegocio() {
 
             <button className="btn btn-gold" onClick={() => setModalCarrusel(true)}>
               <Plus size={16} />
-              Gestionar carrusel
+              Gestionar
             </button>
           </div>
 
@@ -659,58 +699,6 @@ export default function ConfiguracionNegocio() {
                     alt={img.descripcion || "Imagen carrusel"}
                   />
                   <span>{img.descripcion || "Sin descripción"}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </CardDark>
-
-        <CardDark className="mt-4 config-social-card">
-          <div className="config-section-head">
-            <div>
-              <h4 className="section-title">Redes sociales</h4>
-              <p className="section-subtitle">
-                Enlaces visibles para tus clientes.
-              </p>
-            </div>
-
-            <button className="btn btn-gold" onClick={abrirModalRedes}>
-              <Plus size={16} />
-              Agregar red
-            </button>
-          </div>
-
-          <div className="config-social-grid">
-            {redes.length === 0 ? (
-              <div className="config-empty-card">
-                <Globe size={30} />
-                <p>No hay redes sociales registradas.</p>
-              </div>
-            ) : (
-              redes.map((red) => (
-                <div className="config-social-item" key={red.idRedSocial}>
-                  <div className="config-social-icon">{iconoRed(red.tipo)}</div>
-
-                  <div className="config-social-info">
-                    <b>{red.tipo}</b>
-                    <a href={red.url} target="_blank" rel="noreferrer">
-                      {red.url}
-                    </a>
-                    <span>{red.activo ? "Activo" : "Oculto"} · Orden {red.orden}</span>
-                  </div>
-
-                  <div className="config-social-actions">
-                    <button className="btn-action-dark" onClick={() => editarRed(red)}>
-                      <Pencil size={15} />
-                    </button>
-
-                    <button
-                      className="btn-action-danger"
-                      onClick={() => eliminarRed(red.idRedSocial)}
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
                 </div>
               ))
             )}
@@ -771,7 +759,7 @@ export default function ConfiguracionNegocio() {
             </div>
           </div>
 
-          <div className="d-flex justify-content-end gap-2 mt-4 flex-wrap">
+          <div className="config-modal-actions">
             <button className="btn btn-dark-outline" onClick={() => setModalDatos(false)}>
               Cancelar
             </button>
@@ -804,7 +792,7 @@ export default function ConfiguracionNegocio() {
             onChange={seleccionarLogo}
           />
 
-          <div className="d-flex justify-content-end gap-2 mt-4 flex-wrap">
+          <div className="config-modal-actions">
             <button
               className="btn btn-dark-outline"
               onClick={() => {
@@ -862,7 +850,6 @@ export default function ConfiguracionNegocio() {
                 className="form-control input-dark"
                 value={ordenRed}
                 onChange={(e) => setOrdenRed(e.target.value)}
-                placeholder="Orden"
               />
             </div>
 
@@ -879,7 +866,7 @@ export default function ConfiguracionNegocio() {
             </div>
           </div>
 
-          <div className="d-flex justify-content-end gap-2 mb-4 flex-wrap">
+          <div className="config-modal-actions">
             {editandoRedId && (
               <button className="btn btn-dark-outline" onClick={limpiarFormularioRed}>
                 Cancelar edición

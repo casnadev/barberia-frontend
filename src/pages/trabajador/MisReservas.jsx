@@ -3,7 +3,6 @@ import API_BASE from "../../services/api";
 import authFetch from "../../services/authFetch";
 
 import CardDark from "../../components/ui/CardDark";
-import PageHeader from "../../components/ui/PageHeader";
 import GoldBadge from "../../components/ui/GoldBadge";
 import Toast from "../../components/ui/Toast";
 import AvatarCircle from "../../components/ui/AvatarCircle";
@@ -14,6 +13,7 @@ import { getImageUrl } from "../../utils/imageUrl";
 import {
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleCheckBig,
@@ -29,6 +29,19 @@ import {
 } from "lucide-react";
 
 const ESTADOS = ["Todos", "Pendiente", "Confirmada", "Atendida", "Cancelada"];
+
+function estadoClass(estado) {
+  switch (estado) {
+    case "Confirmada":
+      return "confirmada";
+    case "Atendida":
+      return "atendida";
+    case "Cancelada":
+      return "cancelada";
+    default:
+      return "pendiente";
+  }
+}
 
 function ModalReserva({ abierto, reserva, onClose, onAccion, procesando }) {
   if (!abierto || !reserva) return null;
@@ -61,7 +74,10 @@ function ModalReserva({ abierto, reserva, onClose, onAccion, procesando }) {
         <div className="admin-agenda-modal-body">
           <div className="admin-agenda-modal-cover">
             {imgServicio ? (
-              <img src={getImageUrl(imgServicio)} alt={reserva.servicio || "Servicio"} />
+              <img
+                src={getImageUrl(imgServicio)}
+                alt={reserva.servicio || "Servicio"}
+              />
             ) : (
               <Scissors size={42} />
             )}
@@ -169,19 +185,6 @@ function ModalReserva({ abierto, reserva, onClose, onAccion, procesando }) {
   );
 }
 
-function estadoClass(estado) {
-  switch (estado) {
-    case "Confirmada":
-      return "confirmada";
-    case "Atendida":
-      return "atendida";
-    case "Cancelada":
-      return "cancelada";
-    default:
-      return "pendiente";
-  }
-}
-
 export default function AgendaReservasAdmin() {
   const [lista, setLista] = useState([]);
   const [whatsappCliente, setWhatsappCliente] = useState("");
@@ -194,6 +197,7 @@ export default function AgendaReservasAdmin() {
   const [fechaSeleccionada, setFechaSeleccionada] = useState(hoyISO);
   const [busqueda, setBusqueda] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState("Todos");
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
 
   const [modalReserva, setModalReserva] = useState(false);
   const [reservaSeleccionada, setReservaSeleccionada] = useState(null);
@@ -300,9 +304,9 @@ export default function AgendaReservasAdmin() {
       if (estadoFiltro !== "Todos" && r.estado !== estadoFiltro) return false;
 
       if (busqueda.trim()) {
-        const texto = `${r.nombreCliente || ""} ${r.servicio || ""} ${r.trabajador || ""} ${
-          r.telefonoCliente || ""
-        } ${r.correoCliente || ""}`.toLowerCase();
+        const texto = `${r.nombreCliente || ""} ${r.servicio || ""} ${
+          r.trabajador || ""
+        } ${r.telefonoCliente || ""} ${r.correoCliente || ""}`.toLowerCase();
 
         if (!texto.includes(busqueda.toLowerCase())) return false;
       }
@@ -481,7 +485,10 @@ export default function AgendaReservasAdmin() {
 
         <div className="admin-agenda-reserva-worker">
           {imgTrabajador ? (
-            <img src={getImageUrl(imgTrabajador)} alt={reserva.trabajador || "Trabajador"} />
+            <img
+              src={getImageUrl(imgTrabajador)}
+              alt={reserva.trabajador || "Trabajador"}
+            />
           ) : (
             <span>{reserva.trabajador?.charAt(0)?.toUpperCase() || "T"}</span>
           )}
@@ -566,22 +573,20 @@ export default function AgendaReservasAdmin() {
   return (
     <div className="page-shell admin-agenda-page">
       <div className="container-fluid py-4">
-        <CardDark className="admin-agenda-header-card mb-4">
-          <div className="admin-agenda-header-row">
-            <PageHeader
-              title="Agenda de reservas"
-              subtitle="Control diario de citas por trabajador, con historial pasado y futuro."
-            />
-
-            <div className="admin-agenda-header-actions">
-              <GoldBadge>{estadisticasDia.total} citas del día</GoldBadge>
-
-              <button className="btn btn-dark-outline" onClick={volverHoy}>
-                Hoy
-              </button>
-            </div>
+        <section className="admin-agenda-topbar">
+          <div>
+            <h1>Agenda</h1>
+            <p>Control diario de citas por trabajador.</p>
           </div>
-        </CardDark>
+
+          <div className="admin-agenda-topbar-actions">
+            <GoldBadge>{estadisticasDia.total} citas</GoldBadge>
+
+            <button className="btn btn-dark-outline" onClick={volverHoy}>
+              Hoy
+            </button>
+          </div>
+        </section>
 
         <Toast mensaje={mensaje} tipo="success" onClose={() => setMensaje("")} />
         <Toast mensaje={error} tipo="error" onClose={() => setError("")} />
@@ -591,92 +596,104 @@ export default function AgendaReservasAdmin() {
             href={whatsappCliente}
             target="_blank"
             rel="noreferrer"
-            className="btn btn-gold mb-4 admin-agenda-whatsapp-btn"
+            className="btn btn-gold admin-agenda-whatsapp-btn"
           >
             <MessageCircle size={16} />
             Enviar WhatsApp al cliente
           </a>
         )}
 
-        <section className="admin-agenda-kpi-grid mb-4">
-          <CardDark className="admin-agenda-kpi-card gold">
-            <div className="admin-agenda-kpi-icon">
-              <CalendarDays size={22} />
-            </div>
+        <section className="admin-agenda-finance-grid">
+          <article className="admin-agenda-finance-card gold">
+            <span className="admin-agenda-finance-icon">
+              <CalendarDays size={20} />
+            </span>
+
             <p>Total citas</p>
             <h2>
               <AnimatedNumber value={estadisticasDia.total} decimals={0} />
             </h2>
-            <span>Reservas del día seleccionado</span>
-          </CardDark>
+            <small>Día seleccionado</small>
+          </article>
 
-          <CardDark className="admin-agenda-kpi-card pending">
-            <div className="admin-agenda-kpi-icon">
-              <Clock size={22} />
-            </div>
+          <article className="admin-agenda-finance-card pending">
+            <span className="admin-agenda-finance-icon">
+              <Clock size={20} />
+            </span>
+
             <p>Pendientes</p>
             <h2>
               <AnimatedNumber value={estadisticasDia.pendientes} decimals={0} />
             </h2>
-            <span>Esperan confirmación</span>
-          </CardDark>
+            <small>Esperan confirmación</small>
+          </article>
 
-          <CardDark className="admin-agenda-kpi-card success">
-            <div className="admin-agenda-kpi-icon">
-              <CheckCircle2 size={22} />
-            </div>
+          <article className="admin-agenda-finance-card success">
+            <span className="admin-agenda-finance-icon">
+              <CheckCircle2 size={20} />
+            </span>
+
             <p>Confirmadas</p>
             <h2>
               <AnimatedNumber value={estadisticasDia.confirmadas} decimals={0} />
             </h2>
-            <span>Listas para atender</span>
-          </CardDark>
+            <small>Listas para atender</small>
+          </article>
 
-          <CardDark className="admin-agenda-kpi-card info">
-            <div className="admin-agenda-kpi-icon">
-              <UserRound size={22} />
-            </div>
+          <article className="admin-agenda-finance-card info">
+            <span className="admin-agenda-finance-icon">
+              <UserRound size={20} />
+            </span>
+
             <p>Trabajadores</p>
             <h2>
               <AnimatedNumber value={trabajadoresDia.length} decimals={0} />
             </h2>
-            <span>Con agenda en esta fecha</span>
-          </CardDark>
+            <small>Con agenda</small>
+          </article>
         </section>
 
-        <CardDark className="admin-agenda-toolbar-card mb-4">
-          <div className="admin-agenda-toolbar">
+        <CardDark className="admin-agenda-filter-card">
+          <div className="admin-agenda-filter-top">
             <div>
-              <h4 className="section-title text-capitalize mb-1">
-                {formatearFecha(fechaSeleccionada)}
-              </h4>
-              <p className="section-subtitle">
-                Cambia la fecha para revisar citas pasadas, actuales o futuras.
-              </p>
+              <h4>Filtros</h4>
+              <span className="text-capitalize">{formatearFecha(fechaSeleccionada)}</span>
             </div>
 
-            <div className="admin-agenda-date-controls admin-agenda-date-controls-row">
-              <button className="btn btn-dark-outline" onClick={() => cambiarDia(-1)}>
-                <ChevronLeft size={16} />
-              </button>
-
-              <div className="admin-agenda-date-input-wrap">
-                <CalendarDays size={16} />
-                <input
-                  type="date"
-                  className="form-control input-dark"
-                  value={fechaSeleccionada}
-                  onChange={(e) => setFechaSeleccionada(e.target.value)}
-                />
-              </div>
-
-              <button className="btn btn-dark-outline" onClick={() => cambiarDia(1)}>
-                <ChevronRight size={16} />
-              </button>
-            </div>
+            <button
+              type="button"
+              className="admin-agenda-filter-toggle"
+              onClick={() => setFiltrosAbiertos((prev) => !prev)}
+            >
+              Más filtros
+              <ChevronDown
+                size={15}
+                className={filtrosAbiertos ? "rotate" : ""}
+              />
+            </button>
           </div>
 
-          <div className="admin-agenda-filter-grid">
+          <div className="admin-agenda-date-controls admin-agenda-date-controls-row">
+            <button className="btn btn-dark-outline" onClick={() => cambiarDia(-1)}>
+              <ChevronLeft size={16} />
+            </button>
+
+            <div className="admin-agenda-date-input-wrap">
+              <CalendarDays size={16} />
+              <input
+                type="date"
+                className="form-control input-dark"
+                value={fechaSeleccionada}
+                onChange={(e) => setFechaSeleccionada(e.target.value)}
+              />
+            </div>
+
+            <button className="btn btn-dark-outline" onClick={() => cambiarDia(1)}>
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          <div className={`admin-agenda-filter-grid ${filtrosAbiertos ? "open" : ""}`}>
             <div className="admin-agenda-search-box">
               <Search size={16} />
               <input
@@ -719,8 +736,10 @@ export default function AgendaReservasAdmin() {
         </CardDark>
 
         {loading ? (
-          <CardDark>
-            <p className="text-center mb-0">Cargando reservas...</p>
+          <CardDark className="admin-agenda-empty-card">
+            <CalendarDays size={38} />
+            <h4>Cargando reservas...</h4>
+            <p>Estamos preparando tu agenda.</p>
           </CardDark>
         ) : reservasDia.length > 0 ? (
           <CardDark className="admin-agenda-calendar-card">
@@ -728,7 +747,7 @@ export default function AgendaReservasAdmin() {
               <div>
                 <h4 className="section-title mb-1">Calendario diario</h4>
                 <p className="section-subtitle">
-                  Visualiza citas por hora y trabajador. Al marcar atendida se mantiene el flujo hacia ventas, dashboard y pagos.
+                  Visualiza citas por hora y trabajador.
                 </p>
               </div>
 

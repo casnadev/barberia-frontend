@@ -40,7 +40,7 @@ const Modal = ({ abierto, titulo, children, onClose, ancho = "980px" }) => {
         <div className="venta-modal-header">
           <h4>{titulo}</h4>
 
-          <button className="venta-modal-close" onClick={onClose}>
+          <button type="button" className="venta-modal-close" onClick={onClose}>
             <X size={18} />
           </button>
         </div>
@@ -166,18 +166,18 @@ function RegistrarVenta() {
     };
 
     cargarDatos();
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
   const totalReferencial = useMemo(
     () =>
       venta.detalles.reduce(
-        (acc, d) => acc + Number(d.cantidad || 0) * Number(d.precioReferencial || 0),
+        (acc, d) =>
+          acc + Number(d.cantidad || 0) * Number(d.precioReferencial || 0),
         0
       ),
     [venta.detalles]
   );
-
 
   const serviciosSeleccionados = useMemo(
     () => venta.detalles.filter((d) => d.idServicio).length,
@@ -441,16 +441,28 @@ function RegistrarVenta() {
   return (
     <div className="page-shell venta-rapida-page">
       <div className="container-fluid py-4">
-        <CardDark className="mb-4 venta-rapida-header-card">
+        <CardDark className="venta-rapida-header-card">
           <div className="venta-rapida-header-row">
-            <PageHeader
-              title="Venta rápida"
-              subtitle="Registra servicios de clientes que llegaron sin reserva."
-            />
+            <div className="venta-rapida-header-copy">
+              <PageHeader
+                title="Venta rápida"
+                subtitle="Registra servicios de clientes que llegaron sin reserva."
+              />
+            </div>
 
             <div className="venta-rapida-header-actions">
               <GoldBadge>{venta.detalles.length} servicios</GoldBadge>
               <GoldBadge>S/ {totalReferencial.toFixed(2)}</GoldBadge>
+
+              <button
+                type="button"
+                className="btn btn-gold venta-mobile-add-btn"
+                onClick={abrirModalDetalle}
+                disabled={guardando || loading}
+              >
+                <Plus size={16} />
+                Agregar servicio
+              </button>
             </div>
           </div>
         </CardDark>
@@ -467,7 +479,7 @@ function RegistrarVenta() {
 
               <button
                 type="button"
-                className="btn btn-gold"
+                className="btn btn-gold venta-desktop-add-btn"
                 onClick={abrirModalDetalle}
                 disabled={guardando || loading}
               >
@@ -487,10 +499,14 @@ function RegistrarVenta() {
                   const servicio = obtenerServicio(d.idServicio);
                   const trabajador = obtenerTrabajador(d.idTrabajador);
                   const imgServicio = obtenerImagenServicio(servicio);
-                  const subtotal = Number(d.cantidad || 0) * Number(d.precioReferencial || 0);
+                  const subtotal =
+                    Number(d.cantidad || 0) * Number(d.precioReferencial || 0);
 
                   return (
-                    <div key={`${d.idServicio}-${d.idTrabajador}-${i}`} className="venta-rapida-item">
+                    <article
+                      key={`${d.idServicio}-${d.idTrabajador}-${i}`}
+                      className="venta-rapida-item"
+                    >
                       <div className="venta-rapida-item-img">
                         {imgServicio ? (
                           <img src={imgServicio} alt={servicio?.nombre || "Servicio"} />
@@ -504,8 +520,8 @@ function RegistrarVenta() {
                         <p>{trabajador?.nombre || "Sin trabajador"}</p>
 
                         <div className="venta-rapida-item-tags">
-                          <span>Cantidad: {d.cantidad}</span>
-                          <span>Precio: S/ {Number(d.precioReferencial || 0).toFixed(2)}</span>
+                          <span>Cant. {d.cantidad}</span>
+                          <span>S/ {Number(d.precioReferencial || 0).toFixed(2)}</span>
                         </div>
                       </div>
 
@@ -521,7 +537,7 @@ function RegistrarVenta() {
                           <Trash2 size={15} />
                         </button>
                       </div>
-                    </div>
+                    </article>
                   );
                 })}
               </div>
@@ -537,9 +553,9 @@ function RegistrarVenta() {
                 </div>
 
                 {ventasDiaAgrupadas.length > 0 ? (
-                  <div className="venta-hoy-carousel">
+                  <div className="venta-hoy-grid">
                     {ventasDiaAgrupadas.map((v) => (
-                      <div className="venta-hoy-card" key={v.idVenta}>
+                      <article className="venta-hoy-card" key={v.idVenta}>
                         <div className="venta-hoy-icon">
                           <ReceiptText size={22} />
                         </div>
@@ -555,7 +571,7 @@ function RegistrarVenta() {
                         </div>
 
                         <b>S/ {Number(v.total || 0).toFixed(2)}</b>
-                      </div>
+                      </article>
                     ))}
                   </div>
                 ) : (
@@ -569,7 +585,7 @@ function RegistrarVenta() {
             )}
           </CardDark>
 
-          <div className="venta-rapida-side">
+          <aside className="venta-rapida-side">
             <CardDark className="venta-rapida-total-card">
               <div className="venta-rapida-total-icon">
                 <CircleDollarSign size={30} />
@@ -587,7 +603,12 @@ function RegistrarVenta() {
                 type="button"
                 className="btn btn-gold w-100"
                 onClick={guardarVenta}
-                disabled={guardando || loading || venta.detalles.length === 0 || totalReferencial <= 0}
+                disabled={
+                  guardando ||
+                  loading ||
+                  venta.detalles.length === 0 ||
+                  totalReferencial <= 0
+                }
               >
                 <Save size={16} />
                 {guardando ? "Guardando..." : "Guardar venta"}
@@ -624,14 +645,10 @@ function RegistrarVenta() {
                 <b>{ventasDiaAgrupadas.length}</b>
               </CardDark>
             </div>
-          </div>
+          </aside>
         </div>
 
-        <Modal
-          abierto={modalDetalle}
-          titulo="Agregar servicio"
-          onClose={cerrarModalDetalle}
-        >
+        <Modal abierto={modalDetalle} titulo="Agregar servicio" onClose={cerrarModalDetalle}>
           <div className="venta-modal-layout">
             <div className="venta-modal-main">
               <div className="venta-modal-block">
@@ -644,9 +661,10 @@ function RegistrarVenta() {
                   <GoldBadge>{servicios.length} disponibles</GoldBadge>
                 </div>
 
-                <div className="venta-servicios-carousel">
+                <div className="venta-servicios-grid">
                   {servicios.map((s) => {
-                    const selected = Number(detalleTemporal.idServicio) === Number(s.idServicio);
+                    const selected =
+                      Number(detalleTemporal.idServicio) === Number(s.idServicio);
                     const img = obtenerImagenServicio(s);
 
                     return (
@@ -657,18 +675,13 @@ function RegistrarVenta() {
                         onClick={() => seleccionarServicio(s)}
                       >
                         <div className="venta-servicio-img">
-                          {img ? (
-                            <img src={img} alt={s.nombre} />
-                          ) : (
-                            <Scissors size={34} />
-                          )}
+                          {img ? <img src={img} alt={s.nombre} /> : <Scissors size={34} />}
 
                           {s.destacado && <span>Destacado</span>}
                         </div>
 
                         <div className="venta-servicio-info">
                           <h6 title={s.nombre}>{s.nombre}</h6>
-                          <p>{s.descripcionCorta || "Servicio de atención"}</p>
 
                           <div>
                             <b>S/ {Number(s.precioBase || 0).toFixed(2)}</b>
@@ -691,9 +704,10 @@ function RegistrarVenta() {
                   <GoldBadge>{trabajadores.length} personas</GoldBadge>
                 </div>
 
-                <div className="venta-trabajadores-carousel">
+                <div className="venta-trabajadores-grid">
                   {trabajadores.map((t) => {
-                    const selected = Number(detalleTemporal.idTrabajador) === Number(t.idTrabajador);
+                    const selected =
+                      Number(detalleTemporal.idTrabajador) === Number(t.idTrabajador);
                     const foto = obtenerFotoTrabajador(t);
 
                     return (

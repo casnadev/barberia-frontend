@@ -1,164 +1,1089 @@
 /* ==========================================================
-   GASTOS
-   ========================================================== */
+   GASTOS / PREMIUM FINANCIAL DASHBOARD
+========================================================== */
 
 .gastos-page {
   width: 100%;
 }
 
-.gastos-page .header-dashboard {
-  padding: 0;
-  margin-bottom: 0;
+.gastos-page .container-fluid {
+  padding: 18px 18px 110px !important;
 }
 
-.gastos-header-row,
-.gastos-toolbar {
+/* TOPBAR */
+
+.gastos-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.gastos-topbar h1 {
+  margin: 0 0 4px;
+  color: #111827;
+  font-size: 1.75rem;
+  font-weight: 950;
+  letter-spacing: -0.8px;
+}
+
+.gastos-topbar p {
+  margin: 0;
+  color: #667085;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.gastos-topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* FINANCE CARDS */
+
+.gastos-finance-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.gastos-finance-card {
+  position: relative;
+  min-height: 146px;
+  overflow: hidden;
+  border-radius: 28px;
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.13);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.gastos-finance-card::after {
+  content: "";
+  position: absolute;
+  right: -38px;
+  bottom: -52px;
+  width: 128px;
+  height: 128px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.09);
+  pointer-events: none;
+}
+
+.gastos-finance-card.danger {
+  background:
+    radial-gradient(circle at top right, rgba(239, 68, 68, 0.13), transparent 35%),
+    #ffffff;
+}
+
+.gastos-finance-card.gold {
+  background:
+    radial-gradient(circle at top right, rgba(212, 175, 55, 0.14), transparent 35%),
+    #ffffff;
+}
+
+.gastos-finance-card.blue {
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.13), transparent 35%),
+    #ffffff;
+}
+
+.gastos-finance-card.purple {
+  background:
+    radial-gradient(circle at top right, rgba(139, 92, 246, 0.12), transparent 35%),
+    #ffffff;
+}
+
+.gastos-finance-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 17px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.gastos-finance-card.gold .gastos-finance-icon {
+  background: rgba(212, 175, 55, 0.13);
+  color: #b88918;
+}
+
+.gastos-finance-card.blue .gastos-finance-icon {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+}
+
+.gastos-finance-card.purple .gastos-finance-icon {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+}
+
+.gastos-finance-card p {
+  margin: 0 0 8px;
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.gastos-finance-card h2 {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: clamp(1.15rem, 1.5vw, 1.55rem);
+  font-weight: 950;
+  letter-spacing: -0.5px;
+  line-height: 1.05;
+}
+
+.gastos-finance-card small {
+  color: #667085;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+/* SHARED CARDS */
+
+.gastos-filter-card,
+.gastos-section-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(212, 175, 55, 0.12) !important;
+  border-radius: 28px !important;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.055) !important;
+}
+
+/* FILTERS */
+
+.gastos-filter-card {
+  padding: 16px !important;
+  margin-bottom: 14px !important;
+}
+
+.gastos-filter-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 12px;
 }
 
-.gastos-header-actions,
-.gastos-filtros {
-  display: flex;
+.gastos-filter-top h4 {
+  margin: 0;
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.gastos-filter-top span {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.1);
+  color: #8b6f10;
+  font-size: 0.72rem;
+  font-weight: 900;
 }
 
-.gastos-grid {
+.gastos-filter-toggle {
+  border: none;
+  background: #111827;
+  color: #ffffff;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 0.74rem;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gastos-filter-toggle svg {
+  transition: transform 0.18s ease;
+}
+
+.gastos-filter-toggle svg.rotate {
+  transform: rotate(180deg);
+}
+
+.gastos-quick-filters {
+  display: grid;
+  grid-template-columns: repeat(4, max-content);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.gastos-quick-filters .btn {
+  min-height: 38px;
+  border-radius: 13px !important;
+  padding: 0 16px !important;
+  font-size: 0.82rem !important;
+  font-weight: 900 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.gastos-filter-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 12px;
 }
 
-.gasto-kpi-card {
-  background: #ffffff;
-  border: 1px solid rgba(212, 175, 55, 0.18);
-  border-radius: 22px;
-  padding: 18px;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+.gastos-filter-grid .label-gold {
+  font-size: 0.76rem;
+  margin-bottom: 5px;
 }
 
-.gasto-kpi-card span {
-  display: block;
-  color: #6b7280;
+.gastos-filter-grid .form-control,
+.gastos-filter-grid .input-dark {
+  min-height: 44px;
+  height: 44px;
+  border-radius: 14px !important;
+}
+
+/* SECTION */
+
+.gastos-section-card {
+  padding: 18px !important;
+  overflow: hidden;
+}
+
+.gastos-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.gastos-section-head .section-title {
+  margin: 0 0 4px;
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.gastos-section-head .section-subtitle {
+  margin: 0;
+  color: #667085;
   font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.gastos-export-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.export-btn {
+  min-height: 38px;
+  border-radius: 13px !important;
+  font-size: 0.78rem !important;
+  font-weight: 900 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* TABLE */
+
+.gastos-table-wrap {
+  overflow-x: auto;
+}
+
+.gastos-table-name {
+  color: #111827;
+  font-weight: 950;
+}
+
+.gastos-type-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.1);
+  color: #8b6f10;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.gastos-danger-cell {
+  color: #dc2626;
+  font-weight: 950;
+}
+
+.gastos-danger-btn {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-weight: 900 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.gastos-danger-btn:hover {
+  background: #fecaca !important;
+}
+
+/* MOBILE CARDS */
+
+.gastos-mobile-cards {
+  display: none;
+}
+
+.gastos-history-card {
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  border-radius: 18px;
+  padding: 12px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.045);
+}
+
+.gastos-history-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.gastos-history-top h5 {
+  margin: 0 0 3px;
+  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 950;
+}
+
+.gastos-history-top span {
+  color: #667085;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.gastos-history-top b {
+  color: #dc2626;
+  font-size: 0.88rem;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.gastos-history-info {
+  margin-bottom: 10px;
+}
+
+.gastos-history-info span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.1);
+  color: #8b6f10;
+  font-size: 0.62rem;
   font-weight: 900;
   margin-bottom: 6px;
 }
 
-.gasto-kpi-card b {
-  color: #111827;
-  font-size: 1.55rem;
-  font-weight: 950;
+.gastos-history-info p {
+  margin: 0;
+  color: #667085;
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
-.gasto-kpi-card.danger b {
-  color: #dc2626;
+/* EMPTY */
+
+.gastos-empty-card {
+  min-height: 130px;
+  border-radius: 18px;
+  border: 1px dashed rgba(212, 175, 55, 0.3);
+  background: rgba(212, 175, 55, 0.05);
+  color: #667085;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-weight: 800;
+  padding: 18px;
 }
 
-.gasto-kpi-card.warning b {
+.gastos-empty-card svg {
   color: #d4af37;
+  margin-bottom: 8px;
 }
 
-.gasto-form-card,
-.gasto-list-card {
-  overflow: hidden;
-}
+/* PAGINATION */
 
-.gasto-card {
-  background: #ffffff;
-  border: 1px solid rgba(212, 175, 55, 0.18);
-  border-radius: 20px;
-  padding: 16px;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+.gastos-pagination {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 14px;
-  align-items: center;
+  flex-wrap: wrap;
 }
 
-.gasto-card-info {
-  min-width: 0;
-}
-
-.gasto-card-info h5 {
-  color: #111827;
-  font-weight: 950;
-  margin: 0 0 5px;
-}
-
-.gasto-card-info p {
-  color: #6b7280;
-  margin: 0;
-  font-weight: 700;
-  font-size: 0.88rem;
-}
-
-.gasto-card-monto {
-  color: #dc2626;
-  font-weight: 950;
-  font-size: 1.1rem;
-  white-space: nowrap;
-}
-
-.gasto-categoria-pill {
-  display: inline-flex;
-  margin-top: 8px;
-  border-radius: 999px;
-  padding: 5px 10px;
-  background: rgba(212, 175, 55, 0.14);
-  color: #8b6f10;
-  font-size: 0.75rem;
-  font-weight: 900;
-}
-
-.gastos-empty {
-  min-height: 220px;
-  border-radius: 20px;
-  border: 1px dashed rgba(212, 175, 55, 0.35);
-  background: rgba(212, 175, 55, 0.06);
-  color: #6b7280;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+.gastos-pagination-info {
+  color: #667085;
+  font-size: 0.8rem;
   font-weight: 800;
 }
 
+.gastos-pagination-info b {
+  color: #111827;
+}
+
+.gastos-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gastos-page-size {
+  width: 135px !important;
+  min-height: 38px !important;
+  height: 38px !important;
+  border-radius: 13px !important;
+  font-size: 0.76rem !important;
+}
+
+.gastos-page-number {
+  color: #111827;
+  font-size: 0.82rem;
+  font-weight: 950;
+  min-width: 54px;
+  text-align: center;
+}
+
+/* MODAL */
+
+.gastos-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.gastos-modal {
+  width: 100%;
+  max-height: calc(100vh - 36px);
+  overflow: hidden;
+  border-radius: 26px;
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.28);
+  display: flex;
+  flex-direction: column;
+}
+
+.gastos-modal-header {
+  min-height: 62px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  flex-shrink: 0;
+}
+
+.gastos-modal-header h4 {
+  margin: 0;
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.gastos-modal-close {
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 13px;
+  background: #111827;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+}
+
+.gastos-modal-body {
+  padding: 18px;
+  overflow-y: auto;
+}
+
+.gastos-confirm-modal {
+  max-width: 430px;
+}
+
+.gastos-confirm-text {
+  color: #374151;
+  font-size: 0.92rem;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+
+.gastos-modal-actions {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* MODAL CONTENT */
+
+.gastos-modal-intro {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(212, 175, 55, 0.07);
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  margin-bottom: 16px;
+}
+
+.gastos-modal-intro svg {
+  color: #b88918;
+  flex-shrink: 0;
+}
+
+.gastos-modal-intro h5 {
+  margin: 0 0 2px;
+  color: #111827;
+  font-size: 0.94rem;
+  font-weight: 950;
+}
+
+.gastos-modal-intro p {
+  margin: 0;
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.gastos-tipo-section {
+  border-radius: 20px;
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  padding: 14px;
+  background: #fffdf7;
+}
+
+.gastos-tipo-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.gastos-tipo-head h5 {
+  margin: 0 0 2px;
+  color: #111827;
+  font-size: 0.92rem;
+  font-weight: 950;
+}
+
+.gastos-tipo-head p {
+  margin: 0;
+  color: #667085;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.gastos-tipo-carousel {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.gastos-tipo-card {
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  background: #ffffff;
+  border-radius: 18px;
+  min-height: 122px;
+  padding: 12px;
+  text-align: left;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease;
+}
+
+.gastos-tipo-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(212, 175, 55, 0.34);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+}
+
+.gastos-tipo-card.selected {
+  background: rgba(212, 175, 55, 0.11);
+  border-color: rgba(212, 175, 55, 0.45);
+}
+
+.gastos-tipo-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 13px;
+  background: rgba(212, 175, 55, 0.12);
+  color: #b88918;
+  display: grid;
+  place-items: center;
+  margin-bottom: 9px;
+}
+
+.gastos-tipo-card h6 {
+  margin: 0 0 3px;
+  color: #111827;
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.gastos-tipo-card p {
+  margin: 0;
+  color: #667085;
+  font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+/* TABLET */
+
 @media (max-width: 1200px) {
-  .gastos-grid {
+  .gastos-finance-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gastos-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gastos-tipo-carousel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
+/* MOBILE */
+
 @media (max-width: 768px) {
-  .gastos-grid {
-    display: flex;
-    overflow-x: auto;
-    gap: 14px;
-    scroll-snap-type: x mandatory;
-    padding-bottom: 12px;
+  .gastos-page .container-fluid {
+    padding: 8px 10px 96px !important;
   }
 
-  .gasto-kpi-card {
-    flex: 0 0 82%;
-    max-width: 82%;
-    scroll-snap-align: start;
+  .gastos-topbar {
+    display: block;
+    margin-bottom: 8px;
   }
 
-  .gastos-header-actions,
-  .gastos-header-actions .btn,
-  .gastos-filtros,
-  .gastos-filtros .btn {
+  .gastos-topbar h1 {
+    font-size: 1.2rem;
+    margin-bottom: 2px;
+  }
+
+  .gastos-topbar p {
+    font-size: 0.68rem;
+  }
+
+  .gastos-topbar-actions {
+    margin-top: 7px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
     width: 100%;
   }
 
-  .gasto-card {
-    flex-direction: column;
-    align-items: flex-start;
+  .gastos-topbar-actions .gold-badge,
+  .gastos-topbar-actions .btn {
+    width: 100%;
+    min-height: 34px;
+    border-radius: 12px !important;
+    font-size: 0.66rem !important;
+    justify-content: center;
+  }
+
+  .gastos-finance-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin-bottom: 8px;
+  }
+
+  .gastos-finance-card {
+    min-height: 82px;
+    border-radius: 18px;
+    padding: 9px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+  }
+
+  .gastos-finance-card::after {
+    width: 78px;
+    height: 78px;
+    right: -32px;
+    bottom: -38px;
+  }
+
+  .gastos-finance-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+  }
+
+  .gastos-finance-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .gastos-finance-card p {
+    font-size: 0.56rem;
+    margin-bottom: 3px;
+  }
+
+  .gastos-finance-card h2 {
+    font-size: 0.76rem;
+    margin-bottom: 3px;
+    letter-spacing: -0.2px;
+  }
+
+  .gastos-finance-card small {
+    font-size: 0.52rem;
+  }
+
+  .gastos-filter-card {
+    padding: 9px !important;
+    border-radius: 18px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .gastos-filter-top {
+    margin-bottom: 7px;
+  }
+
+  .gastos-filter-top h4 {
+    font-size: 0.82rem;
+  }
+
+  .gastos-filter-top span {
+    min-height: 22px;
+    padding: 0 7px;
+    font-size: 0.56rem;
+  }
+
+  .gastos-filter-toggle {
+    min-height: 30px;
+    padding: 0 9px;
+    border-radius: 10px;
+    font-size: 0.62rem;
+  }
+
+  .gastos-quick-filters {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    margin-bottom: 0;
+  }
+
+  .gastos-quick-filters .btn {
+    min-height: 30px !important;
+    padding: 0 3px !important;
+    font-size: 0.6rem !important;
+    border-radius: 10px !important;
+  }
+
+  .gastos-quick-filters .btn svg {
+    display: none;
+  }
+
+  .gastos-filter-grid {
+    display: none;
+    grid-template-columns: 1fr !important;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .gastos-filter-grid.open {
+    display: grid;
+  }
+
+  .gastos-filter-grid .label-gold {
+    font-size: 0.6rem !important;
+    margin-bottom: 2px !important;
+  }
+
+  .gastos-filter-grid .form-control,
+  .gastos-filter-grid .input-dark {
+    min-height: 34px !important;
+    height: 34px !important;
+    border-radius: 11px !important;
+    font-size: 0.7rem !important;
+    padding: 0 9px !important;
+  }
+
+  .gastos-section-card {
+    padding: 10px !important;
+    border-radius: 20px !important;
+  }
+
+  .gastos-section-head {
+    margin-bottom: 8px;
+  }
+
+  .gastos-section-head .section-title {
+    font-size: 0.86rem;
+  }
+
+  .gastos-section-head .section-subtitle {
+    display: none;
+  }
+
+  .gastos-export-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .gastos-export-actions .gold-badge,
+  .gastos-export-actions .export-btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 36px;
+    height: 36px;
+    border-radius: 12px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px !important;
+    margin: 0 !important;
+    font-size: 0.68rem !important;
+    font-weight: 900 !important;
+    text-align: center;
+  }
+
+  .gastos-export-actions .export-btn svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .gastos-table-wrap {
+    display: none !important;
+  }
+
+  .gastos-mobile-cards {
+    display: grid;
+    gap: 8px;
+  }
+
+  .gastos-history-card {
+    border-radius: 16px;
+    padding: 9px;
+    box-shadow: none;
+  }
+
+  .gastos-history-top {
+    margin-bottom: 8px;
+  }
+
+  .gastos-history-top h5 {
+    font-size: 0.78rem;
+  }
+
+  .gastos-history-top span {
+    font-size: 0.58rem;
+  }
+
+  .gastos-history-top b {
+    font-size: 0.74rem;
+  }
+
+  .gastos-history-info {
+    margin-bottom: 8px;
+  }
+
+  .gastos-history-info span {
+    min-height: 20px;
+    font-size: 0.54rem;
+    margin-bottom: 5px;
+  }
+
+  .gastos-history-info p {
+    font-size: 0.6rem;
+  }
+
+  .gastos-history-card .gastos-danger-btn {
+    min-height: 34px;
+    font-size: 0.68rem !important;
+  }
+
+  .gastos-pagination {
+    margin-top: 8px;
+    padding-top: 8px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .gastos-pagination-info {
+    font-size: 0.66rem;
+    text-align: center;
+  }
+
+  .gastos-pagination-controls {
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .gastos-pagination-controls .btn {
+    min-height: 32px;
+    padding: 0 10px !important;
+    border-radius: 10px !important;
+  }
+
+  .gastos-page-size {
+    width: 120px !important;
+    min-height: 32px !important;
+    height: 32px !important;
+    font-size: 0.66rem !important;
+    border-radius: 10px !important;
+  }
+
+  .gastos-page-number {
+    font-size: 0.7rem;
+    min-width: 44px;
+  }
+
+  .gastos-empty-card {
+    min-height: 105px;
+    padding: 14px;
+  }
+
+  .gastos-modal {
+    border-radius: 22px;
+    max-height: calc(100vh - 24px);
+  }
+
+  .gastos-modal-header {
+    min-height: 54px;
+    padding: 0 14px;
+  }
+
+  .gastos-modal-body {
+    padding: 14px;
+  }
+
+  .gastos-modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .gastos-modal-actions .btn {
+    width: 100%;
+    min-height: 38px;
+    font-size: 0.72rem !important;
+  }
+
+  .gastos-modal-intro {
+    padding: 10px;
+    border-radius: 15px;
+    margin-bottom: 10px;
+  }
+
+  .gastos-modal-intro h5 {
+    font-size: 0.8rem;
+  }
+
+  .gastos-modal-intro p {
+    font-size: 0.62rem;
+  }
+
+  .gastos-tipo-section {
+    padding: 10px;
+    border-radius: 16px;
+  }
+
+  .gastos-tipo-head {
+    margin-bottom: 8px;
+  }
+
+  .gastos-tipo-head h5 {
+    font-size: 0.78rem;
+  }
+
+  .gastos-tipo-head p {
+    font-size: 0.6rem;
+  }
+
+  .gastos-tipo-carousel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .gastos-tipo-card {
+    min-height: 88px;
+    padding: 9px;
+    border-radius: 14px;
+  }
+
+  .gastos-tipo-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 10px;
+    margin-bottom: 6px;
+  }
+
+  .gastos-tipo-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .gastos-tipo-card h6 {
+    font-size: 0.66rem;
+  }
+
+  .gastos-tipo-card p {
+    font-size: 0.54rem;
+  }
+}
+
+/* SMALL MOBILE */
+
+@media (max-width: 390px) {
+  .gastos-page .container-fluid {
+    padding-inline: 8px !important;
+  }
+
+  .gastos-finance-card h2 {
+    font-size: 0.7rem;
+  }
+
+  .gastos-history-top h5 {
+    font-size: 0.72rem;
+  }
+
+  .gastos-history-top b {
+    font-size: 0.68rem;
   }
 }

@@ -49,6 +49,9 @@
 @import "./styles/pages/ventas.css";
 @import "./styles/pages/catalogoservicios.css";
 @import "./styles/pages/catalogotrabajadores.css";
+@import "./styles/pages/registrarventa.css";
+@import "./styles/pages/misreservas.css";
+@import "./styles/pages/configuracionnegocio.css";
 
 @import "./styles/pages/pagos.css";
 @import "./styles/pages/gastos.css";

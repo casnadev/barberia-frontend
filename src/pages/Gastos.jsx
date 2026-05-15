@@ -3,7 +3,6 @@ import API_BASE from "../services/api";
 import authFetch from "../services/authFetch";
 
 import CardDark from "../components/ui/CardDark";
-import PageHeader from "../components/ui/PageHeader";
 import GoldBadge from "../components/ui/GoldBadge";
 import TableDark from "../components/ui/TableDark";
 import Toast from "../components/ui/Toast";
@@ -14,10 +13,12 @@ import { exportarPDF } from "../utils/exportPdf";
 import { exportarExcel } from "../utils/exportExcel";
 
 import { FaFilePdf, FaFileExcel } from "react-icons/fa";
+
 import {
   Banknote,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Droplets,
@@ -34,97 +35,27 @@ import {
   ShowerHead,
   Sparkles,
   Trash2,
-  Wrench,
   Wallet,
   Wifi,
   X,
+  Wrench,
 } from "lucide-react";
 
 const TIPOS_GASTO = [
-  {
-    value: "Alquiler",
-    label: "Alquiler",
-    icon: ReceiptText,
-    descripcion: "Local o espacio",
-  },
-  {
-    value: "Luz",
-    label: "Luz",
-    icon: Flame,
-    descripcion: "Servicio eléctrico",
-  },
-  {
-    value: "Agua",
-    label: "Agua",
-    icon: Droplets,
-    descripcion: "Servicio de agua",
-  },
-  {
-    value: "Internet",
-    label: "Internet",
-    icon: Wifi,
-    descripcion: "Conexión del local",
-  },
-  {
-    value: "Teléfono",
-    label: "Teléfono",
-    icon: Phone,
-    descripcion: "Línea o móvil",
-  },
-  {
-    value: "Insumos",
-    label: "Insumos",
-    icon: Package,
-    descripcion: "Tintes, champús, ceras",
-  },
-  {
-    value: "Lavandería",
-    label: "Lavandería",
-    icon: ShowerHead,
-    descripcion: "Toallas y capas",
-  },
-  {
-    value: "Herramientas",
-    label: "Herramientas",
-    icon: Scissors,
-    descripcion: "Afilado o reparación",
-  },
-  {
-    value: "Limpieza",
-    label: "Limpieza",
-    icon: Sparkles,
-    descripcion: "Desinfección y aseo",
-  },
-  {
-    value: "Marketing",
-    label: "Marketing",
-    icon: Megaphone,
-    descripcion: "Publicidad y redes",
-  },
-  {
-    value: "Seguros",
-    label: "Seguros",
-    icon: ShieldCheck,
-    descripcion: "Protección del negocio",
-  },
-  {
-    value: "Atención al cliente",
-    label: "Atención",
-    icon: Wallet,
-    descripcion: "Café, agua, cortesía",
-  },
-  {
-    value: "Mantenimiento",
-    label: "Mantenimiento",
-    icon: Wrench,
-    descripcion: "Arreglos del local",
-  },
-  {
-    value: "Otros",
-    label: "Otros",
-    icon: Plus,
-    descripcion: "Otro gasto",
-  },
+  { value: "Alquiler", label: "Alquiler", icon: ReceiptText, descripcion: "Local o espacio" },
+  { value: "Luz", label: "Luz", icon: Flame, descripcion: "Servicio eléctrico" },
+  { value: "Agua", label: "Agua", icon: Droplets, descripcion: "Servicio de agua" },
+  { value: "Internet", label: "Internet", icon: Wifi, descripcion: "Conexión del local" },
+  { value: "Teléfono", label: "Teléfono", icon: Phone, descripcion: "Línea o móvil" },
+  { value: "Insumos", label: "Insumos", icon: Package, descripcion: "Tintes, champús, ceras" },
+  { value: "Lavandería", label: "Lavandería", icon: ShowerHead, descripcion: "Toallas y capas" },
+  { value: "Herramientas", label: "Herramientas", icon: Scissors, descripcion: "Afilado o reparación" },
+  { value: "Limpieza", label: "Limpieza", icon: Sparkles, descripcion: "Desinfección y aseo" },
+  { value: "Marketing", label: "Marketing", icon: Megaphone, descripcion: "Publicidad y redes" },
+  { value: "Seguros", label: "Seguros", icon: ShieldCheck, descripcion: "Protección del negocio" },
+  { value: "Atención al cliente", label: "Atención", icon: Wallet, descripcion: "Café, agua, cortesía" },
+  { value: "Mantenimiento", label: "Mantenimiento", icon: Wrench, descripcion: "Arreglos del local" },
+  { value: "Otros", label: "Otros", icon: Plus, descripcion: "Otro gasto" },
 ];
 
 const PAGE_SIZE_OPTIONS = [6, 10, 15, 25];
@@ -253,6 +184,7 @@ function Gastos() {
   const [filtroConcepto, setFiltroConcepto] = useState("");
   const [filtroRapidoActivo, setFiltroRapidoActivo] = useState("");
   const [limpiandoActivo, setLimpiandoActivo] = useState(false);
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
 
   const [form, setForm] = useState(FORM_INICIAL);
 
@@ -304,7 +236,6 @@ function Gastos() {
 
   useEffect(() => {
     cargarGastos();
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -319,10 +250,7 @@ function Gastos() {
     setForm((prev) => ({
       ...prev,
       tipo: tipo.value,
-      concepto:
-        prev.concepto.trim() || tipo.value === "Atención al cliente"
-          ? prev.concepto
-          : tipo.value,
+      concepto: prev.concepto.trim() ? prev.concepto : tipo.value,
     }));
   };
 
@@ -367,9 +295,7 @@ function Gastos() {
     setPagina(1);
 
     setLimpiandoActivo(true);
-    setTimeout(() => {
-      setLimpiandoActivo(false);
-    }, 400);
+    setTimeout(() => setLimpiandoActivo(false), 400);
 
     setTipoMensaje("info");
     setMensaje("Filtros restablecidos");
@@ -653,91 +579,121 @@ function Gastos() {
     setMensaje("Excel generado correctamente.");
   };
 
-  const KpiGasto = ({ title, value, note, icon: KpiIcon, variant = "gold", money = true }) => {
-    const IconComponent = KpiIcon;
-
-    return (
-      <CardDark className={`gastos-kpi-card ${variant}`}>
-        <div className="gastos-kpi-icon">
-          {IconComponent && <IconComponent size={22} />}
-        </div>
-
-        <p>{title}</p>
-
-        <h2>
-          {money ? (
-            <AnimatedNumber value={Number(value || 0)} prefix="S/ " decimals={2} />
-          ) : (
-            <AnimatedNumber value={Number(value || 0)} decimals={0} />
-          )}
-        </h2>
-
-        <span>{note}</span>
-      </CardDark>
-    );
-  };
-
   return (
     <div className="page-shell gastos-page">
       <div className="container-fluid py-4">
-        <CardDark className="gastos-header-card mb-4">
-          <div className="gastos-header-row">
-            <PageHeader
-              title="Gastos"
-              subtitle="Controla los egresos del negocio de forma rápida y ordenada."
-            />
-
-            <div className="gastos-header-actions">
-              <GoldBadge>{gastosFiltrados.length} registros</GoldBadge>
-              <GoldBadge>S/ {totalGastos.toFixed(2)}</GoldBadge>
-
-              <button className="btn btn-gold" onClick={abrirModalCrear}>
-                <Plus size={16} />
-                Nuevo gasto
-              </button>
-            </div>
+        <section className="gastos-topbar">
+          <div>
+            <h1>Gastos</h1>
+            <p>Controla los egresos del negocio de forma rápida y ordenada.</p>
           </div>
-        </CardDark>
 
-        <CardDark className="mb-4 gastos-filter-card">
-          <div className="gastos-section-head">
+          <div className="gastos-topbar-actions">
+            <GoldBadge>{gastosFiltrados.length} registros</GoldBadge>
+
+            <button className="btn btn-gold" onClick={abrirModalCrear}>
+              <Plus size={16} />
+              Nuevo gasto
+            </button>
+          </div>
+        </section>
+
+        <section className="gastos-finance-grid">
+          <article className="gastos-finance-card danger">
+            <span className="gastos-finance-icon">
+              <Wallet size={20} />
+            </span>
+
+            <p>Total filtrado</p>
+            <h2>
+              <AnimatedNumber value={totalGastos} prefix="S/ " decimals={2} />
+            </h2>
+            <small>Suma de egresos</small>
+          </article>
+
+          <article className="gastos-finance-card gold">
+            <span className="gastos-finance-icon">
+              <ReceiptText size={20} />
+            </span>
+
+            <p>Registros</p>
+            <h2>{cantidadGastos}</h2>
+            <small>Gastos encontrados</small>
+          </article>
+
+          <article className="gastos-finance-card blue">
+            <span className="gastos-finance-icon">
+              <Banknote size={20} />
+            </span>
+
+            <p>Promedio</p>
+            <h2>S/ {Number(gastoPromedio || 0).toFixed(2)}</h2>
+            <small>Promedio por gasto</small>
+          </article>
+
+          <article className="gastos-finance-card purple">
+            <span className="gastos-finance-icon">
+              <CalendarDays size={20} />
+            </span>
+
+            <p>Tipos</p>
+            <h2>{tiposDistintos}</h2>
+            <small>{tipoTop ? `Top: ${tipoTop.tipo}` : "Sin datos"}</small>
+          </article>
+        </section>
+
+        <CardDark className="gastos-filter-card">
+          <div className="gastos-filter-top">
             <div>
-              <h4 className="section-title">Filtros de gastos</h4>
-              <p className="section-subtitle">
-                Revisa gastos por fecha o concepto.
-              </p>
+              <h4>Filtros</h4>
+              <span>{filtroConcepto ? "Búsqueda activa" : "Sin búsqueda"}</span>
             </div>
 
-            <div className="gastos-search-badge">
-              <Search size={16} />
-              {filtroConcepto ? "Búsqueda activa" : "Sin búsqueda"}
-            </div>
+            <button
+              type="button"
+              className="gastos-filter-toggle"
+              onClick={() => setFiltrosAbiertos((prev) => !prev)}
+            >
+              Más filtros
+              <ChevronDown
+                size={15}
+                className={filtrosAbiertos ? "rotate" : ""}
+              />
+            </button>
           </div>
 
           <div className="gastos-quick-filters">
             <button
-              className={`btn ${filtroRapidoActivo === "hoy" ? "btn-gold" : "btn-dark-outline"}`}
+              className={`btn ${
+                filtroRapidoActivo === "hoy" ? "btn-gold" : "btn-dark-outline"
+              }`}
               onClick={aplicarFiltroHoy}
             >
               Hoy
             </button>
 
             <button
-              className={`btn ${filtroRapidoActivo === "semana" ? "btn-gold" : "btn-dark-outline"}`}
+              className={`btn ${
+                filtroRapidoActivo === "semana" ? "btn-gold" : "btn-dark-outline"
+              }`}
               onClick={aplicarFiltroSemana}
             >
               Semana
             </button>
 
             <button
-              className={`btn ${filtroRapidoActivo === "mes" ? "btn-gold" : "btn-dark-outline"}`}
+              className={`btn ${
+                filtroRapidoActivo === "mes" ? "btn-gold" : "btn-dark-outline"
+              }`}
               onClick={aplicarFiltroMes}
             >
               Mes
             </button>
 
             <button
-              className={`btn ${limpiandoActivo ? "btn-gold" : "btn-dark-outline"}`}
+              className={`btn ${
+                limpiandoActivo ? "btn-gold" : "btn-dark-outline"
+              }`}
               onClick={limpiarFiltros}
             >
               <Eraser size={16} />
@@ -745,7 +701,7 @@ function Gastos() {
             </button>
           </div>
 
-          <div className="gastos-filter-grid">
+          <div className={`gastos-filter-grid ${filtrosAbiertos ? "open" : ""}`}>
             <div className="filtro-item">
               <DateFilter
                 label="Desde"
@@ -793,42 +749,6 @@ function Gastos() {
             </div>
           </div>
         </CardDark>
-
-        <section className="gastos-kpi-grid mb-4">
-          <KpiGasto
-            title="Total filtrado"
-            value={totalGastos}
-            note="Suma de egresos"
-            icon={Wallet}
-            variant="danger"
-          />
-
-          <KpiGasto
-            title="Registros"
-            value={cantidadGastos}
-            note="Gastos encontrados"
-            icon={ReceiptText}
-            variant="gold"
-            money={false}
-          />
-
-          <KpiGasto
-            title="Promedio"
-            value={gastoPromedio}
-            note="Promedio por gasto"
-            icon={Banknote}
-            variant="info"
-          />
-
-          <KpiGasto
-            title="Tipos"
-            value={tiposDistintos}
-            note={tipoTop ? `Top: ${tipoTop.tipo}` : "Sin datos"}
-            icon={CalendarDays}
-            variant="purple"
-            money={false}
-          />
-        </section>
 
         <CardDark className="gastos-section-card">
           <div className="gastos-section-head">

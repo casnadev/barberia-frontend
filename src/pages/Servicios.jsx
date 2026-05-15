@@ -4,17 +4,16 @@ import authFetch from "../services/authFetch";
 
 import CardDark from "../components/ui/CardDark";
 import GoldBadge from "../components/ui/GoldBadge";
-import PageHeader from "../components/ui/PageHeader";
 import Toast from "../components/ui/Toast";
 
 import { getImageUrl } from "../utils/imageUrl";
+
 import {
   Pencil,
   Trash2,
   Plus,
   X,
   Upload,
-  RotateCcw,
   ImagePlus,
   Scissors,
 } from "lucide-react";
@@ -28,7 +27,7 @@ const Modal = ({ abierto, titulo, children, onClose, ancho = "760px" }) => {
         <div className="trab-modal-header">
           <h4>{titulo}</h4>
 
-          <button className="trab-modal-close" onClick={onClose}>
+          <button type="button" className="trab-modal-close" onClick={onClose}>
             <X size={18} />
           </button>
         </div>
@@ -107,7 +106,7 @@ function Servicios() {
         return;
       }
 
-      setLista(data || []);
+      setLista(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
       setError("Error al cargar servicios");
@@ -136,7 +135,6 @@ function Servicios() {
 
   const ejecutarSubidaImagen = async (id) => {
     if (!imagenServicio) return true;
-
     if (!validarImagen(imagenServicio)) return false;
 
     try {
@@ -188,7 +186,10 @@ function Servicios() {
       return;
     }
 
-    if (duracionNumero !== null && (duracionNumero <= 0 || duracionNumero > 480)) {
+    if (
+      duracionNumero !== null &&
+      (duracionNumero <= 0 || duracionNumero > 480)
+    ) {
       setError("La duración debe estar entre 1 y 480 minutos.");
       return;
     }
@@ -206,21 +207,17 @@ function Servicios() {
     try {
       setGuardando(true);
 
-      let response;
-
-      if (editando) {
-        response = await authFetch(`${API_BASE}/Servicios/${editando}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      } else {
-        response = await authFetch(`${API_BASE}/Servicios`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      }
+      const response = editando
+        ? await authFetch(`${API_BASE}/Servicios/${editando}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          })
+        : await authFetch(`${API_BASE}/Servicios`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
 
       if (!response) return;
 
@@ -231,14 +228,18 @@ function Servicios() {
         return;
       }
 
-      const idFinal = editando || result?.data?.idServicio || result?.idServicio;
+      const idFinal =
+        editando || result?.data?.idServicio || result?.idServicio;
 
       if (idFinal && imagenServicio) {
         const subidaOk = await ejecutarSubidaImagen(idFinal);
         if (!subidaOk) return;
       }
 
-      setMensaje(editando ? "Servicio actualizado." : "Servicio registrado con éxito.");
+      setMensaje(
+        editando ? "Servicio actualizado." : "Servicio registrado con éxito."
+      );
+
       cerrarModalServicio();
       await recargarServicios();
     } catch (err) {
@@ -249,38 +250,11 @@ function Servicios() {
     }
   };
 
-  const subirImagenDirecto = async () => {
-    setMensaje("");
-    setError("");
-
-    if (!editando) {
-      setError("Selecciona un servicio primero.");
-      return;
-    }
-
-    if (!imagenServicio) {
-      setError("Selecciona un archivo de imagen.");
-      return;
-    }
-
-    if (!validarImagen(imagenServicio)) return;
-
-    const ok = await ejecutarSubidaImagen(editando);
-
-    if (ok) {
-      setMensaje("Imagen actualizada correctamente.");
-      setImagenServicio(null);
-      limpiarPreviewServicio();
-      await recargarServicios();
-    }
-  };
-
   const eliminarImagenServicio = async () => {
     setMensaje("");
     setError("");
 
     if (!editando) return;
-
     if (!window.confirm("¿Eliminar la imagen actual?")) return;
 
     try {
@@ -323,7 +297,7 @@ function Servicios() {
     setPrecioBase(s.precioBase ?? "");
     setDescripcionCorta(s.descripcionCorta || "");
     setDuracionMinutos(s.duracionMinutos || "");
-    setDestacado(!!s.destacado);
+    setDestacado(Boolean(s.destacado));
     setImagenServicio(null);
     limpiarPreviewServicio();
     setMensaje("");
@@ -391,15 +365,14 @@ function Servicios() {
       <div className="container-fluid py-4">
         <CardDark className="mb-4 trabajadores-header-card servicios-header-card">
           <div className="trabajadores-header-row">
-            <PageHeader
-              title="Gestión de Servicios"
-              subtitle="Registra, edita y destaca los servicios visibles para tus clientes."
-            />
-
             <div className="trabajadores-header-actions">
               <GoldBadge>{lista.length} servicios activos</GoldBadge>
 
-              <button className="btn btn-gold" onClick={abrirCrearServicio}>
+              <button
+                type="button"
+                className="btn btn-gold"
+                onClick={abrirCrearServicio}
+              >
                 <Plus size={17} />
                 <span>Nuevo servicio</span>
               </button>
@@ -411,9 +384,9 @@ function Servicios() {
         <Toast mensaje={error} tipo="error" onClose={() => setError("")} />
 
         <CardDark className="servicios-panel-card">
-          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 servicios-panel-head">
             <div>
-              <h4 className="section-title">Servicios Activos</h4>
+              <h4 className="section-title">Servicios activos</h4>
               <p className="section-subtitle">
                 Vista rápida de precio, duración, imagen pública y acciones.
               </p>
@@ -423,62 +396,62 @@ function Servicios() {
           <div className="servicios-grid">
             {lista.map((s) => (
               <div className="servicio-card-wrap" key={s.idServicio}>
-                <div className="servicio-card-dashboard h-100">
-                  <div className="servicio-thumb-box">
+                <div
+                  className={`servicio-card-dashboard premium ${
+                    s.destacado ? "featured" : ""
+                  }`}
+                >
+                  <div className="servicio-cover-box">
+                    {s.destacado && (
+                      <span className="servicio-featured-pill">
+                        ⭐ Destacado
+                      </span>
+                    )}
+
                     {s.imagenUrl ? (
                       <img
                         src={getImageUrl(s.imagenUrl)}
-                        className="servicio-thumb-img"
+                        className="servicio-cover-img"
                         alt={s.nombre}
                       />
                     ) : (
-                      <div className="servicio-thumb-placeholder">
+                      <div className="servicio-cover-placeholder">
                         <Scissors size={34} />
                       </div>
                     )}
-
-                    {s.destacado && (
-                      <span className="servicio-floating-badge">⭐ Destacado</span>
-                    )}
                   </div>
 
-                  <div className="servicio-card-body">
-                    <div className="d-flex justify-content-between align-items-start gap-2 mb-2">
-                      <div className="min-w-0">
-                        <h5 className="servicio-card-title truncate-one-line" title={s.nombre}>
-                          {s.nombre}
-                        </h5>
+                  <div className="servicio-card-content">
+                    <div className="servicio-title-line">
+                      <h5 title={s.nombre}>{s.nombre}</h5>
 
-                        <p className="servicio-card-desc">
-                          {s.descripcionCorta || "Sin descripción registrada."}
-                        </p>
-                      </div>
-
-                      <div className="servicio-card-price">
+                      <div className="servicio-price-chip">
                         S/ {Number(s.precioBase || 0).toFixed(2)}
                       </div>
                     </div>
 
-                    <div className="servicio-card-meta">
+                    <div className="servicio-mini-meta">
                       <span>⏱ {s.duracionMinutos || "-"} min</span>
 
                       {!s.destacado && <span>Estándar</span>}
                     </div>
 
-                    <div className="actions-grid servicios-actions-grid">
+                    <div className="servicio-actions-grid compact">
                       <button
+                        type="button"
                         className="btn-action-dark"
                         onClick={() => editar(s)}
                       >
-                        <Pencil size={16} />
+                        <Pencil size={15} />
                         <span>Editar</span>
                       </button>
 
                       <button
+                        type="button"
                         className="btn-action-danger"
                         onClick={() => eliminar(s.idServicio)}
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={15} />
                         <span>Eliminar</span>
                       </button>
                     </div>
@@ -500,138 +473,132 @@ function Servicios() {
           abierto={modalServicio}
           titulo={editando ? "Editar servicio" : "Nuevo servicio"}
           onClose={cerrarModalServicio}
-          ancho="820px"
+          ancho="920px"
         >
-          <div className="row g-3">
-            <div className="col-md-6">
-              <label className="label-gold">Nombre</label>
-              <input
-                className="form-control input-dark"
-                placeholder="Ej: Corte Degradado"
-                value={nombre}
-                maxLength={120}
-                onChange={(e) => setNombre(e.target.value)}
-              />
-            </div>
+          <div className="servicio-modal-layout">
+            <div className="servicio-modal-form">
+              <div>
+                <label className="label-gold">Nombre</label>
+                <input
+                  className="form-control input-dark"
+                  placeholder="Ej: Corte Degradado"
+                  value={nombre}
+                  maxLength={120}
+                  onChange={(e) => setNombre(e.target.value)}
+                />
+              </div>
 
-            <div className="col-md-3">
-              <label className="label-gold">Precio (S/)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                className="form-control input-dark"
-                placeholder="0.00"
-                value={precioBase}
-                onChange={(e) => setPrecioBase(e.target.value)}
-              />
-            </div>
+              <div className="servicio-modal-two">
+                <div>
+                  <label className="label-gold">Precio (S/)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="form-control input-dark"
+                    placeholder="0.00"
+                    value={precioBase}
+                    onChange={(e) => setPrecioBase(e.target.value)}
+                  />
+                </div>
 
-            <div className="col-md-3">
-              <label className="label-gold">Duración (min)</label>
-              <input
-                type="number"
-                min="1"
-                max="480"
-                className="form-control input-dark"
-                placeholder="30"
-                value={duracionMinutos}
-                onChange={(e) => setDuracionMinutos(e.target.value)}
-              />
-            </div>
+                <div>
+                  <label className="label-gold">Duración</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="480"
+                    className="form-control input-dark"
+                    placeholder="30"
+                    value={duracionMinutos}
+                    onChange={(e) => setDuracionMinutos(e.target.value)}
+                  />
+                </div>
+              </div>
 
-            <div className="col-12">
-              <label className="label-gold">Descripción corta</label>
-              <textarea
-                className="form-control input-dark"
-                rows="3"
-                placeholder="Breve descripción del servicio..."
-                value={descripcionCorta}
-                maxLength={250}
-                onChange={(e) => setDescripcionCorta(e.target.value)}
-              />
-            </div>
+              <div>
+                <label className="label-gold">Descripción corta</label>
+                <textarea
+                  className="form-control input-dark"
+                  rows="4"
+                  placeholder="Breve descripción del servicio..."
+                  value={descripcionCorta}
+                  maxLength={250}
+                  onChange={(e) => setDescripcionCorta(e.target.value)}
+                />
+              </div>
 
-            <div className="col-md-8">
-              <label className="label-gold">Imagen del servicio</label>
-              <input
-                type="file"
-                className="form-control input-dark"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={seleccionarImagenServicio}
-              />
-            </div>
-
-            <div className="col-md-4 d-flex align-items-end">
-              <div className="form-check form-switch mb-2">
+              <label className="servicio-switch-box" htmlFor="chkDestacadoModal">
                 <input
                   type="checkbox"
-                  className="form-check-input"
                   id="chkDestacadoModal"
                   checked={destacado}
                   onChange={(e) => setDestacado(e.target.checked)}
                 />
 
-                <label
-                  className="form-check-label fw-bold label-gold"
-                  htmlFor="chkDestacadoModal"
-                >
-                  Destacado ⭐
-                </label>
-              </div>
+                <span>{destacado ? "Destacado ⭐" : "Estándar"}</span>
+              </label>
             </div>
 
-            <div className="col-12">
+            <div className="servicio-modal-media">
+              <label className="label-gold">Imagen del servicio</label>
+
+              <div className="servicio-upload-box">
+                <label className="servicio-upload-minimal">
+                  <Upload size={16} />
+
+                  <span>
+                    {imagenServicio ? "Cambiar imagen" : "Seleccionar imagen"}
+                  </span>
+
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={seleccionarImagenServicio}
+                    hidden
+                  />
+                </label>
+              </div>
+
               {obtenerImagenServicio() ? (
-                <div className="servicio-modal-preview">
-                  <img src={obtenerImagenServicio()} alt="Preview del servicio" />
+                <div className="servicio-modal-preview pro">
+                  <img
+                    src={obtenerImagenServicio()}
+                    alt="Preview del servicio"
+                  />
                 </div>
               ) : (
-                <div className="servicio-modal-preview-empty">
-                  <ImagePlus size={32} />
+                <div className="servicio-modal-preview-empty pro">
+                  <ImagePlus size={34} />
                   <span>Sin imagen seleccionada</span>
                 </div>
+              )}
+
+              {editando && obtenerImagenServicio() && (
+                <button
+                  type="button"
+                  className="btn btn-dark-outline text-danger servicio-remove-image-btn"
+                  onClick={eliminarImagenServicio}
+                  disabled={subiendoImagen}
+                >
+                  <Trash2 size={16} />
+                  Quitar imagen
+                </button>
               )}
             </div>
           </div>
 
-          {editando && (
-            <div className="d-flex gap-2 mt-3 flex-wrap">
-              <button
-                className="btn btn-dark-outline"
-                onClick={subirImagenDirecto}
-                disabled={subiendoImagen || !imagenServicio}
-              >
-                <Upload size={16} />
-                {subiendoImagen ? "Subiendo..." : "Subir nueva imagen"}
-              </button>
-
-              <button
-                className="btn btn-dark-outline text-danger"
-                onClick={eliminarImagenServicio}
-                disabled={subiendoImagen}
-              >
-                <Trash2 size={16} />
-                Quitar imagen
-              </button>
-            </div>
-          )}
-
-          <div className="d-flex justify-content-end gap-2 mt-4 flex-wrap">
-            <button className="btn btn-dark-outline" onClick={cerrarModalServicio}>
+          <div className="servicio-modal-actions minimal">
+            <button
+              type="button"
+              className="btn btn-dark-outline"
+              onClick={cerrarModalServicio}
+            >
               Cancelar
             </button>
 
             <button
-              className="btn btn-dark-outline"
-              onClick={limpiar}
-              disabled={subiendoImagen || guardando}
-            >
-              <RotateCcw size={16} />
-              Limpiar
-            </button>
-
-            <button
+              type="button"
               className="btn btn-gold"
               onClick={guardar}
               disabled={subiendoImagen || guardando}
@@ -639,8 +606,8 @@ function Servicios() {
               {subiendoImagen || guardando
                 ? "Procesando..."
                 : editando
-                ? "Actualizar"
-                : "Registrar"}
+                  ? "Actualizar"
+                  : "Registrar"}
             </button>
           </div>
         </Modal>

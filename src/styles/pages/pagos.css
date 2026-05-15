@@ -1,209 +1,1010 @@
 /* ==========================================================
-   PAGOS / COMISIONES
-   ========================================================== */
+   PAGOS / COMISIONES - PREMIUM FINANCIAL DASHBOARD
+========================================================== */
 
-.pagos-page,
-.comisiones-page {
+.pagos-page {
   width: 100%;
 }
 
-.pagos-header-card .header-dashboard,
-.comisiones-header-card .header-dashboard {
-  padding: 0;
-  margin-bottom: 0;
+.pagos-page .container-fluid {
+  padding: 18px 18px 110px !important;
 }
 
-.pagos-header-row,
-.comisiones-header-row,
-.pagos-toolbar,
-.comisiones-toolbar {
+/* TOP */
+
+.pagos-topbar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 18px;
-  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.pagos-header-actions,
-.comisiones-header-actions {
+.pagos-topbar h1 {
+  margin: 0 0 4px;
+  color: #111827;
+  font-size: 1.75rem;
+  font-weight: 950;
+  letter-spacing: -0.8px;
+}
+
+.pagos-topbar p {
+  margin: 0;
+  color: #667085;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.pagos-topbar-badges {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
-.pagos-grid,
-.comisiones-grid {
+/* FINANCE CARDS */
+
+.pagos-finance-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 14px;
+  margin-bottom: 14px;
 }
 
-.pago-card,
-.comision-card {
+.pagos-finance-card {
+  position: relative;
+  min-height: 146px;
+  overflow: hidden;
+  border-radius: 28px;
   background: #ffffff;
-  border: 1px solid rgba(212, 175, 55, 0.18);
-  border-radius: 22px;
+  border: 1px solid rgba(212, 175, 55, 0.13);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
   padding: 18px;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
-.pago-card span,
-.comision-card span {
-  display: block;
-  color: #6b7280;
-  font-size: 0.8rem;
-  font-weight: 900;
-  margin-bottom: 6px;
+.pagos-finance-card::after {
+  content: "";
+  position: absolute;
+  right: -38px;
+  bottom: -52px;
+  width: 128px;
+  height: 128px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.09);
+  pointer-events: none;
 }
 
-.pago-card b,
-.comision-card b {
-  color: #111827;
-  font-size: 1.55rem;
-  font-weight: 950;
+.pagos-finance-card.gold {
+  background:
+    radial-gradient(circle at top right, rgba(212, 175, 55, 0.14), transparent 35%),
+    #ffffff;
 }
 
-.pago-card.success b,
-.comision-card.success b {
+.pagos-finance-card.green {
+  background:
+    radial-gradient(circle at top right, rgba(22, 163, 74, 0.13), transparent 35%),
+    #ffffff;
+}
+
+.pagos-finance-card.blue {
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.13), transparent 35%),
+    #ffffff;
+}
+
+.pagos-finance-card.purple {
+  background:
+    radial-gradient(circle at top right, rgba(139, 92, 246, 0.12), transparent 35%),
+    #ffffff;
+}
+
+.pagos-finance-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 17px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 12px;
+  background: rgba(212, 175, 55, 0.13);
+  color: #b88918;
+}
+
+.pagos-finance-card.green .pagos-finance-icon {
+  background: rgba(22, 163, 74, 0.1);
   color: #16a34a;
 }
 
-.pago-card.warning b,
-.comision-card.warning b {
-  color: #d4af37;
+.pagos-finance-card.blue .pagos-finance-icon {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
 }
 
-.pago-card.danger b,
-.comision-card.danger b {
-  color: #dc2626;
+.pagos-finance-card.purple .pagos-finance-icon {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
 }
 
-.pagos-table-card,
-.comisiones-table-card {
-  overflow-x: auto;
-}
-
-.pagos-worker-card,
-.comision-worker-card {
-  background: #ffffff;
-  border: 1px solid rgba(212, 175, 55, 0.18);
-  border-radius: 22px;
-  padding: 18px;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 14px;
-}
-
-.pagos-worker-info,
-.comision-worker-info {
-  min-width: 0;
-}
-
-.pagos-worker-info h5,
-.comision-worker-info h5 {
-  color: #111827;
-  font-weight: 950;
-  margin: 0 0 5px;
-}
-
-.pagos-worker-info p,
-.comision-worker-info p {
-  color: #6b7280;
-  margin: 0;
-  font-weight: 700;
-  font-size: 0.9rem;
-}
-
-.pagos-worker-amount,
-.comision-worker-amount {
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.pagos-worker-amount span,
-.comision-worker-amount span {
-  display: block;
-  color: #6b7280;
+.pagos-finance-card p {
+  margin: 0 0 8px;
+  color: #667085;
   font-size: 0.78rem;
   font-weight: 900;
 }
 
-.pagos-worker-amount b,
-.comision-worker-amount b {
-  color: #d4af37;
-  font-size: 1.2rem;
+.pagos-finance-card h2 {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: clamp(1.15rem, 1.5vw, 1.55rem);
+  font-weight: 950;
+  letter-spacing: -0.5px;
+  line-height: 1.05;
+}
+
+.pagos-finance-card small {
+  color: #667085;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+/* SHARED CARDS */
+
+.pagos-filter-card,
+.pagos-section-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(212, 175, 55, 0.12) !important;
+  border-radius: 28px !important;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.055) !important;
+}
+
+/* FILTER */
+
+.pagos-filter-card {
+  margin-bottom: 14px !important;
+  padding: 16px !important;
+}
+
+.pagos-filter-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.pagos-filter-top h4 {
+  margin: 0;
+  color: #111827;
+  font-size: 1rem;
   font-weight: 950;
 }
 
-.pago-status-pill,
-.comision-status-pill {
+.pagos-filter-top span {
   display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
   border-radius: 999px;
-  padding: 6px 11px;
-  font-size: 0.75rem;
+  background: rgba(212, 175, 55, 0.1);
+  color: #8b6f10;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.pagos-filter-toggle {
+  border: none;
+  background: #111827;
+  color: #ffffff;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 0.74rem;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagos-filter-toggle svg {
+  transition: transform 0.18s ease;
+}
+
+.pagos-filter-toggle svg.rotate {
+  transform: rotate(180deg);
+}
+
+.pagos-quick-filters {
+  display: grid;
+  grid-template-columns: repeat(4, max-content);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.pagos-quick-filters .btn {
+  min-height: 38px;
+  border-radius: 13px !important;
+  padding: 0 16px !important;
+  font-size: 0.82rem !important;
+  font-weight: 900 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.pagos-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pagos-filter-grid .label-gold {
+  font-size: 0.76rem;
+  margin-bottom: 5px;
+}
+
+.pagos-filter-grid .form-control,
+.pagos-filter-grid .input-dark {
+  min-height: 44px;
+  height: 44px;
+  border-radius: 14px !important;
+}
+
+/* SECTIONS */
+
+.pagos-section-card {
+  padding: 18px !important;
+  margin-bottom: 14px !important;
+  overflow: hidden;
+}
+
+.pagos-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.pagos-section-head .section-title {
+  margin: 0 0 4px;
+  color: #111827;
+  font-size: 1rem;
   font-weight: 950;
 }
 
-.pago-status-pill.pagado,
-.comision-status-pill.pagado {
-  background: #dcfce7;
+.pagos-section-head .section-subtitle {
+  margin: 0;
+  color: #667085;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.pagos-export-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.export-btn {
+  min-height: 38px;
+  border-radius: 13px !important;
+  font-size: 0.78rem !important;
+  font-weight: 900 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* TABLES */
+
+.pagos-table-wrap {
+  overflow-x: auto;
+}
+
+.pagos-table-name {
+  font-weight: 950;
+  color: #111827;
+}
+
+.pagos-warning-cell {
+  color: #b88918;
+  font-weight: 950;
+}
+
+.pagos-success-cell {
+  color: #16a34a;
+  font-weight: 950;
+}
+
+.pagos-actions-cell {
+  min-width: 260px;
+}
+
+.pagos-actions-cell input {
+  max-width: 210px;
+}
+
+.pagos-row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pagos-pay-all {
+  background: #111827 !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-weight: 900 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagos-pay-all:hover {
+  background: #020617 !important;
+}
+
+.pagos-error-text {
+  display: block;
+  margin-top: 6px;
+  color: #dc2626;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+/* MOBILE CARDS */
+
+.pagos-mobile-cards,
+.pagos-history-mobile {
+  display: none;
+}
+
+.pagos-worker-card,
+.pagos-history-card {
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  border-radius: 20px;
+  padding: 12px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.045);
+}
+
+.pagos-worker-head,
+.pagos-history-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pagos-worker-head h5,
+.pagos-history-card h5 {
+  margin: 0 0 3px;
+  color: #111827;
+  font-size: 0.95rem;
+  font-weight: 950;
+}
+
+.pagos-worker-head span,
+.pagos-history-card span {
+  color: #667085;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.pagos-worker-head b,
+.pagos-history-card b {
+  color: #111827;
+  font-size: 0.95rem;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.pagos-worker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.pagos-worker-grid div {
+  border-radius: 15px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.pagos-worker-grid span {
+  display: block;
+  color: #667085;
+  font-size: 0.66rem;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.pagos-worker-grid b {
+  color: #111827;
+  font-size: 0.82rem;
+  font-weight: 950;
+}
+
+.pagos-worker-grid b.success {
   color: #16a34a;
 }
 
-.pago-status-pill.pendiente,
-.comision-status-pill.pendiente {
-  background: #fff8e1;
-  color: #8b6f10;
+.pagos-worker-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
 }
 
-.pago-status-pill.parcial,
-.comision-status-pill.parcial {
-  background: #dbeafe;
-  color: #2563eb;
+.pagos-worker-actions .btn {
+  min-height: 38px;
+  border-radius: 13px !important;
+  font-size: 0.76rem !important;
+  font-weight: 900 !important;
 }
+
+.pagos-history-card p {
+  margin: 4px 0 0;
+  color: #667085;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* EMPTY */
+
+.pagos-empty-card {
+  min-height: 130px;
+  border-radius: 18px;
+  border: 1px dashed rgba(212, 175, 55, 0.3);
+  background: rgba(212, 175, 55, 0.05);
+  color: #667085;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-weight: 800;
+  padding: 18px;
+}
+
+.pagos-empty-card svg {
+  color: #d4af37;
+  margin-bottom: 8px;
+}
+
+/* PAGINATION */
+
+.pagos-pagination {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.pagos-pagination-info {
+  color: #667085;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.pagos-pagination-info b {
+  color: #111827;
+}
+
+.pagos-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagos-page-size {
+  width: 135px !important;
+  min-height: 38px !important;
+  height: 38px !important;
+  border-radius: 13px !important;
+  font-size: 0.76rem !important;
+}
+
+.pagos-page-number {
+  color: #111827;
+  font-size: 0.82rem;
+  font-weight: 950;
+  min-width: 54px;
+  text-align: center;
+}
+
+/* MODAL */
+
+.pagos-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.pagos-modal {
+  width: 100%;
+  max-width: 430px;
+  border-radius: 26px;
+  background: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.28);
+  overflow: hidden;
+}
+
+.pagos-modal-header {
+  min-height: 62px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.pagos-modal-header h4 {
+  margin: 0;
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.pagos-modal-close {
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 13px;
+  background: #111827;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+}
+
+.pagos-modal-body {
+  padding: 18px;
+}
+
+.pagos-modal-body p {
+  color: #374151;
+  font-size: 0.92rem;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+
+.pagos-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* TABLET */
 
 @media (max-width: 1200px) {
-  .pagos-grid,
-  .comisiones-grid {
+  .pagos-finance-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pagos-filter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
+/* MOBILE */
+
 @media (max-width: 768px) {
-  .pagos-grid,
-  .comisiones-grid {
-    display: flex;
-    overflow-x: auto;
-    gap: 14px;
-    scroll-snap-type: x mandatory;
-    padding-bottom: 12px;
+  .pagos-page .container-fluid {
+    padding: 8px 10px 96px !important;
   }
 
-  .pago-card,
-  .comision-card {
-    flex: 0 0 82%;
-    max-width: 82%;
-    scroll-snap-align: start;
+  .pagos-topbar {
+    display: block;
+    margin-bottom: 8px;
   }
 
-  .pagos-header-actions,
-  .pagos-header-actions .btn,
-  .comisiones-header-actions,
-  .comisiones-header-actions .btn {
+  .pagos-topbar h1 {
+    font-size: 1.2rem;
+    margin-bottom: 2px;
+  }
+
+  .pagos-topbar p {
+    font-size: 0.68rem;
+  }
+
+  .pagos-topbar-badges {
+    margin-top: 6px;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  .pagos-topbar-badges .gold-badge {
+    min-height: 22px;
+    padding: 0 7px;
+    font-size: 0.56rem;
+  }
+
+  .pagos-finance-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin-bottom: 8px;
+  }
+
+  .pagos-finance-card {
+    min-height: 82px;
+    border-radius: 18px;
+    padding: 9px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+  }
+
+  .pagos-finance-card::after {
+    width: 78px;
+    height: 78px;
+    right: -32px;
+    bottom: -38px;
+  }
+
+  .pagos-finance-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+  }
+
+  .pagos-finance-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .pagos-finance-card p {
+    font-size: 0.56rem;
+    margin-bottom: 3px;
+  }
+
+  .pagos-finance-card h2 {
+    font-size: 0.76rem;
+    margin-bottom: 3px;
+    letter-spacing: -0.2px;
+  }
+
+  .pagos-finance-card small {
+    font-size: 0.52rem;
+  }
+
+  .pagos-filter-card {
+    padding: 9px !important;
+    border-radius: 18px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .pagos-filter-top {
+    margin-bottom: 7px;
+  }
+
+  .pagos-filter-top h4 {
+    font-size: 0.82rem;
+  }
+
+  .pagos-filter-top span {
+    min-height: 22px;
+    padding: 0 7px;
+    font-size: 0.56rem;
+  }
+
+  .pagos-filter-toggle {
+    min-height: 30px;
+    padding: 0 9px;
+    border-radius: 10px;
+    font-size: 0.62rem;
+  }
+
+  .pagos-quick-filters {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    margin-bottom: 0;
+  }
+
+  .pagos-quick-filters .btn {
+    min-height: 30px !important;
+    padding: 0 3px !important;
+    font-size: 0.6rem !important;
+    border-radius: 10px !important;
+  }
+
+  .pagos-quick-filters .btn svg {
+    display: none;
+  }
+
+  .pagos-filter-grid {
+    display: none;
+    grid-template-columns: 1fr !important;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .pagos-filter-grid.open {
+    display: grid;
+  }
+
+  .pagos-filter-grid .label-gold {
+    font-size: 0.6rem !important;
+    margin-bottom: 2px !important;
+  }
+
+  .pagos-filter-grid .form-control,
+  .pagos-filter-grid .input-dark {
+    min-height: 34px !important;
+    height: 34px !important;
+    border-radius: 11px !important;
+    font-size: 0.7rem !important;
+    padding: 0 9px !important;
+  }
+
+  .pagos-section-card {
+    padding: 10px !important;
+    border-radius: 20px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .pagos-section-head {
+    margin-bottom: 8px;
+  }
+
+  .pagos-section-head .section-title {
+    font-size: 0.86rem;
+  }
+
+  .pagos-section-head .section-subtitle {
+    display: none;
+  }
+
+  .pagos-section-head .gold-badge {
+    min-height: 22px;
+    padding: 0 7px;
+    font-size: 0.56rem;
+  }
+
+  .pagos-export-actions {
     width: 100%;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  .export-btn {
+    min-height: 32px;
+    border-radius: 10px !important;
+    font-size: 0.66rem !important;
+    padding-inline: 10px !important;
+  }
+
+  .pagos-table-wrap {
+    display: none !important;
+  }
+
+  .pagos-mobile-cards,
+  .pagos-history-mobile {
+    display: grid;
+    gap: 8px;
   }
 
   .pagos-worker-card,
-  .comision-worker-card {
-    flex-direction: column;
+  .pagos-history-card {
+    border-radius: 16px;
+    padding: 9px;
+    box-shadow: none;
+  }
+
+  .pagos-worker-head h5,
+  .pagos-history-card h5 {
+    font-size: 0.8rem;
+  }
+
+  .pagos-worker-head span,
+  .pagos-history-card span {
+    font-size: 0.6rem;
+  }
+
+  .pagos-worker-head b,
+  .pagos-history-card b {
+    font-size: 0.78rem;
+  }
+
+  .pagos-worker-grid {
+    margin: 8px 0;
+    gap: 6px;
+  }
+
+  .pagos-worker-grid div {
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .pagos-worker-grid span {
+    font-size: 0.56rem;
+    margin-bottom: 2px;
+  }
+
+  .pagos-worker-grid b {
+    font-size: 0.68rem;
+  }
+
+  .pagos-worker-card input {
+    min-height: 34px !important;
+    height: 34px !important;
+    border-radius: 11px !important;
+    font-size: 0.7rem !important;
+  }
+
+  .pagos-worker-actions {
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .pagos-worker-actions .btn {
+    min-height: 34px;
+    border-radius: 11px !important;
+    font-size: 0.68rem !important;
+  }
+
+  .pagos-history-card {
     align-items: flex-start;
   }
 
-  .pagos-worker-amount,
-  .comision-worker-amount {
-    text-align: left;
+  .pagos-history-card p {
+    font-size: 0.58rem;
+    margin-top: 3px;
+  }
+
+  .pagos-pagination {
+    margin-top: 8px;
+    padding-top: 8px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .pagos-pagination-info {
+    font-size: 0.66rem;
+    text-align: center;
+  }
+
+  .pagos-pagination-controls {
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .pagos-pagination-controls .btn {
+    min-height: 32px;
+    padding: 0 10px !important;
+    border-radius: 10px !important;
+  }
+
+  .pagos-page-size {
+    width: 120px !important;
+    min-height: 32px !important;
+    height: 32px !important;
+    font-size: 0.66rem !important;
+    border-radius: 10px !important;
+  }
+
+  .pagos-page-number {
+    font-size: 0.7rem;
+    min-width: 44px;
+  }
+
+  .pagos-error-text {
+    font-size: 0.6rem;
+  }
+
+  .pagos-empty-card {
+    min-height: 105px;
+    padding: 14px;
+  }
+
+  .pagos-modal {
+    border-radius: 22px;
+  }
+
+  .pagos-modal-header {
+    min-height: 56px;
+    padding: 0 14px;
+  }
+
+  .pagos-modal-body {
+    padding: 14px;
+  }
+
+  .pagos-modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* SMALL MOBILE */
+
+@media (max-width: 390px) {
+  .pagos-page .container-fluid {
+    padding-inline: 8px !important;
+  }
+
+  .pagos-finance-card h2 {
+    font-size: 0.7rem;
+  }
+
+  .pagos-worker-head h5,
+  .pagos-history-card h5 {
+    font-size: 0.74rem;
+  }
+
+  .pagos-worker-head b,
+  .pagos-history-card b {
+    font-size: 0.72rem;
+  }
+}
+@media (max-width: 768px) {
+  .pagos-export-actions {
+    display: grid !important;
+    grid-template-columns: auto 1fr 1fr;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .pagos-export-actions .gold-badge {
+    grid-column: 1 / 2;
+  }
+
+  .pagos-export-actions .export-btn {
+    width: 100%;
+    min-height: 38px;
+  }
+}
+@media (max-width: 768px) {
+  .pagos-export-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .pagos-export-actions .gold-badge,
+  .pagos-export-actions .export-btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 36px;
+    height: 36px;
+    border-radius: 12px !important;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 8px !important;
+
+    font-size: 0.68rem !important;
+    font-weight: 900 !important;
+
+    margin: 0 !important;
+  }
+
+  .pagos-export-actions .gold-badge {
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  .pagos-export-actions .export-btn svg {
+    width: 13px;
+    height: 13px;
   }
 }

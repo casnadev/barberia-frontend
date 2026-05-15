@@ -628,89 +628,76 @@ function Trabajadores() {
             <div className="trabajadores-grid">
               {lista.map((t) => (
                 <div className="trabajador-card-wrap" key={t.idTrabajador}>
-                  <article className="trabajador-card-pro">
-                    <div className="trabajador-card-top">
-                      <AvatarCircle
-                        src={obtenerUrl(t.fotoPerfilUrl)}
-                        alt={t.nombre}
-                        fallback={t.nombre?.charAt(0)?.toUpperCase() || "T"}
-                        selected={t.destacado}
-                        size="md"
-                      />
+                  <article className={`trabajador-card-pro ${t.destacado ? "is-featured" : ""}`}>
+                    <div className="trabajador-photo-cover">
+                      {t.destacado && (
+                        <span className="trabajador-featured-badge">
+                          ⭐ Trabajador destacado
+                        </span>
+                      )}
 
-                      <div className="trabajador-card-main">
-                        <div className="trabajador-card-title-row">
-                          <h5 title={t.nombre}>{t.nombre}</h5>
-
-                          {t.destacado ? (
-                            <span className="trabajador-pill destacado">Destacado</span>
-                          ) : (
-                            <span className="trabajador-pill normal">Estándar</span>
-                          )}
+                      {obtenerUrl(t.fotoPerfilUrl) ? (
+                        <img src={obtenerUrl(t.fotoPerfilUrl)} alt={t.nombre} />
+                      ) : (
+                        <div className="trabajador-photo-empty">
+                          {t.nombre?.charAt(0)?.toUpperCase() || "T"}
                         </div>
+                      )}
 
-                        <p>
-                          {t.descripcion || "Sin biografía pública registrada."}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="trabajador-info-grid">
-                      <div>
-                        <span>Especialidad</span>
-                        <b>{t.especialidad || "No especificada"}</b>
-                      </div>
-
-                      <div>
-                        <span>Experiencia</span>
-                        <b>{t.experiencia || "No especificada"}</b>
-                      </div>
-
-                      <div>
-                        <span>Comisión</span>
-                        <b>{t.porcentajeComision || 0}%</b>
-                      </div>
-                    </div>
-
-                    <div className="trabajador-actions-grid">
                       <button
                         type="button"
-                        className="btn-action-dark"
+                        className="trabajador-floating-action edit"
                         onClick={() => abrirEditarTrabajador(t)}
+                        title="Editar"
                       >
                         <Pencil size={16} />
-                        <span>Editar</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="btn-action-dark"
-                        onClick={() => abrirImagenes(t)}
-                      >
-                        <Image size={16} />
-                        <span>Imágenes</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="btn-action-dark"
-                        onClick={() => abrirAcceso(t)}
-                      >
-                        <Key size={16} />
-                        <span>Acceso</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="btn-action-danger"
-                        onClick={() => eliminar(t.idTrabajador)}
-                      >
-                        <Trash2 size={16} />
-                        <span>Eliminar</span>
                       </button>
                     </div>
-                  </article>
-                </div>
+
+                    <div className="trabajador-card-content">
+                      <div className="trabajador-card-title-line">
+                        <h5 title={t.nombre}>{t.nombre}</h5>
+
+                        <span className={t.destacado ? "trabajador-pill destacado" : "trabajador-pill normal"}>
+                          {t.destacado ? "Destacado" : "Estándar"}
+                        </span>
+                      </div>
+
+                      <div className="trabajador-mini-stats">
+                        <div>
+                          <span>Comisión</span>
+                          <b>{t.porcentajeComision || 0}%</b>
+                        </div>
+
+                        <div>
+                          <span>Experiencia</span>
+                          <b>{t.experiencia || "—"}</b>
+                        </div>
+                      </div>
+
+                      <div className="trabajador-actions-grid compact">
+                        <button type="button" className="btn-action-dark" onClick={() => abrirEditarTrabajador(t)}>
+                          <Pencil size={15} />
+                          <span>Editar</span>
+                        </button>
+
+                        <button type="button" className="btn-action-dark" onClick={() => abrirImagenes(t)}>
+                          <Image size={15} />
+                          <span>Imágenes</span>
+                        </button>
+
+                        <button type="button" className="btn-action-dark" onClick={() => abrirAcceso(t)}>
+                          <Key size={15} />
+                          <span>Acceso</span>
+                        </button>
+
+                        <button type="button" className="btn-action-danger" onClick={() => eliminar(t.idTrabajador)}>
+                          <Trash2 size={15} />
+                          <span>Eliminar</span>
+                        </button>
+                      </div>
+                    </div>
+                  </article>                </div>
               ))}
             </div>
           ) : (
