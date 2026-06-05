@@ -1,0 +1,136 @@
+/* ===================== Agenda — premium azul/blanco ===================== */
+:root { --ag-gutter: 60px; }
+
+/* ---------- Toolbar ---------- */
+.toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.dateNav { display: inline-flex; align-items: center; gap: 4px; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 4px; }
+.navBtn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; border: none; background: transparent; color: #4b5563; cursor: pointer; transition: background .15s, color .15s; }
+.navBtn:hover { background: #f3f4f6; color: #111827; }
+.todayBtn { height: 34px; padding: 0 14px; border-radius: 9px; border: none; background: transparent; font-weight: 600; font-size: 14px; color: #374151; cursor: pointer; transition: background .15s; }
+.todayBtn:hover { background: #f3f4f6; }
+.calBtn { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 14px; border: 1px solid #e5e7eb; background: #fff; border-radius: 12px; cursor: pointer; color: #111827; font-weight: 600; font-size: 14px; transition: border-color .15s, box-shadow .15s; }
+.calBtn:hover { border-color: #93c5fd; box-shadow: 0 1px 6px rgba(37,99,235,.1); }
+.calBtn svg { color: #2563eb; }
+.dateLabel { font-weight: 700; color: #111827; font-size: 15px; text-transform: capitalize; }
+.spring { flex: 1 1 auto; }
+.addBtn { display: inline-flex; align-items: center; gap: 7px; height: 42px; padding: 0 18px; border: none; border-radius: 12px; background: #2563eb; color: #fff; font-weight: 600; font-size: 14px; cursor: pointer; box-shadow: 0 6px 16px rgba(37,99,235,.25); transition: background .15s, transform .1s; }
+.addBtn:hover { background: #1d4ed8; }
+.addBtn:active { transform: scale(.97); }
+.expandBtn { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border: 1px solid #e5e7eb; background: #fff; border-radius: 12px; cursor: pointer; color: #2563eb; transition: border-color .15s, box-shadow .15s; }
+.expandBtn:hover { border-color: #93c5fd; box-shadow: 0 1px 6px rgba(37,99,235,.1); }
+
+/* ---------- Barra de turnos (TODO / Mañana / Tarde / Noche) ---------- */
+.turnBar { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+.turnBar::-webkit-scrollbar { display: none; }
+.turnBtn { flex: 1 1 0; min-width: 84px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 40px; padding: 0 14px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; font-size: 14px; font-weight: 600; color: #4b5563; cursor: pointer; white-space: nowrap; transition: all .15s; }
+.turnBtn:not(.turnBtnActive):hover:not(:disabled) { border-color: #93c5fd; color: #1d4ed8; }
+.turnBtnActive { background: #2563eb; border-color: #2563eb; color: #fff; box-shadow: 0 6px 16px rgba(37,99,235,.22); }
+.turnBtn:disabled { opacity: .4; cursor: not-allowed; }
+.turnCount { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: rgba(0,0,0,.08); font-size: 11px; font-weight: 800; }
+.turnBtnActive .turnCount { background: rgba(255,255,255,.25); }
+
+/* ---------- Chips de barbero (mobile) ---------- */
+.mobileBar { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 12px; -webkit-overflow-scrolling: touch; }
+.mobileBar::-webkit-scrollbar { display: none; }
+.mChip { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; padding: 6px 12px 6px 6px; border: 1px solid #e5e7eb; border-radius: 999px; background: #fff; font-size: 13px; font-weight: 600; color: #4b5563; cursor: pointer; white-space: nowrap; transition: all .15s; }
+.mChipActive { border-color: #2563eb; background: #eff6ff; color: #1d4ed8; }
+.mAv { width: 26px; height: 26px; border-radius: 999px; overflow: hidden; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 700; }
+.mAv img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ---------- Contenedor del calendario ---------- */
+.calWrap { background: #fff; border: 1px solid #eef0f3; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(16,24,40,.04); }
+.gridScroll { overflow-x: hidden; }
+.gridInner { }
+
+/* ---------- Cabeceras de barberos (compactas) ---------- */
+.heads { display: flex; align-items: stretch; border-bottom: 1px solid #eef0f3; background: #fbfcfe; }
+.headSpacer { width: var(--ag-gutter); flex: 0 0 var(--ag-gutter); }
+.headCol { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 12px 6px; border-left: 1px solid #eef0f3; }
+.hAv { width: 38px; height: 38px; border-radius: 999px; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 700; box-shadow: 0 0 0 2px #fff, 0 2px 6px rgba(16,24,40,.12); }
+.hAv img { width: 100%; height: 100%; object-fit: cover; }
+.hName { font-size: 13px; font-weight: 600; color: #1f2937; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Cuerpo con scroll (grilla desktop) ---------- */
+.bodyScroll { display: flex; max-height: calc(100vh - 290px); overflow-y: auto; overflow-x: hidden; }
+.bodyScroll::-webkit-scrollbar { width: 8px; }
+.bodyScroll::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 8px; }
+.gutter { position: relative; width: var(--ag-gutter); flex: 0 0 var(--ag-gutter); background: #fff; }
+.gLabel { position: absolute; right: 8px; transform: translateY(-50%); font-size: 11px; color: #9ca3af; font-weight: 500; white-space: nowrap; }
+.area { position: relative; flex: 1 1 0; min-width: 0; }
+.areaDrag { touch-action: pan-y; }
+
+.hourLine { position: absolute; left: 0; right: 0; height: 1px; background: #eef0f3; }
+.halfLine { position: absolute; left: 0; right: 0; height: 1px; background: #f3f5f8; }
+.colDiv { position: absolute; top: 0; bottom: 0; width: 1px; background: #eef0f3; }
+.nowLine { position: absolute; left: 0; right: 0; height: 2px; background: #ef4444; z-index: 6; }
+.nowDot { position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 999px; background: #ef4444; }
+
+/* ---------- Tarjeta de cita (vivas) ---------- */
+.block { position: absolute; z-index: 5; border-radius: 10px; padding: 7px 10px; overflow: hidden; cursor: pointer; box-sizing: border-box; user-select: none; transition: box-shadow .15s, transform .05s; display: flex; flex-direction: column; gap: 2px; }
+.block:hover { box-shadow: 0 8px 20px rgba(16,24,40,.2); z-index: 7; transform: translateY(-1px); }
+.blockDraggable { touch-action: none; }
+.dragging { opacity: .95; box-shadow: 0 14px 30px rgba(16,24,40,.28) !important; z-index: 30 !important; cursor: grabbing; transform: scale(1.01); }
+.bTime { font-size: 11px; font-weight: 800; line-height: 1.25; }
+.bName { font-size: 13px; font-weight: 700; color: #111827; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bSvc { font-size: 11px; color: #475569; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.resize { position: absolute; left: 0; right: 0; bottom: 0; height: 8px; cursor: ns-resize; }
+.resize::after { content: ""; position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%); width: 22px; height: 3px; border-radius: 3px; background: rgba(15,23,42,.22); }
+.dragLbl { position: absolute; z-index: 40; pointer-events: none; background: #0f172a; color: #fff; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 7px; white-space: nowrap; }
+
+/* ---------- Lista compacta (mobile) ---------- */
+.mobileList { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+.mCard { border: 1px solid #eef0f3; border-radius: 14px; padding: 12px 14px; cursor: pointer; transition: transform .05s, box-shadow .15s; }
+.mCard:active { transform: scale(.99); }
+.mCard:hover { box-shadow: 0 6px 16px rgba(16,24,40,.1); }
+.mCardTop { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
+.mCardTimeRow { font-size: 12.5px; font-weight: 700; }
+.mState { font-size: 11px; font-weight: 700; text-transform: capitalize; opacity: .75; }
+.mCardName { font-size: 15px; font-weight: 700; color: #111827; line-height: 1.25; }
+.mCardSvc { font-size: 13px; color: #475569; margin-top: 1px; }
+.mEmpty { display: flex; flex-direction: column; align-items: center; text-align: center; color: #94a3b8; font-size: 14px; padding: 48px 20px; }
+.mEmptyIcon { width: 46px; height: 46px; border-radius: 999px; background: #f1f5f9; display: inline-flex; align-items: center; justify-content: center; color: #94a3b8; margin-bottom: 12px; }
+
+/* ---------- Estados de carga / vacío ---------- */
+.loading, .noCols { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 70px 20px; }
+.spinner { width: 32px; height: 32px; border-radius: 999px; border: 3px solid #e5e7eb; border-top-color: #2563eb; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.muted, .noCols { color: #9ca3af; font-size: 14px; }
+
+/* ---------- Modal detalle ---------- */
+.overlay { position: fixed; inset: 0; z-index: 60; background: rgba(17,24,39,.5); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.modal { width: 100%; max-width: 420px; background: #fff; border-radius: 18px; overflow: hidden; box-shadow: 0 24px 60px rgba(16,24,40,.3); }
+.modalHead { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid #f1f3f6; }
+.modalTitle { font-size: 17px; font-weight: 700; color: #111827; margin: 0; }
+.modalClose { width: 34px; height: 34px; border-radius: 9px; border: none; background: #f3f4f6; color: #4b5563; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.modalClose:hover { background: #e5e7eb; }
+.form { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+.detailBadge { align-self: flex-start; color: #fff; font-size: 12px; font-weight: 700; padding: 3px 12px; border-radius: 999px; text-transform: capitalize; }
+.dRow { display: flex; align-items: center; gap: 10px; color: #374151; font-size: 14px; }
+.dRow svg { color: #9ca3af; flex: 0 0 auto; }
+.detailActions { padding: 0 20px 20px; display: flex; flex-direction: column; gap: 10px; }
+.actFull { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; border: none; border-radius: 12px; color: #fff; font-weight: 600; font-size: 14px; cursor: pointer; transition: opacity .15s; }
+.actFull:hover { opacity: .92; }
+.actFull:disabled { opacity: .5; cursor: default; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 767px) {
+  :root { --ag-gutter: 46px; }
+  .dateLabel { font-size: 13px; }
+  .turnBtn { min-width: 0; font-size: 13px; padding: 0 10px; }
+}
+
+/* ---------- Modo expandido (pantalla completa) ---------- */
+.fsOverlay { position: fixed; inset: 0; z-index: 70; background: #f6f8fb; display: flex; flex-direction: column; }
+.fsBar { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #fff; border-bottom: 1px solid #eef0f3; }
+.fsTitle { font-weight: 700; color: #111827; font-size: 15px; text-transform: capitalize; }
+.fsClose { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid #e5e7eb; background: #fff; border-radius: 11px; color: #4b5563; cursor: pointer; }
+.fsClose:hover { background: #f3f4f6; color: #111827; }
+.fsTurns { padding: 12px 14px 0; }
+.fsHint { padding: 6px 14px 0; font-size: 12px; color: #94a3b8; }
+.fsGrid { flex: 1; min-height: 0; padding: 14px; overflow: hidden; }
+.calWrapFs { height: 100%; display: flex; flex-direction: column; border-radius: 14px; }
+.calWrapFs .gridScroll { overflow-x: auto; height: 100%; }
+.calWrapFs .gridScroll::-webkit-scrollbar { height: 8px; }
+.calWrapFs .gridScroll::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 8px; }
+.calWrapFs .gridInner { height: 100%; display: flex; flex-direction: column; }
+.calWrapFs .bodyScroll { max-height: none; flex: 1; }

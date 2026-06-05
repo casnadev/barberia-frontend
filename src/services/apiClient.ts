@@ -1,0 +1,170 @@
+import axios from 'axios'
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.100.25:55692'
+
+// Clave donde se persiste el subdominio del tenant activo.
+const TENANT_KEY = 'tenant_subdomain'
+
+const esLocalOLan = (host: string): boolean =>
+  host === 'localhost' ||
+  host === '127.0.0.1' ||
+  host.startsWith('192.168.') ||
+  host.startsWith('10.') ||
+  /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+
+// Intenta deducir el subdominio real desde el hostname (producción):
+// nader.barber.pe -> "nader". Devuelve null en localhost/IP LAN o cuando no
+// hay un subdominio real (p.ej. barber.pe).
+const subdominioDesdeHost = (): string | null => {
+  const host = window.location.hostname
+  if (esLocalOLan(host)) return null
+  const parts = host.split('.')
+  if (parts.length < 3) return null
+  const first = parts[0]
+  if (!first || first === 'www') return null
+  return first
+}
+
+/**
+ * Subdominio indicado EXPLÍCITAMENTE en la URL por query param `?s=`.
+ *
+ * En producción cada sede vive en su propio subdominio
+ * (sede-chongo.barber.pe), pero en desarrollo (localhost) no hay subdominios
+ * reales, así que el microsite se abre con `/?s=<subdominio>`. Este valor es
+ * la FUENTE DE VERDAD de la pestaña actual: cuando está presente debe ganarle
+ * a cualquier cosa que haya quedado en localStorage (que es por origen y se
+ * comparte entre pestañas, por eso un admin con la sede "demo" guardada hacía
+ * que "Ver sitio" de otra sede leyera el tenant equivocado).
+ *
+ * Importante: NO se persiste en localStorage. Solo manda dentro de la pestaña
+ * que lleva el `?s=`, de modo que la pestaña del panel del admin (sin `?s=`)
+ * conserva intacto su propio tenant.
+ */
+export const tenantDesdeUrl = (): string | null => {
+  try {
+    const s = new URLSearchParams(window.location.search).get('s')
+    if (s && s.trim()) return s.trim().toLowerCase()
+  } catch {
+    /* ignore */
+  }
+  return null
+}
+
+/**
+ * Subdominio del tenant ACTIVO. Orden de prioridad:
+ *  1. ?s=<subdominio> en la URL         (microsite explícito; manda en su pestaña)
+ *  2. subdominio real del hostname       (producción: nader.barber.pe)
+ *  3. localStorage[tenant_subdomain]     (explícito; setTenant — sesión del panel)
+ *  4. VITE_TENANT                        (.env, p.ej. dev local)
+ *  5. 'demo'                             (último recurso)
+ */
+export const getActiveTenant = (): string => {
+  // 1. La URL (?s=) tiene prioridad: es el tenant de ESTA pestaña.
+  const fromUrl = tenantDesdeUrl()
+  if (fromUrl) return fromUrl
+
+  // 2. Subdominio real (producción).
+  const fromHost = subdominioDesdeHost()
+  if (fromHost) return fromHost.toLowerCase()
+
+  // 3. localStorage (sesión del panel).
+  try {
+    const stored = localStorage.getItem(TENANT_KEY)
+    if (stored && stored.trim()) return stored.trim().toLowerCase()
+  } catch {
+    /* ignore */
+  }
+
+  // 4. .env
+  const fromEnv = import.meta.env.VITE_TENANT
+  if (fromEnv && String(fromEnv).trim()) return String(fromEnv).trim().toLowerCase()
+
+  // 5. último recurso
+  return 'demo'
+}
+
+/** Fija (y persiste) el subdominio del tenant activo. */
+export const setTenant = (subdominio: string): void => {
+  try {
+    localStorage.setItem(TENANT_KEY, subdominio.trim().toLowerCase())
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Limpia el tenant persistido (p.ej. en logout). */
+export const clearTenant = (): void => {
+  try {
+    localStorage.removeItem(TENANT_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+console.log('🔌 API Base URL:', API_BASE_URL)
+console.log('🏢 Tenant inicial:', getActiveTenant())
+console.log('🌐 Hostname:', window.location.hostname)
+
+export const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  },
+  withCredentials: true,
+})
+
+apiClient.interceptors.request.use((config: any) => {
+  if (!config.headers) {
+    config.headers = {}
+  }
+
+  const token = localStorage.getItem('token')
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`
+  }
+
+  // El tenant se RESUELVE EN CADA REQUEST (no se captura una sola vez al cargar
+  // el módulo), de modo que si cambia (setTenant) aplica sin recargar.
+  const tenant = getActiveTenant()
+  config.headers['X-Tenant-Subdomain'] = tenant
+
+  console.log('📤', config.method?.toUpperCase(), config.url, '| Tenant:', tenant)
+  return config
+})
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('❌ Error:', error.message, error.response?.status, error.response?.data)
+    const url: string = error.config?.url || ''
+    const esAuth = /\/api\/auth\//i.test(url) || /\/api\/otp\//i.test(url)
+    if (error.response?.status === 401 && !esAuth) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  }
+)
+
+/**
+ * Construye la URL completa de una imagen a partir de una ruta.
+ * - Absoluta (http/https) o data:/blob: -> se devuelve tal cual.
+ * - Relativa (/uploads/...) -> se le antepone API_BASE_URL.
+ */
+export const buildImageUrl = (ruta?: string | null): string => {
+  if (!ruta) return ''
+  if (
+    ruta.startsWith('http://') ||
+    ruta.startsWith('https://') ||
+    ruta.startsWith('data:') ||
+    ruta.startsWith('blob:')
+  ) {
+    return ruta
+  }
+  return `${API_BASE_URL}${ruta.startsWith('/') ? '' : '/'}${ruta}`
+}
+
+export { API_BASE_URL }

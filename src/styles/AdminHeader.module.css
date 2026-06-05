@@ -1,0 +1,53 @@
+/* AdminHeader — header sticky reutilizable para TODO el admin.
+   Título/subtítulo · SedeSwitcher · AccountMenu, alineados al ancho de la landing. */
+
+.appbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+.inner {
+  max-width: var(--page-max, 1380px);
+  margin: 0 auto;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+}
+@media (max-width: 640px) { .inner { padding: 10px 16px; } }
+
+.titleWrap { min-width: 0; flex-shrink: 1; }
+.title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  color: var(--color-text-dark, #111827);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.subtitle {
+  font-size: 0.85rem;
+  color: var(--color-text-light, #4b5563);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 640px) {
+  .title { font-size: 1.1rem; }
+  .subtitle { display: none; }
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}

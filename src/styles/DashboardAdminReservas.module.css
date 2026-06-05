@@ -1,0 +1,519 @@
+/* ================== CONTAINER ================== */
+.container {
+  padding: 2rem 1rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 2rem;
+  }
+}
+
+/* ================== HEADER ================== */
+.header {
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin: 0 0 0.5rem 0;
+}
+
+.subtitulo {
+  color: #999;
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* ================== FILTROS ================== */
+.filtros {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.filtroBtn {
+  padding: 0.75rem 1.25rem;
+  background: #f3f4f6;
+  border: 2px solid transparent;
+  border-radius: 0.5rem;
+  color: #666;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 200ms ease;
+  font-size: 0.875rem;
+}
+
+.filtroBtn:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.filtroActivo {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+/* ================== LOADING ================== */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 3px solid #e5e7eb;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ================== EMPTY STATE ================== */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  color: #999;
+}
+
+.emptyState svg {
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.3;
+}
+
+/* ================== TABLA DESKTOP ================== */
+.tablaContainer {
+  background: white;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.tablaDesktop {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .tablaDesktop {
+    display: block;
+  }
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabla thead {
+  background: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.tabla th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #666;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tabla tbody tr {
+  border-bottom: 1px solid #e5e7eb;
+  transition: background 200ms ease;
+}
+
+.tabla tbody tr:hover {
+  background: #fafafa;
+}
+
+.tabla td {
+  padding: 1rem;
+  color: #1a1a1a;
+  font-size: 0.95rem;
+}
+
+.tabla td svg {
+  display: inline-block;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+.hora {
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.cliente {
+  font-weight: 600;
+}
+
+.servicio {
+  color: #666;
+}
+
+.barbero {
+  color: #666;
+}
+
+.estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.estadoPendiente {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.estadoConfirmada {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.estadoAtendida {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.estadoNoShow {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.estadoCancelada {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.acciones {
+  text-align: right;
+}
+
+.btnDetalles {
+  padding: 0.5rem 1rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 200ms ease;
+}
+
+.btnDetalles:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+/* ================== TABLA MOBILE ================== */
+.tablaMobile {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .tablaMobile {
+    display: none;
+  }
+}
+
+.card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  transition: all 200ms ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.cardHora {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  color: #2563eb;
+  font-size: 1rem;
+}
+
+.cardContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.item svg {
+  color: #999;
+  flex-shrink: 0;
+}
+
+.barberoLabel {
+  color: #666;
+  font-size: 0.875rem;
+}
+
+/* ================== MODAL ================== */
+.modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1rem;
+}
+
+.modalOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: -1;
+}
+
+.modalContent {
+  background: white;
+  border-radius: 0.75rem;
+  padding: 2rem;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.closeBtn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #666;
+  font-size: 1.25rem;
+  transition: all 200ms ease;
+}
+
+.closeBtn:hover {
+  background: #e5e7eb;
+  color: #1a1a1a;
+}
+
+.modalContent h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 1.5rem 0;
+  padding-right: 1.5rem;
+}
+
+.detalles {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.detalleItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detalleItem label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #999;
+  letter-spacing: 0.5px;
+}
+
+.detalleItem p {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.detalleItem small {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.estadoGrande {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  width: fit-content;
+  font-size: 0.95rem;
+}
+
+/* ================== MODAL ACCIONES ================== */
+.modalAcciones {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.btnConfirmar,
+.btnAtender,
+.btnNoShow,
+.btnCerrar {
+  padding: 0.875rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 200ms ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btnConfirmar {
+  background: #10b981;
+  color: white;
+}
+
+.btnConfirmar:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-2px);
+}
+
+.btnConfirmar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btnAtender {
+  background: #2563eb;
+  color: white;
+}
+
+.btnAtender:hover:not(:disabled) {
+  background: #1d4ed8;
+  transform: translateY(-2px);
+}
+
+.btnAtender:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btnNoShow {
+  background: #f97316;
+  color: white;
+}
+
+.btnNoShow:hover:not(:disabled) {
+  background: #ea580c;
+  transform: translateY(-2px);
+}
+
+.btnNoShow:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btnCerrar {
+  background: #f3f4f6;
+  color: #666;
+}
+
+.btnCerrar:hover {
+  background: #e5e7eb;
+  color: #1a1a1a;
+}
+
+/* ================== RESPONSIVE ================== */
+@media (max-width: 640px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .header h1 {
+    font-size: 1.5rem;
+  }
+
+  .filtros {
+    gap: 0.5rem;
+  }
+
+  .filtroBtn {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+  }
+
+  .modalContent {
+    padding: 1.5rem;
+  }
+}

@@ -1,0 +1,119 @@
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { X, Camera } from 'lucide-react'
+import { toast } from 'sonner'
+import { perfilService } from '@/services/perfilService'
+import { useAuthStore } from '@/store/authStore'
+import { buildImageUrl } from '@/services/apiClient'
+
+/**
+ * Modal "Mi perfil" del Admin (su propio Usuario). Permite editar nombre,
+ * correo, teléfono y foto de perfil. Se monta en AdminHeader y se abre desde
+ * el AccountMenu. La foto se sube a /api/upload y se guarda en Usuarios.UrlFotoPerfil.
+ */
+export function MiPerfilAdminModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [nombre, setNombre] = useState('')
+  const [correo, setCorreo] = useState('')
+  const [telefono, setTelefono] = useState('')
+  const [foto, setFoto] = useState('')
+  const [subiendo, setSubiendo] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  // Cargar datos al abrir
+  useEffect(() => {
+    if (!open) return
+    let vivo = true
+    setLoading(true)
+    perfilService.getMiPerfil()
+      .then(p => {
+        if (!vivo) return
+        setNombre(p.nombreCompleto || '')
+        setCorreo(p.correo || '')
+        setTelefono(p.telefono || '')
+        setFoto(p.urlFotoPerfil || '')
+      })
+      .catch(() => toast.error('No se pudo cargar tu perfil'))
+      .finally(() => { if (vivo) setLoading(false) })
+    return () => { vivo = false }
+  }, [open])
+
+  // Esc para cerrar
+  useEffect(() => {
+    if (!open) return
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onEsc)
+    return () => document.removeEventListener('keydown', onEsc)
+  }, [open, onClose])
+
+  if (!open) return null
+
+  const inicial = (nombre || 'A').trim().charAt(0).toUpperCase()
+
+  const subirFoto = async (e: any) => {
+    const file = e.target.files?.[0]; if (!file) return
+    setSubiendo(true)
+    try { const url = await perfilService.subirFoto(file); setFoto(url); toast.success('Foto actualizada') }
+    catch { toast.error('No se pudo subir la foto') } finally { setSubiendo(false) }
+  }
+
+  const guardar = async () => {
+    if (!nombre.trim()) return toast.error('El nombre es obligatorio')
+    if (telefono && !/^9\d{8}$/.test(telefono)) return toast.error('Teléfono peruano inválido (9 dígitos)')
+    setSaving(true)
+    try {
+      await perfilService.updateMiPerfil({
+        nombreCompleto: nombre.trim(),
+        correo: correo.trim() || undefined,
+        telefono: telefono.trim() || undefined,
+        urlFotoPerfil: foto,
+      })
+      const u = useAuthStore.getState().user
+      if (u) useAuthStore.getState().setUser({ ...u, urlFotoPerfil: foto || null })
+      toast.success('Perfil actualizado'); onClose()
+    } catch (e: any) {
+      toast.error(e?.response?.data?.mensaje || 'No se pudo guardar')
+    } finally { setSaving(false) }
+  }
+
+  const field = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none'
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-base font-semibold text-gray-900">Mi perfil</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Cerrar"><X className="w-5 h-5" /></button>
+        </div>
+
+        {loading ? (
+          <p className="text-sm text-gray-400 py-8 text-center">Cargando…</p>
+        ) : (
+          <div className="space-y-3">
+            {/* Foto */}
+            <div className="flex items-center gap-3">
+              <div className={`w-16 h-16 rounded-full overflow-hidden flex items-center justify-center text-white text-xl font-bold shrink-0 ${foto ? '' : 'bg-gradient-to-br from-blue-500 to-blue-700'}`}>
+                {foto ? <img src={buildImageUrl(foto)} alt="" className="w-full h-full object-cover" /> : inicial}
+              </div>
+              <div className="space-y-1">
+                <label className="inline-flex items-center gap-1 text-sm text-blue-700 bg-blue-50 rounded-lg px-3 py-1.5 font-medium cursor-pointer">
+                  <Camera className="w-4 h-4" /> {subiendo ? 'Subiendo…' : 'Subir foto'}
+                  <input type="file" accept="image/*" onChange={subirFoto} className="hidden" disabled={subiendo} />
+                </label>
+                {foto && <button onClick={() => setFoto('')} className="block text-xs text-gray-400 hover:text-rose-500">Quitar foto</button>}
+              </div>
+            </div>
+
+            <div><label className="text-xs text-gray-500">Nombre completo</label><input className={field} value={nombre} onChange={e => setNombre(e.target.value)} /></div>
+            <div><label className="text-xs text-gray-500">Correo</label><input className={field} value={correo} onChange={e => setCorreo(e.target.value)} type="email" /></div>
+            <div><label className="text-xs text-gray-500">Teléfono</label><input className={field} value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="9XXXXXXXX" inputMode="numeric" /></div>
+
+            <button onClick={guardar} disabled={saving || subiendo} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2.5 font-semibold disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar cambios'}</button>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
+  )
+}

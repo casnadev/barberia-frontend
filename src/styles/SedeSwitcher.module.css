@@ -1,0 +1,103 @@
+/* SedeSwitcher — selector de sede inline para el header del admin.
+   Mismo lenguaje que el FAB original, pero alineado a 40px y sin position:fixed. */
+
+.switcher { position: relative; display: inline-flex; }
+
+/* Disparador (pill blanca, 40px de alto para alinear con el avatar) */
+.trigger,
+.staticPill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  background: #fff;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 12px;
+  padding: 0 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+.staticPill { cursor: default; }
+.trigger:hover {
+  border-color: var(--brand, #2855F6);
+  box-shadow: 0 4px 14px rgba(40, 85, 246, 0.14);
+}
+.pinWrap {
+  width: 26px; height: 26px;
+  border-radius: 8px;
+  display: grid; place-items: center;
+  background: rgba(40, 85, 246, 0.1);
+  color: var(--brand, #2855F6);
+  flex-shrink: 0;
+}
+.triggerText { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.05; min-width: 0; }
+.triggerLabel {
+  font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--color-text-muted, #9aa0ac); font-weight: 700;
+}
+.triggerName {
+  font-size: 0.85rem; font-weight: 700; color: var(--color-text-dark, #111827);
+  max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.chev { color: var(--color-text-muted, #9aa0ac); transition: transform 150ms ease; flex-shrink: 0; }
+.chevOpen { transform: rotate(180deg); }
+
+/* Overlay para cerrar al clickear fuera */
+.backdrop { position: fixed; inset: 0; z-index: 55; }
+
+/* Menú desplegable */
+.menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 264px;
+  background: #fff;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(17, 24, 39, 0.16);
+  padding: 8px;
+  z-index: 60;
+  animation: sw-pop 140ms ease;
+}
+@keyframes sw-pop {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.menuHead {
+  font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--color-text-muted, #9aa0ac); font-weight: 700;
+  padding: 8px 10px 6px;
+}
+.item {
+  display: flex; align-items: center; gap: 11px;
+  width: 100%; padding: 10px 11px;
+  border-radius: 12px; border: none; background: transparent;
+  cursor: pointer; text-align: left; font-family: inherit;
+  transition: background 120ms ease;
+}
+.item:hover { background: #f3f6ff; }
+.itemActive { background: var(--brand, #2855F6); }
+.itemActive:hover { background: var(--color-primary-dark, #1E3FCC); }
+.itemDot {
+  width: 30px; height: 30px; border-radius: 9px;
+  display: grid; place-items: center;
+  background: rgba(40, 85, 246, 0.1); color: var(--brand, #2855F6);
+  flex-shrink: 0;
+}
+.itemActive .itemDot { background: rgba(255, 255, 255, 0.2); color: #fff; }
+.itemText { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.itemName {
+  font-size: 0.875rem; font-weight: 600; color: var(--color-text-dark, #111827);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.itemSub { font-size: 0.72rem; color: var(--color-text-muted, #9aa0ac); }
+.itemActive .itemName { color: #fff; }
+.itemActive .itemSub { color: rgba(255, 255, 255, 0.82); }
+.check { margin-left: auto; color: #fff; flex-shrink: 0; }
+
+/* Mobile: el nombre puede achicarse un poco */
+@media (max-width: 640px) {
+  .triggerName { max-width: 110px; }
+  .menu { min-width: 240px; }
+}

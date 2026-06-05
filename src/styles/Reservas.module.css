@@ -1,0 +1,63 @@
+/* ============================================================================
+   Reservas.module.css — gestión de reservas (sistema BarberPe)
+   Dentro de AdminLayout. Colores VIVOS para estados (chips sólidos + badges).
+   ========================================================================== */
+
+/* ===== KPIs (chips de color sólido = vivos) ===== */
+.kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 22px; }
+@media (min-width: 768px) { .kpis { grid-template-columns: repeat(4, 1fr); } }
+.kpi { position: relative; background: #fff; border: 1px solid var(--color-border, #e5e7eb); border-radius: var(--radius-lg, 16px); padding: 16px; box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.05)); overflow: hidden; transition: transform .15s ease, box-shadow .15s ease; }
+.kpi:hover { transform: translateY(-2px); box-shadow: var(--shadow-md, 0 4px 6px rgba(0,0,0,.1)); }
+.kpiAccent { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; } /* color inline */
+.kpiTop { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.kpiIcon { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; color: #fff; } /* bg inline (vivo) */
+.kpiLabel { font-size: 0.8rem; font-weight: 700; color: var(--color-text-light, #4b5563); }
+.kpiValue { font-size: 2.1rem; font-weight: 800; line-height: 1; } /* color inline (vivo) */
+
+/* ===== Toolbar: buscador + filtros ===== */
+.toolbar { display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
+.searchWrap { position: relative; }
+.searchIcon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--color-text-muted, #9ca3af); pointer-events: none; }
+.searchInput { width: 100%; padding: 12px 14px 12px 42px; border: 1px solid var(--color-border, #e5e7eb); border-radius: 12px; font-family: inherit; font-size: 0.9rem; color: var(--color-text-dark, #111827); background: #fff; transition: border-color .15s ease, box-shadow .15s ease; }
+.searchInput:focus { outline: none; border-color: var(--brand, #2855F6); box-shadow: 0 0 0 3px rgba(40, 85, 246, .15); }
+
+.filterBar { display: flex; gap: 8px; flex-wrap: wrap; }
+.fp { padding: 8px 16px; border-radius: var(--radius-pill, 9999px); border: 1.5px solid var(--color-border, #e5e7eb); background: #fff; color: var(--color-text-dark, #111827); font-size: 0.85rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .15s ease; }
+.fp:hover { border-color: currentColor; }
+.fpActive { color: #fff; border-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.12); } /* bg + borderColor inline (vivo) */
+
+/* ===== Tabla ===== */
+.tableCard { background: #fff; border: 1px solid var(--color-border, #e5e7eb); border-radius: var(--radius-lg, 16px); overflow: hidden; box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.05)); }
+.tableScroll { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; }
+.table th { text-align: left; padding: 14px 18px; background: var(--color-bg-soft, #f9fafb); font-size: 0.78rem; font-weight: 700; color: var(--color-text-light, #4b5563); white-space: nowrap; border-bottom: 1px solid var(--color-border, #e5e7eb); }
+.table td { padding: 14px 18px; font-size: 0.9rem; color: var(--color-text-dark, #111827); border-bottom: 1px solid var(--color-border-soft, #f3f4f6); white-space: nowrap; }
+.table tbody tr { transition: background .12s ease; }
+.table tbody tr:hover { background: var(--color-bg-soft, #f9fafb); }
+.table tbody tr:last-child td { border-bottom: none; }
+.cellName { font-weight: 700; }
+.cellIcon { display: inline-flex; align-items: center; gap: 6px; color: var(--color-text-light, #4b5563); }
+.cellIcon svg { color: var(--color-text-muted, #9ca3af); flex-shrink: 0; }
+
+/* Badge de estado — VIVO (relleno sólido, texto blanco). bg inline. */
+.badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 13px; border-radius: var(--radius-pill, 9999px); font-size: 0.72rem; font-weight: 800; color: #fff; text-transform: capitalize; box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+
+/* Acciones */
+.rowActions { display: flex; gap: 4px; }
+.actBtn { width: 36px; height: 36px; display: grid; place-items: center; border: none; cursor: pointer; border-radius: 10px; transition: transform .12s ease, background .12s ease; }
+.actBtn:hover { transform: scale(1.08); }
+.actConfirm { color: #2563eb; background: rgba(37, 99, 235, .12); }
+.actConfirm:hover { background: rgba(37, 99, 235, .22); }
+.actCancel { color: #ef4444; background: rgba(239, 68, 68, .12); }
+.actCancel:hover { background: rgba(239, 68, 68, .22); }
+.actAtender { color: #16a34a; background: rgba(22, 163, 74, .12); }
+.actAtender:hover { background: rgba(22, 163, 74, .22); }
+.noActions { color: var(--color-text-muted, #c2c8d0); font-size: 0.8rem; }
+
+/* ===== Estados de carga / vacío ===== */
+.loading { padding: 56px 20px; text-align: center; }
+.spinner { width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--color-border, #e5e7eb); border-top-color: var(--brand, #2855F6); animation: rvSpin .8s linear infinite; margin: 0 auto 14px; }
+.loadingText { color: var(--color-text-light, #4b5563); font-size: 0.9rem; }
+@keyframes rvSpin { to { transform: rotate(360deg); } }
+.empty { padding: 56px 20px; text-align: center; color: var(--color-text-light, #4b5563); }
+.empty svg { color: var(--color-border, #d1d5db); margin: 0 auto 12px; display: block; }
