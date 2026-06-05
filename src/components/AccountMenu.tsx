@@ -68,7 +68,7 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
   const abrirSitio = () => {
     setOpen(false)
     const sub = getActiveTenant()
-    window.open(sub ? `/?s=${encodeURIComponent(sub)}` : '/', '_blank', 'noopener')
+    window.open(sub ? (window.location.hostname.endsWith('barber.pe') ? `https://${sub}.barber.pe` : `/?s=${encodeURIComponent(sub)}`) : '/', '_blank', 'noopener')
   }
 
   return (
