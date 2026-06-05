@@ -1,29 +1,40 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'        // ← + lazy, Suspense
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/authService'
-import { LoginPage } from '@/pages/LoginPage'
-import { DashboardPage } from '@/pages/admin/DashboardPage'
-import { ClientesPage } from '@/pages/admin/ClientesPage'
-import { ReservasPage } from '@/pages/admin/ReservasPage'
-import { AgendaPage } from '@/pages/admin/AgendaPage'
-import { SuperAdminDashboard } from '@/pages/SuperAdminDashboard'
-import { ReservaClientePage } from '@/pages/cliente/ReservaClientePage'
-import { ReservaAcciones } from '@/pages/cliente/ReservaAcciones'
-import { PublicSedeDetailPage } from '@/pages/PublicSedeDetailPage'
-import { NovedadesSedePage } from '@/pages/NovedadesSedePage'
-import { NotFoundPage } from '@/pages/NotFoundPage'
-import { ServiciosPage } from '@/pages/admin/ServiciosPage'
-import { TrabajadoresPage } from '@/pages/admin/TrabajadoresPage'
-import { PagosPage } from '@/pages/admin/PagosPage'
-import { CierreCajaPage } from '@/pages/admin/CierreCaja'
-import { ConfiguracionPage } from '@/pages/admin/ConfiguracionPage'
-import { TenantGate } from '@/components/TenantGate' // ← NUEVO
-import { TrabajadorMiAgenda } from '@/pages/trabajador/TrabajadorMiAgenda'
-import { MiPerfilCliente } from '@/pages/cliente/MiPerfilCliente'
-import { CompletarPerfilAdmin } from '@/pages/CompletarPerfilAdmin'
-import { ConfirmHost } from '@/components/ConfirmDialog'
-import LandingPage from '@/pages/LandingPage' // ← NUEVO (export default)
+import { TenantGate } from '@/components/TenantGate' // ← NUEVO (se queda eager)
+import { ConfirmHost } from '@/components/ConfirmDialog' // ← se queda eager
+
+// --- Páginas con carga diferida (code-splitting): cada una baja al entrar a su ruta ---
+const LoginPage = lazy(() => import('@/pages/LoginPage').then(m => ({ default: m.LoginPage })))
+const DashboardPage = lazy(() => import('@/pages/admin/DashboardPage').then(m => ({ default: m.DashboardPage })))
+const ClientesPage = lazy(() => import('@/pages/admin/ClientesPage').then(m => ({ default: m.ClientesPage })))
+const ReservasPage = lazy(() => import('@/pages/admin/ReservasPage').then(m => ({ default: m.ReservasPage })))
+const AgendaPage = lazy(() => import('@/pages/admin/AgendaPage').then(m => ({ default: m.AgendaPage })))
+const SuperAdminDashboard = lazy(() => import('@/pages/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })))
+const ReservaClientePage = lazy(() => import('@/pages/cliente/ReservaClientePage').then(m => ({ default: m.ReservaClientePage })))
+const ReservaAcciones = lazy(() => import('@/pages/cliente/ReservaAcciones').then(m => ({ default: m.ReservaAcciones })))
+const PublicSedeDetailPage = lazy(() => import('@/pages/PublicSedeDetailPage').then(m => ({ default: m.PublicSedeDetailPage })))
+const NovedadesSedePage = lazy(() => import('@/pages/NovedadesSedePage').then(m => ({ default: m.NovedadesSedePage })))
+const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })))
+const ServiciosPage = lazy(() => import('@/pages/admin/ServiciosPage').then(m => ({ default: m.ServiciosPage })))
+const TrabajadoresPage = lazy(() => import('@/pages/admin/TrabajadoresPage').then(m => ({ default: m.TrabajadoresPage })))
+const PagosPage = lazy(() => import('@/pages/admin/PagosPage').then(m => ({ default: m.PagosPage })))
+const CierreCajaPage = lazy(() => import('@/pages/admin/CierreCaja').then(m => ({ default: m.CierreCajaPage })))
+const ConfiguracionPage = lazy(() => import('@/pages/admin/ConfiguracionPage').then(m => ({ default: m.ConfiguracionPage })))
+const TrabajadorMiAgenda = lazy(() => import('@/pages/trabajador/TrabajadorMiAgenda').then(m => ({ default: m.TrabajadorMiAgenda })))
+const MiPerfilCliente = lazy(() => import('@/pages/cliente/MiPerfilCliente').then(m => ({ default: m.MiPerfilCliente })))
+const CompletarPerfilAdmin = lazy(() => import('@/pages/CompletarPerfilAdmin').then(m => ({ default: m.CompletarPerfilAdmin })))
+const LandingPage = lazy(() => import('@/pages/LandingPage')) // ← NUEVO (export default)
+
+// Fallback mientras baja el chunk de cada página (mismo spinner del index.html)
+function RouteFallback() {
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0b1220' }}>
+      <div style={{ width: 36, height: 36, border: '3px solid rgba(255,255,255,0.15)', borderTopColor: '#2092B4', borderRadius: '50%', animation: 'appspin .8s linear infinite' }} />
+    </div>
+  )
+}
 
 function ProtectedRoute({ children, requiredRole, skipTenant }: any) {
   const { user } = useAuthStore()
@@ -122,6 +133,7 @@ export function App() {
 
   return (
     <BrowserRouter>
+      <Suspense fallback={<RouteFallback />}>            {/* ← envuelve las rutas */}
       <Routes>
         {/* LOGIN */}
         <Route path="/login" element={<LoginPage />} />
@@ -265,6 +277,7 @@ export function App() {
         {/* 404 */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      </Suspense>                                         {/* ← cierra Suspense */}
       <ConfirmHost />
     </BrowserRouter>
   )
