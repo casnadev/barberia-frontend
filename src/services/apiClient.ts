@@ -12,16 +12,22 @@ const esLocalOLan = (host: string): boolean =>
   host.startsWith('10.') ||
   /^172\.(1[6-9]|2\d|3[01])\./.test(host)
 
+// Hostnames del PANEL: NO son subdominios de una sede. En estos, el tenant
+// NO debe salir del host; se usa el que guardó setTenant (la sede activa del
+// admin). Sin esto, en app.barber.pe el tenant se resolvía a "app" y rompía
+// (TenantGate entraba en bucle de recarga).
+const HOSTS_RESERVADOS = new Set(['www', 'app', 'admin', 'api', 'panel'])
+
 // Intenta deducir el subdominio real desde el hostname (producción):
-// nader.barber.pe -> "nader". Devuelve null en localhost/IP LAN o cuando no
-// hay un subdominio real (p.ej. barber.pe).
+// nader.barber.pe -> "nader". Devuelve null en localhost/IP LAN, en hosts
+// reservados del panel (app/admin/...) o cuando no hay un subdominio real.
 const subdominioDesdeHost = (): string | null => {
   const host = window.location.hostname
   if (esLocalOLan(host)) return null
   const parts = host.split('.')
   if (parts.length < 3) return null
-  const first = parts[0]
-  if (!first || first === 'www') return null
+  const first = (parts[0] || '').toLowerCase()
+  if (!first || HOSTS_RESERVADOS.has(first)) return null
   return first
 }
 

@@ -57,9 +57,10 @@ function ProtectedRoute({ children, requiredRole, skipTenant }: any) {
   return <>{children}</>
 }
 
-// ← NUEVO: hosts del dominio raíz donde se muestra la LANDING (no un microsite).
-//   Ajusta a tu dominio real cuando lo tengas (p. ej. agrega 'barber.pe', 'www.barber.pe').
-const ROOT_HOSTS = ['localhost', '127.0.0.1', 'barber.pe', 'www.barber.pe']
+// ← NUEVO: hosts del dominio raíz / panel donde se muestra la LANDING (no un microsite).
+const ROOT_HOSTS = ['localhost', '127.0.0.1', 'barber.pe', 'www.barber.pe', 'app.barber.pe', 'admin.barber.pe']
+// Etiquetas de subdominio reservadas para el panel (no son sedes).
+const SUBS_RESERVADOS = ['www', 'app', 'admin', 'api', 'panel']
 
 function getSubdominio(): string | null {
   const host = window.location.hostname
@@ -68,7 +69,7 @@ function getSubdominio(): string | null {
   const parts = host.split('.')
   if (parts.length >= 3) {
     const sub = parts[0]
-    return sub === 'www' ? null : sub // elpatron.barber.pe → "elpatron"
+    return SUBS_RESERVADOS.includes(sub.toLowerCase()) ? null : sub // elpatron.barber.pe → "elpatron"
   }
   return null
 }
