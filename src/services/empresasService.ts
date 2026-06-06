@@ -8,6 +8,8 @@ export interface Empresa {
   correoContacto: string
   telefonoContacto: string
   totalSedes?: number
+  planActual?: string
+  fechaFinPlan?: string
 }
 
 export interface Admin {
@@ -107,6 +109,15 @@ export interface Plan {
   permiteReportes: boolean
 }
 
+/**
+ * Quita del payload los campos vacíos ('') o nulos antes de enviarlos.
+ * El backend valida formato (EmailAddress, RUC, etc.) y un string vacío NO
+ * pasa esas validaciones (daba 400). Omitiéndolos llegan como null y se aceptan.
+ * Conserva 0, false y demás valores válidos.
+ */
+const limpiar = <T extends Record<string, any>>(o: T): Record<string, any> =>
+  Object.fromEntries(Object.entries(o).filter(([, v]) => v !== '' && v != null))
+
 export const empresasService = {
   // ===== Empresas =====
   getEmpresas: async (): Promise<Empresa[]> => {
@@ -122,7 +133,7 @@ export const empresasService = {
     correoContacto: string
     telefonoContacto: string
   }): Promise<Empresa> => {
-    const res = await apiClient.post('/api/superadmin/empresas', data)
+    const res = await apiClient.post('/api/superadmin/empresas', limpiar(data))
     const e = res.data.data
     return { ...e, id: e.id ?? e.idEmpresa }
   },
@@ -135,7 +146,7 @@ export const empresasService = {
   },
 
   createAdminEmpresa: async (idEmpresa: number, data: CreateAdminDTO): Promise<Admin> => {
-    const res = await apiClient.post(`/api/superadmin/empresas/${idEmpresa}/admin`, data)
+    const res = await apiClient.post(`/api/superadmin/empresas/${idEmpresa}/admin`, limpiar(data))
     const a = res.data.data
     return { ...a, id: a.id ?? a.idUsuario }
   },
@@ -160,7 +171,7 @@ export const empresasService = {
 
   // ===== Sedes =====
   createSede: async (data: CreateSedeDTO) => {
-    const res = await apiClient.post('/api/Sedes', data)
+    const res = await apiClient.post('/api/Sedes', limpiar(data))
     return res.data.data
   },
 
@@ -176,7 +187,7 @@ export const empresasService = {
   },
 
   updateSede: async (idSede: number, data: UpdateSedeDTO): Promise<SedeAdmin> => {
-    const res = await apiClient.put(`/api/Sedes/${idSede}`, data)
+    const res = await apiClient.put(`/api/Sedes/${idSede}`, limpiar(data))
     return res.data.data ?? res.data
   },
 

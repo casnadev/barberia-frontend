@@ -1,12 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
 import {
-  Scissors, LogOut, Plus, Building2, MapPin, KeyRound, Power,
-  X, ArrowRight, ArrowLeft, Check, Mail, Phone, CreditCard,
-  Store, Trash2, ShieldCheck, Send, Loader2,
+  Scissors, Plus, Building2, MapPin, KeyRound, Power,
+  X, Check, Mail, Phone, CreditCard,
+  Store, Trash2, Send, Loader2,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { AccountMenu } from '@/components/AccountMenu'
@@ -23,37 +22,39 @@ const slugify = (t: string): string =>
 
 const soles = (n: number) => n === 0 ? 'Gratis' : `S/ ${n.toFixed(0)}`
 
-type WizForm = {
-  nombreComercial: string; razonSocial: string; ruc: string
-  empCorreo: string; empTelefono: string
-  ownerNombre: string; canal: CanalAcceso; ownerCorreo: string; ownerTelefono: string
-  idPlan: number | null
-}
-const emptyWiz: WizForm = {
-  nombreComercial: '', razonSocial: '', ruc: '',
-  empCorreo: '', empTelefono: '',
-  ownerNombre: '', canal: 'Email', ownerCorreo: '', ownerTelefono: '',
-  idPlan: null,
+const fechaCorta = (iso?: string) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
+type CrearForm = {
+  nombre: string
+  ownerNombre: string
+  canal: CanalAcceso
+  ownerCorreo: string
+  ownerTelefono: string
+}
+const emptyForm: CrearForm = { nombre: '', ownerNombre: '', canal: 'Email', ownerCorreo: '', ownerTelefono: '' }
+
 export function SuperAdminDashboard() {
-  const navigate = useNavigate()
-  const { logout, user } = useAuthStore()
+  const { user } = useAuthStore()
 
   const [empresas, setEmpresas] = useState<Empresa[]>([])
   const [owners, setOwners] = useState<Record<number, Admin | null>>({})
   const [planes, setPlanes] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Wizard
-  const [wizOpen, setWizOpen] = useState(false)
-  const [step, setStep] = useState(1)
-  const [wiz, setWiz] = useState<WizForm>(emptyWiz)
+  // Alta (un solo paso, datos mínimos)
+  const [crearOpen, setCrearOpen] = useState(false)
+  const [form, setForm] = useState<CrearForm>(emptyForm)
   const [saving, setSaving] = useState(false)
 
   // Modales auxiliares
   const [planTarget, setPlanTarget] = useState<Empresa | null>(null)
   const [sedeTarget, setSedeTarget] = useState<Empresa | null>(null)
+  const [accesoTarget, setAccesoTarget] = useState<Empresa | null>(null)
 
   const loadAll = async () => {
     setLoading(true)
@@ -83,51 +84,70 @@ export function SuperAdminDashboard() {
     return { total, activas, sinAcceso }
   }, [empresas, owners])
 
-  // ----------------------------------------------------------------- Wizard
-  const openWizard = () => { setWiz(emptyWiz); setStep(1); setWizOpen(true) }
+  // ----------------------------------------------------------------- Alta mínima
+  const abrirCrear = () => { setForm(emptyForm); setCrearOpen(true) }
 
-  const puedeAvanzar = () => {
-    if (step === 1) return wiz.nombreComercial.trim().length >= 2
-    if (step === 2) return wiz.canal === 'Email'
-      ? /\S+@\S+\.\S+/.test(wiz.ownerCorreo.trim())
-      : wiz.ownerTelefono.trim().length >= 6
-    if (step === 3) return wiz.idPlan != null
-    return false
-  }
+  const emailOk = /\S+@\S+\.\S+/.test(form.ownerCorreo.trim())
+  const telOk = /^9\d{8}$/.test(form.ownerTelefono.trim())
+  const valido = form.nombre.trim().length >= 2 && (form.canal === 'Email' ? emailOk : telOk)
+  const subPreview = slugify(form.nombre) || 'tu-negocio'
 
   const crearTodo = async () => {
-    if (wiz.idPlan == null) return
+    if (!valido) return
     setSaving(true)
     try {
-      // 1) Empresa
+      const nombre = form.nombre.trim()
+
+      // 1) Empresa con datos mínimos (el dueño completa el resto desde su perfil)
       const empresa = await empresasService.createEmpresa({
-        razonSocial: (wiz.razonSocial.trim() || wiz.nombreComercial.trim()),
-        nombreComercial: wiz.nombreComercial.trim(),
-        ruc: wiz.ruc.trim(),
-        correoContacto: wiz.empCorreo.trim(),
-        telefonoContacto: wiz.empTelefono.trim(),
+        razonSocial: nombre,
+        nombreComercial: nombre,
+        ruc: '',
+        correoContacto: '',
+        telefonoContacto: '',
       })
 
-      // 2) Admin (correo O teléfono, sin password)
+      // 2) Admin (dueño): correo O teléfono real, sin contraseña → entra por PIN/OTP
       const admin = await empresasService.createAdminEmpresa(empresa.id, {
-        nombreCompleto: wiz.ownerNombre.trim() || undefined,
-        correo: wiz.canal === 'Email' ? wiz.ownerCorreo.trim() : undefined,
-        telefono: wiz.canal === 'WhatsApp' ? wiz.ownerTelefono.trim() : undefined,
+        nombreCompleto: form.ownerNombre.trim() || undefined,
+        correo: form.canal === 'Email' ? form.ownerCorreo.trim() : undefined,
+        telefono: form.canal === 'WhatsApp' ? form.ownerTelefono.trim() : undefined,
       })
 
-      // 3) Plan (activa de inmediato). Prueba (precio 0) vence en 14 días.
-      const plan = planes.find((p) => p.idPlan === wiz.idPlan)!
-      let fechaFin: string | null = null
-      if (plan.precioMensualPEN === 0) {
-        const d = new Date(); d.setDate(d.getDate() + 14); fechaFin = d.toISOString().slice(0, 10)
+      // 3) Sede inicial por defecto (el admin no puede crear sedes solo)
+      const base = slugify(nombre)
+      const sedeBase = {
+        idEmpresa: empresa.id,
+        nombre: 'Sede principal',
+        direccion: '', departamento: '', provincia: '', distrito: '',
+        latitud: 0, longitud: 0,
+        telefono: '', whatsappContacto: '', correoContacto: '',
+        zonaHoraria: 'America/Lima', moneda: 'PEN',
       }
-      await empresasService.asignarSuscripcion(empresa.id, wiz.idPlan, fechaFin)
+      try {
+        await empresasService.createSede({ ...sedeBase, subdominio: base, slug: base })
+      } catch {
+        // subdominio en uso → reintenta con sufijo único de la empresa
+        const alt = `${base}-${empresa.id}`
+        try { await empresasService.createSede({ ...sedeBase, subdominio: alt, slug: alt }) }
+        catch { toast.message('Barbería creada, pero la sede inicial no se pudo crear. Créala manualmente en "Sedes".') }
+      }
 
-      toast.success(`"${empresa.nombreComercial}" creada con plan ${plan.nombre}.`)
-      setWizOpen(false)
+      // 4) Plan Prueba (gratis 14 días) automático
+      const prueba = planes.find((p) => p.precioMensualPEN === 0) ?? planes[0]
+      if (prueba) {
+        let fechaFin: string | null = null
+        if (prueba.precioMensualPEN === 0) {
+          const d = new Date(); d.setDate(d.getDate() + 14); fechaFin = d.toISOString().slice(0, 10)
+        }
+        await empresasService.asignarSuscripcion(empresa.id, prueba.idPlan, fechaFin)
+      }
 
-      // 4) Ofrecer enviar acceso ya
-      const canal = wiz.canal
+      toast.success(`"${nombre}" creada${prueba ? ` · plan ${prueba.nombre}` : ''}.`)
+      setCrearOpen(false)
+
+      // 5) Ofrecer enviar el acceso (OTP) al dueño ahora
+      const canal = form.canal
       const enviar = await confirmDialog({
         title: 'Enviar acceso',
         message: `¿Enviar el código de acceso al dueño por ${canal === 'Email' ? 'correo' : 'WhatsApp'} ahora?`,
@@ -138,7 +158,7 @@ export function SuperAdminDashboard() {
 
       await loadAll()
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'No se pudo completar la creación.')
+      toast.error(err?.response?.data?.message || 'No se pudo crear la barbería.')
     } finally { setSaving(false) }
   }
 
@@ -152,16 +172,9 @@ export function SuperAdminDashboard() {
     }
   }
 
-  const darAccesoEmpresa = async (e: Empresa) => {
-    const owner = owners[e.id]
-    if (!owner) { toast.error('Esta barbería no tiene dueño asignado.'); return }
-    let canal: CanalAcceso | null = null
-    if (owner.correo && owner.telefono) {
-      canal = window.confirm('¿Enviar por CORREO? (Cancelar = WhatsApp)') ? 'Email' : 'WhatsApp'
-    } else if (owner.correo) canal = 'Email'
-    else if (owner.telefono) canal = 'WhatsApp'
-    if (!canal) { toast.error('El dueño no tiene correo ni teléfono.'); return }
-    await enviarAcceso(owner.id, canal)
+  const abrirAcceso = (e: Empresa) => {
+    if (!owners[e.id]) { toast.error('Esta barbería no tiene dueño asignado.'); return }
+    setAccesoTarget(e)
   }
 
   const toggleEstado = async (e: Empresa) => {
@@ -186,6 +199,7 @@ export function SuperAdminDashboard() {
       await empresasService.asignarSuscripcion(planTarget.id, idPlan, fechaFin)
       toast.success(`Plan ${plan.nombre} activado para ${planTarget.nombreComercial}.`)
       setPlanTarget(null)
+      await loadAll() // refresca el plan visible en la tarjeta
     } catch { toast.error('No se pudo asignar el plan.') }
   }
 
@@ -224,7 +238,7 @@ export function SuperAdminDashboard() {
               </div>
             ))}
           </div>
-          <button onClick={openWizard}
+          <button onClick={abrirCrear}
             className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-xl shadow-lg shadow-blue-500/25 transition">
             <Plus className="w-5 h-5" /> Nueva barbería
           </button>
@@ -245,6 +259,7 @@ export function SuperAdminDashboard() {
             {empresas.map((e) => {
               const owner = owners[e.id]
               const inactivo = owner?.estado === false
+              const esPrueba = (e.planActual || '').toLowerCase().includes('prueba')
               return (
                 <motion.div key={e.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   className={`bg-white border rounded-2xl p-5 ${inactivo ? 'border-gray-200 opacity-70' : 'border-gray-200'}`}>
@@ -254,8 +269,27 @@ export function SuperAdminDashboard() {
                       <p className="text-xs text-gray-400 truncate">{e.razonSocial}</p>
                     </div>
                     {inactivo
-                      ? <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Inactiva</span>
-                      : <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-600">Activa</span>}
+                      ? <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 shrink-0">Inactiva</span>
+                      : <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-600 shrink-0">Activa</span>}
+                  </div>
+
+                  {/* Plan + sedes (siempre visible) */}
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {e.planActual ? (
+                      <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                        esPrueba ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                        <CreditCard className="w-3.5 h-3.5" />
+                        {e.planActual}
+                        {e.fechaFinPlan && <span className="text-gray-400 font-normal">· vence {fechaCorta(e.fechaFinPlan)}</span>}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-red-50 text-red-600">
+                        <CreditCard className="w-3.5 h-3.5" /> Sin plan
+                      </span>
+                    )}
+                    <span className="inline-flex items-center gap-1 text-xs text-gray-500 px-2 py-0.5 rounded-full bg-gray-50">
+                      <MapPin className="w-3.5 h-3.5" /> {e.totalSedes ?? 0} {(e.totalSedes ?? 0) === 1 ? 'sede' : 'sedes'}
+                    </span>
                   </div>
 
                   {/* Dueño */}
@@ -278,7 +312,7 @@ export function SuperAdminDashboard() {
 
                   {/* Acciones */}
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <button onClick={() => darAccesoEmpresa(e)} disabled={!owner}
+                    <button onClick={() => abrirAcceso(e)} disabled={!owner}
                       className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition disabled:opacity-40">
                       <Send className="w-4 h-4" /> Dar acceso
                     </button>
@@ -303,122 +337,77 @@ export function SuperAdminDashboard() {
         )}
       </main>
 
-      {/* ============================== WIZARD ============================== */}
+      {/* ============================== ALTA MÍNIMA ============================== */}
       <AnimatePresence>
-        {wizOpen && (
-          <Modal onClose={() => !saving && setWizOpen(false)}>
-            <div className="flex items-center gap-2 mb-1">
-              {[1, 2, 3].map((n) => (
-                <div key={n} className={`h-1.5 flex-1 rounded-full transition ${n <= step ? 'bg-blue-600' : 'bg-gray-200'}`} />
-              ))}
-            </div>
-            <p className="text-xs text-gray-400 mb-4">Paso {step} de 3</p>
+        {crearOpen && (
+          <Modal onClose={() => !saving && setCrearOpen(false)}>
+            <h2 className="text-lg font-semibold text-gray-900">Nueva barbería</h2>
+            <p className="text-sm text-gray-500 mt-0.5 mb-4">
+              Solo lo mínimo. El dueño completará el resto desde su perfil.
+            </p>
 
-            {step === 1 && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-gray-900">El negocio</h2>
-                <Field label="Nombre del negocio *">
-                  <input className={inputCls} value={wiz.nombreComercial}
-                    onChange={(e) => setWiz({ ...wiz, nombreComercial: e.target.value })}
-                    placeholder="Barbería Nader" />
-                </Field>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Razón social (opcional)">
-                    <input className={inputCls} value={wiz.razonSocial}
-                      onChange={(e) => setWiz({ ...wiz, razonSocial: e.target.value })}
-                      placeholder="Se usa el nombre del negocio" />
-                  </Field>
-                  <Field label="RUC (opcional)">
-                    <input className={inputCls} value={wiz.ruc}
-                      onChange={(e) => setWiz({ ...wiz, ruc: e.target.value })} placeholder="20•••••••••" />
-                  </Field>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Correo del negocio (opcional)">
-                    <input className={inputCls} value={wiz.empCorreo}
-                      onChange={(e) => setWiz({ ...wiz, empCorreo: e.target.value })} placeholder="hola@negocio.com" />
-                  </Field>
-                  <Field label="Teléfono del negocio (opcional)">
-                    <input className={inputCls} value={wiz.empTelefono}
-                      onChange={(e) => setWiz({ ...wiz, empTelefono: e.target.value })} placeholder="987654321" />
-                  </Field>
-                </div>
-              </div>
-            )}
+            <div className="space-y-4">
+              <Field label="Nombre del negocio *">
+                <input className={inputCls} value={form.nombre} autoFocus
+                  onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                  placeholder="Barbería Nader" />
+                <p className="text-xs text-gray-400 mt-1">
+                  Su página será <span className="font-medium text-gray-600">{subPreview}.barber.pe</span>
+                </p>
+              </Field>
 
-            {step === 2 && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-gray-900">El dueño</h2>
-                <p className="text-sm text-gray-500 -mt-2">Solo necesitas un contacto. Sin contraseña — él creará su PIN.</p>
-                <Field label="Nombre del dueño (opcional)">
-                  <input className={inputCls} value={wiz.ownerNombre}
-                    onChange={(e) => setWiz({ ...wiz, ownerNombre: e.target.value })}
-                    placeholder="Se usará el nombre del negocio" />
-                </Field>
+              <Field label="Nombre del dueño (opcional)">
+                <input className={inputCls} value={form.ownerNombre}
+                  onChange={(e) => setForm({ ...form, ownerNombre: e.target.value })}
+                  placeholder="Se usará el nombre del negocio" />
+              </Field>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">¿Cómo recibirá su acceso?</label>
                 <div className="grid grid-cols-2 gap-2">
                   {(['Email', 'WhatsApp'] as CanalAcceso[]).map((c) => (
-                    <button key={c} type="button" onClick={() => setWiz({ ...wiz, canal: c })}
+                    <button key={c} type="button" onClick={() => setForm({ ...form, canal: c })}
                       className={`py-2.5 rounded-xl text-sm font-medium border transition inline-flex items-center justify-center gap-2 ${
-                        wiz.canal === c ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-blue-300'}`}>
+                        form.canal === c ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-blue-300'}`}>
                       {c === 'Email' ? <Mail className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
                       {c === 'Email' ? 'Correo' : 'WhatsApp'}
                     </button>
                   ))}
                 </div>
-                {wiz.canal === 'Email' ? (
-                  <Field label="Correo del dueño *">
-                    <input className={inputCls} value={wiz.ownerCorreo} autoCapitalize="none"
-                      onChange={(e) => setWiz({ ...wiz, ownerCorreo: e.target.value })} placeholder="dueño@gmail.com" />
-                  </Field>
-                ) : (
-                  <Field label="WhatsApp del dueño *">
-                    <input className={inputCls} value={wiz.ownerTelefono}
-                      onChange={(e) => setWiz({ ...wiz, ownerTelefono: e.target.value })} placeholder="987654321" />
-                  </Field>
-                )}
               </div>
-            )}
 
-            {step === 3 && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-gray-900">El plan</h2>
-                <p className="text-sm text-gray-500 -mt-2">Se activa de inmediato. La prueba dura 14 días.</p>
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {planes.map((p) => (
-                    <button key={p.idPlan} type="button" onClick={() => setWiz({ ...wiz, idPlan: p.idPlan })}
-                      className={`w-full text-left p-3 rounded-xl border transition ${
-                        wiz.idPlan === p.idPlan ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}>
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-gray-900">{p.nombre}</span>
-                        <span className="font-bold text-blue-700">{soles(p.precioMensualPEN)}<span className="text-xs font-normal text-gray-400">/mes</span></span>
-                      </div>
-                      {p.descripcion && <p className="text-xs text-gray-500 mt-1">{p.descripcion}</p>}
-                    </button>
-                  ))}
-                  {planes.length === 0 && <p className="text-sm text-gray-400">No hay planes. Corre el SQL de planes.</p>}
-                </div>
-              </div>
-            )}
-
-            {/* Nav */}
-            <div className="flex items-center justify-between mt-6">
-              <button type="button" disabled={saving}
-                onClick={() => step === 1 ? setWizOpen(false) : setStep(step - 1)}
-                className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800">
-                <ArrowLeft className="w-4 h-4" /> {step === 1 ? 'Cancelar' : 'Atrás'}
-              </button>
-              {step < 3 ? (
-                <button type="button" disabled={!puedeAvanzar()} onClick={() => setStep(step + 1)}
-                  className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl transition disabled:opacity-40">
-                  Siguiente <ArrowRight className="w-4 h-4" />
-                </button>
+              {form.canal === 'Email' ? (
+                <Field label="Correo del dueño *">
+                  <input className={inputCls} value={form.ownerCorreo} autoCapitalize="none" inputMode="email"
+                    onChange={(e) => setForm({ ...form, ownerCorreo: e.target.value })} placeholder="dueño@gmail.com" />
+                  {form.ownerCorreo.trim() && !emailOk &&
+                    <p className="text-xs text-red-500 mt-1">Correo inválido.</p>}
+                </Field>
               ) : (
-                <button type="button" disabled={!puedeAvanzar() || saving} onClick={crearTodo}
-                  className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl transition disabled:opacity-40">
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  {saving ? 'Creando...' : 'Crear y activar'}
-                </button>
+                <Field label="WhatsApp del dueño *">
+                  <input className={inputCls} value={form.ownerTelefono} inputMode="numeric"
+                    onChange={(e) => setForm({ ...form, ownerTelefono: e.target.value })} placeholder="987654321" />
+                  {form.ownerTelefono.trim() && !telOk &&
+                    <p className="text-xs text-red-500 mt-1">Debe ser un celular peruano: 9 dígitos que empiezan en 9.</p>}
+                </Field>
               )}
+
+              <div className="flex items-start gap-2 text-xs text-gray-500 bg-blue-50/60 border border-blue-100 rounded-xl p-3">
+                <Check className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                <span>Se crea con el plan <strong>Prueba</strong> (14 días) y una <strong>sede inicial</strong>. El subdominio se genera del nombre y solo tú puedes cambiarlo.</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between mt-6">
+              <button type="button" disabled={saving} onClick={() => setCrearOpen(false)}
+                className="text-sm text-gray-500 hover:text-gray-800">
+                Cancelar
+              </button>
+              <button type="button" disabled={!valido || saving} onClick={crearTodo}
+                className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl transition disabled:opacity-40">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                {saving ? 'Creando...' : 'Crear y dar acceso'}
+              </button>
             </div>
           </Modal>
         )}
@@ -429,27 +418,68 @@ export function SuperAdminDashboard() {
         {planTarget && (
           <Modal onClose={() => setPlanTarget(null)}>
             <h2 className="text-lg font-semibold text-gray-900 mb-1">Plan de {planTarget.nombreComercial}</h2>
-            <p className="text-sm text-gray-500 mb-4">Elige el plan a activar.</p>
+            <p className="text-sm text-gray-500 mb-4">
+              {planTarget.planActual
+                ? <>Plan actual: <strong className="text-gray-700">{planTarget.planActual}</strong>. Elige otro para cambiarlo.</>
+                : 'Esta barbería no tiene plan. Elige uno para activarlo.'}
+            </p>
             <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-              {planes.map((p) => (
-                <button key={p.idPlan} type="button" onClick={() => asignarPlan(p.idPlan)}
-                  className="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-gray-900">{p.nombre}</span>
-                    <span className="font-bold text-blue-700">{soles(p.precioMensualPEN)}<span className="text-xs font-normal text-gray-400">/mes</span></span>
-                  </div>
-                  {p.descripcion && <p className="text-xs text-gray-500 mt-1">{p.descripcion}</p>}
-                </button>
-              ))}
+              {planes.map((p) => {
+                const actual = (planTarget.planActual || '') === p.nombre
+                return (
+                  <button key={p.idPlan} type="button" onClick={() => asignarPlan(p.idPlan)}
+                    className={`w-full text-left p-3 rounded-xl border transition ${
+                      actual ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-blue-400 hover:bg-blue-50'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-gray-900 inline-flex items-center gap-2">
+                        {p.nombre}
+                        {actual && <span className="text-xs font-medium text-blue-600 bg-white border border-blue-200 rounded-full px-2 py-0.5">Actual</span>}
+                      </span>
+                      <span className="font-bold text-blue-700">{soles(p.precioMensualPEN)}<span className="text-xs font-normal text-gray-400">/mes</span></span>
+                    </div>
+                    {p.descripcion && <p className="text-xs text-gray-500 mt-1">{p.descripcion}</p>}
+                  </button>
+                )
+              })}
+              {planes.length === 0 && <p className="text-sm text-gray-400">No hay planes. Corre el SQL de planes.</p>}
             </div>
           </Modal>
         )}
       </AnimatePresence>
 
+      {/* ============================== DAR ACCESO ============================== */}
+      <AnimatePresence>
+        {accesoTarget && (() => {
+          const owner = owners[accesoTarget.id]
+          return (
+            <Modal onClose={() => setAccesoTarget(null)}>
+              <h2 className="text-lg font-semibold text-gray-900 mb-1">Enviar código de acceso</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                ¿Por dónde enviamos el código al dueño de <strong className="text-gray-700">{accesoTarget.nombreComercial}</strong>?
+              </p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button disabled={!owner?.correo}
+                  onClick={async () => { if (owner?.correo) { await enviarAcceso(owner.id, 'Email'); setAccesoTarget(null) } }}
+                  className="flex flex-col items-center gap-1 py-3.5 px-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 font-semibold hover:bg-blue-100 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                  <Mail className="w-5 h-5" /> Correo
+                  <span className="text-xs font-normal text-blue-600/80 truncate max-w-full">{owner?.correo || 'Sin correo'}</span>
+                </button>
+                <button disabled={!owner?.telefono}
+                  onClick={async () => { if (owner?.telefono) { await enviarAcceso(owner.id, 'WhatsApp'); setAccesoTarget(null) } }}
+                  className="flex flex-col items-center gap-1 py-3.5 px-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 font-semibold hover:bg-emerald-100 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                  <Phone className="w-5 h-5" /> WhatsApp
+                  <span className="text-xs font-normal text-emerald-600/80 truncate max-w-full">{owner?.telefono || 'Sin teléfono'}</span>
+                </button>
+              </div>
+            </Modal>
+          )
+        })()}
+      </AnimatePresence>
+
       {/* ============================== SEDES ============================== */}
       <AnimatePresence>
         {sedeTarget && (
-          <SedesModal empresa={sedeTarget} onClose={() => setSedeTarget(null)} />
+          <SedesModal empresa={sedeTarget} onClose={() => { setSedeTarget(null); loadAll() }} />
         )}
       </AnimatePresence>
     </div>

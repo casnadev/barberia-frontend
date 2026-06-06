@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import {
@@ -78,6 +78,23 @@ export function LoginPage() {
       toast('Este dispositivo es nuevo. Verifiquemos que eres tú.')
     } else { setPin(''); setPinError(r.mensaje || 'PIN incorrecto.') }
   }
+
+  // ----------------------------------------------------------- deep-link del correo
+  // El botón del correo abre /login?acceso=enrolar|recuperar&id=<correo/tel>&code=<otp>
+  // → caemos directo en "Crea tu PIN" (o "Cambiar PIN") con el contacto y el código
+  // ya precargados. El usuario solo elige su PIN.
+  const [searchParams] = useSearchParams()
+  useEffect(() => {
+    const acceso = searchParams.get('acceso')
+    if (!acceso) return
+    const id = searchParams.get('id')
+    const code = searchParams.get('code')
+    if (id) setIdentificador(id)
+    if (code) setCodigo(code)
+    if (acceso === 'recuperar') setView('recover-code')
+    else if (acceso === 'enrolar') setView('enroll-code')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (view === 'pin' && pin.length === 6 && !loading) submitPin(pin)

@@ -174,12 +174,9 @@ export function TrabajadoresPage() {
 
   const darAcceso = (t: Trabajador) => {
     if (!t.idTrabajador) return
-    const tieneCorreo = !!t.correo
-    const tieneTel = !!t.telefono
-    if (!tieneCorreo && !tieneTel) { toast.error('Asigna correo o teléfono al trabajador primero.'); return }
-    // Si tiene ambos, deja que el usuario elija el canal en el modal.
-    if (tieneCorreo && tieneTel) { setAccesoPara(t); return }
-    enviarAcceso(t, tieneCorreo ? 'Email' : 'WhatsApp')
+    if (!t.correo && !t.telefono) { toast.error('Asigna correo o teléfono al trabajador primero.'); return }
+    // Siempre abre el selector para que se vea a qué correo/teléfono se enviará.
+    setAccesoPara(t)
   }
 
   const handleEdit = (trabajador: Trabajador) => {
@@ -476,16 +473,20 @@ export function TrabajadoresPage() {
               <p className={s.confirmText}>¿Por dónde enviamos el código a <b>{accesoPara.nombreCompleto}</b>?</p>
               <div className="grid grid-cols-2 gap-2.5 mt-1">
                 <button
-                  onClick={() => enviarAcceso(accesoPara, 'Email')}
-                  className="flex flex-col items-center gap-1.5 py-3.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 font-semibold hover:bg-blue-100 active:scale-95 transition"
+                  disabled={!accesoPara.correo}
+                  onClick={() => accesoPara.correo && enviarAcceso(accesoPara, 'Email')}
+                  className="flex flex-col items-center gap-1 py-3.5 px-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 font-semibold hover:bg-blue-100 active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
                 >
                   <Mail width={20} height={20} /> Correo
+                  <span className="text-xs font-normal text-blue-600/80 truncate max-w-full">{accesoPara.correo || 'Sin correo'}</span>
                 </button>
                 <button
-                  onClick={() => enviarAcceso(accesoPara, 'WhatsApp')}
-                  className="flex flex-col items-center gap-1.5 py-3.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 font-semibold hover:bg-emerald-100 active:scale-95 transition"
+                  disabled={!accesoPara.telefono}
+                  onClick={() => accesoPara.telefono && enviarAcceso(accesoPara, 'WhatsApp')}
+                  className="flex flex-col items-center gap-1 py-3.5 px-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 font-semibold hover:bg-emerald-100 active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
                 >
                   <MessageCircle width={20} height={20} /> WhatsApp
+                  <span className="text-xs font-normal text-emerald-600/80 truncate max-w-full">{accesoPara.telefono || 'Sin teléfono'}</span>
                 </button>
               </div>
               <div className={s.confirmActions}>
