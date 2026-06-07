@@ -9,16 +9,21 @@ export default defineConfig(({ mode }) => ({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  // NUEVO: en producción elimina console.* (incluido el log por request del apiClient)
+  // En producción elimina console.* (incluido el log por request del apiClient)
   esbuild: mode === 'production' ? { drop: ['console', 'debugger'] } : {},
-  // NUEVO: separa librerías pesadas en chunks propios (se cachean aparte)
   build: {
     rollupOptions: {
       output: {
+        // ← Junta librerías en chunks propios. Lo clave: 'icons' agrupa TODOS
+        //   los íconos de lucide-react en UN solo archivo, en vez de ~30 chunks
+        //   minúsculos que antes bajaban uno por uno.
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          charts: ['recharts'],
-          motion: ['framer-motion'],
+          'icons': ['lucide-react'],                                  // ← NUEVO
+          'vendor': ['axios', '@tanstack/react-query', 'zustand',     // ← NUEVO
+                     'date-fns', 'sonner', 'clsx'],
+          'charts': ['recharts'],
+          'motion': ['framer-motion'],
         },
       },
     },

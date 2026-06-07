@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.100.25:55692'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://192.168.100.25:55692'
 
 // Clave donde se persiste el subdominio del tenant activo.
 const TENANT_KEY = 'tenant_subdomain'

@@ -8,6 +8,18 @@ import styles from '@/styles/TenantGate.module.css'
  * (X-Tenant-Subdomain) corresponda a una sede de SU empresa antes de renderizar.
  * El selector visual de sede ahora vive en el header (SedeSwitcher / AdminHeader).
  */
+
+// ← NUEVO: caché de sesión. Las sedes del admin no cambian mientras navega, así
+// que las pedimos UNA sola vez y reutilizamos el resultado. Esto evita el spinner
+// que aparecía en CADA cambio de página del panel. Se limpia solo al recargar /
+// cerrar sesión (clearSedesCache), porque el módulo se reinicia.
+let sedesCache: Awaited<ReturnType<typeof sedeTenantService.getMisSedes>> | null = null
+
+/** Limpia la caché de sedes (llámalo en el logout si no haces full reload). */
+export const clearSedesCache = (): void => {
+  sedesCache = null
+}
+
 export function TenantGate({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false)
 
@@ -15,7 +27,8 @@ export function TenantGate({ children }: { children: React.ReactNode }) {
     let cancelado = false
     ;(async () => {
       try {
-        const lista = await sedeTenantService.getMisSedes()
+        // ← Usa la caché si ya la tenemos; si no, pide una vez y la guarda.
+        const lista = sedesCache ?? (sedesCache = await sedeTenantService.getMisSedes())
         if (cancelado) return
 
         const subs = lista.map((s) => s.subdominio)
