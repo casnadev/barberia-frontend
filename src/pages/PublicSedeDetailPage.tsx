@@ -628,7 +628,7 @@ export function PublicSedeDetailPage() {
                           </div>
                         </div>
                       </div>
-                      <button className={styles.reservarBtn} style={{ borderColor: brand, color: brand }} onClick={handleReservar}>Reservar</button>
+                      <button className={styles.reservarBtn} style={{ borderColor: brand, color: brand }} onClick={() => navigate(`/reservar-publica?servicio=${s.idServicio || s.id}`)}>Reservar</button>
                     </motion.div>
                   ))}
                 </div>

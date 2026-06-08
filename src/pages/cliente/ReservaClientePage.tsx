@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Calendar, X, Plus, Clock, MapPin, User, Check } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { trabajadoresService } from '@/services/trabajadoresService'
 import { sedesService } from '@/services/sedesService'
 import { reservasService } from '@/services/reservasService'
 import { buildImageUrl } from '@/services/apiClient'
@@ -11,6 +10,7 @@ import { confirmDialog } from '@/components/ConfirmDialog'
 import { useAuthStore } from '@/store/authStore'
 import { CalendarModal } from './CalendarModal'
 import { ReservaResumen } from './ReservaResumen'
+import { getActiveTenant } from '@/services/apiClient'
 
 import { DateTimeModal, BarberCard, ServiceCard } from '@/components'
 import styles from '@/styles/ReservaClientePage.module.css'
@@ -82,16 +82,16 @@ export function ReservaClientePage() {
       if (!AC) return
       const ctx = new AC()
       const now = ctx.currentTime
-      ;[659.25, 987.77].forEach((f, i) => {           // E5 → B5, dos notas cortas
-        const o = ctx.createOscillator(); const g = ctx.createGain()
-        o.type = 'sine'; o.frequency.value = f
-        o.connect(g); g.connect(ctx.destination)
-        const t = now + i * 0.12
-        g.gain.setValueAtTime(0, t)
-        g.gain.linearRampToValueAtTime(0.18, t + 0.02)
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28)
-        o.start(t); o.stop(t + 0.3)
-      })
+        ;[659.25, 987.77].forEach((f, i) => {           // E5 → B5, dos notas cortas
+          const o = ctx.createOscillator(); const g = ctx.createGain()
+          o.type = 'sine'; o.frequency.value = f
+          o.connect(g); g.connect(ctx.destination)
+          const t = now + i * 0.12
+          g.gain.setValueAtTime(0, t)
+          g.gain.linearRampToValueAtTime(0.18, t + 0.02)
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28)
+          o.start(t); o.stop(t + 0.3)
+        })
       setTimeout(() => { try { ctx.close() } catch { /* noop */ } }, 900)
     } catch { /* noop */ }
   }
@@ -145,14 +145,32 @@ export function ReservaClientePage() {
   }, [user])
   const loadInitialData = async () => {
     try {
+      const sParam = new URLSearchParams(window.location.search).get('s')
+      const host = window.location.hostname
+      const subdominio = sParam
+        ? sParam
+        : (host === 'localhost' || host.startsWith('192.168.') || host.startsWith('10.') || host.startsWith('172.'))
+          ? getActiveTenant()
+          : host.split('.')[0]
+
       const [trabData, servData, sedeData] = await Promise.all([
-        trabajadoresService.getTrabajadores().catch(() => []),
-        sedesService.getServicios().catch(() => []),
-        sedesService.getSedeActual().catch(() => null),
+        sedesService.getTrabajadoresPublicos(subdominio).catch(() => []),
+        sedesService.getServiciosPublicos(subdominio).catch(() => []),
+        sedesService.getSedePublica(subdominio).catch(() => null),
       ])
       setTrabajadores(trabData || [])
       setServicios(servData || [])
       setSede(sedeData)
+
+      // Preselección desde ?servicio=<id>
+      const preId = Number(new URLSearchParams(window.location.search).get('servicio'))
+      if (preId) {
+        const pre = (servData || []).find((x) => (x.idServicio || x.id) === preId)
+        if (pre) {
+          setSelectedServicios([pre])
+          setStep(2)
+        }
+      }
     } catch (error) {
       console.error('Error:', error)
       toast.error('Error cargando datos')

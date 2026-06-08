@@ -154,7 +154,7 @@ export function TrabajadoresPage() {
         resetForm()
         await loadTrabajadores()
       } else {
-        toast.error(err.response?.data?.message || 'Error guardando trabajador')
+        toast.error(err.response?.data?.detail || err.response?.data?.message || 'Error guardando trabajador')
       }
     } finally {
       setSubmitting(false)
@@ -287,43 +287,43 @@ export function TrabajadoresPage() {
   return (
     <AdminLayout title="Trabajadores" subtitle="Tu equipo y sus horarios">
       <div className={s.toolbar}>
-          <div className={s.toolbarText}>
-            <h1 className={s.h1}>Tu equipo</h1>
-            <p className={s.sub}>Gestiona los trabajadores de tu barbería</p>
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
-            className={s.newBtn}
-            onClick={() => { resetForm(); setShowModal(true) }}
-          >
-            <Plus width={18} height={18} /> Nuevo trabajador
-          </motion.button>
+        <div className={s.toolbarText}>
+          <h1 className={s.h1}>Tu equipo</h1>
+          <p className={s.sub}>Gestiona los trabajadores de tu barbería</p>
         </div>
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
+          className={s.newBtn}
+          onClick={() => { resetForm(); setShowModal(true) }}
+        >
+          <Plus width={18} height={18} /> Nuevo trabajador
+        </motion.button>
+      </div>
 
-        {trabajadores.length === 0 && (
-          <div className={s.empty}>No hay trabajadores registrados todavía.</div>
-        )}
+      {trabajadores.length === 0 && (
+        <div className={s.empty}>No hay trabajadores registrados todavía.</div>
+      )}
 
-        {activos.length > 0 && (
-          <section className={s.section}>
-            <div className={s.sectionHead}>
-              <Eye width={18} height={18} color="#16a34a" />
-              <h2 className={s.sectionTitle}>Activos ({activos.length})</h2>
-            </div>
-            <div className={s.grid}>{activos.map(t => renderCard(t, false))}</div>
-          </section>
-        )}
+      {activos.length > 0 && (
+        <section className={s.section}>
+          <div className={s.sectionHead}>
+            <Eye width={18} height={18} color="#16a34a" />
+            <h2 className={s.sectionTitle}>Activos ({activos.length})</h2>
+          </div>
+          <div className={s.grid}>{activos.map(t => renderCard(t, false))}</div>
+        </section>
+      )}
 
-        {inactivos.length > 0 && (
-          <section className={s.section}>
-            <div className={s.sectionHead}>
-              <EyeOff width={18} height={18} color="#9ca3af" />
-              <h2 className={s.sectionTitleMuted}>Desactivados ({inactivos.length})</h2>
-            </div>
-            <div className={s.grid}>{inactivos.map(t => renderCard(t, true))}</div>
-          </section>
-        )}
+      {inactivos.length > 0 && (
+        <section className={s.section}>
+          <div className={s.sectionHead}>
+            <EyeOff width={18} height={18} color="#9ca3af" />
+            <h2 className={s.sectionTitleMuted}>Desactivados ({inactivos.length})</h2>
+          </div>
+          <div className={s.grid}>{inactivos.map(t => renderCard(t, true))}</div>
+        </section>
+      )}
       {/* Modal crear/editar */}
       <AnimatePresence>
         {showModal && (
