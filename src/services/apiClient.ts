@@ -65,30 +65,30 @@ export const tenantDesdeUrl = (): string | null => {
  *  5. 'demo'                             (último recurso)
  */
 export const getActiveTenant = (): string => {
-  // 1. La URL (?s=) tiene prioridad: es el tenant de ESTA pestaña.
+  // 1. ?s= en la URL (microsite explícito) — igual que antes
   const fromUrl = tenantDesdeUrl()
   if (fromUrl) return fromUrl
 
-  // 2. Subdominio real (producción).
+  // 2. NUEVO: con sesión de admin, la sede elegida en el panel
+  //    gana sobre el subdominio del host. Esto permite cambiar de
+  //    sede sin importar en qué subdominio esté abierto el panel.
+  const token = localStorage.getItem('token')
+  const elegida = localStorage.getItem(TENANT_KEY)
+  if (token && elegida && elegida.trim()) return elegida.trim().toLowerCase()
+
+  // 3. Subdominio real del host (microsite público) — igual que antes
   const fromHost = subdominioDesdeHost()
   if (fromHost) return fromHost.toLowerCase()
 
-  // 3. localStorage (sesión del panel).
+  // 4. localStorage / 5. .env / 6. 'demo' — igual que antes
   try {
     const stored = localStorage.getItem(TENANT_KEY)
     if (stored && stored.trim()) return stored.trim().toLowerCase()
-  } catch {
-    /* ignore */
-  }
-
-  // 4. .env
+  } catch { /* ignore */ }
   const fromEnv = import.meta.env.VITE_TENANT
   if (fromEnv && String(fromEnv).trim()) return String(fromEnv).trim().toLowerCase()
-
-  // 5. último recurso
   return 'demo'
 }
-
 /** Fija (y persiste) el subdominio del tenant activo. */
 export const setTenant = (subdominio: string): void => {
   try {
