@@ -5,7 +5,7 @@ import { confirmDialog } from '@/components/ConfirmDialog'
 import {
   Scissors, Plus, Building2, MapPin, KeyRound, Power,
   X, Check, Mail, Phone, CreditCard,
-  Store, Trash2, Send, Loader2,
+  Store, Trash2, Send, Loader2, Pencil,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { AccountMenu } from '@/components/AccountMenu'
@@ -523,6 +523,11 @@ function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: () => voi
   const [form, setForm] = useState({ nombre: '', direccion: '', telefono: '', whatsapp: '' })
   const [saving, setSaving] = useState(false)
 
+  // Edición de slug (solo SuperAdmin)
+  const [editId, setEditId] = useState<number | null>(null)
+  const [editSlug, setEditSlug] = useState('')
+  const [savingSlug, setSavingSlug] = useState(false)
+
   const load = async () => {
     setLoading(true)
     try { setSedes(await empresasService.getSedes(empresa.id)) }
@@ -569,12 +574,43 @@ function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: () => voi
     catch { toast.error('No se pudo eliminar.') }
   }
 
+  // Abrir editor y guardar el nuevo slug/subdominio (con advertencia)
+  const abrirEditor = (s: SedeAdmin) => {
+    setEditId(s.idSede)
+    setEditSlug(s.subdominio || '')
+  }
+
+  const guardarSlug = async (s: SedeAdmin) => {
+    const nuevo = editSlug.trim().toLowerCase()
+    if (!/^[a-z0-9-]{3,}$/.test(nuevo)) {
+      toast.error('Slug inválido: solo minúsculas, números y guiones (mínimo 3).')
+      return
+    }
+    if (nuevo === s.subdominio) { setEditId(null); return }
+    if (!(await confirmDialog({
+      title: 'Cambiar slug',
+      message: `Vas a cambiar la URL de "${s.nombre}" a ${nuevo}.barber.pe. Esto ROMPE los enlaces, QR y favoritos que apuntaban al slug anterior. ¿Continuar?`,
+      confirmText: 'Sí, cambiar',
+      cancelText: 'Cancelar',
+      tone: 'danger',
+    }))) return
+    setSavingSlug(true)
+    try {
+      await empresasService.cambiarSlugSede(s.idSede, nuevo)
+      toast.success('Slug actualizado.')
+      setEditId(null)
+      await load()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'No se pudo cambiar el slug.')
+    } finally { setSavingSlug(false) }
+  }
+
   return (
     <Modal onClose={onClose}>
       <h2 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
         <Store className="w-5 h-5 text-blue-600" /> Sedes de {empresa.nombreComercial}
       </h2>
-      <p className="text-sm text-gray-500 mb-4">El subdominio se genera solo desde el nombre.</p>
+      <p className="text-sm text-gray-500 mb-4">El subdominio se genera del nombre; puedes editarlo con el lápiz.</p>
 
       {loading ? (
         <div className="py-6 text-center text-gray-400"><Loader2 className="w-5 h-5 animate-spin inline" /></div>
@@ -582,15 +618,40 @@ function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: () => voi
         <div className="space-y-2 mb-5">
           {sedes.length === 0 && <p className="text-sm text-gray-400">Sin sedes todavía.</p>}
           {sedes.map((s) => (
-            <div key={s.idSede} className="flex items-center gap-2 p-3 rounded-xl border border-gray-200">
-              <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">{s.nombre}</p>
-                <p className="text-xs text-gray-400 truncate">{s.direccion || 'Sin dirección'} · /{s.subdominio}</p>
+            <div key={s.idSede} className="p-3 rounded-xl border border-gray-200">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{s.nombre}</p>
+                  <p className="text-xs text-gray-400 truncate">{s.direccion || 'Sin dirección'} · /{s.subdominio}</p>
+                </div>
+                <button onClick={() => abrirEditor(s)} title="Cambiar slug"
+                  className="ml-auto text-gray-300 hover:text-blue-500 shrink-0">
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button onClick={() => eliminar(s)} title="Eliminar"
+                  className="text-gray-300 hover:text-red-500 shrink-0">
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
-              <button onClick={() => eliminar(s)} className="ml-auto text-gray-300 hover:text-red-500 shrink-0">
-                <Trash2 className="w-4 h-4" />
-              </button>
+
+              {editId === s.idSede && (
+                <div className="mt-3 pl-6 space-y-2">
+                  <input className={inputCls} value={editSlug} placeholder="nuevo-slug"
+                    onChange={(e) => setEditSlug(e.target.value)} />
+                  <p className="text-[11px] text-amber-600 leading-snug">
+                    ⚠ Cambiará la URL pública a <strong>{(editSlug.trim() || '...')}.barber.pe</strong> y romperá los enlaces anteriores de esta sede.
+                  </p>
+                  <div className="flex gap-2">
+                    <button onClick={() => guardarSlug(s)} disabled={savingSlug}
+                      className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg disabled:opacity-50">
+                      {savingSlug ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null} Guardar
+                    </button>
+                    <button onClick={() => setEditId(null)}
+                      className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5">Cancelar</button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

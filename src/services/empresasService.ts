@@ -196,6 +196,18 @@ export const empresasService = {
     return res.data
   },
 
+  /**
+   * Cambia el subdominio/slug de una sede. Solo SuperAdmin.
+   * ⚠ Cambia la URL pública de la sede; rompe los enlaces/QR anteriores.
+   */
+  cambiarSlugSede: async (idSede: number, subdominio: string) => {
+    const res = await apiClient.patch(`/api/superadmin/sedes/${idSede}/slug`, {
+      subdominio,
+      slug: subdominio,
+    })
+    return res.data.data ?? res.data
+  },
+
   // ===== Planes / Suscripción =====
   getPlanes: async (): Promise<Plan[]> => {
     const res = await apiClient.get('/api/superadmin/planes')

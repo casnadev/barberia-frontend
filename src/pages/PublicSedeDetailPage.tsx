@@ -89,6 +89,7 @@ export function PublicSedeDetailPage() {
 
   // Refs de secciones (scroll-spy + tabs)
   const refServicios = useRef<HTMLElement>(null)
+  const refCats = useRef<HTMLDivElement>(null) // fila de categorías (scroll horizontal en desktop)
   const refGaleria = useRef<HTMLElement>(null)
   const refEquipo = useRef<HTMLElement>(null)
   const refResenas = useRef<HTMLElement>(null)
@@ -208,6 +209,68 @@ export function PublicSedeDetailPage() {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  // Categorías en desktop: arrastrar con el mouse (clic sostenido) + rueda → carrusel.
+  useEffect(() => {
+    const el = refCats.current
+    if (!el) return
+
+    // Rueda vertical del mouse → desplazamiento horizontal.
+    const onWheel = (e: WheelEvent) => {
+      if (el.scrollWidth <= el.clientWidth) return            // nada que desplazar
+      if (Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return    // trackpad: ya es horizontal
+      e.preventDefault()
+      el.scrollLeft += e.deltaY
+    }
+
+    // Arrastrar con clic sostenido (como deslizar con el dedo en mobile).
+    let isDown = false
+    let startX = 0
+    let startScroll = 0
+    let moved = 0
+
+    const onDown = (e: MouseEvent) => {
+      isDown = true
+      moved = 0
+      startX = e.pageX
+      startScroll = el.scrollLeft
+      el.style.cursor = 'grabbing'
+      el.style.userSelect = 'none'
+      e.preventDefault() // evita selección de texto / foco que interrumpe el arrastre
+    }
+    const onMove = (e: MouseEvent) => {
+      if (!isDown) return
+      const dx = e.pageX - startX
+      moved = Math.max(moved, Math.abs(dx))
+      el.scrollLeft = startScroll - dx
+    }
+    const stop = () => {
+      if (!isDown) return
+      isDown = false
+      el.style.cursor = ''
+      el.style.userSelect = ''
+    }
+    // Si hubo arrastre, evita que el clic final seleccione una categoría sin querer.
+    const onClickCapture = (e: MouseEvent) => {
+      if (moved > 5) { e.preventDefault(); e.stopPropagation(); moved = 0 }
+    }
+
+    el.addEventListener('wheel', onWheel, { passive: false })
+    el.addEventListener('mousedown', onDown)
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', stop)
+    el.addEventListener('mouseleave', stop)
+    el.addEventListener('click', onClickCapture, true)
+
+    return () => {
+      el.removeEventListener('wheel', onWheel)
+      el.removeEventListener('mousedown', onDown)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', stop)
+      el.removeEventListener('mouseleave', stop)
+      el.removeEventListener('click', onClickCapture, true)
+    }
+  }, [servicios])
 
   const handleReservar = () => navigate('/reservar-publica')
   const handleNovedades = () => navigate('/novedades')
@@ -538,7 +601,7 @@ export function PublicSedeDetailPage() {
                 )}
               </div>
               {categorias.length > 0 && (
-                <div className={styles.cats}>
+                <div className={styles.cats} ref={refCats}>
                   <button className={`${styles.cat} ${filtroCategoria === 'todos' ? styles.catActive : ''}`} onClick={() => setFiltroCategoria('todos')}>Todos</button>
                   {categorias.map((c) => (
                     <button key={c} className={`${styles.cat} ${filtroCategoria === c ? styles.catActive : ''}`} onClick={() => setFiltroCategoria(c)}>{c}</button>

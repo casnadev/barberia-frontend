@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <clipPath id="pole">
+      <rect x="24" y="10" width="16" height="44" rx="8"/>
+    </clipPath>
+  </defs>
+
+  <!-- Fondo redondeado con el color de marca -->
+  <rect x="0" y="0" width="64" height="64" rx="14" fill="#2092B4"/>
+
+  <!-- Poste blanco -->
+  <rect x="24" y="10" width="16" height="44" rx="8" fill="#ffffff"/>
+
+  <!-- Franjas diagonales (rojo y azul) dentro del poste -->
+  <g clip-path="url(#pole)">
+    <g fill="none" stroke-width="6">
+      <line x1="14" y1="2"  x2="50" y2="38" stroke="#e23b3b"/>
+      <line x1="14" y1="14" x2="50" y2="50" stroke="#2f6fe0"/>
+      <line x1="14" y1="26" x2="50" y2="62" stroke="#e23b3b"/>
+      <line x1="14" y1="38" x2="50" y2="74" stroke="#2f6fe0"/>
+    </g>
+  </g>
+
+  <!-- Tapas plateadas arriba y abajo -->
+  <rect x="22" y="7"  width="20" height="7" rx="3.5" fill="#c9d2da"/>
+  <rect x="22" y="50" width="20" height="7" rx="3.5" fill="#c9d2da"/>
+</svg>

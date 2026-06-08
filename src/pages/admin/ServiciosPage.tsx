@@ -235,6 +235,7 @@ export function ServiciosPage() {
         nombre: catForm.nombre.trim(),
         descripcion: catForm.descripcion,
         orden: catForm.orden,
+        estaActivo: true, // evita que el backend desactive la categoría al editar
       }
       if (catEditingId) {
         // ⚠️ CONFIRMAR en Swagger la ruta exacta del PUT (la dejé como /{id})

@@ -440,6 +440,8 @@
 
 /* ════════════════════════ DESKTOP (≥ 1024px) ════════════════════════ */
 @media (min-width: 1024px) {
+  /* Categorías: carrusel horizontal en desktop, igual que en mobile */
+  .cats { min-width: 0; overflow-x: auto; cursor: grab; }
   .novedadesBtnMobile { display: none; }
   .mHeader { display: none; }
   .mHero { display: none; }
