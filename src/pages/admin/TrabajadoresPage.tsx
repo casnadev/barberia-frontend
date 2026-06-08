@@ -21,6 +21,28 @@ interface Trabajador {
   fechaIngreso?: string
 }
 
+/**
+ * Extrae el mensaje de error real de cualquier respuesta del backend.
+ * Cubre las dos formas que devuelve la API:
+ *  - Reglas de negocio (ValidationDomainException) → { detail: "..." }
+ *  - Validación automática de ASP.NET (anotaciones del DTO) → { errors: { Campo: ["..."] } }
+ * Además contempla { mensaje }, { message } y { title } como respaldo.
+ */
+function getApiError(err: any, fallback: string): string {
+  const d = err?.response?.data
+  if (!d) return fallback
+  if (typeof d === 'string') return d
+  if (d.detail) return d.detail
+  if (d.errors) {
+    const msgs = Object.values(d.errors as Record<string, string[]>).flat()
+    if (msgs.length) return msgs.join(' ')
+  }
+  if (d.mensaje) return d.mensaje
+  if (d.message) return d.message
+  if (d.title) return d.title
+  return fallback
+}
+
 export function TrabajadoresPage() {
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([])
   const [loading, setLoading] = useState(true)
@@ -55,7 +77,7 @@ export function TrabajadoresPage() {
       setTrabajadores(lista)
     } catch (err: any) {
       console.error('Error cargando trabajadores:', err.message)
-      toast.error(err.response?.data?.message || 'Error cargando trabajadores')
+      toast.error(getApiError(err, 'Error cargando trabajadores'))
     } finally {
       setLoading(false)
     }
@@ -86,7 +108,7 @@ export function TrabajadoresPage() {
       toast.success('Imagen subida correctamente')
     } catch (err: any) {
       console.error('Error subiendo imagen:', err)
-      toast.error(err.response?.data?.message || 'Error al subir imagen')
+      toast.error(getApiError(err, 'Error al subir imagen'))
     } finally {
       setUploadingImage(false)
       e.target.value = '' // permite re-subir el mismo archivo
@@ -154,7 +176,7 @@ export function TrabajadoresPage() {
         resetForm()
         await loadTrabajadores()
       } else {
-        toast.error(err.response?.data?.detail || err.response?.data?.message || 'Error guardando trabajador')
+        toast.error(getApiError(err, 'Error guardando trabajador'))
       }
     } finally {
       setSubmitting(false)
@@ -168,7 +190,7 @@ export function TrabajadoresPage() {
       await apiClient.post(`/api/Trabajadores/${t.idTrabajador}/dar-acceso`, { canal })
       toast.success(`Código de acceso enviado por ${canal === 'Email' ? 'correo' : 'WhatsApp'}.`)
     } catch (err: any) {
-      toast.error(err.response?.data?.mensaje || err.response?.data?.message || 'No se pudo enviar el acceso.')
+      toast.error(getApiError(err, 'No se pudo enviar el acceso.'))
     }
   }
 
@@ -211,7 +233,7 @@ export function TrabajadoresPage() {
         setDeleteConfirm(null)
         await loadTrabajadores()
       } else {
-        toast.error(err.response?.data?.message || 'Error eliminando trabajador')
+        toast.error(getApiError(err, 'Error eliminando trabajador'))
       }
     } finally {
       setSubmitting(false)
