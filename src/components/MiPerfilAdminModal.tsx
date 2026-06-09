@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { X, Camera } from 'lucide-react'
 import { toast } from 'sonner'
 import { perfilService } from '@/services/perfilService'
+import { authService } from '@/services/authService'
 import { useAuthStore } from '@/store/authStore'
 import { buildImageUrl } from '@/services/apiClient'
 
@@ -19,6 +20,13 @@ export function MiPerfilAdminModal({ open, onClose }: { open: boolean; onClose: 
   const [subiendo, setSubiendo] = useState(false)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  // Contraseña (sección de seguridad)
+  const [passActual, setPassActual] = useState('')
+  const [passNueva, setPassNueva] = useState('')
+  const [passRepite, setPassRepite] = useState('')
+  const [guardandoPass, setGuardandoPass] = useState(false)
+  const [enviandoEnlace, setEnviandoEnlace] = useState(false)
 
   // Cargar datos al abrir
   useEffect(() => {
@@ -76,6 +84,28 @@ export function MiPerfilAdminModal({ open, onClose }: { open: boolean; onClose: 
     } finally { setSaving(false) }
   }
 
+  const cambiarPass = async () => {
+    if (!passActual) return toast.error('Ingresa tu contraseña actual')
+    if (passNueva.length < 8) return toast.error('La nueva contraseña debe tener al menos 8 caracteres')
+    if (passNueva !== passRepite) return toast.error('Las contraseñas no coinciden')
+    setGuardandoPass(true)
+    const r = await authService.cambiarPassword(passActual, passNueva)
+    setGuardandoPass(false)
+    if (r.ok) {
+      toast.success('Contraseña actualizada')
+      setPassActual(''); setPassNueva(''); setPassRepite('')
+    } else toast.error(r.mensaje || 'No se pudo cambiar la contraseña')
+  }
+
+  const enviarEnlacePass = async () => {
+    const ident = correo.trim() || telefono.trim()
+    if (!ident) return toast.error('Agrega un correo o teléfono a tu perfil primero')
+    setEnviandoEnlace(true)
+    await authService.solicitarPassword(ident)
+    setEnviandoEnlace(false)
+    toast.success('Te enviamos un enlace para crear tu contraseña. Ábrelo desde tu correo/WhatsApp.')
+  }
+
   const field = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none'
 
   return createPortal(
@@ -110,6 +140,31 @@ export function MiPerfilAdminModal({ open, onClose }: { open: boolean; onClose: 
             <div><label className="text-xs text-gray-500">Teléfono</label><input className={field} value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="9XXXXXXXX" inputMode="numeric" /></div>
 
             <button onClick={guardar} disabled={saving || subiendo} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2.5 font-semibold disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar cambios'}</button>
+
+            {/* Contraseña */}
+            <div className="pt-3 mt-1 border-t border-gray-100 space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Contraseña</p>
+                <p className="text-xs text-gray-400">Para entrar con correo/teléfono + contraseña. Tu PIN sigue funcionando igual.</p>
+              </div>
+
+              <div><label className="text-xs text-gray-500">Contraseña actual</label>
+                <input className={field} type="password" value={passActual} onChange={e => setPassActual(e.target.value)} placeholder="••••••••" /></div>
+              <div><label className="text-xs text-gray-500">Nueva contraseña</label>
+                <input className={field} type="password" value={passNueva} onChange={e => setPassNueva(e.target.value)} placeholder="Mínimo 8 caracteres" /></div>
+              <div><label className="text-xs text-gray-500">Repite la nueva</label>
+                <input className={field} type="password" value={passRepite} onChange={e => setPassRepite(e.target.value)} placeholder="Repite la contraseña" /></div>
+
+              <button onClick={cambiarPass} disabled={guardandoPass}
+                className="w-full bg-gray-900 hover:bg-black text-white rounded-xl py-2.5 font-semibold disabled:opacity-50">
+                {guardandoPass ? 'Guardando…' : 'Cambiar contraseña'}
+              </button>
+
+              <button onClick={enviarEnlacePass} disabled={enviandoEnlace}
+                className="w-full text-blue-600 text-xs py-1 hover:underline disabled:opacity-50">
+                ¿Entras por PIN y nunca configuraste una, o la olvidaste? Crear contraseña por enlace
+              </button>
+            </div>
           </div>
         )}
       </div>

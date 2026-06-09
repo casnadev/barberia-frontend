@@ -112,6 +112,24 @@ export const authService = {
   },
 
   /**
+   * Cambia la contraseña del usuario logueado (requiere la contraseña actual).
+   * Para crear una por primera vez sin tenerla, usar solicitarPassword (enlace OTP).
+   */
+  cambiarPassword: async (
+    passwordActual: string,
+    passwordNueva: string,
+  ): Promise<{ ok: boolean; mensaje?: string }> => {
+    try {
+      const r = await apiClient.post('/api/Auth/cambiar-password', {
+        passwordActual, passwordNueva,
+      })
+      return { ok: true, mensaje: r.data?.mensaje }
+    } catch (error: any) {
+      return { ok: false, mensaje: apiError(error, 'No se pudo cambiar la contraseña.') }
+    }
+  },
+
+  /**
    * Obtener token del localStorage
    */
   getStoredToken: (): string | null => {
