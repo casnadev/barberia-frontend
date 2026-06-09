@@ -95,6 +95,8 @@ export function SuperAdminDashboard() {
   const crearTodo = async () => {
     if (!valido) return
     setSaving(true)
+    let empresaIdNueva: number | null = null
+    let adminCreado = false
     try {
       const nombre = form.nombre.trim()
 
@@ -106,6 +108,7 @@ export function SuperAdminDashboard() {
         correoContacto: '',
         telefonoContacto: '',
       })
+      empresaIdNueva = empresa.id
 
       // 2) Admin (dueño): correo O teléfono real, sin contraseña → entra por PIN/OTP
       const admin = await empresasService.createAdminEmpresa(empresa.id, {
@@ -113,6 +116,7 @@ export function SuperAdminDashboard() {
         correo: form.canal === 'Email' ? form.ownerCorreo.trim() : undefined,
         telefono: form.canal === 'WhatsApp' ? form.ownerTelefono.trim() : undefined,
       })
+      adminCreado = true
 
       // 3) Sede inicial por defecto (el admin no puede crear sedes solo)
       const base = slugify(nombre)
@@ -158,6 +162,11 @@ export function SuperAdminDashboard() {
 
       await loadAll()
     } catch (err: any) {
+      // Rollback: si la empresa se creó pero el admin no, quedó huérfana → la limpiamos.
+      // deleteEmpresa solo purga empresas vacías, así que esto no puede borrar datos reales.
+      if (empresaIdNueva && !adminCreado) {
+        try { await empresasService.deleteEmpresa(empresaIdNueva) } catch { /* limpieza best-effort */ }
+      }
       toast.error(err?.response?.data?.message || 'No se pudo crear la barbería.')
     } finally { setSaving(false) }
   }
@@ -186,6 +195,28 @@ export function SuperAdminDashboard() {
       setOwners((m) => ({ ...m, [e.id]: { ...owner, estado: activar } }))
       toast.success(activar ? 'Barbería activada.' : 'Barbería desactivada.')
     } catch { toast.error('No se pudo cambiar el estado.') }
+  }
+
+  const eliminarEmpresa = async (e: Empresa) => {
+    const owner = owners[e.id]
+    const vacia = (e.totalSedes ?? 0) === 0 && !owner
+    const ok = await confirmDialog({
+      title: vacia ? 'Eliminar barbería vacía' : 'Eliminar barbería',
+      message: vacia
+        ? `"${e.nombreComercial}" no tiene sedes ni accesos. Se eliminará definitivamente. ¿Continuar?`
+        : `Se archivará "${e.nombreComercial}": se ocultarán sus sedes y accesos, se cerrarán sus sesiones y sus subdominios quedarán libres. Los datos se conservan. ¿Continuar?`,
+      confirmText: 'Sí, eliminar',
+      cancelText: 'Cancelar',
+      tone: 'danger',
+    })
+    if (!ok) return
+    try {
+      const res = await empresasService.deleteEmpresa(e.id)
+      toast.success(res?.mensaje || res?.message || 'Barbería eliminada.')
+      await loadAll()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.mensaje || err?.response?.data?.message || 'No se pudo eliminar la barbería.')
+    }
   }
 
   const asignarPlan = async (idPlan: number) => {
@@ -328,6 +359,10 @@ export function SuperAdminDashboard() {
                       className={`inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition disabled:opacity-40 ml-auto ${
                         inactivo ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}>
                       <Power className="w-4 h-4" /> {inactivo ? 'Activar' : 'Desactivar'}
+                    </button>
+                    <button onClick={() => eliminarEmpresa(e)} title="Eliminar barbería"
+                      className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition">
+                      <Trash2 className="w-4 h-4" /> Eliminar
                     </button>
                   </div>
                 </motion.div>

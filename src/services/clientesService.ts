@@ -1,134 +1,235 @@
 import { apiClient } from './apiClient'
 
-export interface Cliente {
-  idCliente?: number
-  telefono: string
-  nombreCompleto: string
+export interface Empresa {
+  id: number
+  razonSocial: string
+  nombreComercial: string
+  ruc: string
+  correoContacto: string
+  telefonoContacto: string
+  totalSedes?: number
+  planActual?: string
+  fechaFinPlan?: string
+}
+
+export interface Admin {
+  id: number
   correo?: string
-  genero?: string
-  cumpleaños?: string
+  telefono?: string
+  nombreCompleto: string
+  rol: string
+  estado?: boolean
+  metodoLogin?: string        // 'OTP' (PIN) | 'Password'
+  debeCambiarPassword?: boolean
+}
+
+/**
+ * Alta de Admin "estilo Fresha": se crea con correo O teléfono (al menos uno),
+ * SIN contraseña → el Admin entra por OTP/PIN. El nombre es opcional
+ * (si se omite, el backend usa el nombre del negocio como pre-asignado).
+ */
+export interface CreateAdminDTO {
+  nombreCompleto?: string
+  correo?: string
+  telefono?: string
+  password?: string                 // opcional; normalmente vacío
+  forzarCambioPassword?: boolean
+}
+
+export type CanalAcceso = 'Email' | 'WhatsApp'
+
+export interface CreateSedeDTO {
+  idEmpresa: number
+  nombre: string
+  subdominio: string
+  slug: string
+  direccion: string
+  departamento: string
+  provincia: string
+  distrito: string
+  latitud: number
+  longitud: number
+  telefono: string
+  whatsappContacto: string
+  correoContacto: string
+  urlLogo?: string
+  urlBanner?: string
+  colorPrimarioHex?: string
+  descripcionCorta?: string
+  zonaHoraria?: string
+  moneda?: string
+}
+
+export interface SedeAdmin {
+  idSede: number
+  idEmpresa: number
+  nombre: string
+  subdominio?: string
+  slug?: string
   direccion?: string
-  referencia?: string
-  idEmpresa?: number
-  registradoEn?: string
-  activo?: boolean
-  bloqueadoWeb?: boolean
-  contadorNoShows?: number
-  totalReservas?: number
-  reservasAtendidas?: number
-  ultimaVisita?: string
-  ultimoLogin?: string
-  fechaCreacion?: string
+  departamento?: string
+  provincia?: string
+  distrito?: string
+  telefono?: string
+  whatsappContacto?: string
+  correoContacto?: string
+  urlLogo?: string
+  urlBanner?: string
+  colorPrimarioHex?: string
+  descripcionCorta?: string
+  estado?: boolean
 }
 
-export interface ClientesPaginado {
-  items: Cliente[]
-  total: number
-  pagina: number
-  tamanoPagina: number
-  totalPaginas: number
+export interface UpdateSedeDTO {
+  nombre?: string
+  direccion?: string
+  departamento?: string
+  provincia?: string
+  distrito?: string
+  latitud?: number
+  longitud?: number
+  telefono?: string
+  whatsappContacto?: string
+  correoContacto?: string
+  urlLogo?: string
+  urlBanner?: string
+  colorPrimarioHex?: string
+  descripcionCorta?: string
+  estado?: boolean
 }
 
-export const clientesService = {
-  /**
-   * Obtiene la lista de todos los clientes (paginado)
-   * Los clientes se crean automáticamente cuando:
-   * 1. Hacen una reserva (pre-registro)
-   * 2. Se logean por OTP
-   */
-  getClientes: async (pagina: number = 1, tamanoPagina: number = 20, buscar?: string): Promise<Cliente[]> => {
-    try {
-      console.log('📥 Obteniendo lista de clientes...', { pagina, tamanoPagina, buscar })
-      
-      const params = new URLSearchParams()
-      params.append('pagina', pagina.toString())
-      params.append('tamanoPagina', tamanoPagina.toString())
-      if (buscar) params.append('buscar', buscar)
+export interface Plan {
+  idPlan: number
+  nombre: string
+  descripcion?: string
+  precioMensualPEN: number
+  limiteSedes: number
+  limiteTrabajadores: number
+  permiteWhatsApp: boolean
+  permiteReportes: boolean
+}
 
-      const res = await apiClient.get(`/api/Clientes?${params.toString()}`)
-      
-      console.log('📊 Respuesta del backend:', res.data)
+/**
+ * Quita del payload los campos vacíos ('') o nulos antes de enviarlos.
+ * El backend valida formato (EmailAddress, RUC, etc.) y un string vacío NO
+ * pasa esas validaciones (daba 400). Omitiéndolos llegan como null y se aceptan.
+ * Conserva 0, false y demás valores válidos.
+ */
+const limpiar = <T extends Record<string, any>>(o: T): Record<string, any> =>
+  Object.fromEntries(Object.entries(o).filter(([, v]) => v !== '' && v != null))
 
-      // El backend devuelve: { ok, data: { items, total, pagina, tamanoPagina, totalPaginas } }
-      const data = res.data.data || res.data
-      
-      // Extraer items del objeto paginado
-      if (data?.items && Array.isArray(data.items)) {
-        console.log(`✅ Clientes obtenidos: ${data.items.length} de ${data.total} total`)
-        return data.items
-      }
-      
-      // Fallback si viene como array directo (compatibilidad)
-      return Array.isArray(data) ? data : []
-    } catch (error) {
-      console.error('❌ Error getting clientes:', error)
-      return []
-    }
+export const empresasService = {
+  // ===== Empresas =====
+  getEmpresas: async (): Promise<Empresa[]> => {
+    const res = await apiClient.get('/api/superadmin/empresas')
+    const data = res.data.data || []
+    return data.map((e: any) => ({ ...e, id: e.id ?? e.idEmpresa }))
+  },
+
+  createEmpresa: async (data: {
+    razonSocial: string
+    nombreComercial: string
+    ruc: string
+    correoContacto: string
+    telefonoContacto: string
+  }): Promise<Empresa> => {
+    const res = await apiClient.post('/api/superadmin/empresas', limpiar(data))
+    const e = res.data.data
+    return { ...e, id: e.id ?? e.idEmpresa }
   },
 
   /**
-   * Obtiene los detalles completos de un cliente específico
+   * Elimina una empresa. Si está vacía (0 sedes y 0 usuarios) la purga;
+   * si tiene datos la archiva (soft-delete en cascada). El backend decide.
+   * Devuelve el ApiResponse para mostrar su mensaje.
    */
-  getClienteById: async (id: number): Promise<Cliente | null> => {
-    try {
-      console.log(`📥 Obteniendo detalles del cliente ${id}...`)
-      const res = await apiClient.get(`/api/Clientes/${id}`)
-      const cliente = res.data.data || res.data
-      console.log('✅ Cliente obtenido:', cliente)
-      return cliente || null
-    } catch (error) {
-      console.error('❌ Error:', error)
-      return null
-    }
+  deleteEmpresa: async (idEmpresa: number) => {
+    const res = await apiClient.delete(`/api/superadmin/empresas/${idEmpresa}`)
+    return res.data
+  },
+
+  // ===== Admin (dueño) =====
+  getAdminsEmpresa: async (idEmpresa: number): Promise<Admin[]> => {
+    const res = await apiClient.get(`/api/superadmin/empresas/${idEmpresa}/admin`)
+    const data = res.data.data || []
+    return data.map((a: any) => ({ ...a, id: a.id ?? a.idUsuario }))
+  },
+
+  createAdminEmpresa: async (idEmpresa: number, data: CreateAdminDTO): Promise<Admin> => {
+    const res = await apiClient.post(`/api/superadmin/empresas/${idEmpresa}/admin`, limpiar(data))
+    const a = res.data.data
+    return { ...a, id: a.id ?? a.idUsuario }
+  },
+
+  /** Envía el código de acceso (OTP) al Admin por correo o WhatsApp para que cree su PIN. */
+  darAcceso: async (idUsuario: number, canal: CanalAcceso) => {
+    const res = await apiClient.post(`/api/superadmin/usuarios/${idUsuario}/dar-acceso`, { canal })
+    return res.data
+  },
+
+  setUsuarioEstado: async (idUsuario: number, activo: boolean) => {
+    const res = await apiClient.patch(`/api/superadmin/usuarios/${idUsuario}/estado`, { activo })
+    return res.data
+  },
+
+  resetPasswordAdmin: async (idUsuario: number, nuevaPassword: string) => {
+    const res = await apiClient.post(`/api/superadmin/usuarios/${idUsuario}/reset-password`, {
+      nuevaPassword,
+    })
+    return res.data.data ?? res.data
+  },
+
+  // ===== Sedes =====
+  createSede: async (data: CreateSedeDTO) => {
+    const res = await apiClient.post('/api/Sedes', limpiar(data))
+    return res.data.data
+  },
+
+  getSedes: async (idEmpresa?: number): Promise<SedeAdmin[]> => {
+    const res = await apiClient.get('/api/Sedes', { params: idEmpresa ? { idEmpresa } : {} })
+    const data = res.data.data ?? res.data
+    return Array.isArray(data) ? data : []
+  },
+
+  getSede: async (idSede: number): Promise<SedeAdmin> => {
+    const res = await apiClient.get(`/api/Sedes/${idSede}`)
+    return res.data.data ?? res.data
+  },
+
+  updateSede: async (idSede: number, data: UpdateSedeDTO): Promise<SedeAdmin> => {
+    const res = await apiClient.put(`/api/Sedes/${idSede}`, limpiar(data))
+    return res.data.data ?? res.data
+  },
+
+  deleteSede: async (idSede: number) => {
+    const res = await apiClient.delete(`/api/Sedes/${idSede}`)
+    return res.data
   },
 
   /**
-   * Actualiza los datos de un cliente existente
-   * Solo para Admin
+   * Cambia el subdominio/slug de una sede. Solo SuperAdmin.
+   * ⚠ Cambia la URL pública de la sede; rompe los enlaces/QR anteriores.
    */
-  updateCliente: async (id: number, cliente: Partial<Cliente>) => {
-    try {
-      const payload = {
-        telefono: cliente.telefono?.trim(),
-        nombreCompleto: cliente.nombreCompleto?.trim(),
-        correo: cliente.correo?.trim() || null,
-        genero: cliente.genero?.trim() || null,
-        cumpleaños: cliente.cumpleaños || null,
-        direccion: cliente.direccion?.trim() || null,
-        referencia: cliente.referencia?.trim() || null
-      }
-
-      console.log(`📤 Actualizando cliente ${id}:`, payload)
-      const res = await apiClient.put(`/api/Clientes/${id}`, payload)
-      console.log('✅ Respuesta del backend:', res.data)
-
-      return res.data.data || res.data
-    } catch (error) {
-      console.error('❌ Error actualizando cliente:', error)
-      throw error
-    }
+  cambiarSlugSede: async (idSede: number, subdominio: string) => {
+    const res = await apiClient.patch(`/api/superadmin/sedes/${idSede}/slug`, {
+      subdominio,
+      slug: subdominio,
+    })
+    return res.data.data ?? res.data
   },
 
-  /**
-   * Desbloquea un cliente que fue bloqueado por no-shows
-   * Reseta el contador de inasistencias
-   */
-  desbloquearCliente: async (id: number) => {
-    try {
-      console.log(`🔓 Desbloqueando cliente ${id}...`)
-      const res = await apiClient.post(`/api/Clientes/${id}/desbloquear`, {})
-      console.log('✅ Cliente desbloqueado:', res.data)
-      return res.data.data || res.data
-    } catch (error) {
-      console.error('❌ Error desbloqueando cliente:', error)
-      throw error
-    }
+  // ===== Planes / Suscripción =====
+  getPlanes: async (): Promise<Plan[]> => {
+    const res = await apiClient.get('/api/superadmin/planes')
+    return res.data.data || []
   },
 
-  /**
-   * Nota: No hay endpoint para crear clientes manualmente
-   * Los clientes se crean automáticamente cuando:
-   * - Hacen una reserva (pre-registro por teléfono)
-   * - Se logean por OTP
-   */
+  /** Asigna/renueva el plan. El backend lo deja en estado Activa de inmediato. */
+  asignarSuscripcion: async (idEmpresa: number, idPlan: number, fechaFin?: string | null) => {
+    const res = await apiClient.post(`/api/superadmin/empresas/${idEmpresa}/suscripcion`, {
+      idPlan,
+      fechaFin: fechaFin ?? null,
+    })
+    return res.data.data ?? res.data
+  },
 }

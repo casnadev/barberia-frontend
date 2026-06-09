@@ -19,6 +19,19 @@ export interface LoginResponse {
   user: LoginUserData
 }
 
+/** Extrae el mensaje de error más útil de una respuesta de la API. */
+function apiError(error: any, fallback: string): string {
+  const d = error?.response?.data
+  if (!d) return fallback
+  if (typeof d === 'string') return d
+  if (d.detail) return d.detail
+  if (d.errors && typeof d.errors === 'object') {
+    const first = (Object.values(d.errors).flat() as string[])[0]
+    if (first) return String(first)
+  }
+  return d.mensaje || d.message || d.title || fallback
+}
+
 export const authService = {
   /**
    * Login - Obtener token y usuario
@@ -64,6 +77,37 @@ export const authService = {
     } catch (error: any) {
       console.error('❌ Error en login:', error.response?.data || error.message)
       return null
+    }
+  },
+
+  /**
+   * Crear / recuperar contraseña por OTP - paso 1: envía el enlace (correo o WhatsApp).
+   * Respuesta uniforme: el backend siempre responde ok (no revela si la cuenta existe).
+   */
+  solicitarPassword: async (identificador: string): Promise<{ ok: boolean; mensaje?: string }> => {
+    try {
+      const r = await apiClient.post('/api/Auth/password/solicitar', { identificador })
+      return { ok: true, mensaje: r.data?.mensaje }
+    } catch (error: any) {
+      return { ok: false, mensaje: apiError(error, 'No se pudo enviar el enlace.') }
+    }
+  },
+
+  /**
+   * Crear / recuperar contraseña por OTP - paso 2: valida el código y fija la contraseña.
+   */
+  establecerPassword: async (
+    identificador: string,
+    codigo: string,
+    passwordNueva: string,
+  ): Promise<{ ok: boolean; mensaje?: string }> => {
+    try {
+      const r = await apiClient.post('/api/Auth/password/establecer', {
+        identificador, codigo, passwordNueva,
+      })
+      return { ok: true, mensaje: r.data?.mensaje }
+    } catch (error: any) {
+      return { ok: false, mensaje: apiError(error, 'No se pudo establecer la contraseña.') }
     }
   },
 

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import {
   Scissors, ArrowLeft, Delete, ShieldCheck, KeyRound, Send, Loader2, LogIn,
-  CalendarCheck, Users, Wallet, Eye, EyeOff,
+  CalendarCheck, Users, Wallet, Eye, EyeOff, MailCheck, MessageCircle,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { pinAuthService } from '@/services/pinAuthService'
@@ -12,7 +12,7 @@ import { authService } from '@/services/authService'
 import { setTenant, clearTenant } from '@/services/apiClient'
 import { sedeTenantService } from '@/services/sedeTenantService'
 
-type View = 'pin' | 'password' | 'enroll-id' | 'enroll-code' | 'recover-id' | 'recover-code'
+type View = 'pin' | 'password' | 'enroll-id' | 'enroll-code' | 'recover-id' | 'recover-code' | 'sent' | 'recover-pass-id' | 'set-password'
 function nombreDispositivoCorto(): string {
   const ua = navigator.userAgent
   const has = (s: string) => ua.includes(s)
@@ -37,6 +37,7 @@ export function LoginPage() {
 
   const [view, setView] = useState<View>('pin')
   const [loading, setLoading] = useState(false)
+  const [flujo, setFlujo] = useState<'enroll' | 'recover' | 'password'>('recover')
 
   const [pin, setPin] = useState('')
   const [pinError, setPinError] = useState('')
@@ -49,6 +50,9 @@ export function LoginPage() {
 
   const [correo, setCorreo] = useState('')
   const [password, setPassword] = useState('')
+
+  const [nuevaPass, setNuevaPass] = useState('')
+  const [repitePass, setRepitePass] = useState('')
 
   // ----------------------------------------------------------- routing
   const entrar = async (token: string, user: any, subdominio?: string) => {
@@ -93,6 +97,7 @@ export function LoginPage() {
     if (code) setCodigo(code)
     if (acceso === 'recuperar') setView('recover-code')
     else if (acceso === 'enrolar') setView('enroll-code')
+    else if (acceso === 'password') { setFlujo('password'); setView('set-password') }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -113,8 +118,8 @@ export function LoginPage() {
     setLoading(true)
     await pinAuthService.enrolarSolicitar(identificador.trim())
     setLoading(false)
-    toast.success('Si tu cuenta existe, te enviamos un código.')
-    setView('enroll-code')
+    toast.success('Listo, revisa tu mensaje.')
+    setFlujo('enroll'); setView('sent')
   }
 
   const crearPin = async () => {
@@ -135,8 +140,8 @@ export function LoginPage() {
     setLoading(true)
     await pinAuthService.recuperarSolicitar(identificador.trim())
     setLoading(false)
-    toast.success('Si tu cuenta existe, te enviamos un código.')
-    setView('recover-code')
+    toast.success('Listo, revisa tu mensaje.')
+    setFlujo('recover'); setView('sent')
   }
 
   const cambiarPin = async () => {
@@ -151,6 +156,32 @@ export function LoginPage() {
     else toast.error(r.mensaje || 'No se pudo cambiar el PIN. Revisa el código.')
   }
 
+  // ----------------------------------------------------------- crear/recuperar contraseña
+  const enviarCodigoPassword = async () => {
+    if (!identificador.trim()) { toast.error('Ingresa tu correo o teléfono.'); return }
+    setLoading(true)
+    await authService.solicitarPassword(identificador.trim())
+    setLoading(false)
+    // Respuesta uniforme: siempre confirmamos el envío (no revelamos si la cuenta existe).
+    toast.success('Listo, revisa tu mensaje.')
+    setFlujo('password'); setView('sent')
+  }
+
+  const establecerPassword = async () => {
+    if (!identificador.trim()) { toast.error('Ingresa tu correo o teléfono.'); return }
+    if (codigo.length !== 6) { toast.error('El código debe tener 6 dígitos.'); return }
+    if (nuevaPass.length < 8) { toast.error('La contraseña debe tener al menos 8 caracteres.'); return }
+    if (nuevaPass !== repitePass) { toast.error('Las contraseñas no coinciden.'); return }
+    setLoading(true)
+    const r = await authService.establecerPassword(identificador.trim(), codigo, nuevaPass)
+    setLoading(false)
+    if (r.ok) {
+      toast.success('¡Contraseña lista! Ahora ingresa con ella.')
+      setCorreo(identificador.trim())
+      limpiar(); setView('password')
+    } else toast.error(r.mensaje || 'No se pudo establecer la contraseña. Revisa el código.')
+  }
+
   // ----------------------------------------------------------- tradicional
   const loginPassword = async () => {
     if (!correo.trim() || !password) { toast.error('Completa el acceso y la contraseña.'); return }
@@ -163,7 +194,7 @@ export function LoginPage() {
     finally { setLoading(false) }
   }
 
-  const limpiar = () => { setCodigo(''); setNuevoPin(''); setRepitePin('') }
+  const limpiar = () => { setCodigo(''); setNuevoPin(''); setRepitePin(''); setNuevaPass(''); setRepitePass('') }
   const irA = (v: View) => { setPinError(''); limpiar(); setView(v) }
 
   // ================================================================= UI
@@ -370,6 +401,112 @@ export function LoginPage() {
               </motion.div>
             )}
 
+            {/* ---------------- ENVIADO: revisa tu correo / WhatsApp ---------------- */}
+            {view === 'sent' && (
+              <motion.div key="sent" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                {(() => {
+                  const esCorreo = identificador.includes('@')
+                  const canal = esCorreo ? 'correo' : 'WhatsApp'
+                  const reenviar = flujo === 'enroll' ? enviarCodigoEnrolar
+                    : flujo === 'password' ? enviarCodigoPassword : enviarCodigoRecuperar
+                  const vistaManual: View = flujo === 'enroll' ? 'enroll-code'
+                    : flujo === 'password' ? 'set-password' : 'recover-code'
+                  const textoBoton = flujo === 'enroll' ? 'Activar mi acceso'
+                    : flujo === 'password' ? 'Crear mi contraseña' : 'Restablecer mi PIN'
+                  const vistaAtras: View = flujo === 'enroll' ? 'enroll-id'
+                    : flujo === 'password' ? 'recover-pass-id' : 'recover-id'
+                  return (
+                    <>
+                      <Back onClick={() => irA(vistaAtras)} />
+
+                      <div className="flex justify-center lg:justify-start mb-5">
+                        <div className="relative w-16 h-16 rounded-2xl bg-blue-50 ring-1 ring-blue-100 flex items-center justify-center">
+                          {esCorreo
+                            ? <MailCheck className="w-8 h-8 text-blue-600" />
+                            : <MessageCircle className="w-8 h-8 text-blue-600" />}
+                          <span className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center ring-2 ring-white shadow-sm">
+                            <Send className="w-3 h-3 text-white" />
+                          </span>
+                        </div>
+                      </div>
+
+                      <h2 className="text-2xl font-bold text-gray-900 mb-1 text-center lg:text-left">
+                        Revisa tu {canal}
+                      </h2>
+                      <p className="text-sm text-gray-500 mb-5 text-center lg:text-left">
+                        Te enviamos un enlace a{' '}
+                        <span className="font-semibold text-gray-700">{identificador || `tu ${canal}`}</span>.
+                        Ábrelo y toca <span className="font-medium text-gray-700">“{textoBoton}”</span> para continuar.
+                      </p>
+
+                      <div className="rounded-xl bg-blue-50/60 border border-blue-100 p-4 mb-6 flex items-start gap-2.5">
+                        <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0 text-blue-600" />
+                        <p className="text-sm text-blue-900/80 leading-relaxed">
+                          El enlace ya lleva tu código incluido. No necesitas copiar ni escribir nada — solo ábrelo.
+                        </p>
+                      </div>
+
+                      <button onClick={reenviar} disabled={loading} className={btnPrimary}>
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                        Reenviar enlace
+                      </button>
+
+                      <button onClick={() => irA(vistaManual)}
+                        className="w-full text-gray-400 text-sm py-3 hover:text-gray-600 transition">
+                        ¿No te llegó? Ingresar el código manualmente
+                      </button>
+                    </>
+                  )
+                })()}
+              </motion.div>
+            )}
+
+            {/* ---------------- CONTRASEÑA: identificador ---------------- */}
+            {view === 'recover-pass-id' && (
+              <motion.div key="recover-pass-id" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <Back onClick={() => irA('password')} />
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Crea tu contraseña</h2>
+                <p className="text-sm text-gray-500 mb-6">
+                  Te enviaremos un enlace para crear (o recuperar) tu contraseña de acceso.
+                </p>
+
+                <Label>Correo o teléfono</Label>
+                <Input value={identificador} onChange={setIdentificador} placeholder="tucorreo@gmail.com o 987654321" />
+
+                <button onClick={enviarCodigoPassword} disabled={loading} className={btnPrimary + ' mt-2'}>
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} Enviarme el enlace
+                </button>
+                <button onClick={() => irA('set-password')} className="w-full text-blue-600 font-medium py-2 text-sm hover:underline">
+                  Ya tengo un código
+                </button>
+              </motion.div>
+            )}
+
+            {/* ---------------- CONTRASEÑA: código + nueva contraseña ---------------- */}
+            {view === 'set-password' && (
+              <motion.div key="set-password" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <Back onClick={() => irA('recover-pass-id')} />
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Tu contraseña</h2>
+                <p className="text-sm text-gray-500 mb-5">Ingresa el código que recibiste y crea tu contraseña.</p>
+
+                <Label>Acceso (correo o teléfono)</Label>
+                <Input value={identificador} onChange={setIdentificador} placeholder="Correo o teléfono" />
+                <Label>Código (6 dígitos)</Label>
+                <Digits value={codigo} onChange={setCodigo} />
+                <Label>Nueva contraseña</Label>
+                <PassInput value={nuevaPass} onChange={setNuevaPass} placeholder="Mínimo 8 caracteres" />
+                <Label>Repite tu contraseña</Label>
+                <PassInput value={repitePass} onChange={setRepitePass} placeholder="Repite la contraseña" />
+
+                <button onClick={establecerPassword} disabled={loading} className={btnPrimary + ' mt-2'}>
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <KeyRound className="w-5 h-5" />} Guardar contraseña
+                </button>
+                <button onClick={enviarCodigoPassword} className="w-full text-gray-400 text-sm py-2 hover:text-gray-600">
+                  Reenviar código
+                </button>
+              </motion.div>
+            )}
+
             {/* ---------------- INGRESO TRADICIONAL ---------------- */}
             {view === 'password' && (
               <motion.div key="password" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -388,6 +525,10 @@ export function LoginPage() {
 
                 <button onClick={loginPassword} disabled={loading} className={btnPrimary + ' mt-1'}>
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />} Entrar
+                </button>
+                <button onClick={() => irA('recover-pass-id')}
+                  className="w-full text-gray-400 text-sm py-2 mt-1 hover:text-gray-600 transition">
+                  ¿Olvidaste tu contraseña? Créala aquí
                 </button>
               </motion.div>
             )}
@@ -425,6 +566,21 @@ function Input({ value, onChange, placeholder }: { value: string; onChange: (v: 
   return (
     <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} autoCapitalize="none"
       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+  )
+}
+
+function PassInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const [show, setShow] = useState(false)
+  return (
+    <div className="relative mb-4">
+      <input value={value} onChange={(e) => onChange(e.target.value)} type={show ? 'text' : 'password'} placeholder={placeholder}
+        className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+      <button type="button" onClick={() => setShow((s) => !s)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 active:scale-90 transition"
+        aria-label={show ? 'Ocultar' : 'Mostrar'}>
+        {show ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+      </button>
+    </div>
   )
 }
 

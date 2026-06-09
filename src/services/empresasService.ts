@@ -138,6 +138,16 @@ export const empresasService = {
     return { ...e, id: e.id ?? e.idEmpresa }
   },
 
+  /**
+   * Elimina una empresa. Si está vacía (0 sedes y 0 usuarios) la purga;
+   * si tiene datos la archiva (soft-delete en cascada). El backend decide.
+   * Devuelve el ApiResponse para mostrar su mensaje.
+   */
+  deleteEmpresa: async (idEmpresa: number) => {
+    const res = await apiClient.delete(`/api/superadmin/empresas/${idEmpresa}`)
+    return res.data
+  },
+
   // ===== Admin (dueño) =====
   getAdminsEmpresa: async (idEmpresa: number): Promise<Admin[]> => {
     const res = await apiClient.get(`/api/superadmin/empresas/${idEmpresa}/admin`)
@@ -198,7 +208,7 @@ export const empresasService = {
 
   /**
    * Cambia el subdominio/slug de una sede. Solo SuperAdmin.
-   * ⚠ Cambia la URL pública de la sede; rompe los enlaces/QR anteriores.
+   * Cambia la URL publica de la sede; rompe los enlaces/QR anteriores.
    */
   cambiarSlugSede: async (idSede: number, subdominio: string) => {
     const res = await apiClient.patch(`/api/superadmin/sedes/${idSede}/slug`, {
