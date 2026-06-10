@@ -96,47 +96,36 @@ export function App() {
   const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
-    // El init es async porque, si NO hay sesión en este origin (típico al abrir
-    // otro subdominio), intentamos recuperarla por SSO desde la cookie .barber.pe.
+    // NO bloqueamos el render esperando a la red. Si hay sesión local la
+    // restauramos al instante; si no, mostramos la app ya (anónimo) y dejamos
+    // que el SSO por cookie .barber.pe resuelva en segundo plano. Cuando
+    // restaura, el estado se actualiza y la app re-renderiza sola.
     let cancelado = false
 
-    const inicializar = async () => {
-      try {
-        console.log('🚀 Inicializando autenticación...')
+    const token = authService.getStoredToken()
+    const user = authService.getStoredUser()
 
-        const token = authService.getStoredToken()
-        const user = authService.getStoredUser()
-
-        console.log('🔍 Token encontrado:', !!token)
-        console.log('🔍 Usuario encontrado:', !!user)
-
-        if (token && user) {
-          // Sesión local en este origin: restaurar tal cual (comportamiento de siempre).
-          console.log('✅ Restaurando sesión:', user.nombreCompleto)
-          setToken(token)
-          setUser(user)
-        } else {
-          // ← NUEVO (SSO): sin sesión local. Intentamos recuperarla con la cookie
-          //   compartida. Si existe (logueado en otro subdominio), volvemos a quedar
-          //   logueados aquí. Si no, seguimos como anónimo (no rompe nada).
-          const restaurada = await authService.bootstrapSession()
-          if (restaurada && !cancelado) {
-            setToken(restaurada.token)
-            setUser(restaurada.user as any)
-          } else {
-            console.log('⚠️ No hay sesión activa (anónimo)')
-          }
-        }
-      } catch (error) {
-        console.error('❌ Error inicializando auth:', error)
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-      } finally {
-        if (!cancelado) setIsInitialized(true)
-      }
+    if (token && user) {
+      // Sesión local en este origin: restaurar tal cual (comportamiento de siempre).
+      setToken(token)
+      setUser(user)
+      setIsInitialized(true)
+      return
     }
 
-    inicializar()
+    // Sin sesión local: NO esperamos. La app se muestra de inmediato.
+    setIsInitialized(true)
+
+    // SSO en segundo plano (no bloquea nada).
+    authService.bootstrapSession()
+      .then((restaurada) => {
+        if (restaurada && !cancelado) {
+          setToken(restaurada.token)
+          setUser(restaurada.user as any)
+        }
+      })
+      .catch(() => { /* anónimo: no rompe nada */ })
+
     return () => { cancelado = true }
   }, [setUser, setToken])
 
