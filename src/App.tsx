@@ -96,29 +96,48 @@ export function App() {
   const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
-    try {
-      console.log('🚀 Inicializando autenticación...')
+    // El init es async porque, si NO hay sesión en este origin (típico al abrir
+    // otro subdominio), intentamos recuperarla por SSO desde la cookie .barber.pe.
+    let cancelado = false
 
-      const token = authService.getStoredToken()
-      const user = authService.getStoredUser()
+    const inicializar = async () => {
+      try {
+        console.log('🚀 Inicializando autenticación...')
 
-      console.log('🔍 Token encontrado:', !!token)
-      console.log('🔍 Usuario encontrado:', !!user)
+        const token = authService.getStoredToken()
+        const user = authService.getStoredUser()
 
-      if (token && user) {
-        console.log('✅ Restaurando sesión:', user.nombreCompleto)
-        setToken(token)
-        setUser(user)
-      } else {
-        console.log('⚠️ No hay sesión guardada')
+        console.log('🔍 Token encontrado:', !!token)
+        console.log('🔍 Usuario encontrado:', !!user)
+
+        if (token && user) {
+          // Sesión local en este origin: restaurar tal cual (comportamiento de siempre).
+          console.log('✅ Restaurando sesión:', user.nombreCompleto)
+          setToken(token)
+          setUser(user)
+        } else {
+          // ← NUEVO (SSO): sin sesión local. Intentamos recuperarla con la cookie
+          //   compartida. Si existe (logueado en otro subdominio), volvemos a quedar
+          //   logueados aquí. Si no, seguimos como anónimo (no rompe nada).
+          const restaurada = await authService.bootstrapSession()
+          if (restaurada && !cancelado) {
+            setToken(restaurada.token)
+            setUser(restaurada.user as any)
+          } else {
+            console.log('⚠️ No hay sesión activa (anónimo)')
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error inicializando auth:', error)
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+      } finally {
+        if (!cancelado) setIsInitialized(true)
       }
-    } catch (error) {
-      console.error('❌ Error inicializando auth:', error)
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-    } finally {
-      setIsInitialized(true)
     }
+
+    inicializar()
+    return () => { cancelado = true }
   }, [setUser, setToken])
 
   if (!isInitialized) {

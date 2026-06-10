@@ -32,6 +32,27 @@ function apiError(error: any, fallback: string): string {
   return d.mensaje || d.message || d.title || fallback
 }
 
+/** Mapea la respuesta cruda del backend (login/refresh) al shape LoginResponse del front. */
+function mapLoginResponse(responseData: any, correoFallback = ''): LoginResponse | null {
+  if (!responseData?.token) return null
+  return {
+    token: responseData.token,
+    tipoToken: responseData.tipoToken || 'Bearer',
+    expiraUtc: responseData.expiraUtc,
+    refreshToken: responseData.refreshToken,
+    user: {
+      id: responseData.idUsuarioOCliente || responseData.id || responseData.user?.id,
+      correo: responseData.correo || correoFallback,
+      rol: responseData.rol || 'Usuario',
+      nombreCompleto: responseData.nombreCompleto || '',
+      telefono: responseData.telefono,
+      idEmpresa: responseData.idEmpresa,
+      idSede: responseData.idSede,
+      debeCambiarPassword: responseData.debeCambiarPassword,
+    },
+  }
+}
+
 export const authService = {
   /**
    * Login - Obtener token y usuario
@@ -39,7 +60,7 @@ export const authService = {
   login: async (email: string, password: string): Promise<LoginResponse | null> => {
     try {
       console.log('🔐 Iniciando login...', email)
-      
+
       const response = await apiClient.post('/api/Auth/login', {
         Correo: email,
         Password: password,
@@ -49,33 +70,51 @@ export const authService = {
 
       // Parsear respuesta
       const responseData = response.data.data || response.data
-      
-      if (!responseData.token) {
+
+      const loginData = mapLoginResponse(responseData, email)
+      if (!loginData) {
         console.error('❌ No token en respuesta')
         return null
       }
-
-      const loginData: LoginResponse = {
-  token: responseData.token,
-  tipoToken: responseData.tipoToken || 'Bearer',
-  expiraUtc: responseData.expiraUtc,
-  refreshToken: responseData.refreshToken,
-  user: {
-    id: responseData.idUsuarioOCliente || responseData.id || responseData.user?.id,
-    correo: responseData.correo || email,
-    rol: responseData.rol || 'Usuario',
-    nombreCompleto: responseData.nombreCompleto || '',
-    telefono: responseData.telefono,
-    idEmpresa: responseData.idEmpresa,
-    idSede: responseData.idSede,
-    debeCambiarPassword: responseData.debeCambiarPassword,
-  }
-}
 
       console.log('✅ Login exitoso:', loginData)
       return loginData
     } catch (error: any) {
       console.error('❌ Error en login:', error.response?.data || error.message)
+      return null
+    }
+  },
+
+  /**
+   * SSO cross-subdominio: recupera la sesión SIN pedir credenciales.
+   *
+   * El login deja un refresh token en una cookie httpOnly `bp_rt` con
+   * Domain=.barber.pe, que el navegador envía a barber.pe, app.barber.pe y a
+   * cualquier <sede>.barber.pe. Al abrir un subdominio nuevo, el localStorage
+   * de ESE origin está vacío, así que llamamos a /refresh con body vacío: el
+   * backend lee la cookie compartida y, si es válida, devuelve un nuevo par
+   * de tokens. Así el usuario aparece logueado en cualquier subdominio.
+   *
+   * Devuelve la sesión restaurada (y la persiste en este origin) o null si no
+   * hay sesión activa (entonces el usuario navega como anónimo, sin romper nada).
+   */
+  bootstrapSession: async (): Promise<LoginResponse | null> => {
+    try {
+      // body {} → fuerza a que el backend resuelva el refresh desde la cookie.
+      const response = await apiClient.post('/api/Auth/refresh', {})
+      const responseData = response.data.data || response.data
+
+      const loginData = mapLoginResponse(responseData)
+      if (!loginData) return null
+
+      // Persistir en este origin para que apiClient adjunte el Bearer en las
+      // siguientes peticiones, igual que tras un login normal.
+      localStorage.setItem('token', loginData.token)
+      localStorage.setItem('user', JSON.stringify(loginData.user))
+      console.log('🔁 Sesión restaurada por SSO:', loginData.user.nombreCompleto)
+      return loginData
+    } catch {
+      // 401/SIN_SESION → no hay sesión en este navegador: anónimo. Sin ruido.
       return null
     }
   },

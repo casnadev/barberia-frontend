@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import {
-  Store, Phone, Clock, MapPin, Image as ImageIcon, Camera, Share2, Save, Loader2,
+  Store, Building2, Phone, Clock, MapPin, Image as ImageIcon, Camera, Share2, Save, Loader2,
   X, Upload, RefreshCw, Plus, Instagram, Facebook, Globe, Music2, Youtube, Twitter, Palette,
 } from 'lucide-react'
 import { apiClient } from '@/services/apiClient'
@@ -88,7 +88,15 @@ export function ConfiguracionPage() {
     departamento: '', provincia: '', distrito: '',
   })
 
-  useEffect(() => { loadSede() }, [])
+  // Datos del negocio (empresa) — ahora editables también desde aquí (antes solo en el primer login).
+  const [empresa, setEmpresa] = useState({
+    idEmpresa: null as number | null,
+    razonSocial: '', nombreComercial: '', ruc: '', correoContacto: '', telefonoContacto: '',
+  })
+  // Correo/teléfono de la cuenta del admin: sirven como valor por defecto para no retipear.
+  const [cuenta, setCuenta] = useState({ correo: '', telefono: '' })
+
+  useEffect(() => { loadSede(); loadNegocio() }, [])
 
   const mapearHorarios = (lista: any[]): DiaHorario[] =>
     DIAS_SEMANA.map((d) => {
@@ -195,6 +203,36 @@ export function ConfiguracionPage() {
     }
   }
 
+  const loadNegocio = async () => {
+    try {
+      const [emp, perfil] = await Promise.all([
+        apiClient.get('/api/mi-empresa').catch(() => null),
+        apiClient.get('/api/auth/mi-perfil').catch(() => null),
+      ])
+      const e = emp?.data?.data ?? emp?.data
+      const p = perfil?.data?.data ?? perfil?.data
+      const cuentaCorreo = p?.correo ?? ''
+      const cuentaTel = p?.telefono ?? ''
+      setCuenta({ correo: cuentaCorreo, telefono: cuentaTel })
+      if (e) {
+        setEmpresa({
+          idEmpresa: e.idEmpresa ?? null,
+          razonSocial: e.razonSocial ?? '',
+          nombreComercial: e.nombreComercial ?? '',
+          ruc: e.ruc ?? '',
+          // Si la empresa aún no tiene contacto, se pre-carga con el de tu cuenta (no retipear).
+          correoContacto: e.correoContacto || cuentaCorreo || '',
+          telefonoContacto: e.telefonoContacto || cuentaTel || '',
+        })
+      }
+    } catch (err) {
+      console.error('❌ Error cargando datos del negocio:', err)
+    }
+  }
+
+  const handleChangeEmpresa = (field: string, value: string) =>
+    setEmpresa((prev) => ({ ...prev, [field]: value }))
+
   const handleChange = (field: keyof Sede, value: string | number) =>
     setSede((prev) => ({ ...prev, [field]: value }))
 
@@ -275,6 +313,7 @@ export function ConfiguracionPage() {
     e.preventDefault()
     if (!sede.nombre?.trim()) { toast.error('El nombre es obligatorio'); return }
     if (!sede.telefono?.trim()) { toast.error('El teléfono es obligatorio'); return }
+    if (empresa.idEmpresa != null && !empresa.nombreComercial?.trim()) { toast.error('El nombre del negocio es obligatorio.'); return }
     try {
       setSubmitting(true)
       const telDigits = (sede.telefono || '').replace(/\D/g, '')
@@ -298,8 +337,21 @@ export function ConfiguracionPage() {
         toast.info('El teléfono no se guardó: debe ser 9 dígitos y empezar en 9 (ej. 987654321).')
       }
       await apiClient.put('/api/Sedes/actual', payload)
+
+      // Guardar también los datos del negocio (empresa) en la misma acción "Guardar cambios".
+      if (empresa.idEmpresa != null) {
+        await apiClient.put('/api/mi-empresa', {
+          razonSocial: empresa.razonSocial?.trim() || empresa.nombreComercial?.trim() || undefined,
+          nombreComercial: empresa.nombreComercial?.trim() || undefined,
+          ruc: empresa.ruc?.trim() || undefined,
+          correoContacto: empresa.correoContacto?.trim() || undefined,
+          telefonoContacto: empresa.telefonoContacto?.trim() || undefined,
+        })
+      }
+
       toast.success('Configuración guardada')
       await loadSede()
+      await loadNegocio()
     } catch (err: any) {
       console.error('❌ Error guardando:', err.response?.data || err)
       toast.error(err.response?.data?.message || err.response?.data?.mensaje || 'Error al guardar la configuración')
@@ -346,6 +398,32 @@ export function ConfiguracionPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           {/* ===== Columna izquierda ===== */}
           <div className="space-y-4">
+          {/* Datos del negocio (empresa) */}
+          <Card icon={Building2} title="Datos del negocio" desc="Datos de tu empresa: RUC, razón social y contacto. Editables siempre.">
+            <div className="space-y-4">
+              <Field label="Nombre comercial *">
+                <input className={inputCls} value={empresa.nombreComercial} onChange={(e) => handleChangeEmpresa('nombreComercial', e.target.value)} placeholder="Ej: Barbería Central" />
+              </Field>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Razón social">
+                  <input className={inputCls} value={empresa.razonSocial} onChange={(e) => handleChangeEmpresa('razonSocial', e.target.value)} placeholder="Igual al nombre si no tienes" />
+                </Field>
+                <Field label="RUC">
+                  <input className={inputCls} value={empresa.ruc} onChange={(e) => handleChangeEmpresa('ruc', e.target.value)} placeholder="20•••••••••" maxLength={11} />
+                </Field>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Correo del negocio">
+                  <input type="email" className={inputCls} value={empresa.correoContacto} onChange={(e) => handleChangeEmpresa('correoContacto', e.target.value)} placeholder="hola@negocio.com" />
+                </Field>
+                <Field label="Teléfono del negocio">
+                  <input type="tel" className={inputCls} value={empresa.telefonoContacto} onChange={(e) => handleChangeEmpresa('telefonoContacto', e.target.value)} placeholder="987654321" />
+                </Field>
+              </div>
+              <p className="text-xs text-gray-400">El correo y teléfono se pre-cargan con los de tu cuenta. Solo cámbialos si tu negocio usa otros.</p>
+            </div>
+          </Card>
+
           {/* Información básica */}
           <Card icon={Store} title="Información básica" desc="El nombre y la descripción de tu barbería.">
             <div className="space-y-4">
@@ -359,7 +437,14 @@ export function ConfiguracionPage() {
           </Card>
 
           {/* Contacto */}
-          <Card icon={Phone} title="Contacto" desc="Cómo te encuentran tus clientes.">
+          <Card icon={Phone} title="Contacto" desc="Cómo te encuentran tus clientes."
+            actions={
+              <button type="button"
+                onClick={() => { handleChange('telefono', empresa.telefonoContacto || sede.telefono || ''); handleChange('correo', empresa.correoContacto || sede.correo || '') }}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700 whitespace-nowrap">
+                Usar datos del negocio
+              </button>
+            }>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Field label="Teléfono *">
                 <input type="tel" className={inputCls} value={sede.telefono || ''} onChange={(e) => handleChange('telefono', e.target.value)} placeholder="987654321" required />

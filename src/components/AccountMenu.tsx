@@ -7,6 +7,7 @@ import { getActiveTenant, buildImageUrl } from '@/services/apiClient'
 import { miCuentaService } from '@/services/miCuentaService'
 import { perfilService } from '@/services/perfilService'
 import { panelTrabajadorService } from '@/services/panelTrabajadorService'
+import { MiPerfilAdminModal } from '@/components/MiPerfilAdminModal'   // ← NUEVO
 import s from '@/styles/AccountMenu.module.css'
 
 /* Ruta del panel según el rol. */
@@ -27,6 +28,10 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const [open, setOpen] = useState(false)
+  // ← NUEVO: modal de "Mi perfil" propio del menú. Se usa SOLO como respaldo
+  //   cuando el padre no pasa `onMiPerfil` (ej. el micrositio público). En el
+  //   dashboard, AdminHeader sigue pasando su propio onMiPerfil y este queda en false.
+  const [perfilOpen, setPerfilOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -60,6 +65,15 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
 
   const go = (path: string) => { setOpen(false); navigate(path) }
   const onLogout = () => { setOpen(false); logout(); navigate('/') }
+
+  // ← NUEVO: "Mi perfil" robusto. Si el padre pasó onMiPerfil (dashboard), se usa
+  //   ese (comportamiento de siempre). Si no (micrositio público), abrimos el
+  //   modal montado aquí mismo, así "Mi perfil" funciona en cualquier subdominio.
+  const abrirMiPerfil = () => {
+    setOpen(false)
+    if (onMiPerfil) onMiPerfil()
+    else setPerfilOpen(true)
+  }
 
   // "Ver sitio": abre la landing de la SEDE ACTIVA (la del dropdown).
   // Capturamos el subdominio AQUÍ (en el panel, donde es correcto) y lo
@@ -113,7 +127,7 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
                     <PanelIcon className={s.itemIcon} /> Mi panel
                   </button>
                   {user.rol === 'Admin' && (
-                    <button className={s.item} onClick={() => { setOpen(false); onMiPerfil?.() }}>
+                    <button className={s.item} onClick={abrirMiPerfil}>
                       <User className={s.itemIcon} width={18} height={18} /> Mi perfil
                     </button>
                   )}
@@ -157,6 +171,12 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ← NUEVO: modal de "Mi perfil" como respaldo (micrositio). Solo Admin lo
+          puede abrir; en el dashboard queda en false porque allí se usa onMiPerfil. */}
+      {user?.rol === 'Admin' && (
+        <MiPerfilAdminModal open={perfilOpen} onClose={() => setPerfilOpen(false)} />
+      )}
     </div>
   )
 }

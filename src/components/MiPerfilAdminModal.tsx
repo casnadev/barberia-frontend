@@ -9,8 +9,9 @@ import { buildImageUrl } from '@/services/apiClient'
 
 /**
  * Modal "Mi perfil" del Admin (su propio Usuario). Permite editar nombre,
- * correo, teléfono y foto de perfil. Se monta en AdminHeader y se abre desde
- * el AccountMenu. La foto se sube a /api/upload y se guarda en Usuarios.UrlFotoPerfil.
+ * correo, teléfono y foto de perfil. Se monta en AdminHeader (dashboard) y
+ * también en AccountMenu (micrositio), y se abre desde el menú de cuenta.
+ * La foto se sube a /api/upload y se guarda en Usuarios.UrlFotoPerfil.
  */
 export function MiPerfilAdminModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [nombre, setNombre] = useState('')
@@ -109,9 +110,14 @@ export function MiPerfilAdminModal({ open, onClose }: { open: boolean; onClose: 
   const field = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none'
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    // ← CAMBIO (responsive): en móvil el modal es una "hoja inferior" (bottom-sheet)
+    //   que ocupa el ancho completo y NO se desborda; en desktop (sm+) vuelve a ser
+    //   la tarjeta centrada de siempre.
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
+      {/* ← CAMBIO clave: max-h + overflow-y-auto → el contenido alto (datos +
+          contraseña) hace scroll DENTRO del modal en vez de tapar toda la pantalla. */}
+      <div className="relative bg-white w-full sm:max-w-md p-5 shadow-xl rounded-t-2xl sm:rounded-2xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-base font-semibold text-gray-900">Mi perfil</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Cerrar"><X className="w-5 h-5" /></button>
