@@ -10,6 +10,8 @@ export interface Empresa {
   totalSedes?: number
   planActual?: string
   fechaFinPlan?: string
+  /** Dueño incrustado por el backend (evita pedir admins uno por uno). */
+  owner?: Admin | null
 }
 
 export interface Admin {
@@ -123,7 +125,12 @@ export const empresasService = {
   getEmpresas: async (): Promise<Empresa[]> => {
     const res = await apiClient.get('/api/superadmin/empresas')
     const data = res.data.data || []
-    return data.map((e: any) => ({ ...e, id: e.id ?? e.idEmpresa }))
+    return data.map((e: any) => ({
+      ...e,
+      id: e.id ?? e.idEmpresa,
+      // El dueño viene incrustado; normalizamos su id igual que en getAdminsEmpresa.
+      owner: e.owner ? { ...e.owner, id: e.owner.id ?? e.owner.idUsuario } : null,
+    }))
   },
 
   createEmpresa: async (data: {

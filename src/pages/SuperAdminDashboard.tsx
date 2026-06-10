@@ -65,11 +65,10 @@ export function SuperAdminDashboard() {
       ])
       setEmpresas(emps)
       setPlanes(pls)
+      // El dueño ya viene incrustado en cada empresa (backend), así que NO
+      // hacemos una llamada por barbería. Esto elimina el N+1 (y sus preflights).
       const map: Record<number, Admin | null> = {}
-      await Promise.all(emps.map(async (e) => {
-        try { const as = await empresasService.getAdminsEmpresa(e.id); map[e.id] = as[0] ?? null }
-        catch { map[e.id] = null }
-      }))
+      for (const e of emps) map[e.id] = e.owner ?? null
       setOwners(map)
     } catch {
       toast.error('No se pudieron cargar las barberías.')
