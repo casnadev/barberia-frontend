@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Scissors, CalendarCheck, CalendarClock, Wallet, Users, Globe, Star,
-  Check, X, ShieldCheck, ArrowRight, Plus, Menu, FileSpreadsheet, FileText,
+  Check, X, ShieldCheck, ArrowRight, Plus, Menu, FileSpreadsheet, FileText, Mail, Phone,
 } from 'lucide-react'
 import { landingService, type SedeDestacada } from '@/services/landingService'
 import { setTenant, buildImageUrl, apiClient } from '@/services/apiClient'
@@ -81,7 +81,7 @@ export default function LandingPage() {
   const [ciclo, setCiclo] = useState<'mes' | 'anio'>('mes')
   const [faq, setFaq] = useState<number | null>(0)
   const [sedes, setSedes] = useState<SedeDestacada[]>([])
-  const [lead, setLead] = useState({ nombre: '', barberia: '', telefono: '', correo: '', ciudad: '', barberos: 'Solo yo' })
+  const [lead, setLead] = useState({ negocio: '', duenio: '', tipoContacto: 'correo' as 'correo' | 'whatsapp', contacto: '' })
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
   const [err, setErr] = useState('')
@@ -110,8 +110,10 @@ export default function LandingPage() {
     setEnviando(true); setErr('')
     try {
       await apiClient.post('/api/leads', {
-        nombre: lead.nombre, barberia: lead.barberia,
-        telefono: lead.telefono, correo: lead.correo, ciudad: lead.ciudad, barberos: lead.barberos,
+        negocio: lead.negocio,
+        duenio: lead.duenio || null,
+        correo: lead.tipoContacto === 'correo' ? lead.contacto : null,
+        telefono: lead.tipoContacto === 'whatsapp' ? lead.contacto : null,
       })
       setEnviado(true)
     } catch {
@@ -169,8 +171,6 @@ export default function LandingPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.pole} />
-
       {/* NAV */}
       <header className={`${styles.nav} ${scrolled ? styles.navScrolled : ''}`}>
         <div className={styles.navIn}>
@@ -282,15 +282,13 @@ export default function LandingPage() {
           </span>
         </div>
         {mqSedes.length ? (
-          <div className={styles.marquee}>
-            <div className={styles.mqTrack}>
-              {[...mqSedes, ...mqSedes].map((s, i) => (
+          <div className={styles.strip}>
+              {mqSedes.map((s, i) => (
                 <button className={styles.sedeChip} key={`${s.idSede}-${i}`} onClick={() => verSede(s)} title={`Ver ${s.nombre}`}>
                   <span className={styles.mk}>{s.logoUrl ? <img src={buildImageUrl(s.logoUrl)} alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} /> : <Scissors size={18} />}</span>
                   <span><span className={styles.nm}>{s.nombre}</span><span className={styles.lo}>{s.ciudad || s.direccion || 'Perú'}</span></span>
                 </button>
               ))}
-            </div>
           </div>
         ) : (
           <div className={`${styles.wrap} ${styles.trustIn}`}>
@@ -433,16 +431,14 @@ export default function LandingPage() {
         <div className={styles.wrap}>
           <Reveal className={styles.head}><span className={styles.eyebrow}>Reseñas</span><h2>Barberos que ya dejaron el cuaderno</h2><p>Lo que dicen quienes ya trabajan con barber.pe.</p></Reveal>
         </div>
-        <div className={styles.marquee} style={{ ['--mq-dur' as any]: '52s' }}>
-          <div className={styles.mqTrack}>
-            {[...TESTIMONIOS, ...TESTIMONIOS].map((t, i) => (
+        <div className={styles.strip}>
+            {TESTIMONIOS.map((t, i) => (
               <div className={styles.tCard} key={i}>
                 <div className={styles.tStars}>{'★'.repeat(t.s)}</div>
                 <p className={styles.tQuote}>“{t.q}”</p>
                 <div className={styles.tWho}><span className={styles.tAv}>{iniciales(t.n)}</span><div><div className={styles.tName}>{t.n}</div><div className={styles.tRole}>{t.r}</div></div></div>
               </div>
             ))}
-          </div>
         </div>
       </section>
 
@@ -562,20 +558,26 @@ export default function LandingPage() {
               <div style={{ textAlign: 'center', padding: '14px 4px' }}>
                 <div style={{ fontSize: 46, lineHeight: 1 }}>✅</div>
                 <h3 style={{ marginTop: 10 }}>¡Solicitud enviada!</h3>
-                <p className={styles.fsub}>Gracias{lead.nombre ? `, ${lead.nombre.split(' ')[0]}` : ''}. Te contactaremos muy pronto para activar tu barbería.</p>
+                <p className={styles.fsub}>Gracias{lead.duenio ? `, ${lead.duenio.split(' ')[0]}` : ''}. Te contactaremos muy pronto para activar tu barbería.</p>
                 <button className={`${styles.btn} ${styles.btnGhost} ${styles.btnBlock}`} style={{ marginTop: 12 }} onClick={() => setDemoOpen(false)}>Cerrar</button>
               </div>
             ) : (<>
               <h3>Solicitar acceso</h3><p className={styles.fsub}>Toma menos de 1 minuto. Te contactamos hoy mismo.</p>
               <form onSubmit={enviarLead}>
-                <div className={styles.field}><label htmlFor="m-nombre">Tu nombre</label><input id="m-nombre" required placeholder="Ej. Carlos Ramírez" value={lead.nombre} onChange={(e) => setLead({ ...lead, nombre: e.target.value })} /></div>
-                <div className={styles.field}><label htmlFor="m-barberia">Nombre de tu barbería</label><input id="m-barberia" required placeholder="Ej. Barbería El Patrón" value={lead.barberia} onChange={(e) => setLead({ ...lead, barberia: e.target.value })} /></div>
-                <div className={styles.fieldRow}>
-                  <div className={styles.field}><label htmlFor="m-tel">Teléfono</label><input id="m-tel" required inputMode="tel" placeholder="9XX XXX XXX" value={lead.telefono} onChange={(e) => setLead({ ...lead, telefono: e.target.value })} /></div>
-                  <div className={styles.field}><label htmlFor="m-ciudad">Distrito / ciudad</label><input id="m-ciudad" required placeholder="Ej. Surco, Lima" value={lead.ciudad} onChange={(e) => setLead({ ...lead, ciudad: e.target.value })} /></div>
+                <div className={styles.field}><label htmlFor="m-negocio">Nombre del negocio</label><input id="m-negocio" required placeholder="Ej. Barbería El Patrón" value={lead.negocio} onChange={(e) => setLead({ ...lead, negocio: e.target.value })} /></div>
+                <div className={styles.field}><label htmlFor="m-duenio">Nombre del dueño <span style={{ color: '#9ca3af', fontWeight: 400 }}>(opcional)</span></label><input id="m-duenio" placeholder="Se usará el nombre del negocio" value={lead.duenio} onChange={(e) => setLead({ ...lead, duenio: e.target.value })} /></div>
+                <div className={styles.field}>
+                  <label>¿Cómo te contactamos?</label>
+                  <div className={styles.seg}>
+                    <button type="button" className={lead.tipoContacto === 'correo' ? styles.segOn : ''} onClick={() => setLead({ ...lead, tipoContacto: 'correo', contacto: '' })}><Mail size={15} /> Correo</button>
+                    <button type="button" className={lead.tipoContacto === 'whatsapp' ? styles.segOn : ''} onClick={() => setLead({ ...lead, tipoContacto: 'whatsapp', contacto: '' })}><Phone size={15} /> WhatsApp</button>
+                  </div>
                 </div>
-                <div className={styles.field}><label htmlFor="m-correo">Correo <span style={{ color: '#9ca3af', fontWeight: 400 }}>(opcional)</span></label><input id="m-correo" type="email" placeholder="tucorreo@ejemplo.com" value={lead.correo} onChange={(e) => setLead({ ...lead, correo: e.target.value })} /></div>
-                <div className={styles.field}><label htmlFor="m-barberos">¿Cuántos barberos trabajan contigo?</label><select id="m-barberos" value={lead.barberos} onChange={(e) => setLead({ ...lead, barberos: e.target.value })}><option>Solo yo</option><option>2 a 3</option><option>4 a 6</option><option>Más de 6 / varias sedes</option></select></div>
+                <div className={styles.field}>
+                  {lead.tipoContacto === 'correo'
+                    ? <input id="m-contacto" type="email" required placeholder="tucorreo@ejemplo.com" value={lead.contacto} onChange={(e) => setLead({ ...lead, contacto: e.target.value })} />
+                    : <input id="m-contacto" inputMode="tel" required placeholder="9XX XXX XXX" value={lead.contacto} onChange={(e) => setLead({ ...lead, contacto: e.target.value })} />}
+                </div>
                 <button type="submit" disabled={enviando} className={`${styles.btn} ${styles.btnPrimary} ${styles.btnBlock} ${styles.btnLg}`}>{enviando ? 'Enviando…' : 'Solicitar acceso'}</button>
                 {err && <p style={{ color: '#dc2626', fontSize: 13, marginTop: 8 }}>{err}</p>}
                 <p className={styles.formNote}>Al enviar aceptas que te contactemos. Tus datos están seguros.</p>

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { ChevronLeft, Star, Clock, MapPin, User, Calendar } from 'lucide-react'
+import { X, Clock, MapPin, User, Star, Check, CalendarClock, Scissors } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { reservasService } from '@/services/reservasService'
+import { reservasService } from '@/services/reservasService' // ← para conectar endpoints reales
 import styles from '@/styles/ReservaAcciones.module.css'
 
 interface Reserva {
@@ -24,7 +24,7 @@ interface FormReprogramar {
   motivo: string
 }
 
-type TabType = 'detalles' | 'acciones' | 'resena'
+type DoneType = 'confirmada' | 'cancelada' | 'reprogramada' | 'resena' | null
 
 export function ReservaAcciones() {
   const { token } = useParams<{ token: string }>()
@@ -32,399 +32,223 @@ export function ReservaAcciones() {
   const location = useLocation()
   const [reserva, setReserva] = useState<Reserva | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<TabType>('detalles')
   const [calificacion, setCalificacion] = useState(0)
   const [resena, setResena] = useState('')
-  const [formReprogramar, setFormReprogramar] = useState<FormReprogramar>({
-    fechaNueva: '',
-    horaNueva: '',
-    motivo: ''
-  })
+  const [showReprog, setShowReprog] = useState(false)
+  const [formReprogramar, setFormReprogramar] = useState<FormReprogramar>({ fechaNueva: '', horaNueva: '', motivo: '' })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [done, setDone] = useState<DoneType>(null)
 
-  // 🎯 Detectar acción desde la URL
+  // Deep-link desde el correo: si la URL pide reprogramar, abrimos el form
   useEffect(() => {
-    const path = location.pathname
-    
-    if (path.includes('/confirmar/')) {
-      setActiveTab('acciones')
-      setTimeout(() => {
-        const confirmBtn = document.querySelector('[data-action="confirmar"]')
-        confirmBtn?.scrollIntoView({ behavior: 'smooth' })
-      }, 500)
-    } else if (path.includes('/cancelar/')) {
-      setActiveTab('acciones')
-      setTimeout(() => {
-        const cancelBtn = document.querySelector('[data-action="cancelar"]')
-        cancelBtn?.scrollIntoView({ behavior: 'smooth' })
-      }, 500)
-    } else if (path.includes('/reprogramar/')) {
-      setActiveTab('acciones')
-      setTimeout(() => {
-        const reprogramarBtn = document.querySelector('[data-action="reprogramar"]')
-        reprogramarBtn?.scrollIntoView({ behavior: 'smooth' })
-      }, 500)
-    } else if (path.includes('/calificar/') || path.includes('/resena/')) {
-      setActiveTab('resena')
-    }
+    if (location.pathname.includes('/reprogramar/')) setShowReprog(true)
   }, [location.pathname])
 
-  useEffect(() => {
-    loadReserva()
-  }, [token])
+  useEffect(() => { loadReserva() }, [token])
 
   const loadReserva = async () => {
     try {
-      if (!token) {
-        toast.error('Token inválido')
-        navigate('/')
-        return
-      }
-      // TODO: Descomentar cuando tengas el endpoint
-      // const data = await reservasService.obtenerPorToken(token)
-      // setReserva(data)
-      
-      // Simulación temporal:
+      if (!token) { toast.error('Token inválido'); navigate('/'); return }
+      // TODO: conectar endpoint real:
+      // const data = await reservasService.obtenerPorToken(token); setReserva(data)
       setReserva({
-        idReserva: 1,
-        nombreCliente: 'Juan Pérez',
-        telefonoCliente: '943811931',
-        servicio: 'Corte + Barba',
-        fecha: '2026-05-26',
-        hora: '14:00',
-        profesional: 'Rambo Barber',
-        sede: 'Sede Central',
-        estado: 'Pendiente'
+        idReserva: 1, nombreCliente: 'Juan Pérez', telefonoCliente: '943811931',
+        servicio: 'Corte + Barba', fecha: '2026-05-26', hora: '14:00',
+        profesional: 'Rambo Barber', sede: 'Sede Central', estado: 'Pendiente',
       })
-    } catch (error) {
-      console.error('Error:', error)
+    } catch {
       toast.error('Error cargando reserva')
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
+  }
+
+  // Cierre inteligente: intenta cerrar la pestaña; si no, vuelve atrás (Gmail) o a barber.pe
+  const cerrar = () => {
+    try { window.close() } catch { /* noop */ }
+    setTimeout(() => {
+      if (window.history.length > 1) window.history.back()
+      else window.location.href = 'https://barber.pe'
+    }, 150)
   }
 
   const handleConfirmar = async () => {
     if (!token) return
     setIsSubmitting(true)
     try {
-      // TODO: Descomentar cuando tengas el endpoint
       // await reservasService.confirmarPorToken(token)
-      toast.success('✅ Cita confirmada')
-      setTimeout(() => navigate('/'), 2000)
-    } catch (error) {
-      toast.error('Error al confirmar')
-    } finally {
-      setIsSubmitting(false)
-    }
+      setDone('confirmada')
+    } catch { toast.error('Error al confirmar') } finally { setIsSubmitting(false) }
   }
 
   const handleCancelar = async () => {
     if (!token) return
     setIsSubmitting(true)
     try {
-      // TODO: Descomentar cuando tengas el endpoint
       // await reservasService.cancelarPorToken(token)
-      toast.success('❌ Cita cancelada')
-      setTimeout(() => navigate('/'), 2000)
-    } catch (error) {
-      toast.error('Error al cancelar')
-    } finally {
-      setIsSubmitting(false)
-    }
+      setDone('cancelada')
+    } catch { toast.error('Error al cancelar') } finally { setIsSubmitting(false) }
   }
 
   const handleReprogramar = async () => {
     if (!token || !formReprogramar.fechaNueva || !formReprogramar.horaNueva) {
-      toast.error('Completa fecha y hora')
-      return
+      toast.error('Completa fecha y hora'); return
     }
     setIsSubmitting(true)
     try {
-      // TODO: Descomentar cuando tengas el endpoint
       // await reservasService.reprogramarPorToken(token, formReprogramar)
-      toast.success('🔄 Cita reprogramada')
-      setTimeout(() => navigate('/'), 2000)
-    } catch (error) {
-      toast.error('Error al reprogramar')
-    } finally {
-      setIsSubmitting(false)
-    }
+      setDone('reprogramada')
+    } catch { toast.error('Error al reprogramar') } finally { setIsSubmitting(false) }
   }
 
   const handleCalificar = async () => {
-    if (calificacion === 0) {
-      toast.error('Selecciona una calificación')
-      return
-    }
+    if (calificacion === 0) { toast.error('Selecciona una calificación'); return }
     setIsSubmitting(true)
     try {
-      // TODO: Descomentar cuando tengas el endpoint
-      // await reservasService.calificarPorToken(token, calificacion)
-      toast.success('⭐ Gracias por tu calificación')
-      setCalificacion(0)
-      setActiveTab('resena')
-    } catch (error) {
-      toast.error('Error al calificar')
-    } finally {
-      setIsSubmitting(false)
-    }
+      // await reservasService.resenaPorToken(token, calificacion, resena)
+      setDone('resena')
+    } catch { toast.error('Error al guardar') } finally { setIsSubmitting(false) }
   }
 
-  const handleDejarResena = async () => {
-    if (!resena.trim()) {
-      toast.error('Escribe una reseña')
-      return
+  // Helpers de fecha/hora para el badge
+  const partesFecha = (iso: string) => {
+    const d = new Date(iso + 'T00:00:00')
+    if (isNaN(d.getTime())) return { mes: '', dia: '', dow: '' }
+    const mesRaw = d.toLocaleDateString('es-PE', { month: 'short' }).replace('.', '')
+    const dowRaw = d.toLocaleDateString('es-PE', { weekday: 'long' })
+    return {
+      mes: mesRaw.charAt(0).toUpperCase() + mesRaw.slice(1),
+      dia: String(d.getDate()).padStart(2, '0'),
+      dow: dowRaw.charAt(0).toUpperCase() + dowRaw.slice(1),
     }
-    setIsSubmitting(true)
-    try {
-      // TODO: Descomentar cuando tengas el endpoint
-      // await reservasService.resenaP orToken(token, resena)
-      toast.success('💬 Reseña publicada')
-      setTimeout(() => navigate('/'), 2000)
-    } catch (error) {
-      toast.error('Error al guardar reseña')
-    } finally {
-      setIsSubmitting(false)
-    }
+  }
+  const a12h = (hhmm: string) => {
+    const [h, m] = (hhmm || '').split(':').map(Number)
+    if (isNaN(h)) return hhmm
+    const ap = h >= 12 ? 'PM' : 'AM'
+    const h12 = h % 12 || 12
+    return `${h12}:${String(m || 0).padStart(2, '0')} ${ap}`
   }
 
   if (loading) {
     return (
-      <div className={styles.container}>
-        <div className={styles.loadingContainer}>
-          <div className={styles.spinner}></div>
-          <p>Cargando reserva...</p>
-        </div>
+      <div className={styles.page}>
+        <div className={styles.loading}><div className={styles.spinner} /><p>Cargando tu reserva…</p></div>
       </div>
     )
   }
 
   if (!reserva) {
     return (
-      <div className={styles.container}>
-        <div className={styles.errorContainer}>
-          <p>❌ No se encontró la reserva</p>
-          <button className={styles.primaryButton} onClick={() => navigate('/')}>
-            Volver al inicio
-          </button>
+      <div className={styles.page}>
+        <div className={styles.loading}>
+          <p>No encontramos la reserva.</p>
+          <button className={styles.btnGhost} onClick={cerrar}>Cerrar</button>
         </div>
       </div>
     )
   }
 
+  // ── Pantalla de ÉXITO (tema negro) ──
+  if (done) {
+    const txt = {
+      confirmada:   { t: '¡Cita confirmada!',   s: 'Te esperamos. Ya puedes cerrar esta pestaña.' },
+      cancelada:    { t: 'Cita cancelada',       s: 'Tu cita fue cancelada. Ya puedes cerrar esta pestaña.' },
+      reprogramada: { t: '¡Cita reprogramada!',  s: 'Te enviaremos los nuevos detalles. Ya puedes cerrar esta pestaña.' },
+      resena:       { t: '¡Gracias por tu reseña!', s: 'Tu opinión nos ayuda a mejorar. Ya puedes cerrar esta pestaña.' },
+    }[done]
+    return (
+      <div className={styles.success}>
+        <div className={styles.successIcon}><Check size={54} strokeWidth={3} /></div>
+        <h1 className={styles.successTitle}>{txt.t}</h1>
+        <p className={styles.successSub}>{txt.s}</p>
+        <div className={styles.successBtns}>
+          <button className={styles.btnLight} onClick={cerrar}>Cerrar</button>
+          <button className={styles.btnOutlineLight} onClick={() => { window.location.href = 'https://barber.pe' }}>Volver al inicio</button>
+        </div>
+      </div>
+    )
+  }
+
+  const f = partesFecha(reserva.fecha)
+  const esAtendida = reserva.estado === 'Atendida'
+  const estadoClass = {
+    Pendiente: styles.statusPend, Confirmada: styles.statusConf,
+    Atendida: styles.statusDone, Cancelada: styles.statusCanc,
+  }[reserva.estado]
+
   return (
-    <div className={styles.container}>
-      {/* Header Flotante */}
-      <header className={styles.floatingHeader}>
-        <button 
-          className={styles.headerButton} 
-          onClick={() => navigate('/')}
-        >
-          <ChevronLeft size={20} />
-        </button>
-        <h1 className={styles.headerTitle}>Tu Reserva</h1>
-        <div style={{ width: '2.5rem' }}></div>
+    <div className={styles.page}>
+      <header className={styles.topbar}>
+        <span className={styles.brand}>
+          <span className={styles.brandMark}><Scissors size={15} /></span>
+          barber<span className={styles.brandPe}>.pe</span>
+        </span>
+        <button className={styles.closeBtn} aria-label="Cerrar" onClick={cerrar}><X size={18} /></button>
       </header>
 
-      {/* Contenido */}
-      <div className={styles.content}>
-        {/* Tarjeta Detalles */}
-        <motion.div 
-          className={styles.detailsCard}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <div className={styles.reservaHeader}>
-            <h2 className={styles.servicioNombre}>{reserva.servicio}</h2>
-            <span className={`${styles.badge} ${styles[`badge${reserva.estado}`]}`}>
-              {reserva.estado}
-            </span>
+      <main className={styles.wrap}>
+        <motion.div className={styles.card} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+          <div className={styles.cardTop}>
+            <div className={styles.badge}>
+              <div className={styles.badgeMon}>{f.mes}</div>
+              <div className={styles.badgeDay}>{f.dia}</div>
+              <div className={styles.badgeDow}>{f.dow}</div>
+            </div>
+            <div className={styles.cardHead}>
+              <div className={styles.service}>{reserva.servicio}</div>
+              <div className={styles.timeRow}><Clock size={14} /> {a12h(reserva.hora)}</div>
+            </div>
+            <span className={`${styles.status} ${estadoClass}`}>{reserva.estado}</span>
           </div>
 
-          <div className={styles.detailsGrid}>
-            <div className={styles.detailItem}>
-              <Calendar size={18} className={styles.icon} />
-              <div>
-                <p className={styles.label}>Fecha</p>
-                <p className={styles.value}>{reserva.fecha}</p>
-              </div>
+          <div className={styles.details}>
+            <div className={styles.detailRow}>
+              <span className={styles.detailIcon}><User size={16} /></span>
+              <div><div className={styles.detailLabel}>Profesional</div><div className={styles.detailValue}>{reserva.profesional}</div></div>
             </div>
-
-            <div className={styles.detailItem}>
-              <Clock size={18} className={styles.icon} />
-              <div>
-                <p className={styles.label}>Hora</p>
-                <p className={styles.value}>{reserva.hora}</p>
-              </div>
-            </div>
-
-            <div className={styles.detailItem}>
-              <User size={18} className={styles.icon} />
-              <div>
-                <p className={styles.label}>Profesional</p>
-                <p className={styles.value}>{reserva.profesional}</p>
-              </div>
-            </div>
-
-            <div className={styles.detailItem}>
-              <MapPin size={18} className={styles.icon} />
-              <div>
-                <p className={styles.label}>Sede</p>
-                <p className={styles.value}>{reserva.sede}</p>
-              </div>
+            <div className={styles.detailRow}>
+              <span className={styles.detailIcon}><MapPin size={16} /></span>
+              <div><div className={styles.detailLabel}>Sede</div><div className={styles.detailValue}>{reserva.sede}</div></div>
             </div>
           </div>
         </motion.div>
 
-        {/* Tabs de Acciones */}
-        <div className={styles.tabsContainer}>
-          {reserva.estado === 'Atendida' ? (
-            <>
-              <button 
-                className={`${styles.tab} ${activeTab === 'resena' ? styles.tabActive : ''}`}
-                onClick={() => setActiveTab('resena')}
-              >
-                <Star size={16} /> Calificar & Reseña
-              </button>
-            </>
-          ) : (
-            <>
-              <button 
-                className={`${styles.tab} ${activeTab === 'detalles' ? styles.tabActive : ''}`}
-                onClick={() => setActiveTab('detalles')}
-              >
-                Detalles
-              </button>
-              <button 
-                className={`${styles.tab} ${activeTab === 'acciones' ? styles.tabActive : ''}`}
-                onClick={() => setActiveTab('acciones')}
-              >
-                Acciones
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Contenido Tabs */}
-        {activeTab === 'acciones' && (
-          <motion.div 
-            className={styles.actionsContainer}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            {/* Confirmar */}
-            <div className={styles.actionCard} data-action="confirmar">
-              <h3>✅ Confirmar Cita</h3>
-              <p>Confirma que asistirás a la cita programada</p>
-              <button 
-                className={styles.primaryButton}
-                onClick={handleConfirmar}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Confirmando...' : 'Confirmar'}
-              </button>
-            </div>
-
-            {/* Reprogramar */}
-            <div className={styles.actionCard} data-action="reprogramar">
-              <h3>🔄 Reprogramar Cita</h3>
-              <p>Cambia la fecha y hora de tu cita</p>
-              <input 
-                type="date"
-                className={styles.input}
-                value={formReprogramar.fechaNueva}
-                onChange={(e) => setFormReprogramar({...formReprogramar, fechaNueva: e.target.value})}
-              />
-              <input 
-                type="time"
-                className={styles.input}
-                value={formReprogramar.horaNueva}
-                onChange={(e) => setFormReprogramar({...formReprogramar, horaNueva: e.target.value})}
-              />
-              <textarea 
-                className={styles.textarea}
-                placeholder="Motivo (opcional)"
-                value={formReprogramar.motivo}
-                onChange={(e) => setFormReprogramar({...formReprogramar, motivo: e.target.value})}
-              />
-              <button 
-                className={styles.primaryButton}
-                onClick={handleReprogramar}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Reprogramando...' : 'Reprogramar'}
-              </button>
-            </div>
-
-            {/* Cancelar */}
-            <div className={styles.actionCard} data-action="cancelar">
-              <h3>❌ Cancelar Cita</h3>
-              <p>Cancela tu cita (no podrás deshacer esta acción)</p>
-              <button 
-                className={styles.dangerButton}
-                onClick={handleCancelar}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Cancelando...' : 'Cancelar Cita'}
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        {activeTab === 'resena' && (
-          <motion.div 
-            className={styles.resenaContainer}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            {/* Calificación */}
-            <div className={styles.ratingCard}>
-              <h3>⭐ ¿Cómo fue tu experiencia?</h3>
-              <div className={styles.starsContainer}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    className={`${styles.star} ${calificacion >= star ? styles.starFilled : ''}`}
-                    onClick={() => setCalificacion(star)}
-                  >
-                    <Star size={32} />
-                  </button>
+        {esAtendida ? (
+          <div className={styles.actions}>
+            <div className={styles.block}>
+              <div className={styles.blockTitle}>¿Cómo fue tu experiencia?</div>
+              <div className={styles.stars}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button key={n} className={`${styles.star} ${calificacion >= n ? styles.starOn : ''}`} onClick={() => setCalificacion(n)} aria-label={`${n} estrellas`}><Star size={28} /></button>
                 ))}
               </div>
-              <button 
-                className={styles.primaryButton}
-                onClick={handleCalificar}
-                disabled={isSubmitting || calificacion === 0}
-              >
-                {isSubmitting ? 'Guardando...' : 'Guardar Calificación'}
-              </button>
+              <textarea className={styles.textarea} placeholder="Cuéntanos tu experiencia (opcional)…" value={resena} onChange={(e) => setResena(e.target.value)} rows={4} />
+              <button className={styles.btnPrimary} onClick={handleCalificar} disabled={isSubmitting || calificacion === 0}>{isSubmitting ? 'Guardando…' : 'Enviar reseña'}</button>
             </div>
+          </div>
+        ) : (
+          <div className={styles.actions}>
+            <button className={styles.btnPrimary} onClick={handleConfirmar} disabled={isSubmitting}>
+              <Check size={18} /> {isSubmitting ? 'Confirmando…' : 'Confirmar asistencia'}
+            </button>
 
-            {/* Reseña */}
-            <div className={styles.reviewCard}>
-              <h3>💬 Cuéntanos tu experiencia</h3>
-              <textarea 
-                className={styles.textarea}
-                placeholder="Escribe tu reseña aquí... (mínimo 10 caracteres)"
-                value={resena}
-                onChange={(e) => setResena(e.target.value)}
-                rows={6}
-              />
-              <button 
-                className={styles.primaryButton}
-                onClick={handleDejarResena}
-                disabled={isSubmitting || resena.length < 10}
-              >
-                {isSubmitting ? 'Publicando...' : 'Publicar Reseña'}
-              </button>
-            </div>
-          </motion.div>
+            {!showReprog ? (
+              <button className={styles.btnGhost} onClick={() => setShowReprog(true)}><CalendarClock size={17} /> Reprogramar cita</button>
+            ) : (
+              <div className={styles.block}>
+                <div className={styles.blockTitle}><CalendarClock size={17} /> Reprogramar cita</div>
+                <div className={styles.inputRow}>
+                  <input type="date" className={styles.input} value={formReprogramar.fechaNueva} onChange={(e) => setFormReprogramar({ ...formReprogramar, fechaNueva: e.target.value })} />
+                  <input type="time" className={styles.input} value={formReprogramar.horaNueva} onChange={(e) => setFormReprogramar({ ...formReprogramar, horaNueva: e.target.value })} />
+                </div>
+                <textarea className={styles.textarea} placeholder="Motivo (opcional)" value={formReprogramar.motivo} onChange={(e) => setFormReprogramar({ ...formReprogramar, motivo: e.target.value })} rows={2} />
+                <button className={styles.btnPrimary} onClick={handleReprogramar} disabled={isSubmitting}>{isSubmitting ? 'Reprogramando…' : 'Confirmar nueva fecha'}</button>
+              </div>
+            )}
+
+            <button className={styles.btnDanger} onClick={handleCancelar} disabled={isSubmitting}><X size={16} /> {isSubmitting ? 'Cancelando…' : 'Cancelar cita'}</button>
+          </div>
         )}
-      </div>
+      </main>
     </div>
   )
 }

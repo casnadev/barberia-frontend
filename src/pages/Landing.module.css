@@ -467,3 +467,20 @@
 .finalPhoto::after { content: ""; position: absolute; inset: 0; background: linear-gradient(120deg, rgba(12,14,22,.92), rgba(30,63,204,.74)); z-index: 0; }
 .finalPhoto > * { position: relative; z-index: 1; }
 .finalPhoto p { color: #dbe4ff !important; }
+/* ── Lote 1: fila estática (reemplaza el marquee, sin animación) ── */
+.strip { display: flex; gap: 14px; overflow-x: auto; padding: 6px 2px 12px;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.strip::-webkit-scrollbar { display: none; }
+
+/* ── Toggle Correo / WhatsApp del formulario de acceso ── */
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.seg button { display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 11px 10px; border: 1.5px solid var(--line); border-radius: var(--r);
+  background: #fff; color: var(--ink-2); font-weight: 700; font-size: 14px;
+  cursor: pointer; transition: border-color .15s, background .15s, color .15s; }
+.seg button.segOn { border-color: var(--ink); background: var(--ink); color: #fff; }
+
+/* ── Modal de acceso más ajustado en mobile ── */
+@media (max-width: 480px) {
+  .formCard { padding: 22px 18px; }
+}
