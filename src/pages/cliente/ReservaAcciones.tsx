@@ -149,17 +149,23 @@ export function ReservaAcciones() {
 
   // ── Pantalla de ÉXITO (tema negro) ──
   if (done) {
-    const txt = {
-      confirmada:   { t: '¡Cita confirmada!',   s: 'Te esperamos. Ya puedes cerrar esta pestaña.' },
-      cancelada:    { t: 'Cita cancelada',       s: 'Tu cita fue cancelada. Ya puedes cerrar esta pestaña.' },
-      reprogramada: { t: '¡Cita reprogramada!',  s: 'Te enviaremos los nuevos detalles. Ya puedes cerrar esta pestaña.' },
-      resena:       { t: '¡Gracias por tu reseña!', s: 'Tu opinión nos ayuda a mejorar. Ya puedes cerrar esta pestaña.' },
+    const titulo = {
+      confirmada: '¡Cita confirmada!',
+      reprogramada: '¡Cita reprogramada!',
+      cancelada: 'Tu cita fue cancelada',
+      resena: '¡Gracias por tu reseña!',
+    }[done]
+    const subtitulo = {
+      confirmada: 'Te esperamos. Ya puedes cerrar esta pestaña.',
+      reprogramada: 'Tu cita quedó confirmada para la nueva fecha. ¡Te esperamos! Ya puedes cerrar esta pestaña.',
+      cancelada: '¡Esperamos verte pronto! Cuando quieras, reserva de nuevo. 👋',
+      resena: 'Tu opinión nos ayuda a mejorar. Ya puedes cerrar esta pestaña.',
     }[done]
     return (
       <div className={styles.success}>
         <div className={styles.successIcon}><Check size={54} strokeWidth={3} /></div>
-        <h1 className={styles.successTitle}>{txt.t}</h1>
-        <p className={styles.successSub}>{txt.s}</p>
+        <h1 className={styles.successTitle}>{titulo}</h1>
+        <p className={styles.successSub}>{subtitulo}</p>
         <div className={styles.successBtns}>
           <button className={styles.btnLight} onClick={cerrar}>Cerrar</button>
           <button className={styles.btnOutlineLight} onClick={() => { window.location.href = 'https://barber.pe' }}>Volver al inicio</button>

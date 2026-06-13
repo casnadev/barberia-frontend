@@ -1,38 +1,29 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
-  Scissors, CalendarCheck, CalendarClock, Wallet, Users, Globe, Star,
-  Check, X, ShieldCheck, ArrowRight, Plus, Menu, FileSpreadsheet, FileText, Mail, Phone,
+  Scissors, CalendarClock, Wallet, Globe, Star, BarChart3,
+  Check, X, ShieldCheck, ArrowRight, ArrowLeft, Plus, Minus, Menu,
+  Heart, Mail, Phone, Instagram, Facebook, Youtube, MapPin,
 } from 'lucide-react'
 import { landingService, type SedeDestacada } from '@/services/landingService'
+import { planesService, type PlanPublico } from '@/services/planesService'
+import { resenasPublicasService, type ResenaDestacada } from '@/services/resenasPublicasService'
 import { setTenant, buildImageUrl, apiClient } from '@/services/apiClient'
 import styles from './Landing.module.css'
 
 /* ════════════════════════════════════════════════════════════════════════
    CONFIGURACIÓN — ajustar antes de publicar
    ════════════════════════════════════════════════════════════════════════ */
-const WHATSAPP = '51999888777'         // ← tu número real (51 + 9 dígitos)
-
-// Respaldo si aún no existe GET /api/Sedes/publicas (ver LEEME). Con ese endpoint,
-// el carrusel y los avatares muestran TODAS las sedes automáticamente.
+const WHATSAPP = '51999888777' // ← número real (51 + 9 dígitos) para "Agendar reunión"
+// Respaldo si aún no hay sedes públicas en BD: la vitrina degrada con elegancia.
 const SEDES_FALLBACK = ['demo', 'barberhouse-sanisidro', 'sanisidro']
-
-// Fotos de ambiente (Pexels, uso libre). RECOMENDADO: descárgalas y sírvelas desde
-// tu propio dominio (ej. /img/...) para mejor velocidad y para no depender de Pexels.
-const PHOTOS = {
-  gallery: [
-    { src: 'https://images.pexels.com/photos/7518728/pexels-photo-7518728.jpeg?auto=compress&cs=tinysrgb&w=1200', cap: 'Tu local', bg: '#1b2440' },
-    { src: 'https://images.pexels.com/photos/2035227/pexels-photo-2035227.jpeg?auto=compress&cs=tinysrgb&w=1200', cap: 'Cada corte', bg: '#22184a' },
-    { src: 'https://images.pexels.com/photos/1813272/pexels-photo-1813272.jpeg?auto=compress&cs=tinysrgb&w=1200', cap: 'Tu equipo', bg: '#0e2a2a' },
-  ],
-  cta: 'https://images.pexels.com/photos/3998403/pexels-photo-3998403.jpeg?auto=compress&cs=tinysrgb&w=1600',
-}
 
 /* ── helpers ───────────────────────────────────────────────────────────── */
 const waLink = (t: string) => `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(t)}`
-const iniciales = (n: string) => n.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
-const AV_PAL = ['#2855F6', '#1E3FCC', '#5076F8', '#1b2440', '#2855F6']
+const iniciales = (n: string) =>
+  n.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
+const soles = (n: number) => `S/${Number.isInteger(n) ? n : n.toFixed(2)}`
 
 const WaIcon = ({ size = 18 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -43,50 +34,59 @@ const WaIcon = ({ size = 18 }: { size?: number }) => (
 const ease = [0.2, 0.7, 0.2, 1] as const
 function Reveal({ children, delay = 0, className }: { children: React.ReactNode; delay?: number; className?: string }) {
   return (
-    <motion.div className={className} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.55, delay, ease }}>
+    <motion.div className={className} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.5, delay, ease }}>
       {children}
     </motion.div>
   )
 }
 
-/* Testimonios de MUESTRA — reemplázalos por reseñas reales antes de publicar.
-   Publicar reseñas inventadas como reales es publicidad engañosa. */
-const TESTIMONIOS = [
-  { s: 5, q: 'Los recordatorios por WhatsApp nos bajaron los plantones casi a la mitad. El cliente confirma y ya no se olvida.', n: 'Andrés Quispe', r: 'Dueño · Barbería El Patrón' },
-  { s: 5, q: 'Ahora el cliente reserva solo desde el link. Dejé de vivir pegado al WhatsApp respondiendo "¿hay hueco?".', n: 'Marco Ríos', r: 'Barbero · Fade Studio' },
-  { s: 5, q: 'El cierre de caja al final del día es lo mejor. Sé cuánto entró y cuánto le toca a cada barbero.', n: 'Luis Paredes', r: 'Administrador · Don Barbas' },
-  { s: 5, q: 'Manejo mis dos locales desde una sola cuenta. La agenda de cada sede por separado me ordenó todo.', n: 'Diego Salas', r: 'Dueño · Salas Barber Co.' },
-  { s: 5, q: 'Lo configuramos en una tarde. Mis barberos lo usan desde el celular sin que les explique nada.', n: 'Renzo Cárdenas', r: 'Dueño · The Cut Lab' },
-  { s: 5, q: 'Tener mi propia página de reservas con mi marca se ve mucho más profesional que un grupo de WhatsApp.', n: 'Kevin Torres', r: 'Barbero · Urban Barber' },
+/* Ventajas de la plataforma (contenido estático del producto). */
+const VENTAJAS = [
+  { icon: <WaIcon size={20} />, t: 'Reservas por WhatsApp 24/7', d: 'Tus clientes reservan, confirman y reprograman solos desde un link. Tú dejas de vivir respondiendo "¿hay hueco?".', tone: 'green' },
+  { icon: <CalendarClock size={20} />, t: 'Agenda por barbero', d: 'Cada barbero ve su propia agenda. Sin choques de horario ni citas pisadas.', tone: 'blue' },
+  { icon: <Wallet size={20} />, t: 'Caja y comisiones claras', d: 'Registra ventas por método de pago y al cierre sabes cuánto entró y cuánto le toca a cada barbero.', tone: 'amber' },
+  { icon: <BarChart3 size={20} />, t: 'Reportes en un clic', d: 'Mira tu mejor día, tu ticket promedio y exporta a Excel o PDF con tu logo.', tone: 'purple' },
+  { icon: <Globe size={20} />, t: 'Tu página, tu marca', d: 'Un sitio de reservas con tu logo y color en tu propio subdominio. Tu marca, no un marketplace.', tone: 'paper' },
 ]
 
-// Barras del mini-reporte (estáticas, demostrativas; fines de semana resaltados)
-const REPORT_BARS = (() => {
-  const baseByWd: Record<number, number> = { 0: 24, 1: 46, 2: 42, 3: 48, 4: 54, 5: 74, 6: 96 }
-  const out: { h: number; we: boolean }[] = []
-  for (let d = 1; d <= 26; d++) {
-    const wd = new Date(2026, 5, d).getDay()
-    const h = Math.max(8, Math.min(100, Math.round(baseByWd[wd] * (1 + (((d * 37) % 11) - 5) / 100))))
-    out.push({ h, we: wd === 0 || wd === 6 })
-  }
-  return out
-})()
+/* FAQ — preguntas del wireframe + respuestas reales del producto. */
+const FAQS: [string, string][] = [
+  ['¿Mis clientes necesitan descargar una app?', 'No. Reservan desde tu link en el navegador y reciben todo por WhatsApp. Pueden confirmar, reprogramar o cancelar sin instalar nada.'],
+  ['¿Puedo poner mi logo, mi color y mi marca?', 'Sí. Cada barbería vive en su propio subdominio (ej. tubarberia.barber.pe) con tu logo, color de marca y datos. Es tu página, no un marketplace.'],
+  ['¿Cómo funcionan las comisiones de mis barberos?', 'Cada barbero tiene su agenda y sus comisiones se calculan solas según los servicios que atendió. Al cierre de caja ves cuánto le toca a cada uno.'],
+  ['¿Puedo ver cuánto gané y exportarlo?', 'Sí. Consultas por fecha o rango, ves gráficos y tu mejor día, y exportas el reporte a Excel o PDF con el logo de tu barbería en un clic.'],
+]
+
+/* Señales de confianza bajo los precios (contenido estático). */
+const BADGES = [
+  { icon: <Check size={18} />, t: 'Empieza gratis hoy', d: 'Días de prueba sin tarjeta' },
+  { icon: <X size={18} />, t: 'Sin contratos', d: 'Cancela cuando quieras' },
+  { icon: <WaIcon size={16} />, t: 'Soporte humano', d: 'Te ayudamos por WhatsApp' },
+  { icon: <ShieldCheck size={18} />, t: 'Seguridad garantizada', d: 'Tus datos siempre respaldados' },
+]
 
 /* ════════════════════════════════════════════════════════════════════════ */
 export default function LandingPage() {
   const navigate = useNavigate()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [ciclo, setCiclo] = useState<'mes' | 'anio'>('mes')
   const [faq, setFaq] = useState<number | null>(0)
+
   const [sedes, setSedes] = useState<SedeDestacada[]>([])
+  const [planes, setPlanes] = useState<PlanPublico[]>([])
+  const [resenas, setResenas] = useState<ResenaDestacada[]>([])
+
   const [lead, setLead] = useState({ negocio: '', duenio: '', tipoContacto: 'correo' as 'correo' | 'whatsapp', contacto: '' })
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
   const [err, setErr] = useState('')
   const [demoOpen, setDemoOpen] = useState(false)
 
+  const sedesRail = useRef<HTMLDivElement>(null)
+  const resenasRail = useRef<HTMLDivElement>(null)
+
+  /* ── efectos ──────────────────────────────────────────────────────── */
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12)
     onScroll(); window.addEventListener('scroll', onScroll, { passive: true })
@@ -96,13 +96,26 @@ export default function LandingPage() {
   useEffect(() => {
     let alive = true
     landingService.getSedesPublicas(SEDES_FALLBACK).then((s) => { if (alive) setSedes(s) })
+    planesService.getPublicos().then((p) => { if (alive) setPlanes(p) })
+    resenasPublicasService.getDestacadas(12).then((r) => { if (alive) setResenas(r) })
     return () => { alive = false }
   }, [])
 
+  useEffect(() => {
+    if (!demoOpen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDemoOpen(false) }
+    document.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
+  }, [demoOpen])
+
+  /* ── acciones ─────────────────────────────────────────────────────── */
   const irA = (id: string) => { setMenuOpen(false); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
-  const ejemplo = sedes[0] ?? null
-  const verEjemplo = () => { if (!ejemplo) return; if (ejemplo.subdominio) setTenant(ejemplo.subdominio); navigate(`/sede/${ejemplo.idSede}`) }
   const verSede = (s: SedeDestacada) => { if (s.subdominio) setTenant(s.subdominio); navigate(`/sede/${s.idSede}`) }
+  const abrirDemo = () => { setEnviado(false); setErr(''); setDemoOpen(true) }
+  const scrollRail = (ref: React.RefObject<HTMLDivElement>, dir: 1 | -1) =>
+    ref.current?.scrollBy({ left: dir * Math.min(ref.current.clientWidth * 0.8, 520), behavior: 'smooth' })
 
   const enviarLead = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -121,99 +134,61 @@ export default function LandingPage() {
     } finally { setEnviando(false) }
   }
 
-  const abrirDemo = () => { setEnviado(false); setErr(''); setDemoOpen(true) }
-
-  useEffect(() => {
-    if (!demoOpen) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDemoOpen(false) }
-    document.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
-  }, [demoOpen])
-
-  const proMes = ciclo === 'mes' ? 59 : 49
-  const cadMes = ciclo === 'mes' ? 119 : 99
-
-  const mqSedes = useMemo(() => {
-    if (!sedes.length) return []
-    const o = [...sedes]; while (o.length < 6) o.push(...sedes); return o
-  }, [sedes])
+  /* ── datos derivados ──────────────────────────────────────────────── */
+  // Planes de pago para las tarjetas; el plan gratis (si existe) define el CTA.
+  const planesPago = planes.filter((p) => !p.esGratis)
+  const planGratis = planes.find((p) => p.esGratis)
+  const tarjetas = planesPago.length ? planesPago : planes
+  const ctaPrueba = planGratis ? 'Probar gratis' : 'Empezar gratis'
   const avatars = sedes.slice(0, 5)
 
-  const Si = () => <span className={styles.yes}><Check size={13} /></span>
-  const No = () => <span className={styles.no}><X size={13} /></span>
-  type Cell = { y?: boolean; n?: boolean; t?: string; mut?: boolean }
-  const cell = (c: Cell, k: number) =>
-    c.y ? <Si key={k} /> : c.n ? <No key={k} />
-      : <span key={k} className={c.mut ? styles.mxTxtMut : styles.mxTxt}>{c.t}</span>
-
-  const matrix: { f: string; cols: [Cell, Cell, Cell] }[] = [
-    { f: 'Página de reservas propia', cols: [{ y: true }, { y: true }, { y: true }] },
-    { f: 'Reservas online', cols: [{ t: 'Ilimitadas' }, { t: 'Ilimitadas' }, { t: 'Ilimitadas' }] },
-    { f: 'Barberos', cols: [{ t: '1' }, { t: 'Ilimitados' }, { t: 'Ilimitados' }] },
-    { f: 'Sedes', cols: [{ t: '1' }, { t: '1' }, { t: 'Ilimitadas' }] },
-    { f: 'Recordatorios WhatsApp', cols: [{ t: '30/mes', mut: true }, { t: '1.000/mes' }, { t: '3.000/mes' }] },
-    { f: 'Agenda por barbero', cols: [{ y: true }, { y: true }, { y: true }] },
-    { f: 'Gestión de clientes', cols: [{ y: true }, { y: true }, { y: true }] },
-    { f: 'Caja y reportes', cols: [{ n: true }, { y: true }, { y: true }] },
-    { f: 'Gastos e inventario', cols: [{ n: true }, { y: true }, { y: true }] },
-    { f: 'Comisiones por barbero', cols: [{ n: true }, { y: true }, { y: true }] },
-    { f: 'Reseñas automáticas', cols: [{ n: true }, { y: true }, { y: true }] },
-    { f: 'Dominio y marca propia', cols: [{ t: 'Básico', mut: true }, { y: true }, { y: true }] },
-    { f: 'Panel de toda la cadena', cols: [{ n: true }, { n: true }, { y: true }] },
-    { f: 'Roles y permisos por sede', cols: [{ n: true }, { n: true }, { y: true }] },
-    { f: 'Soporte', cols: [{ t: 'Por WhatsApp', mut: true }, { t: 'Prioritario' }, { t: 'Prioritario + onboarding' }] },
-  ]
-
-  const nav = ['Funciones', 'Reportes', 'Precios', 'Preguntas']
-  const navIds = ['funciones', 'reportes', 'precios', 'faq']
+  const navLinks: [string, string][] = [['Características', 'ventajas'], ['Planes/Precios', 'precios'], ['Contacto', 'contacto']]
 
   return (
     <div className={styles.page}>
-      {/* NAV */}
-      <header className={`${styles.nav} ${scrolled ? styles.navScrolled : ''}`}>
+      {/* ══════════ NAV ══════════ */}
+      <header className={`${styles.nav} ${scrolled ? styles.navOn : ''}`}>
         <div className={styles.navIn}>
-          <span className={styles.logo} onClick={() => irA('top')}><span className={styles.logoMark}><Scissors size={18} /></span>barber<span className={styles.pe}>.pe</span></span>
-          <nav className={styles.navLinks}>{nav.map((n, i) => <a key={n} onClick={() => irA(navIds[i])}>{n}</a>)}</nav>
+          <span className={styles.logo} onClick={() => irA('top')}>
+            <span className={styles.logoMark}><Scissors size={17} /></span>BARBER<span className={styles.pe}>.PE</span>
+          </span>
+          <nav className={styles.navLinks}>
+            {navLinks.map(([n, id]) => <a key={id} onClick={() => irA(id)}>{n}</a>)}
+          </nav>
           <div className={styles.navCta}>
-            <Link to="/login" className={styles.linkLogin}>Ingresar</Link>
-            <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={abrirDemo}>Prueba gratis</button>
+            <Link to="/login" className={styles.linkLogin}>Iniciar sesión</Link>
+            <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={abrirDemo}>Empieza GRATIS</button>
             <button className={styles.hamb} aria-label="Menú" onClick={() => setMenuOpen((v) => !v)}>{menuOpen ? <X size={22} /> : <Menu size={22} />}</button>
           </div>
         </div>
         {menuOpen && (
           <div className={styles.mobileMenu}>
-            {nav.map((n, i) => <a key={n} onClick={() => irA(navIds[i])}>{n}</a>)}
-            <Link to="/login" className={`${styles.btn} ${styles.btnGhost}`}>Ingresar</Link>
-            <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={abrirDemo}>Prueba gratis</button>
+            {navLinks.map(([n, id]) => <a key={id} onClick={() => irA(id)}>{n}</a>)}
+            <Link to="/login" className={`${styles.btn} ${styles.btnGhost}`}>Iniciar sesión</Link>
+            <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={abrirDemo}>Empieza GRATIS</button>
           </div>
         )}
       </header>
 
-      {/* HERO */}
+      {/* ══════════ HERO ══════════ */}
       <section className={styles.hero} id="top">
-        <div className={styles.heroBg}><div className={styles.heroGrid} /></div>
+        <div className={styles.heroBg} />
         <div className={`${styles.wrap} ${styles.heroIn}`}>
-          <div>
-            <Reveal><span className={styles.pillBadge}>🇵🇪 Software para barberías, hecho en Perú</span></Reveal>
-            <Reveal delay={0.05}><h1>La agenda inteligente para tu barbería</h1></Reveal>
-            <Reveal delay={0.1}><p className={styles.heroSub}>Tu propia página de reservas, recordatorios por WhatsApp, agenda por barbero y caja — todo en una sola plataforma. En soles, <b>sin comisiones</b>, lista en minutos.</p></Reveal>
+          <div className={styles.heroCopy}>
+            <Reveal><span className={styles.pill}>🇵🇪 Software para barberías · hecho en Perú</span></Reveal>
+            <Reveal delay={0.05}>
+              <h1>Más clientes en tu barbería <span className={styles.hl}>automatizando las citas por WhatsApp</span></h1>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <p className={styles.heroSub}>Tus clientes reservan, confirman y reprograman solos las 24 horas. Tú recibes la cita en tu agenda sin mover un dedo — en soles y sin comisiones.</p>
+            </Reveal>
             <Reveal delay={0.15}>
               <div className={styles.heroCta}>
-                <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnLg}`} onClick={abrirDemo}>Prueba gratis <ArrowRight size={18} /></button>
-                {ejemplo
-                  ? <button className={styles.btnLink} onClick={verEjemplo}>Ver una barbería de ejemplo <ArrowRight size={16} /></button>
-                  : <button className={`${styles.btn} ${styles.btnGhost} ${styles.btnLg}`} onClick={() => irA('funciones')}>Ver funciones</button>}
+                <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnLg}`} onClick={abrirDemo}>Inicia tu prueba GRATIS <ArrowRight size={18} /></button>
               </div>
             </Reveal>
-            <Reveal delay={0.2}>
-              <div className={styles.heroAside}>
-                <span><i className={styles.ck}><Check size={12} /></i> Sin comisiones</span>
-                <span><i className={styles.ck}><Check size={12} /></i> Sin permanencia</span>
-                <span><i className={styles.ck}><Check size={12} /></i> Soporte por WhatsApp</span>
-              </div>
-            </Reveal>
+            <Reveal delay={0.2}><p className={styles.heroNote}>No requiere tarjeta de crédito.</p></Reveal>
+
             <Reveal delay={0.25}>
               <div className={styles.proof}>
                 <div className={styles.avs}>
@@ -222,367 +197,305 @@ export default function LandingPage() {
                     const ini = isSede ? iniciales(s.nombre || 'B') : ['AQ', 'MR', 'LP', 'DS'][i]
                     const logo = isSede && s.logoUrl ? buildImageUrl(s.logoUrl) : ''
                     return (
-                      <span key={i} className={styles.a} style={{ background: AV_PAL[i % AV_PAL.length] }}>
+                      <span key={i} className={styles.av}>
                         {logo ? <img src={logo} alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).replaceWith(document.createTextNode(ini)) }} /> : ini}
                       </span>
                     )
                   })}
-                  {sedes.length > 5 && <span className={`${styles.a} ${styles.more}`}>+{sedes.length - 5}</span>}
+                  {sedes.length > 5 && <span className={`${styles.av} ${styles.avMore}`}>+{sedes.length - 5}</span>}
                 </div>
-                <div className={styles.proofMeta}><div className={styles.st}>★★★★★</div><div className={styles.tx}>Barberías de Lima, Arequipa y más <b>ya reservan con barber.pe</b></div></div>
+                <div className={styles.proofTxt}>
+                  <span className={styles.stars}>★★★★★</span>
+                  <span>{sedes.length ? <><b>{sedes.length} barberías</b> ya reservan con barber.pe</> : 'Barberías de todo el Perú ya reservan con barber.pe'}</span>
+                </div>
               </div>
             </Reveal>
           </div>
 
+          {/* Panel "Beneficios · Sistema de citas" */}
           <Reveal delay={0.15} className={styles.heroVisual}>
             <div className={styles.panel}>
-              <div className={styles.panelBar}>
-                <span className={styles.dot} style={{ background: '#FF5F57' }} /><span className={styles.dot} style={{ background: '#FEBC2E' }} /><span className={styles.dot} style={{ background: '#28C840' }} />
-                <span className={styles.tab}>Panel · Hoy</span>
+              <div className={styles.panelTop}>
+                <span className={styles.panelEye}>Beneficios</span>
+                <span className={styles.panelTitle}>Sistema de citas</span>
               </div>
               <div className={styles.panelBody}>
-                <div className={styles.panelHd}><span className={styles.h}>Agenda de hoy</span><span className={styles.s}>Vie 6 jun</span></div>
                 <div className={styles.kpis}>
-                  <div className={styles.kpi}><div className={styles.l}>Reservas</div><div className={`${styles.v} ${styles.tnum}`}>18</div><div className={`${styles.d} ${styles.up}`}>+12%</div></div>
-                  <div className={styles.kpi}><div className={styles.l}>Ocupación</div><div className={`${styles.v} ${styles.tnum}`}>86%</div><div className={styles.d}>&nbsp;</div></div>
-                  <div className={styles.kpi}><div className={styles.l}>Ingresos</div><div className={`${styles.v} ${styles.tnum}`}>S/1.240</div><div className={`${styles.d} ${styles.up}`}>hoy</div></div>
+                  <div className={styles.kpi}><span className={styles.l}>Reservas hoy</span><span className={styles.v}>18</span><span className={styles.up}>+12%</span></div>
+                  <div className={styles.kpi}><span className={styles.l}>Ocupación</span><span className={styles.v}>86%</span></div>
+                  <div className={styles.kpi}><span className={styles.l}>Ingresos</span><span className={styles.v}>S/1.240</span></div>
                 </div>
                 <div className={styles.agendaHd}>Próximas citas</div>
-                {[['09:30', 'CR', 'Carlos Ramírez', 'Corte + barba', 'ok'], ['10:15', 'JM', 'José Medina', 'Corte clásico', 'ok'], ['11:00', 'LP', 'Luis Paredes', 'Perfilado de barba', 'wait']].map(([t, av, n, x, st]) => (
+                {([['09:30', 'Carlos Ramírez', 'Corte + barba', true], ['10:15', 'José Medina', 'Corte clásico', true], ['11:00', 'Luis Paredes', 'Perfilado', false]] as const).map(([t, n, x, ok]) => (
                   <div className={styles.row} key={t}>
-                    <span className={styles.time}>{t}</span><span className={styles.av}>{av}</span>
-                    <span className={styles.meta}><span className={styles.n}>{n}</span><span className={styles.x}>{x}</span></span>
-                    <span className={`${styles.chip} ${st === 'ok' ? styles.chipOk : styles.chipWait}`}>{st === 'ok' ? 'Confirmado' : 'Por confirmar'}</span>
+                    <span className={styles.time}>{t}</span>
+                    <span className={styles.rowMeta}><b>{n}</b><small>{x}</small></span>
+                    <span className={`${styles.chip} ${ok ? styles.chipOk : styles.chipWait}`}>{ok ? 'Confirmado' : 'Por confirmar'}</span>
                   </div>
                 ))}
+                <div className={styles.waNote}><span className={styles.waDot}><WaIcon size={13} /></span> Recordatorio enviado por WhatsApp ✓</div>
               </div>
             </div>
-            <div className={styles.miniPhone}>
-              <div className={styles.scr}>
-                <div className={styles.mpTop}><div className={styles.mpLogo}><Scissors size={17} /></div></div>
-                <div className={styles.mpBody}>
-                  <div className={styles.mpName}>Barbería El Patrón</div>
-                  <div className={styles.mpMeta}>★★★★★ 4.9 · Reservar</div>
-                  <div className={styles.mpSv}><span><div className={styles.nm}>Corte clásico</div><div className={styles.pr}>30 min · S/35</div></span><span className={styles.bk}>Reservar</span></div>
-                  <div className={styles.mpSv}><span><div className={styles.nm}>Corte + barba</div><div className={styles.pr}>45 min · S/50</div></span><span className={styles.bk}>Reservar</span></div>
-                </div>
-              </div>
-            </div>
-            <div className={`${styles.floatChip} ${styles.fc1}`}><span className={styles.i}><Check size={15} /></span><div>Reserva confirmada<small>hace 2 min</small></div></div>
-            <div className={`${styles.floatChip} ${styles.fc2}`}><span className={styles.i}><WaIcon size={15} /></span><div>Recordatorio enviado<small>WhatsApp ✓</small></div></div>
+            <div className={`${styles.floatChip} ${styles.fc1}`}><span className={styles.fci}><Check size={14} /></span><div>Reserva confirmada<small>hace 2 min</small></div></div>
           </Reveal>
         </div>
       </section>
 
-      {/* CARRUSEL DE SEDES */}
-      <div className={styles.trust}>
+      {/* ══════════ YA CONFÍAN EN NOSOTROS ══════════ */}
+      <section className={styles.sec} id="confian">
         <div className={styles.wrap}>
-          <span className={styles.lab} style={{ display: 'block', textAlign: 'center', marginBottom: 18 }}>
-            {sedes.length ? 'Barberías que ya trabajan con barber.pe' : 'Pensado para barberías de todo el Perú'}
-          </span>
+          <div className={styles.railHead}>
+            <div>
+              <h2 className={styles.h2}>Ya confían en nosotros</h2>
+              <p className={styles.sub}>Algunas barberías que ya usan barber.pe como su sistema de citas.</p>
+            </div>
+            {sedes.length > 3 && (
+              <div className={styles.railNav}>
+                <button aria-label="Anterior" onClick={() => scrollRail(sedesRail, -1)}><ArrowLeft size={18} /></button>
+                <button aria-label="Siguiente" onClick={() => scrollRail(sedesRail, 1)}><ArrowRight size={18} /></button>
+              </div>
+            )}
+          </div>
         </div>
-        {mqSedes.length ? (
-          <div className={styles.strip}>
-              {mqSedes.map((s, i) => (
-                <button className={styles.sedeChip} key={`${s.idSede}-${i}`} onClick={() => verSede(s)} title={`Ver ${s.nombre}`}>
-                  <span className={styles.mk}>{s.logoUrl ? <img src={buildImageUrl(s.logoUrl)} alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} /> : <Scissors size={18} />}</span>
-                  <span><span className={styles.nm}>{s.nombre}</span><span className={styles.lo}>{s.ciudad || s.direccion || 'Perú'}</span></span>
-                </button>
-              ))}
-          </div>
-        ) : (
-          <div className={`${styles.wrap} ${styles.trustIn}`}>
-            {['Lima', 'Arequipa', 'Trujillo', 'Cusco', 'Piura', 'Chiclayo'].map((c) => <span className={styles.city} key={c}>{c}</span>)}
-          </div>
-        )}
-      </div>
+        <div className={styles.rail} ref={sedesRail}>
+          <div className={styles.railPad} />
+          {sedes.map((s) => (
+            <button className={styles.sedeCard} key={s.idSede} onClick={() => verSede(s)} title={`Ver ${s.nombre}`}>
+              <div className={styles.sedeCover} style={s.portadaUrl ? { backgroundImage: `url(${buildImageUrl(s.portadaUrl)})` } : undefined}>
+                <span className={styles.heart}><Heart size={15} /></span>
+                {!s.portadaUrl && <Scissors size={26} className={styles.sedeCoverIcon} />}
+              </div>
+              <div className={styles.sedeInfo}>
+                <span className={styles.sedeLogo}>
+                  {s.logoUrl ? <img src={buildImageUrl(s.logoUrl)} alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} /> : iniciales(s.nombre)}
+                </span>
+                <div className={styles.sedeText}>
+                  <span className={styles.sedeName}>{s.nombre} <ShieldCheck size={14} className={styles.verified} /></span>
+                  <span className={styles.sedeLoc}><MapPin size={12} /> {s.direccion || s.ciudad || 'Perú'}</span>
+                </div>
+              </div>
+            </button>
+          ))}
+          {!sedes.length && [0, 1, 2, 3].map((i) => (
+            <div className={`${styles.sedeCard} ${styles.sedeSkeleton}`} key={i}><div className={styles.sedeCover} /><div className={styles.sedeInfo}><span className={styles.sedeLogo} /><div className={styles.sedeText}><span className={styles.skLine} /><span className={`${styles.skLine} ${styles.skShort}`} /></div></div></div>
+          ))}
+          <div className={styles.railPad} />
+        </div>
+      </section>
 
-      {/* GALERÍA (fotos reales) */}
-      <section className={styles.sec} id="galeria">
+      {/* ══════════ VENTAJAS (bento) ══════════ */}
+      <section className={`${styles.sec} ${styles.soft}`} id="ventajas">
         <div className={styles.wrap}>
-          <Reveal className={styles.head}><span className={styles.eyebrow}>El día a día</span><h2>Hecho para el ritmo de tu barbería</h2><p>Desde una silla hasta varias sedes — barber.pe se adapta a tu negocio.</p></Reveal>
-          <div className={styles.gallery}>
-            {PHOTOS.gallery.map((g, i) => (
-              <Reveal className={styles.gphoto} key={i} delay={i * 0.06}>
-                <img loading="lazy" src={g.src} alt={g.cap} onError={(e) => { const el = e.currentTarget as HTMLImageElement; el.style.display = 'none'; (el.parentElement as HTMLElement).style.background = g.bg }} />
-                <span className={styles.gcap}>{g.cap}</span>
+          <Reveal><span className={styles.eyebrow}>Ventajas de usar BARBER.PE</span></Reveal>
+          <Reveal delay={0.05}><h2 className={styles.h2}>Olvídate de usar cuadernos</h2></Reveal>
+          <Reveal delay={0.1}><p className={styles.sub}>Una sola herramienta para reservar, recordar, atender y cobrar.</p></Reveal>
+          <div className={styles.bento}>
+            {VENTAJAS.map((v, i) => (
+              <Reveal key={v.t} delay={i * 0.05} className={`${styles.vCard} ${styles[`v_${v.tone}`]} ${i === 0 ? styles.vWide : ''}`}>
+                <span className={styles.vIcon}>{v.icon}</span>
+                <h3>{v.t}</h3>
+                <p>{v.d}</p>
               </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* FUNCIONES (bento) */}
-      <section className={styles.sec} id="funciones">
-        <div className={styles.wrap}>
-          <Reveal className={styles.head}><span className={styles.eyebrow}>Funciones</span><h2>Todo en una sola plataforma</h2><p>Una sola herramienta para reservar, recordar, atender y cobrar. Sin cuadernos ni hojas de cálculo.</p></Reveal>
-          <div className={styles.bento}>
-            <Reveal className={`${styles.bCard} ${styles.bGreen} ${styles.spanTall}`}>
-              <span className={styles.bIcon}><WaIcon size={21} /></span>
-              <span className={styles.bEye}>WhatsApp en automático</span>
-              <h3>Confirma y recuerda solo</h3>
-              <p>El cliente recibe la confirmación al reservar y un recordatorio antes de la cita, con botones para confirmar o reprogramar.</p>
-              <div className={styles.bChat}>
-                <div className={`${styles.bubble} ${styles.bIn}`} style={{ margin: 0, maxWidth: '92%' }}>Te recordamos tu cita mañana 10:15 a.m. en El Patrón 💈</div>
-                <div className={`${styles.bubble} ${styles.bOut}`} style={{ margin: '6px 0 0 auto' }}>Confirmar ✅</div>
+      {/* ══════════ RESEÑAS ══════════ */}
+      {resenas.length > 0 && (
+        <section className={styles.sec} id="resenas">
+          <div className={styles.wrap}>
+            <div className={styles.railHead}>
+              <div>
+                <span className={styles.eyebrow}>RESEÑAS</span>
+                <h2 className={styles.h2}>Qué dicen los que ya usan barber.pe</h2>
               </div>
-            </Reveal>
-            <Reveal className={`${styles.bCard} ${styles.bPaper} ${styles.span3}`}>
-              <span className={styles.bEye}>Menos sillas vacías</span>
-              <h3>Menos plantones</h3>
-              <p>Con recordatorios automáticos, menos clientes olvidan su cita.</p>
-              <svg className={styles.spark} viewBox="0 0 260 60" preserveAspectRatio="none"><polyline points="0,14 40,18 80,16 120,26 160,30 200,42 260,50" fill="none" stroke="#16A34A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            </Reveal>
-            <Reveal className={`${styles.bCard} ${styles.bBlue} ${styles.span3}`}>
-              <span className={styles.bIcon}><Globe size={21} /></span><span className={styles.bEye}>Tu marca</span>
-              <h3>Tu página de reservas propia</h3>
-              <p>Un microsite con tu logo y color, en tu subdominio (tubarberia.barber.pe). Tu marca, no un marketplace.</p>
-            </Reveal>
-            <Reveal className={`${styles.bCard} ${styles.bAmber} ${styles.span2}`}>
-              <span className={styles.bIcon}><Wallet size={21} /></span><span className={styles.bEye}>Caja del día</span>
-              <h3 className={styles.tnum}>S/ 1.060</h3><p>Ventas y gastos por método de pago, claros al cierre.</p>
-            </Reveal>
-            <Reveal className={`${styles.bCard} ${styles.bPurple} ${styles.span2}`}>
-              <span className={styles.bIcon}><Star size={21} /></span><span className={styles.bEye}>Reputación</span>
-              <h3>Reseñas automáticas</h3><p>Pide la calificación por WhatsApp tras cada cita.</p>
-            </Reveal>
-            <Reveal className={`${styles.bCard} ${styles.bPaper} ${styles.span2}`}>
-              <span className={styles.bIcon}><CalendarClock size={21} /></span><span className={styles.bEye}>Sin choques</span>
-              <h3>Agenda por barbero</h3><p>Disponibilidad real por servicio y por cada barbero.</p>
-            </Reveal>
+              {resenas.length > 3 && (
+                <div className={styles.railNav}>
+                  <button aria-label="Anterior" onClick={() => scrollRail(resenasRail, -1)}><ArrowLeft size={18} /></button>
+                  <button aria-label="Siguiente" onClick={() => scrollRail(resenasRail, 1)}><ArrowRight size={18} /></button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* EN ACCIÓN */}
-      <section className={`${styles.sec} ${styles.paperBand}`} id="accion">
-        <div className={styles.wrap}>
-          <Reveal className={styles.headL}><span className={styles.eyebrow}>En acción</span><h2>Pensado para el día a día de la barbería</h2><p>Diseñado para que tú y tu equipo lo usen desde el celular, sin entrenamiento.</p></Reveal>
-          <div className={styles.action}>
-            <Reveal className={styles.actRow}>
-              <div className={styles.actText}><span className={styles.actNum}>01</span><h3>Agenda y reservas en un solo lugar</h3><p>El cliente reserva desde tu link y la cita aparece al instante en la agenda del barbero. Reprogramar o cancelar es un toque.</p><button className={styles.btnLink} onClick={abrirDemo}>Quiero mi agenda <ArrowRight size={16} /></button></div>
-              <div className={styles.actMedia}><div className={styles.uiHd}>Agenda · Hoy</div>
-                {[['09:30', 'Corte + barba', 'con Andrés'], ['10:15', 'Corte clásico', 'con Marco'], ['11:00', 'Perfilado', 'con Andrés']].map(([t, s, b]) => (
-                  <div className={styles.uiRow} key={t}><span className={styles.t}>{t}</span><span className={styles.b}>{s}<small>{b}</small></span><span className={`${styles.chip} ${styles.chipOk}`}>OK</span></div>
-                ))}
-              </div>
-            </Reveal>
-            <Reveal className={styles.actRow}>
-              <div className={styles.actText}><span className={styles.actNum}>02</span><h3>Recordatorios automáticos por WhatsApp</h3><p>Menos plantones: el cliente recibe la confirmación al reservar y un recordatorio antes de la cita, con botones para responder.</p><button className={styles.btnLink} onClick={abrirDemo}>Activar recordatorios <ArrowRight size={16} /></button></div>
-              <div className={styles.actMedia}><div className={styles.uiHd}>WhatsApp</div>
-                <div className={`${styles.bubble} ${styles.bIn}`}>Hola Carlos 👋 Te recordamos tu cita mañana 10:15 a. m. en Barbería El Patrón.<span className={styles.qb}><span>Confirmar</span><span>Reprogramar</span></span></div>
-                <div className={`${styles.bubble} ${styles.bOut}`}>Confirmar ✅</div>
-                <div className={`${styles.bubble} ${styles.bIn}`}>¡Listo! Tu cita quedó confirmada. Te esperamos 💈</div>
-              </div>
-            </Reveal>
-            <Reveal className={styles.actRow}>
-              <div className={styles.actText}><span className={styles.actNum}>03</span><h3>Caja y reportes claros</h3><p>Registra cada venta y su método de pago. Al cierre sabes cuánto entró, por barbero y por servicio, sin sacar la calculadora.</p><button className={styles.btnLink} onClick={() => irA('reportes')}>Ver cómo funciona <ArrowRight size={16} /></button></div>
-              <div className={styles.actMedia}><div className={styles.uiHd}>Cierre de caja · Hoy</div>
-                <div className={styles.cashRow}><span>Cortes (12)</span><span className={styles.pos}>S/ 540</span></div>
-                <div className={styles.cashRow}><span>Barba y perfilado (6)</span><span className={styles.pos}>S/ 300</span></div>
-                <div className={styles.cashRow}><span>Productos (4)</span><span className={styles.pos}>S/ 220</span></div>
-                <div className={styles.cashRow}><span>Total del día</span><span className={styles.neu}>S/ 1.060</span></div>
-              </div>
-            </Reveal>
+          <div className={styles.rail} ref={resenasRail}>
+            <div className={styles.railPad} />
+            {resenas.map((r) => {
+              const p = Math.max(1, Math.min(5, r.puntuacion))
+              return (
+                <div className={styles.rCard} key={r.idCalificacion}>
+                  <div className={styles.rStars}>{'★'.repeat(p)}<span className={styles.rStarsOff}>{'★'.repeat(5 - p)}</span></div>
+                  <p className={styles.rQuote}>“{r.comentario}”</p>
+                  <div className={styles.rWho}>
+                    <span className={styles.rAv}>{iniciales(r.nombreCliente || r.nombreSede)}</span>
+                    <div>
+                      <span className={styles.rName}>{r.nombreCliente || 'Cliente de barber.pe'}</span>
+                      <span className={styles.rRole}>{[r.nombreSede, r.ciudadSede].filter(Boolean).join(' · ')}</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+            <div className={styles.railPad} />
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* REPORTES */}
-      <section className={styles.sec} id="reportes">
+      {/* ══════════ PLANES Y PRECIOS ══════════ */}
+      <section className={`${styles.sec} ${styles.soft}`} id="precios">
         <div className={styles.wrap}>
-          <div className={styles.reportWrap}>
-            <div>
-              <Reveal><span className={styles.eyebrow}>Reportes y estadísticas</span></Reveal>
-              <Reveal delay={0.05}><h2 style={{ fontSize: 'clamp(1.7rem,3.4vw,2.5rem)', margin: '8px 0 14px' }}>Sabe cuánto ganas, sin sacar la calculadora</h2></Reveal>
-              <Reveal delay={0.1}><p style={{ color: 'var(--color-ink-2, #4b4b53)', fontSize: '1.05rem', marginBottom: 18 }}>Consulta por día o por rango, mira tus promedios en gráficos y descubre tu mejor día del mes. Cuando te pregunten "¿cuánto ganaste este mes?", lo respondes con un clic.</p></Reveal>
-              <Reveal delay={0.12}>
-                <ul className={styles.ctaList} style={{ marginBottom: 22 }}>
-                  {['Ingresos por día, por servicio y por barbero', 'Mejor día de la semana y del mes, ticket promedio', 'Exporta a Excel y PDF con el logo de tu barbería'].map((t) => <li key={t}><i className={styles.ck}><Check size={12} /></i>{t}</li>)}
+          <Reveal><span className={styles.eyebrow}>Planes y precios</span></Reveal>
+          <div className={styles.priceHead}>
+            <Reveal delay={0.05}>
+              <h2 className={styles.h2}>Precio fijo al mes. <span className={styles.muted}>Justo y sin sorpresas.</span></h2>
+            </Reveal>
+            <span className={styles.country}>🇵🇪 Perú</span>
+          </div>
+
+          <div className={styles.plans}>
+            {tarjetas.map((p) => (
+              <Reveal key={p.idPlan} className={`${styles.plan} ${p.popular ? styles.planPop : ''}`}>
+                {p.popular && <span className={styles.popBadge}><Star size={13} /> Más popular</span>}
+                <span className={styles.planName}>{p.nombre}</span>
+                <div className={styles.planPrice}>
+                  <span className={styles.amount}>{soles(p.precioMensualPEN)}</span>
+                  <span className={styles.per}>/mes</span>
+                </div>
+                {p.descripcion && <p className={styles.planTag}>{p.descripcion.split('·')[0].trim()}</p>}
+                <button className={`${styles.btn} ${p.popular ? styles.btnPrimary : styles.btnGhost} ${styles.btnBlock}`} onClick={abrirDemo}>{ctaPrueba}</button>
+                <ul className={styles.planList}>
+                  {p.caracteristicas.map((c, i) => (
+                    <li key={i}><i className={styles.ck}><Check size={12} /></i>{c}</li>
+                  ))}
                 </ul>
               </Reveal>
-              <Reveal delay={0.15}><button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnLg}`} onClick={abrirDemo}>Quiero mis reportes <ArrowRight size={16} /></button></Reveal>
-            </div>
-            <Reveal delay={0.1} className={styles.reportPanel}>
-              <div className={styles.rpTop}><div><div className={styles.rpTitle}>Reporte mensual</div><div className={styles.rpSub}>KiSha Barber Spa · Junio 2026</div></div><span className={styles.rpBadge}>1 clic</span></div>
-              <div className={styles.rpBody}>
-                <div className={styles.rpKpis}>
-                  <div className={styles.rpKpi}><div className={styles.l}>Ingresos</div><div className={`${styles.v} ${styles.b} ${styles.tnum}`}>S/11.498</div></div>
-                  <div className={styles.rpKpi}><div className={styles.l}>Citas</div><div className={`${styles.v} ${styles.tnum}`}>318</div></div>
-                  <div className={styles.rpKpi}><div className={styles.l}>Ticket</div><div className={`${styles.v} ${styles.tnum}`}>S/36</div></div>
-                  <div className={styles.rpKpi}><div className={styles.l}>Utilidad</div><div className={`${styles.v} ${styles.g} ${styles.tnum}`}>S/8.358</div></div>
-                </div>
-                <div className={styles.rpChartHd}>Ingresos por día</div>
-                <div className={styles.rpChart}>
-                  {REPORT_BARS.map((b, i) => <span key={i} className={`${styles.rpBar} ${b.we ? styles.we : ''}`} style={{ height: `${b.h}%` }} />)}
-                </div>
-              </div>
-              <div className={styles.rpFoot}>
-                <div className={styles.rpBest}>Mejor día: <b>Sáb 27 · S/707</b></div>
-                <div className={styles.rpExport}><span className={`${styles.rpBtn} ${styles.x}`}><FileSpreadsheet size={15} /> Excel</span><span className={`${styles.rpBtn} ${styles.p}`}><FileText size={15} /> PDF</span></div>
-              </div>
-            </Reveal>
+            ))}
+            {!tarjetas.length && [0, 1, 2].map((i) => <div className={`${styles.plan} ${styles.planSkeleton}`} key={i} />)}
           </div>
-        </div>
-      </section>
 
-      {/* RESEÑAS (carrusel) */}
-      <section className={`${styles.sec} ${styles.paperBand}`} id="resenas">
-        <div className={styles.wrap}>
-          <Reveal className={styles.head}><span className={styles.eyebrow}>Reseñas</span><h2>Barberos que ya dejaron el cuaderno</h2><p>Lo que dicen quienes ya trabajan con barber.pe.</p></Reveal>
-        </div>
-        <div className={styles.strip}>
-            {TESTIMONIOS.map((t, i) => (
-              <div className={styles.tCard} key={i}>
-                <div className={styles.tStars}>{'★'.repeat(t.s)}</div>
-                <p className={styles.tQuote}>“{t.q}”</p>
-                <div className={styles.tWho}><span className={styles.tAv}>{iniciales(t.n)}</span><div><div className={styles.tName}>{t.n}</div><div className={styles.tRole}>{t.r}</div></div></div>
+          {/* Señales de confianza */}
+          <div className={styles.badges}>
+            {BADGES.map((b) => (
+              <div className={styles.badge} key={b.t}>
+                <span className={styles.badgeIc}>{b.icon}</span>
+                <div><b>{b.t}</b><small>{b.d}</small></div>
               </div>
             ))}
-        </div>
-      </section>
-
-      {/* PRECIOS — matriz comparativa */}
-      <section className={styles.sec} id="precios">
-        <div className={styles.wrap}>
-          <Reveal className={styles.head}><span className={styles.eyebrow}>Precios</span><h2>Compara los planes</h2><p>Claros, en soles, sin comisiones sobre tus cortes. Cambia o cancela cuando quieras.</p></Reveal>
-          <Reveal className={styles.offer}><span className={styles.offerBand}><span className={styles.tag}>LANZAMIENTO</span> Barberías fundadoras: Pro a S/39/mes de por vida — primeras 100</span></Reveal>
-          <Reveal className={styles.toggle}>
-            <div className={styles.toggleIn}>
-              <button className={ciclo === 'mes' ? styles.on : ''} onClick={() => setCiclo('mes')}>Mensual</button>
-              <button className={ciclo === 'anio' ? styles.on : ''} onClick={() => setCiclo('anio')}>Anual <span className={styles.save}>2 meses gratis</span></button>
-            </div>
-          </Reveal>
-          <Reveal className={styles.matrixWrap}>
-            <table className={`${styles.matrix} ${styles.tnum}`}>
-              <thead>
-                <tr>
-                  <th className={styles.colFn}></th>
-                  <th><span className={styles.mxName}>Empieza · Gratis</span><span className={styles.mxPrice}>S/0</span> <span className={styles.mxPer}>/ siempre</span><button className={styles.mxBtn} onClick={abrirDemo}>Comenzar →</button></th>
-                  <th className={styles.popHead}><span className={styles.popTag}>★ POPULAR</span><span className={styles.mxName}>Pro</span><span className={styles.mxPrice}>S/{proMes}</span> <span className={styles.mxPer}>/ mes</span><button className={styles.mxBtn} onClick={abrirDemo}>Comenzar →</button></th>
-                  <th><span className={styles.mxName}>Cadena</span><span className={styles.mxPrice}>S/{cadMes}</span> <span className={styles.mxPer}>/ mes</span><a className={styles.mxBtn} href={waLink('Hola barber.pe 👋 Quiero el plan Cadena (multi-sede).')} target="_blank" rel="noopener noreferrer">Hablar con ventas →</a></th>
-                </tr>
-              </thead>
-              <tbody>
-                {matrix.map((r, i) => (
-                  <tr key={i}>
-                    <th>{r.f}</th>
-                    <td>{cell(r.cols[0], 0)}</td>
-                    <td className={styles.pop}>{cell(r.cols[1], 1)}</td>
-                    <td>{cell(r.cols[2], 2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* GARANTÍA */}
-      <section className={styles.secTight}>
-        <div className={styles.wrap}><Reveal className={styles.guarantee}><div className={styles.ic}><ShieldCheck size={26} /></div><h2>30 días de garantía</h2><p>Si en 30 días no te sirve, te devolvemos tu dinero. Sin permanencia: te bajas cuando quieras.</p></Reveal></div>
-      </section>
-
-      {/* SOLICITAR */}
-      <section className={`${styles.sec} ${styles.paperBand}`} id="solicitar">
-        <div className={styles.wrap}>
-          <div className={styles.ctaGrid}>
-            <Reveal className={styles.ctaCopy}>
-              <span className={styles.eyebrow}>Empieza hoy</span><h2>Tu barbería online esta semana</h2>
-              <p>Déjanos tus datos y te escribimos por WhatsApp para activar tu cuenta y configurar tu página contigo, gratis.</p>
-              <ul className={styles.ctaList}>{['Activación guiada paso a paso', 'Migramos tu lista de clientes por ti', 'Sin tarjeta de crédito para empezar'].map((t) => <li key={t}><i className={styles.ck}><Check size={12} /></i>{t}</li>)}</ul>
-            </Reveal>
-            <Reveal className={styles.formCard} delay={0.08}>
-              <h3>Solicitar acceso</h3>
-              <p className={styles.fsub}>Te contactamos hoy mismo. Toma menos de 1 minuto.</p>
-              <button onClick={abrirDemo} className={`${styles.btn} ${styles.btnPrimary} ${styles.btnBlock} ${styles.btnLg}`} style={{ marginTop: 10 }}>Solicitar acceso</button>
-              <p className={styles.formNote}>Sin tarjeta. Sin compromiso.</p>
-            </Reveal>
           </div>
         </div>
       </section>
 
-      {/* FAQ */}
+      {/* ══════════ FAQ ══════════ */}
       <section className={styles.sec} id="faq">
         <div className={styles.wrap}>
-          <Reveal className={styles.head}><span className={styles.eyebrow}>Preguntas</span><h2>Preguntas frecuentes</h2></Reveal>
-          <div className={styles.faq}>
-            {[
-              ['¿Mis clientes necesitan descargar una app?', 'No. Reservan desde tu link en el navegador y reciben todo por WhatsApp. Pueden confirmar, reprogramar o cancelar sin instalar nada.'],
-              ['¿Puedo poner mi logo, mi color y mi marca?', 'Sí. Cada barbería vive en su propio subdominio (ej. tubarberia.barber.pe) con tu logo, color de marca y datos. Es tu página, no un marketplace.'],
-              ['¿Cómo cobro? ¿Hay comisiones por cliente?', 'Registras tus ventas con su método de pago (efectivo, Yape, Plin) y cierras caja. barber.pe no te cobra comisión por cada cliente: pagas solo tu plan mensual.'],
-              ['¿Cómo funcionan las comisiones de mis barberos?', 'Cada barbero tiene su agenda y sus comisiones se calculan solas según los servicios que atendió. Al cierre ves cuánto le toca a cada uno.'],
-              ['¿Puedo ver cuánto gané y exportarlo?', 'Sí. Consultas por fecha o rango, ves gráficos y tu mejor día, y exportas el reporte a Excel o PDF con el logo de tu barbería en un clic.'],
-              ['¿Puedo manejar varias sedes?', 'Sí. Con el plan Cadena administras todas tus sucursales desde una sola cuenta, cada una con su agenda, equipo y caja, y un panel consolidado.'],
-              ['¿Migran mis clientes actuales?', 'Sí. Te ayudamos a importar tu lista de clientes para que arranques con tu historial, sin empezar de cero.'],
-              ['¿Hay soporte en español?', 'Claro. Somos peruanos y te atendemos en español por WhatsApp.'],
-            ].map(([q, a], i) => (
-              <div className={`${styles.qa} ${faq === i ? styles.open : ''}`} key={i}>
-                <button onClick={() => setFaq(faq === i ? null : i)}>{q}<span className={styles.arrow}><Plus size={20} /></span></button>
-                <div className={styles.qaAns}><div><p>{a}</p></div></div>
-              </div>
-            ))}
+          <div className={styles.faqGrid}>
+            <div className={styles.faqIntro}>
+              <span className={styles.eyebrow}>Preguntas y respuestas (FAQs)</span>
+              <h2 className={styles.h2}>Todo lo que necesitas saber, lo puedes encontrar aquí.</h2>
+              <p className={styles.sub}>Si necesitas más información, no dudes en contactarnos.</p>
+              <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => irA('contacto')}>Contáctanos <ArrowRight size={16} /></button>
+            </div>
+            <div className={styles.faqList}>
+              {FAQS.map(([q, a], i) => (
+                <div className={`${styles.qa} ${faq === i ? styles.qaOpen : ''}`} key={i}>
+                  <button onClick={() => setFaq(faq === i ? null : i)}>
+                    <span className={styles.qaNum}>{String(i + 1).padStart(2, '0')}</span>
+                    <span className={styles.qaQ}>{q}</span>
+                    <span className={styles.qaIcon}>{faq === i ? <Minus size={18} /> : <Plus size={18} />}</span>
+                  </button>
+                  <div className={styles.qaAns}><div><p>{a}</p></div></div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* CTA FINAL (con foto) */}
-      <section className={styles.final}>
+      {/* ══════════ CTA FINAL (banda oscura) ══════════ */}
+      <section className={styles.ctaBand} id="contacto">
         <div className={styles.wrap}>
-          <Reveal className={`${styles.finalCard} ${styles.finalPhoto}`}>
-            <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${PHOTOS.cta})`, backgroundSize: 'cover', backgroundPosition: 'center', zIndex: 0 }} />
-            <h2>Moderniza tu barbería con barber.pe</h2>
-            <p>Reservas, WhatsApp, agenda y caja en un solo lugar. Gratis para empezar, listo en minutos.</p>
-            <div className={styles.finalCta}><button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnLg}`} onClick={abrirDemo}>Prueba gratis <ArrowRight size={18} /></button><Link to="/login" className={`${styles.btn} ${styles.btnGhost} ${styles.btnLg}`}>Ya tengo cuenta</Link></div>
+          <Reveal className={styles.ctaInner}>
+            <h2>Lleva tu barbería a un siguiente <span className={styles.hl}>NIVEL</span> usando nuestro software.</h2>
+            <p>No necesitas tarjeta de crédito ni instalar nada. Si usas otro sistema, te ayudamos con la migración completamente GRATIS.</p>
+            <div className={styles.ctaBtns}>
+              <button className={`${styles.btn} ${styles.btnLight} ${styles.btnLg}`} onClick={abrirDemo}>Empieza ahora gratis</button>
+              <a className={`${styles.btn} ${styles.btnOutline} ${styles.btnLg}`} href={waLink('Hola barber.pe 👋 Quiero agendar una reunión.')} target="_blank" rel="noopener noreferrer">Agendar reunión</a>
+            </div>
+            <p className={styles.ctaFine}>Empieza hoy, tienes 30 días de garantía.</p>
           </Reveal>
         </div>
       </section>
 
-      {/* FOOTER */}
+      {/* ══════════ FOOTER ══════════ */}
       <footer className={styles.footer}>
         <div className={styles.wrap}>
-          <div className={styles.footGrid}>
-            <div><div className={styles.logo}><span className={styles.logoMark}><Scissors size={18} /></span>barber<span className={styles.pe}>.pe</span></div><p>El software para barberías y salones de belleza en Perú. Reservas, WhatsApp, caja y equipo en un solo lugar.</p></div>
-            <div className={styles.footCol}><h5>Producto</h5><a onClick={() => irA('funciones')}>Funciones</a><a onClick={() => irA('reportes')}>Reportes</a><a onClick={() => irA('precios')}>Precios</a><Link to="/login">Ingresar</Link></div>
-            <div className={styles.footCol}><h5>Empresa</h5><a onClick={() => irA('faq')}>Preguntas</a><a href={waLink('Hola barber.pe 👋')} target="_blank" rel="noopener noreferrer">WhatsApp</a><a href="mailto:contacto@barber.pe">contacto@barber.pe</a></div>
-            <div className={styles.footCol}><h5>Legal</h5><span className={styles.k}>Términos</span><span className={styles.k}>Privacidad</span></div>
+          <div className={styles.footTop}>
+            <div className={styles.footBrand}>
+              <span className={styles.logo}><span className={styles.logoMark}><Scissors size={16} /></span>BARBER<span className={styles.pe}>.PE</span></span>
+              <p>Automatiza tus reservas en WhatsApp, sin complicaciones.</p>
+              <div className={styles.social}>
+                <a href="#" aria-label="Facebook"><Facebook size={18} /></a>
+                <a href="#" aria-label="Instagram"><Instagram size={18} /></a>
+                <a href="#" aria-label="YouTube"><Youtube size={18} /></a>
+              </div>
+            </div>
+            <nav className={styles.footLinks}>
+              <a onClick={() => irA('top')}>Términos y condiciones</a>
+              <a onClick={() => irA('top')}>Política de privacidad</a>
+              <a onClick={() => irA('top')}>Libro de reclamaciones</a>
+              <a onClick={() => irA('contacto')}>Contacto</a>
+            </nav>
           </div>
-          <div className={styles.footBottom}><span>© {new Date().getFullYear()} barber.pe · Un producto de <b>Computer Solutions L&amp;E E.I.R.L.</b> · Hecho en Perú 🇵🇪</span><span>Reservas · WhatsApp · Caja · Reportes</span></div>
+          <div className={styles.footBottom}>
+            <span>© {new Date().getFullYear()} Barber.pe — Todos los derechos reservados.</span>
+            <span>Computer Solutions L&amp;E E.I.R.L.</span>
+          </div>
         </div>
       </footer>
+
+      {/* ══════════ MODAL SOLICITAR ACCESO ══════════ */}
       {demoOpen && (
-        <div onClick={() => setDemoOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(17,24,39,.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '24px 16px', overflowY: 'auto' }}>
-          <div className={styles.formCard} onClick={(e) => e.stopPropagation()} style={{ position: 'relative', width: '100%', maxWidth: 460, marginTop: '6vh' }}>
-            <button aria-label="Cerrar" onClick={() => setDemoOpen(false)} style={{ position: 'absolute', top: 10, right: 10, width: 34, height: 34, borderRadius: 9999, border: 'none', background: '#f3f4f6', color: '#374151', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={18} /></button>
+        <div className={styles.modalBg} onClick={() => setDemoOpen(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <button aria-label="Cerrar" className={styles.modalX} onClick={() => setDemoOpen(false)}><X size={18} /></button>
             {enviado ? (
-              <div style={{ textAlign: 'center', padding: '14px 4px' }}>
-                <div style={{ fontSize: 46, lineHeight: 1 }}>✅</div>
-                <h3 style={{ marginTop: 10 }}>¡Solicitud enviada!</h3>
-                <p className={styles.fsub}>Gracias{lead.duenio ? `, ${lead.duenio.split(' ')[0]}` : ''}. Te contactaremos muy pronto para activar tu barbería.</p>
-                <button className={`${styles.btn} ${styles.btnGhost} ${styles.btnBlock}`} style={{ marginTop: 12 }} onClick={() => setDemoOpen(false)}>Cerrar</button>
+              <div className={styles.modalDone}>
+                <div className={styles.doneIc}><Check size={30} /></div>
+                <h3>¡Solicitud enviada!</h3>
+                <p>Gracias{lead.duenio ? `, ${lead.duenio.split(' ')[0]}` : ''}. Te contactaremos muy pronto para activar tu barbería.</p>
+                <button className={`${styles.btn} ${styles.btnGhost} ${styles.btnBlock}`} onClick={() => setDemoOpen(false)}>Cerrar</button>
               </div>
-            ) : (<>
-              <h3>Solicitar acceso</h3><p className={styles.fsub}>Toma menos de 1 minuto. Te contactamos hoy mismo.</p>
-              <form onSubmit={enviarLead}>
-                <div className={styles.field}><label htmlFor="m-negocio">Nombre del negocio</label><input id="m-negocio" required placeholder="Ej. Barbería El Patrón" value={lead.negocio} onChange={(e) => setLead({ ...lead, negocio: e.target.value })} /></div>
-                <div className={styles.field}><label htmlFor="m-duenio">Nombre del dueño <span style={{ color: '#9ca3af', fontWeight: 400 }}>(opcional)</span></label><input id="m-duenio" placeholder="Se usará el nombre del negocio" value={lead.duenio} onChange={(e) => setLead({ ...lead, duenio: e.target.value })} /></div>
-                <div className={styles.field}>
-                  <label>¿Cómo te contactamos?</label>
-                  <div className={styles.seg}>
-                    <button type="button" className={lead.tipoContacto === 'correo' ? styles.segOn : ''} onClick={() => setLead({ ...lead, tipoContacto: 'correo', contacto: '' })}><Mail size={15} /> Correo</button>
-                    <button type="button" className={lead.tipoContacto === 'whatsapp' ? styles.segOn : ''} onClick={() => setLead({ ...lead, tipoContacto: 'whatsapp', contacto: '' })}><Phone size={15} /> WhatsApp</button>
+            ) : (
+              <>
+                <h3>Inicia tu prueba gratis</h3>
+                <p className={styles.modalSub}>Toma menos de 1 minuto. Te contactamos hoy mismo.</p>
+                <form onSubmit={enviarLead}>
+                  <div className={styles.field}>
+                    <label htmlFor="m-negocio">Nombre del negocio</label>
+                    <input id="m-negocio" required placeholder="Ej. Barbería El Patrón" value={lead.negocio} onChange={(e) => setLead({ ...lead, negocio: e.target.value })} />
                   </div>
-                </div>
-                <div className={styles.field}>
-                  {lead.tipoContacto === 'correo'
-                    ? <input id="m-contacto" type="email" required placeholder="tucorreo@ejemplo.com" value={lead.contacto} onChange={(e) => setLead({ ...lead, contacto: e.target.value })} />
-                    : <input id="m-contacto" inputMode="tel" required placeholder="9XX XXX XXX" value={lead.contacto} onChange={(e) => setLead({ ...lead, contacto: e.target.value })} />}
-                </div>
-                <button type="submit" disabled={enviando} className={`${styles.btn} ${styles.btnPrimary} ${styles.btnBlock} ${styles.btnLg}`}>{enviando ? 'Enviando…' : 'Solicitar acceso'}</button>
-                {err && <p style={{ color: '#dc2626', fontSize: 13, marginTop: 8 }}>{err}</p>}
-                <p className={styles.formNote}>Al enviar aceptas que te contactemos. Tus datos están seguros.</p>
-              </form>
-            </>)}
+                  <div className={styles.field}>
+                    <label htmlFor="m-duenio">Nombre del dueño <span className={styles.opt}>(opcional)</span></label>
+                    <input id="m-duenio" placeholder="Tu nombre" value={lead.duenio} onChange={(e) => setLead({ ...lead, duenio: e.target.value })} />
+                  </div>
+                  <div className={styles.field}>
+                    <label>¿Cómo te contactamos?</label>
+                    <div className={styles.seg}>
+                      <button type="button" className={lead.tipoContacto === 'correo' ? styles.segOn : ''} onClick={() => setLead({ ...lead, tipoContacto: 'correo', contacto: '' })}><Mail size={15} /> Correo</button>
+                      <button type="button" className={lead.tipoContacto === 'whatsapp' ? styles.segOn : ''} onClick={() => setLead({ ...lead, tipoContacto: 'whatsapp', contacto: '' })}><Phone size={15} /> WhatsApp</button>
+                    </div>
+                  </div>
+                  <div className={styles.field}>
+                    {lead.tipoContacto === 'correo'
+                      ? <input type="email" required placeholder="tucorreo@ejemplo.com" value={lead.contacto} onChange={(e) => setLead({ ...lead, contacto: e.target.value })} />
+                      : <input inputMode="tel" required placeholder="9XX XXX XXX" value={lead.contacto} onChange={(e) => setLead({ ...lead, contacto: e.target.value })} />}
+                  </div>
+                  <button type="submit" disabled={enviando} className={`${styles.btn} ${styles.btnPrimary} ${styles.btnBlock} ${styles.btnLg}`}>{enviando ? 'Enviando…' : 'Solicitar acceso'}</button>
+                  {err && <p className={styles.modalErr}>{err}</p>}
+                  <p className={styles.modalNote}>Al enviar aceptas que te contactemos. Tus datos están seguros.</p>
+                </form>
+              </>
+            )}
           </div>
         </div>
       )}
