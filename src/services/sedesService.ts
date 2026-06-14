@@ -97,6 +97,22 @@ export const sedesService = {
   },
 
   /**
+   * Obtiene la sede pública por Id (sin autenticación). Lo usa la landing al
+   * abrir /sede/{id} desde el dominio raíz (barber.pe), donde no hay un
+   * subdominio real que resolver en el host.
+   */
+  getSedePublicaPorId: async (idSede: number): Promise<SedePublica | null> => {
+    try {
+      const res = await apiClient.get(`/api/Sedes/${idSede}/publica`)
+      const sede = res.data.data || res.data
+      return sede || null
+    } catch (error) {
+      console.error('❌ Error obteniendo sede por id:', error)
+      return null
+    }
+  },
+
+  /**
    * Obtiene lista de todas las sedes (solo SuperAdmin)
    */
   getSedes: async (): Promise<Sede[]> => {

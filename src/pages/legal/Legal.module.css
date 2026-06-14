@@ -1,0 +1,46 @@
+/* Páginas legales — mismo tema negro/azul de la landing */
+.page { --brand:#2f6bff; --brand-light:#6f9bff; --ink:#f4f5f7; --ink-2:#b2b5bc; --muted:#71747d;
+  --line:#27272c; --bg:#0a0a0b; --surface:#141416; --surface-2:#1a1a1d;
+  min-height:100vh; background:var(--bg); color:var(--ink);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; -webkit-font-smoothing:antialiased; }
+.topbar { position:sticky; top:0; z-index:10; background:rgba(10,10,11,.85); backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line); }
+.topin { max-width:880px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.logoImg { height:28px; width:auto; display:block; cursor:pointer; }
+.back { display:inline-flex; align-items:center; gap:7px; color:var(--ink-2); text-decoration:none; font-weight:600; font-size:.92rem; }
+.back:hover { color:var(--brand-light); }
+.wrap { max-width:880px; margin:0 auto; padding:48px 24px 96px; }
+.kicker { display:inline-block; font-size:.76rem; font-weight:750; letter-spacing:.12em; text-transform:uppercase; color:var(--brand-light); margin-bottom:10px; }
+.title { font-size:clamp(1.8rem,4vw,2.5rem); font-weight:820; letter-spacing:-.02em; margin:0 0 8px; }
+.updated { color:var(--muted); font-size:.9rem; margin:0 0 36px; }
+.prose h2 { font-size:1.2rem; font-weight:750; margin:34px 0 10px; letter-spacing:-.01em; }
+.prose h3 { font-size:1rem; font-weight:700; margin:22px 0 8px; color:var(--ink); }
+.prose p, .prose li { color:var(--ink-2); line-height:1.7; font-size:.98rem; }
+.prose p { margin:0 0 12px; }
+.prose ul { margin:0 0 14px; padding-left:20px; }
+.prose li { margin:0 0 6px; }
+.prose a { color:var(--brand-light); }
+.prose strong { color:var(--ink); }
+.note { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px 18px; color:var(--ink-2); font-size:.92rem; margin:18px 0; }
+
+/* Libro de reclamaciones — formulario */
+.form { display:grid; gap:16px; margin-top:8px; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.field label { display:block; font-size:.85rem; font-weight:650; margin-bottom:7px; }
+.field input, .field select, .field textarea { width:100%; padding:12px 14px; background:var(--surface-2); color:var(--ink);
+  border:1px solid var(--line); border-radius:11px; font:inherit; font-size:.95rem; }
+.field textarea { min-height:110px; resize:vertical; }
+.field input:focus, .field select:focus, .field textarea:focus { outline:none; border-color:var(--brand); box-shadow:0 0 0 3px rgba(47,107,255,.18); }
+.seg { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.seg button { padding:14px; border:1px solid var(--line); border-radius:12px; background:var(--surface-2); color:var(--ink-2);
+  cursor:pointer; font:inherit; font-weight:650; text-align:left; transition:all .15s; }
+.seg button small { display:block; font-weight:400; color:var(--muted); font-size:.82rem; margin-top:3px; }
+.segOn { border-color:var(--brand)!important; background:rgba(47,107,255,.1)!important; color:var(--brand-light)!important; }
+.submit { padding:14px 22px; border:none; border-radius:12px; background:var(--brand); color:#fff; font:inherit; font-weight:700;
+  font-size:1rem; cursor:pointer; }
+.submit:hover { background:var(--brand-light); }
+.submit:disabled { opacity:.6; cursor:default; }
+.ok { text-align:center; padding:30px 10px; }
+.okIc { width:64px; height:64px; border-radius:999px; background:rgba(52,211,153,.16); color:#34d399; display:grid; place-items:center; margin:0 auto 16px; }
+.err { color:#f87171; font-size:.9rem; }
+@media (max-width:640px){ .grid2{grid-template-columns:1fr;} .seg{grid-template-columns:1fr;} }

@@ -85,6 +85,7 @@ export default function LandingPage() {
 
   const sedesRail = useRef<HTMLDivElement>(null)
   const resenasRail = useRef<HTMLDivElement>(null)
+  const planesRail = useRef<HTMLDivElement>(null)
 
   /* ── efectos ──────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -136,9 +137,8 @@ export default function LandingPage() {
 
   /* ── datos derivados ──────────────────────────────────────────────── */
   // Planes de pago para las tarjetas; el plan gratis (si existe) define el CTA.
-  const planesPago = planes.filter((p) => !p.esGratis)
   const planGratis = planes.find((p) => p.esGratis)
-  const tarjetas = planesPago.length ? planesPago : planes
+  const tarjetas = planes
   const ctaPrueba = planGratis ? 'Probar gratis' : 'Empezar gratis'
   const avatars = sedes.slice(0, 5)
 
@@ -150,7 +150,7 @@ export default function LandingPage() {
       <header className={`${styles.nav} ${scrolled ? styles.navOn : ''}`}>
         <div className={styles.navIn}>
           <span className={styles.logo} onClick={() => irA('top')}>
-            <span className={styles.logoMark}><Scissors size={17} /></span>BARBER<span className={styles.pe}>.PE</span>
+            <img src="/barber-logo.png" alt="Barber.PE" className={styles.logoImg} />
           </span>
           <nav className={styles.navLinks}>
             {navLinks.map(([n, id]) => <a key={id} onClick={() => irA(id)}>{n}</a>)}
@@ -267,7 +267,7 @@ export default function LandingPage() {
               </div>
               <div className={styles.sedeInfo}>
                 <span className={styles.sedeLogo}>
-                  {s.logoUrl ? <img src={buildImageUrl(s.logoUrl)} alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} /> : iniciales(s.nombre)}
+                  {s.logoUrl ? <img src={buildImageUrl(s.logoUrl)} alt="" onError={(e) => { const el = e.currentTarget as HTMLImageElement; el.style.display = 'none'; const cont = el.parentElement; if (cont && !cont.dataset.fb) { cont.dataset.fb = '1'; cont.appendChild(document.createTextNode(iniciales(s.nombre))) } }} /> : iniciales(s.nombre)}
                 </span>
                 <div className={styles.sedeText}>
                   <span className={styles.sedeName}>{s.nombre} <ShieldCheck size={14} className={styles.verified} /></span>
@@ -349,20 +349,20 @@ export default function LandingPage() {
             <Reveal delay={0.05}>
               <h2 className={styles.h2}>Precio fijo al mes. <span className={styles.muted}>Justo y sin sorpresas.</span></h2>
             </Reveal>
-            <span className={styles.country}>🇵🇪 Perú</span>
+            <div className={styles.priceHeadRight}><span className={styles.country}>🇵🇪 Perú</span>{tarjetas.length > 3 && (<div className={styles.railNav}><button aria-label="Anterior" onClick={() => scrollRail(planesRail, -1)}><ArrowLeft size={18} /></button><button aria-label="Siguiente" onClick={() => scrollRail(planesRail, 1)}><ArrowRight size={18} /></button></div>)}</div>
           </div>
 
-          <div className={styles.plans}>
+          <div className={styles.plansRail} ref={planesRail}>
             {tarjetas.map((p) => (
               <Reveal key={p.idPlan} className={`${styles.plan} ${p.popular ? styles.planPop : ''}`}>
-                {p.popular && <span className={styles.popBadge}><Star size={13} /> Más popular</span>}
+                {p.esGratis ? <span className={styles.freeBadge}><Star size={13} /> 14 días gratis</span> : (p.popular && <span className={styles.popBadge}><Star size={13} /> Más popular</span>)}
                 <span className={styles.planName}>{p.nombre}</span>
                 <div className={styles.planPrice}>
-                  <span className={styles.amount}>{soles(p.precioMensualPEN)}</span>
-                  <span className={styles.per}>/mes</span>
+                  <span className={styles.amount}>{p.esGratis ? 'Gratis' : soles(p.precioMensualPEN)}</span>
+                  {!p.esGratis && <span className={styles.per}>/mes</span>}
                 </div>
                 {p.descripcion && <p className={styles.planTag}>{p.descripcion.split('·')[0].trim()}</p>}
-                <button className={`${styles.btn} ${p.popular ? styles.btnPrimary : styles.btnGhost} ${styles.btnBlock}`} onClick={abrirDemo}>{ctaPrueba}</button>
+                <button className={`${styles.btn} ${p.popular || p.esGratis ? styles.btnPrimary : styles.btnGhost} ${styles.btnBlock}`} onClick={abrirDemo}>{p.esGratis ? 'Empezar gratis' : ctaPrueba}</button>
                 <ul className={styles.planList}>
                   {p.caracteristicas.map((c, i) => (
                     <li key={i}><i className={styles.ck}><Check size={12} /></i>{c}</li>
@@ -431,7 +431,7 @@ export default function LandingPage() {
         <div className={styles.wrap}>
           <div className={styles.footTop}>
             <div className={styles.footBrand}>
-              <span className={styles.logo}><span className={styles.logoMark}><Scissors size={16} /></span>BARBER<span className={styles.pe}>.PE</span></span>
+              <span className={styles.logo}><img src="/barber-logo.png" alt="Barber.PE" className={styles.logoImg} /></span>
               <p>Automatiza tus reservas en WhatsApp, sin complicaciones.</p>
               <div className={styles.social}>
                 <a href="#" aria-label="Facebook"><Facebook size={18} /></a>
@@ -440,9 +440,9 @@ export default function LandingPage() {
               </div>
             </div>
             <nav className={styles.footLinks}>
-              <a onClick={() => irA('top')}>Términos y condiciones</a>
-              <a onClick={() => irA('top')}>Política de privacidad</a>
-              <a onClick={() => irA('top')}>Libro de reclamaciones</a>
+              <Link to="/terminos">Términos y condiciones</Link>
+              <Link to="/privacidad">Política de privacidad</Link>
+              <Link to="/libro-reclamaciones">Libro de reclamaciones</Link>
               <a onClick={() => irA('contacto')}>Contacto</a>
             </nav>
           </div>
@@ -468,7 +468,7 @@ export default function LandingPage() {
             ) : (
               <>
                 <h3>Inicia tu prueba gratis</h3>
-                <p className={styles.modalSub}>Toma menos de 1 minuto. Te contactamos hoy mismo.</p>
+                <p className={styles.modalSub}>Toma menos de 1 minuto. Empieza a Gestionar tu Negocio!</p>
                 <form onSubmit={enviarLead}>
                   <div className={styles.field}>
                     <label htmlFor="m-negocio">Nombre del negocio</label>
@@ -492,7 +492,7 @@ export default function LandingPage() {
                   </div>
                   <button type="submit" disabled={enviando} className={`${styles.btn} ${styles.btnPrimary} ${styles.btnBlock} ${styles.btnLg}`}>{enviando ? 'Enviando…' : 'Solicitar acceso'}</button>
                   {err && <p className={styles.modalErr}>{err}</p>}
-                  <p className={styles.modalNote}>Al enviar aceptas que te contactemos. Tus datos están seguros.</p>
+                  <p className={styles.modalNote}>Te enviaremos un código de acceso, tenemos que verificar que eres tú.</p>
                 </form>
               </>
             )}

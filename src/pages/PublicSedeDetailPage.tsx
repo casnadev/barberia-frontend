@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   MapPin, Phone, Clock, Star, ChevronRight, ChevronLeft, Scissors,
   Heart, Share2, AlertCircle, X, ChevronDown, Instagram, Facebook, Globe,
@@ -66,6 +66,7 @@ function TrabajadorModal({ trabajador, brand, onReservar, onClose }: any) {
 
 export function PublicSedeDetailPage() {
   const navigate = useNavigate()
+  const { idSede: idSedeParam } = useParams<{ idSede: string }>()
   const [sede, setSede] = useState<any>(null)
   const [servicios, setServicios] = useState<any[]>([])
   const [trabajadores, setTrabajadores] = useState<any[]>([])
@@ -97,7 +98,7 @@ export function PublicSedeDetailPage() {
   const refHorarios = useRef<HTMLElement>(null)
   const heroTrackRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => { loadData() }, [idSedeParam])
 
   // Novedades públicas de la sede (flyer del landing).
   useEffect(() => {
@@ -150,13 +151,22 @@ export function PublicSedeDetailPage() {
     try {
       setLoading(true)
       setError(null)
+
+      // Subdominio efectivo de la sede a mostrar.
+      // - Microsite real (sede.barber.pe): el subdominio del host.
+      // - Landing → /sede/:id en el dominio raíz o en local: NO hay subdominio
+      //   en el host, pero al pulsar la tarjeta la landing ya hizo
+      //   setTenant(sede.subdominio); por eso getActiveTenant() lo devuelve.
       const hostname = window.location.hostname
       const sParam = new URLSearchParams(window.location.search).get('s')
-      const subdominio = sParam
-        ? sParam
-        : (hostname === 'localhost' || hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.'))
-          ? getActiveTenant()
-          : hostname.split('.')[0]
+      const esLocalOLan =
+        hostname === 'localhost' ||
+        hostname.startsWith('192.168.') ||
+        hostname.startsWith('10.') ||
+        hostname.startsWith('172.')
+      const subHost = !esLocalOLan && hostname.split('.').length >= 3 ? hostname.split('.')[0] : ''
+      // Prioridad: ?s= → subdominio real del host → tenant activo (persistido).
+      const subdominio = sParam || subHost || getActiveTenant()
 
       const [sedeData, serviciosData, trabajadoresData] = await Promise.all([
         sedesService.getSedePublica(subdominio),
