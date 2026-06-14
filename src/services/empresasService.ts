@@ -60,6 +60,8 @@ export interface CreateSedeDTO {
   descripcionCorta?: string
   zonaHoraria?: string
   moneda?: string
+  /** Si es true, al crear la sede el backend da de alta al dueño como trabajador. */
+  crearTrabajadorDueno?: boolean
 }
 
 export interface SedeAdmin {

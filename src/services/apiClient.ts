@@ -140,6 +140,36 @@ apiClient.interceptors.request.use((config: any) => {
   return config
 })
 
+// Comprime/convierte imágenes ANTES de subirlas (un solo punto para TODOS los
+// uploads). HEIC de iPhone → JPEG, y fotos pesadas → ~0.7MB, así no fallan en
+// datos móviles. Carga perezosa: el compresor (src/services/comprimirImagen)
+// solo se descarga cuando de verdad subes una imagen.
+apiClient.interceptors.request.use(async (config: any) => {
+  const url: string = config.url || ''
+  const data: any = config.data
+  if (/upload/i.test(url) && typeof FormData !== 'undefined' && data instanceof FormData) {
+    const esImagen = (f: File) => /^image\//i.test(f.type) || /\.(heic|heif)$/i.test(f.name)
+
+    // Recolectamos con forEach (evita problemas de iteración en algunos tsconfig).
+    const entradas: Array<[string, FormDataEntryValue]> = []
+    data.forEach((v: FormDataEntryValue, k: string) => entradas.push([k, v]))
+
+    if (entradas.some(([, v]) => v instanceof File && esImagen(v as File))) {
+      const { comprimirImagen } = await import('@/services/comprimirImagen')
+      const nueva = new FormData()
+      for (const [k, v] of entradas) {
+        if (v instanceof File && esImagen(v)) {
+          nueva.append(k, await comprimirImagen(v))
+        } else {
+          nueva.append(k, v as any)
+        }
+      }
+      config.data = nueva
+    }
+  }
+  return config
+})
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {

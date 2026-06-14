@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { User, LogOut, LogIn, UserPlus, Settings, ExternalLink } from 'lucide-react'
+import { User, LogOut, LogIn, UserPlus, Settings, ExternalLink, LifeBuoy } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { getActiveTenant, buildImageUrl } from '@/services/apiClient'
 import { miCuentaService } from '@/services/miCuentaService'
 import { perfilService } from '@/services/perfilService'
 import { panelTrabajadorService } from '@/services/panelTrabajadorService'
 import { MiPerfilAdminModal } from '@/components/MiPerfilAdminModal'   // ← NUEVO
+import { SoporteModal } from '@/components/SoporteModal'
+import { useSoporteStore } from '@/store/soporteStore'
 import s from '@/styles/AccountMenu.module.css'
 
 /* Ruta del panel según el rol. */
@@ -84,6 +86,8 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
     const sub = getActiveTenant()
     window.open(sub ? (window.location.hostname.endsWith('barber.pe') ? `https://${sub}.barber.pe` : `/?s=${encodeURIComponent(sub)}`) : '/', '_blank', 'noopener')
   }
+  const abrirSoporte = () => { setOpen(false); useSoporteStore.getState().abrir() }
+
 
   return (
     <div className={s.root} ref={ref}>
@@ -146,6 +150,9 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
                       <Settings className={s.itemIcon} width={18} height={18} /> Configuración
                     </button>
                   )}
+                  <button className={s.item} onClick={abrirSoporte}>
+                    <LifeBuoy className={s.itemIcon} width={18} height={18} /> Ayuda y soporte
+                  </button>
                   {siteLink && (
                     <button className={s.item} onClick={abrirSitio}>
                       <ExternalLink className={s.itemIcon} width={18} height={18} /> Ver sitio
@@ -177,6 +184,9 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
       {user?.rol === 'Admin' && (
         <MiPerfilAdminModal open={perfilOpen} onClose={() => setPerfilOpen(false)} />
       )}
+
+      {/* Modal de soporte (controlado por store). */}
+      {user && <SoporteModal />}
     </div>
   )
 }

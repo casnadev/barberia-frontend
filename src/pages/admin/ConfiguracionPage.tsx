@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import {
   Store, Building2, Phone, Clock, MapPin, Image as ImageIcon, Camera, Share2, Save, Loader2,
-  X, Upload, RefreshCw, Plus, Instagram, Facebook, Globe, Music2, Youtube, Twitter, Palette,
+  X, Upload, Plus, Instagram, Facebook, Globe, Music2, Youtube, Twitter, Link2, Copy, ExternalLink, Info,
 } from 'lucide-react'
 import { apiClient } from '@/services/apiClient'
 import { AdminLayout } from '@/components/AdminLayout'
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://192.168.100.25:55692'
+import SeccionFila from '@/components/SeccionFila'
+import SeccionSheet from '@/components/SeccionSheet'
 
 interface Sede {
   idSede?: number
@@ -60,8 +58,10 @@ const inputCls =
 const COLOR_PRESETS = ['#2855F6', '#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#0d9488', '#dc2626', '#111827']
 const DEFAULT_BRAND = '#2855F6'
 
+// Identificadores de cada editor (sheet) del hub.
+type SheetId = 'info' | 'imagen' | 'contacto' | 'ubicacion' | 'horarios' | 'negocio' | 'galeria' | 'redes' | null
+
 export function ConfiguracionPage() {
-  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
@@ -81,6 +81,10 @@ export function ConfiguracionPage() {
   )
   const [cargandoHorarios, setCargandoHorarios] = useState(true)
   const [guardandoHorarios, setGuardandoHorarios] = useState(false)
+
+  // Editor abierto del hub (null = ninguno).
+  const [sheet, setSheet] = useState<SheetId>(null)
+  const cerrar = () => setSheet(null)
 
   const [sede, setSede] = useState<Sede>({
     idSede: 1, nombre: '', descripcion: '', direccion: '', telefono: '', correo: '',
@@ -130,12 +134,12 @@ export function ConfiguracionPage() {
   const setHora = (dia: number, campo: 'inicio' | 'fin', valor: string) =>
     setHorariosDias((prev) => prev.map((d) => (d.dia === dia ? { ...d, [campo]: valor } : d)))
 
-  const guardarHorarios = async () => {
-    if (!idSedeActual) { toast.error('No se pudo resolver la sede activa'); return }
+  const guardarHorarios = async (): Promise<boolean> => {
+    if (!idSedeActual) { toast.error('No se pudo resolver la sede activa'); return false }
     for (const d of horariosDias) {
       if (d.abierto && (!d.inicio || !d.fin || d.inicio >= d.fin)) {
         toast.error(`${d.label}: la hora de inicio debe ser menor que la de fin`)
-        return
+        return false
       }
     }
     try {
@@ -159,9 +163,11 @@ export function ConfiguracionPage() {
       const hRes = await apiClient.get(`/api/Horarios/sede/${idSedeActual}`)
       setHorariosDias(mapearHorarios(hRes.data?.data ?? hRes.data ?? []))
       toast.success('Horarios guardados')
+      return true
     } catch (err: any) {
       console.error('❌ Error guardando horarios:', err.response?.data || err)
       toast.error(err.response?.data?.detail || err.response?.data?.message || 'Error guardando horarios')
+      return false
     } finally {
       setGuardandoHorarios(false)
     }
@@ -236,33 +242,30 @@ export function ConfiguracionPage() {
   const handleChange = (field: keyof Sede, value: string | number) =>
     setSede((prev) => ({ ...prev, [field]: value }))
 
+  // Sube por apiClient (NO fetch): así pasa por el interceptor que comprime y
+  // convierte HEIC -> JPEG antes de enviar. El tamaño lo controla la compresión.
   const subirImagen = async (file: File): Promise<string | null> => {
-    if (!file.type.startsWith('image/')) { toast.error('Por favor selecciona una imagen'); return null }
-    if (file.size > 5 * 1024 * 1024) { toast.error('La imagen debe ser menor a 5MB'); return null }
+    const esImagen = file.type.startsWith('image/') || /\.(heic|heif)$/i.test(file.name)
+    if (!esImagen) { toast.error('Por favor selecciona una imagen'); return null }
     const form = new FormData()
     form.append('Archivo', file)
-    const res = await fetch(`${API_BASE}/api/Upload`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: form,
-    })
-    const json = await res.json().catch(() => null)
-    if (!res.ok) throw new Error(json?.mensaje || json?.message || 'Error subiendo la imagen')
+    const res = await apiClient.post('/api/Upload', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+    const json = res.data
     return json?.data?.url ?? json?.url ?? null
   }
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
     try { setSubiendoLogo(true); const url = await subirImagen(file); if (url) { setLogoPreview(url); handleChange('urlLogo', url); toast.success('Logo subido') } }
-    catch (err: any) { toast.error(err.message || 'Error subiendo el logo') }
-    finally { setSubiendoLogo(false) }
+    catch (err: any) { toast.error(err.response?.data?.message || err.message || 'Error subiendo el logo') }
+    finally { setSubiendoLogo(false); e.target.value = '' }
   }
 
   const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
     try { setSubiendoBanner(true); const url = await subirImagen(file); if (url) { setBannerPreview(url); handleChange('urlBanner', url); toast.success('Banner subido') } }
-    catch (err: any) { toast.error(err.message || 'Error subiendo el banner') }
-    finally { setSubiendoBanner(false) }
+    catch (err: any) { toast.error(err.response?.data?.message || err.message || 'Error subiendo el banner') }
+    finally { setSubiendoBanner(false); e.target.value = '' }
   }
 
   const removeLogo = () => { setLogoPreview(null); handleChange('urlLogo', '') }
@@ -300,7 +303,7 @@ export function ConfiguracionPage() {
       setSubiendoGaleria(true)
       const url = await subirImagen(file)
       if (url) { await apiClient.post('/api/SedeMedia/imagenes', { urlImagen: url, orden: imagenes.length + 1 }); toast.success('Imagen agregada a la galería'); cargarMedia() }
-    } catch (err: any) { toast.error(err.message || 'Error subiendo la imagen') }
+    } catch (err: any) { toast.error(err.response?.data?.message || err.message || 'Error subiendo la imagen') }
     finally { setSubiendoGaleria(false); e.target.value = '' }
   }
 
@@ -309,11 +312,11 @@ export function ConfiguracionPage() {
     catch { toast.error('Error eliminando la imagen') }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!sede.nombre?.trim()) { toast.error('El nombre es obligatorio'); return }
-    if (!sede.telefono?.trim()) { toast.error('El teléfono es obligatorio'); return }
-    if (empresa.idEmpresa != null && !empresa.nombreComercial?.trim()) { toast.error('El nombre del negocio es obligatorio.'); return }
+  // Guarda sede + datos del negocio (empresa) en una sola acción. Devuelve true si OK.
+  const guardarConfig = async (): Promise<boolean> => {
+    if (!sede.nombre?.trim()) { toast.error('El nombre de la barbería es obligatorio'); return false }
+    if (!sede.telefono?.trim()) { toast.error('El teléfono es obligatorio'); return false }
+    if (empresa.idEmpresa != null && !empresa.nombreComercial?.trim()) { toast.error('El nombre del negocio es obligatorio.'); return false }
     try {
       setSubmitting(true)
       const telDigits = (sede.telefono || '').replace(/\D/g, '')
@@ -338,7 +341,7 @@ export function ConfiguracionPage() {
       }
       await apiClient.put('/api/Sedes/actual', payload)
 
-      // Guardar también los datos del negocio (empresa) en la misma acción "Guardar cambios".
+      // Guardar también los datos del negocio (empresa) en la misma acción.
       if (empresa.idEmpresa != null) {
         await apiClient.put('/api/mi-empresa', {
           razonSocial: empresa.razonSocial?.trim() || empresa.nombreComercial?.trim() || undefined,
@@ -352,15 +355,44 @@ export function ConfiguracionPage() {
       toast.success('Configuración guardada')
       await loadSede()
       await loadNegocio()
+      return true
     } catch (err: any) {
       console.error('❌ Error guardando:', err.response?.data || err)
       toast.error(err.response?.data?.message || err.response?.data?.mensaje || 'Error al guardar la configuración')
+      return false
     } finally {
       setSubmitting(false)
     }
   }
 
-  const recargar = () => { setLoading(true); loadSede() }
+  // Guarda y, si todo salió bien, cierra el editor.
+  const guardarYcerrar = async () => { if (await guardarConfig()) cerrar() }
+  const guardarHorariosYcerrar = async () => { if (await guardarHorarios()) cerrar() }
+
+  // Resúmenes para las filas del hub.
+  const diasAbiertos = horariosDias.filter((d) => d.abierto).length
+  const tieneImagen = !!(logoPreview || bannerPreview)
+
+  // Enlace público (mismo criterio que "Ver sitio"): en prod usa el subdominio
+  // real; en dev, el link con ?s= que sí funciona en localhost.
+  const enlacePublico = (sub?: string): string => {
+    const v = (sub || '').trim()
+    if (!v) return ''
+    return window.location.hostname.endsWith('barber.pe')
+      ? `https://${v}.barber.pe`
+      : `${window.location.origin}/?s=${encodeURIComponent(v)}`
+  }
+  const enlaceMostrar = (sub?: string) => enlacePublico(sub).replace(/^https?:\/\//, '')
+  const copiarEnlace = async () => {
+    const url = enlacePublico(sede.subdominio)
+    if (!url) return
+    try { await navigator.clipboard.writeText(url); toast.success('Enlace copiado') }
+    catch { toast.error('No se pudo copiar') }
+  }
+  const abrirEnlace = () => {
+    const url = enlacePublico(sede.subdominio)
+    if (url) window.open(url, '_blank', 'noopener')
+  }
 
   // ================================================================= UI
   if (loading) {
@@ -375,311 +407,367 @@ export function ConfiguracionPage() {
 
   return (
     <AdminLayout title="Configuración" subtitle="Tu sede">
-      <form onSubmit={handleSubmit} className="pb-10">
-        {/* Encabezado del body */}
-        <div className="flex items-end justify-between gap-3 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Configuración de sede</h1>
-            <p className="text-sm text-gray-400 mt-0.5">Personaliza cómo se ve tu barbería en tu página pública.</p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button type="button" onClick={recargar} title="Recargar"
-              className="p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition">
-              <RefreshCw className="w-5 h-5" />
-            </button>
-            <motion.button whileTap={{ scale: 0.98 }} type="submit" disabled={submitting}
-              className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 transition shadow-lg shadow-blue-600/20">
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              <span className="hidden sm:inline">{submitting ? 'Guardando...' : 'Guardar cambios'}</span>
-            </motion.button>
-          </div>
-        </div>
+      <div className="pb-10">
+        {/* Encabezado */}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          {/* ===== Columna izquierda ===== */}
-          <div className="space-y-4">
-          {/* Datos del negocio (empresa) */}
-          <Card icon={Building2} title="Datos del negocio" desc="Datos de tu empresa: RUC, razón social y contacto. Editables siempre.">
-            <div className="space-y-4">
-              <Field label="Nombre comercial *">
-                <input className={inputCls} value={empresa.nombreComercial} onChange={(e) => handleChangeEmpresa('nombreComercial', e.target.value)} placeholder="Ej: Barbería Central" />
-              </Field>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Razón social">
-                  <input className={inputCls} value={empresa.razonSocial} onChange={(e) => handleChangeEmpresa('razonSocial', e.target.value)} placeholder="Igual al nombre si no tienes" />
-                </Field>
-                <Field label="RUC">
-                  <input className={inputCls} value={empresa.ruc} onChange={(e) => handleChangeEmpresa('ruc', e.target.value)} placeholder="20•••••••••" maxLength={11} />
-                </Field>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Correo del negocio">
-                  <input type="email" className={inputCls} value={empresa.correoContacto} onChange={(e) => handleChangeEmpresa('correoContacto', e.target.value)} placeholder="hola@negocio.com" />
-                </Field>
-                <Field label="Teléfono del negocio">
-                  <input type="tel" className={inputCls} value={empresa.telefonoContacto} onChange={(e) => handleChangeEmpresa('telefonoContacto', e.target.value)} placeholder="987654321" />
-                </Field>
-              </div>
-              <p className="text-xs text-gray-400">El correo y teléfono se pre-cargan con los de tu cuenta. Solo cámbialos si tu negocio usa otros.</p>
-            </div>
-          </Card>
 
-          {/* Información básica */}
-          <Card icon={Store} title="Información básica" desc="El nombre y la descripción de tu barbería.">
-            <div className="space-y-4">
-              <Field label="Nombre de la barbería *">
-                <input className={inputCls} value={sede.nombre || ''} onChange={(e) => handleChange('nombre', e.target.value)} placeholder="Ej: Barbería Central" required />
-              </Field>
-              <Field label="Descripción">
-                <textarea className={inputCls + ' resize-none'} rows={3} value={sede.descripcion || ''} onChange={(e) => handleChange('descripcion', e.target.value)} placeholder="Cuéntale a tus clientes qué hace especial a tu barbería..." />
-              </Field>
-            </div>
-          </Card>
-
-          {/* Contacto */}
-          <Card icon={Phone} title="Contacto" desc="Cómo te encuentran tus clientes."
-            actions={
-              <button type="button"
-                onClick={() => { handleChange('telefono', empresa.telefonoContacto || sede.telefono || ''); handleChange('correo', empresa.correoContacto || sede.correo || '') }}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 whitespace-nowrap">
-                Usar datos del negocio
-              </button>
-            }>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Field label="Teléfono *">
-                <input type="tel" className={inputCls} value={sede.telefono || ''} onChange={(e) => handleChange('telefono', e.target.value)} placeholder="987654321" required />
-              </Field>
-              <Field label="Email">
-                <input type="email" className={inputCls} value={sede.correo || ''} onChange={(e) => handleChange('correo', e.target.value)} placeholder="info@barberia.pe" />
-              </Field>
-              <Field label="Subdominio">
-                <input className={inputCls + ' bg-gray-100 text-gray-500 cursor-not-allowed'} value={sede.subdominio || ''} disabled />
-              </Field>
-            </div>
-          </Card>
-
-          {/* Horarios */}
-          <Card icon={Clock} title="Horarios de atención" desc="Los días y horas en que recibes clientes."
-            actions={
-              <button type="button" onClick={guardarHorarios} disabled={guardandoHorarios || !idSedeActual}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition disabled:opacity-50">
-                {guardandoHorarios ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Guardar
-              </button>
-            }>
-            {cargandoHorarios ? (
-              <div className="flex items-center gap-2 text-gray-400 text-sm py-4"><Loader2 className="w-4 h-4 animate-spin" /> Cargando horarios...</div>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {horariosDias.map((d) => (
-                  <div key={d.dia} className="flex items-center justify-between gap-3 py-2.5 flex-wrap">
-                    <button type="button" onClick={() => toggleDia(d.dia)}
-                      className={`flex items-center gap-2.5 text-sm font-medium transition ${d.abierto ? 'text-gray-900' : 'text-gray-400'}`}>
-                      <span className={`w-10 h-6 rounded-full relative transition-colors shrink-0 ${d.abierto ? 'bg-blue-600' : 'bg-gray-200'}`}>
-                        <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${d.abierto ? 'left-[1.125rem]' : 'left-0.5'}`} />
-                      </span>
-                      <span className="w-20 text-left">{d.label}</span>
-                    </button>
-                    {d.abierto ? (
-                      <div className="flex items-center gap-2">
-                        <input type="time" value={d.inicio} onChange={(e) => setHora(d.dia, 'inicio', e.target.value)}
-                          className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                        <span className="text-gray-300">—</span>
-                        <input type="time" value={d.fin} onChange={(e) => setHora(d.dia, 'fin', e.target.value)}
-                          className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-300">Cerrado</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-          </div>
-
-          {/* ===== Columna derecha ===== */}
-          <div className="space-y-4">
-          {/* Ubicación */}
-          <Card icon={MapPin} title="Ubicación" desc="Para que te ubiquen en el mapa.">
-            <div className="space-y-4">
-              <Field label="Dirección">
-                <input className={inputCls} value={sede.direccion || ''} onChange={(e) => handleChange('direccion', e.target.value)} placeholder="Av. Principal 123, Lima" />
-              </Field>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Field label="Distrito">
-                  <input className={inputCls} value={sede.distrito || ''} onChange={(e) => handleChange('distrito', e.target.value)} placeholder="Miraflores" />
-                </Field>
-                <Field label="Latitud">
-                  <input type="number" step="0.0001" className={inputCls} value={sede.latitud ?? ''} onChange={(e) => handleChange('latitud', parseFloat(e.target.value) || 0)} placeholder="-12.0450" />
-                </Field>
-                <Field label="Longitud">
-                  <input type="number" step="0.0001" className={inputCls} value={sede.longitud ?? ''} onChange={(e) => handleChange('longitud', parseFloat(e.target.value) || 0)} placeholder="-77.0342" />
-                </Field>
-              </div>
-            </div>
-          </Card>
-
-          {/* Logo y portada */}
-          <Card icon={ImageIcon} title="Logo y portada" desc="Tu marca en la página pública.">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
-              <div className="sm:col-span-1">
-                <ImgUpload label="Logo" preview={logoPreview} onUpload={handleLogoUpload} onRemove={removeLogo}
-                  subiendo={subiendoLogo} hint="Cuadrado · PNG/JPG (máx 5MB)" heightCls="h-40" />
-              </div>
-              <div className="sm:col-span-2">
-                <ImgUpload label="Banner / portada" preview={bannerPreview} onUpload={handleBannerUpload} onRemove={removeBanner}
-                  subiendo={subiendoBanner} hint="Horizontal · PNG/JPG (máx 5MB)" heightCls="h-48" />
-              </div>
-            </div>
-          </Card>
-
-          {/* Color de tema */}
-          <Card icon={Palette} title="Color de tema" desc="El color principal de tu página pública: botones, enlaces y acentos.">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-              {/* Selector + código */}
-              <div className="flex items-center gap-3">
-                <label className="relative cursor-pointer shrink-0" title="Elegir color">
-                  <span className="block w-14 h-14 rounded-xl border border-gray-200 shadow-sm"
-                    style={{ background: sede.colorPrimarioHex || DEFAULT_BRAND }} />
-                  <input type="color"
-                    value={(sede.colorPrimarioHex || DEFAULT_BRAND).slice(0, 7)}
-                    onChange={(e) => handleChange('colorPrimarioHex', e.target.value)}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                </label>
-                <Field label="Código de color">
-                  <input className={inputCls + ' w-36 font-mono uppercase'}
-                    value={sede.colorPrimarioHex || ''}
-                    onChange={(e) => handleChange('colorPrimarioHex', e.target.value)}
-                    placeholder={DEFAULT_BRAND} maxLength={9} />
-                </Field>
-              </div>
-
-              {/* Sugerencias */}
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Sugerencias</label>
-                <div className="flex flex-wrap gap-2">
-                  {COLOR_PRESETS.map((c) => {
-                    const active = (sede.colorPrimarioHex || '').toLowerCase() === c.toLowerCase()
-                    return (
-                      <button key={c} type="button" onClick={() => handleChange('colorPrimarioHex', c)} aria-label={c}
-                        className={`w-8 h-8 rounded-lg transition ${active ? 'ring-2 ring-offset-2 ring-gray-900 scale-110' : 'shadow hover:scale-110'}`}
-                        style={{ background: c }} />
-                    )
-                  })}
+        {/* Enlace público (A): visible, de solo lectura y explicado */}
+        {sede.subdominio && (
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 mb-4 flex items-start gap-3">
+            <span className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <Link2 className="w-[18px] h-[18px]" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2 mb-0.5">
+                <p className="text-sm font-medium text-gray-900">Tu enlace público</p>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button type="button" onClick={copiarEnlace}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-800 px-2 py-1 rounded-lg hover:bg-gray-100 transition">
+                    <Copy className="w-3.5 h-3.5" /> Copiar
+                  </button>
+                  <button type="button" onClick={abrirEnlace}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 px-2 py-1 rounded-lg hover:bg-blue-50 transition">
+                    <ExternalLink className="w-3.5 h-3.5" /> Abrir
+                  </button>
                 </div>
               </div>
+              <p className="text-sm text-blue-600 truncate">{enlaceMostrar(sede.subdominio)}</p>
+              <p className="text-xs text-gray-400 mt-1">Es fijo a propósito: no cambia aunque cambies el nombre, para no romper reservas ni enlaces que ya compartiste.</p>
             </div>
+          </div>
+        )}
 
-            {/* Vista previa */}
-            <div className="mt-5 rounded-xl border border-gray-100 bg-gray-50/60 p-4 flex items-center justify-between gap-3">
+        {/* HUB de secciones */}
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+          <SeccionFila
+            icono={<Store className="w-[18px] h-[18px]" />}
+            titulo="Información básica"
+            preview={sede.nombre || 'Falta el nombre'}
+            estado={sede.nombre ? 'listo' : 'falta'}
+            onClick={() => setSheet('info')}
+          />
+          <SeccionFila
+            icono={<ImageIcon className="w-[18px] h-[18px]" />}
+            titulo="Imagen y color"
+            preview={tieneImagen ? 'Logo / portada listos' : 'Sin imágenes aún'}
+            estado={tieneImagen ? 'listo' : undefined}
+            onClick={() => setSheet('imagen')}
+            derecha={
+              <span className="w-6 h-6 rounded-md border border-gray-200 shrink-0"
+                style={{ background: sede.colorPrimarioHex || DEFAULT_BRAND }} />
+            }
+          />
+          <SeccionFila
+            icono={<Phone className="w-[18px] h-[18px]" />}
+            titulo="Contacto"
+            preview={sede.telefono || 'Agrega un teléfono'}
+            estado={sede.telefono ? 'listo' : 'falta'}
+            onClick={() => setSheet('contacto')}
+          />
+          <SeccionFila
+            icono={<MapPin className="w-[18px] h-[18px]" />}
+            titulo="Ubicación"
+            preview={sede.direccion || 'Sin dirección'}
+            estado={sede.direccion ? 'listo' : undefined}
+            onClick={() => setSheet('ubicacion')}
+          />
+          <SeccionFila
+            icono={<Clock className="w-[18px] h-[18px]" />}
+            titulo="Horarios de atención"
+            preview={cargandoHorarios ? 'Cargando...' : diasAbiertos ? `${diasAbiertos} día(s) abierto(s)` : 'Sin horarios'}
+            estado={diasAbiertos ? 'listo' : 'falta'}
+            onClick={() => setSheet('horarios')}
+          />
+          <SeccionFila
+            icono={<Building2 className="w-[18px] h-[18px]" />}
+            titulo="Datos del negocio"
+            preview={empresa.nombreComercial || 'Completa los datos'}
+            estado={empresa.nombreComercial ? 'listo' : 'falta'}
+            onClick={() => setSheet('negocio')}
+          />
+          <SeccionFila
+            icono={<Camera className="w-[18px] h-[18px]" />}
+            titulo="Galería"
+            preview={imagenes.length ? `${imagenes.length} foto(s)` : 'Sin fotos aún'}
+            estado={imagenes.length ? 'listo' : undefined}
+            onClick={() => setSheet('galeria')}
+            derecha={
+              imagenes.length ? (
+                <span className="flex -space-x-2 shrink-0">
+                  {imagenes.slice(0, 3).map((i) => (
+                    <img key={i.idImagen} src={i.urlImagen} alt="" className="w-7 h-7 rounded-md object-cover border border-white shadow-sm" />
+                  ))}
+                </span>
+              ) : undefined
+            }
+          />
+          <SeccionFila
+            icono={<Share2 className="w-[18px] h-[18px]" />}
+            titulo="Redes sociales"
+            preview={redes.length ? `${redes.length} red(es)` : 'Sin redes'}
+            estado={redes.length ? 'listo' : undefined}
+            onClick={() => setSheet('redes')}
+          />
+        </div>
+
+      </div>
+
+      {/* ===================================================== EDITORES (sheets) */}
+
+      {/* Información básica */}
+      <SeccionSheet open={sheet === 'info'} onClose={cerrar} titulo="Información básica"
+        subtitulo="El nombre y la descripción de tu barbería"
+        footer={<BotonGuardar onClick={guardarYcerrar} cargando={submitting} />}>
+        <div className="space-y-4">
+          <Field label="Nombre de la barbería *">
+            <input className={inputCls} value={sede.nombre || ''} onChange={(e) => handleChange('nombre', e.target.value)} placeholder="Ej: Barbería Central" />
+          </Field>
+          {sede.subdominio && (
+            <p className="text-xs text-gray-400 flex items-start gap-1.5">
+              <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <span>Cambiar el nombre no cambia tu enlace público (<span className="font-medium text-gray-500">{enlaceMostrar(sede.subdominio)}</span>).</span>
+            </p>
+          )}
+          <Field label="Descripción">
+            <textarea className={inputCls + ' resize-none'} rows={4} value={sede.descripcion || ''} onChange={(e) => handleChange('descripcion', e.target.value)} placeholder="Cuéntale a tus clientes qué hace especial a tu barbería..." />
+          </Field>
+        </div>
+      </SeccionSheet>
+
+      {/* Imagen y color */}
+      <SeccionSheet open={sheet === 'imagen'} onClose={cerrar} titulo="Imagen y color"
+        subtitulo="Tu marca en la página pública"
+        footer={<BotonGuardar onClick={guardarYcerrar} cargando={submitting} />}>
+        <div className="space-y-5">
+          <ImgUpload label="Logo" preview={logoPreview} onUpload={handleLogoUpload} onRemove={removeLogo}
+            subiendo={subiendoLogo} hint="Cuadrado · PNG/JPG/HEIC" heightCls="h-40" />
+          <ImgUpload label="Banner / portada" preview={bannerPreview} onUpload={handleBannerUpload} onRemove={removeBanner}
+            subiendo={subiendoBanner} hint="Horizontal · PNG/JPG/HEIC" heightCls="h-44" />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Color de tema</label>
+            <div className="flex items-center gap-3">
+              <label className="relative cursor-pointer shrink-0" title="Elegir color">
+                <span className="block w-12 h-12 rounded-xl border border-gray-200 shadow-sm"
+                  style={{ background: sede.colorPrimarioHex || DEFAULT_BRAND }} />
+                <input type="color"
+                  value={(sede.colorPrimarioHex || DEFAULT_BRAND).slice(0, 7)}
+                  onChange={(e) => handleChange('colorPrimarioHex', e.target.value)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+              </label>
+              <input className={inputCls + ' w-36 font-mono uppercase'}
+                value={sede.colorPrimarioHex || ''}
+                onChange={(e) => handleChange('colorPrimarioHex', e.target.value)}
+                placeholder={DEFAULT_BRAND} maxLength={9} />
+            </div>
+            <div className="flex flex-wrap gap-2 mt-3">
+              {COLOR_PRESETS.map((c) => {
+                const active = (sede.colorPrimarioHex || '').toLowerCase() === c.toLowerCase()
+                return (
+                  <button key={c} type="button" onClick={() => handleChange('colorPrimarioHex', c)} aria-label={c}
+                    className={`w-8 h-8 rounded-lg transition ${active ? 'ring-2 ring-offset-2 ring-gray-900 scale-110' : 'shadow hover:scale-110'}`}
+                    style={{ background: c }} />
+                )
+              })}
+            </div>
+            <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50/60 p-4 flex items-center justify-between gap-3">
               <span className="text-sm text-gray-500">Vista previa</span>
               <span className="inline-flex items-center px-4 py-2 rounded-xl text-white text-sm font-semibold shadow"
                 style={{ background: sede.colorPrimarioHex || DEFAULT_BRAND }}>
                 Reservar ahora
               </span>
             </div>
-          </Card>
-          <Card icon={Share2} title="Redes sociales" desc="Conecta tus perfiles para que aparezcan en tu sitio.">
-            <div className="flex flex-col sm:flex-row gap-2 mb-4">
-              <select value={nuevaRedTipo} onChange={(e) => setNuevaRedTipo(e.target.value)}
-                className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-40">
-                {RED_OPCIONES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-              <input type="url" value={nuevaRedUrl} onChange={(e) => setNuevaRedUrl(e.target.value)}
-                placeholder="https://instagram.com/tubarberia"
-                className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white" />
-              <button type="button" onClick={agregarRed}
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition">
-                <Plus className="w-4 h-4" /> Agregar
-              </button>
-            </div>
-            {redes.length === 0 ? (
-              <p className="text-sm text-gray-400">Aún no hay redes configuradas.</p>
-            ) : (
-              <div className="space-y-2">
-                {redes.map((r) => {
-                  const RIcon = redIcon(r.tipo)
-                  return (
-                    <div key={r.idRedSocial} className="flex items-center gap-3 border border-gray-100 bg-gray-50/60 rounded-xl px-3 py-2.5 text-sm">
-                      <div className="w-8 h-8 rounded-lg bg-white border border-gray-100 flex items-center justify-center text-blue-600 shrink-0">
-                        <RIcon className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold capitalize text-gray-800 leading-tight">{r.tipo}</p>
-                        <a href={r.url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline text-xs truncate block">{r.url}</a>
-                      </div>
-                      <button type="button" onClick={() => eliminarRed(r.idRedSocial)} className="text-gray-300 hover:text-red-500 shrink-0" aria-label="Eliminar">
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </Card>
-
-          {/* Galería */}
-          <Card icon={Camera} title="Galería" desc="Fotos de tu local y trabajos para tu landing.">
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-              {imagenes.map((i) => (
-                <div key={i.idImagen} className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 group">
-                  <img src={i.urlImagen} alt={i.descripcion || 'Imagen'} className="w-full h-full object-cover" />
-                  <button type="button" onClick={() => eliminarImagen(i.idImagen)}
-                    className="absolute top-1.5 right-1.5 p-1 bg-white/90 text-red-500 rounded-full shadow hover:bg-white transition opacity-0 group-hover:opacity-100"
-                    aria-label="Eliminar imagen">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-              {/* Tile para subir */}
-              <label className={`aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center text-center cursor-pointer transition ${
-                subiendoGaleria ? 'border-blue-300 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/40'}`}>
-                {subiendoGaleria ? <Loader2 className="w-5 h-5 animate-spin text-blue-500" /> : <Plus className="w-6 h-6 text-gray-300" />}
-                <span className="text-[11px] text-gray-400 mt-1 px-1">Agregar</span>
-                <input type="file" accept="image/*" onChange={subirImagenGaleria} disabled={subiendoGaleria} className="hidden" />
-              </label>
-            </div>
-            <p className="text-xs text-gray-400 mt-3">PNG/JPG (máx 5MB). Se muestran en la galería de tu landing.</p>
-          </Card>
           </div>
         </div>
+      </SeccionSheet>
 
-        {/* Botones al final */}
-        <div className="flex items-center justify-between gap-3 mt-6">
-          <button type="button" onClick={() => navigate('/dashboard')}
-            className="px-4 py-2.5 text-gray-500 font-medium hover:text-gray-800 transition">
-            Volver
+      {/* Contacto */}
+      <SeccionSheet open={sheet === 'contacto'} onClose={cerrar} titulo="Contacto"
+        subtitulo="Cómo te encuentran tus clientes"
+        footer={<BotonGuardar onClick={guardarYcerrar} cargando={submitting} />}>
+        <div className="space-y-4">
+          <button type="button"
+            onClick={() => { handleChange('telefono', empresa.telefonoContacto || sede.telefono || ''); handleChange('correo', empresa.correoContacto || sede.correo || '') }}
+            className="text-xs font-semibold text-blue-600 hover:text-blue-700">
+            Usar datos del negocio
           </button>
-          <motion.button whileTap={{ scale: 0.98 }} type="submit" disabled={submitting}
-            className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 transition shadow-lg shadow-blue-600/20">
-            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {submitting ? 'Guardando...' : 'Guardar cambios'}
-          </motion.button>
+          <Field label="Teléfono *">
+            <input type="tel" className={inputCls} value={sede.telefono || ''} onChange={(e) => handleChange('telefono', e.target.value)} placeholder="987654321" />
+          </Field>
+          <Field label="Email">
+            <input type="email" className={inputCls} value={sede.correo || ''} onChange={(e) => handleChange('correo', e.target.value)} placeholder="info@barberia.pe" />
+          </Field>
         </div>
-      </form>
+      </SeccionSheet>
+
+      {/* Ubicación */}
+      <SeccionSheet open={sheet === 'ubicacion'} onClose={cerrar} titulo="Ubicación"
+        subtitulo="Para que te ubiquen en el mapa"
+        footer={<BotonGuardar onClick={guardarYcerrar} cargando={submitting} />}>
+        <div className="space-y-4">
+          <Field label="Dirección">
+            <input className={inputCls} value={sede.direccion || ''} onChange={(e) => handleChange('direccion', e.target.value)} placeholder="Av. Principal 123, Lima" />
+          </Field>
+          <Field label="Distrito">
+            <input className={inputCls} value={sede.distrito || ''} onChange={(e) => handleChange('distrito', e.target.value)} placeholder="Miraflores" />
+          </Field>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Latitud">
+              <input type="number" step="0.0001" className={inputCls} value={sede.latitud ?? ''} onChange={(e) => handleChange('latitud', parseFloat(e.target.value) || 0)} placeholder="-12.0450" />
+            </Field>
+            <Field label="Longitud">
+              <input type="number" step="0.0001" className={inputCls} value={sede.longitud ?? ''} onChange={(e) => handleChange('longitud', parseFloat(e.target.value) || 0)} placeholder="-77.0342" />
+            </Field>
+          </div>
+        </div>
+      </SeccionSheet>
+
+      {/* Horarios */}
+      <SeccionSheet open={sheet === 'horarios'} onClose={cerrar} titulo="Horarios de atención"
+        subtitulo="Los días y horas en que recibes clientes"
+        footer={<BotonGuardar onClick={guardarHorariosYcerrar} cargando={guardandoHorarios} label="Guardar horarios" />}>
+        {cargandoHorarios ? (
+          <div className="flex items-center gap-2 text-gray-400 text-sm py-4"><Loader2 className="w-4 h-4 animate-spin" /> Cargando horarios...</div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {horariosDias.map((d) => (
+              <div key={d.dia} className="flex items-center justify-between gap-3 py-2.5 flex-wrap">
+                <button type="button" onClick={() => toggleDia(d.dia)}
+                  className={`flex items-center gap-2.5 text-sm font-medium transition ${d.abierto ? 'text-gray-900' : 'text-gray-400'}`}>
+                  <span className={`w-10 h-6 rounded-full relative transition-colors shrink-0 ${d.abierto ? 'bg-blue-600' : 'bg-gray-200'}`}>
+                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${d.abierto ? 'left-[1.125rem]' : 'left-0.5'}`} />
+                  </span>
+                  <span className="w-20 text-left">{d.label}</span>
+                </button>
+                {d.abierto ? (
+                  <div className="flex items-center gap-2">
+                    <input type="time" value={d.inicio} onChange={(e) => setHora(d.dia, 'inicio', e.target.value)}
+                      className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <span className="text-gray-300">—</span>
+                    <input type="time" value={d.fin} onChange={(e) => setHora(d.dia, 'fin', e.target.value)}
+                      className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                ) : (
+                  <span className="text-sm text-gray-300">Cerrado</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </SeccionSheet>
+
+      {/* Datos del negocio */}
+      <SeccionSheet open={sheet === 'negocio'} onClose={cerrar} titulo="Datos del negocio"
+        subtitulo="RUC, razón social y contacto de tu empresa"
+        footer={<BotonGuardar onClick={guardarYcerrar} cargando={submitting} />}>
+        <div className="space-y-4">
+          <Field label="Nombre comercial *">
+            <input className={inputCls} value={empresa.nombreComercial} onChange={(e) => handleChangeEmpresa('nombreComercial', e.target.value)} placeholder="Ej: Barbería Central" />
+          </Field>
+          <Field label="Razón social">
+            <input className={inputCls} value={empresa.razonSocial} onChange={(e) => handleChangeEmpresa('razonSocial', e.target.value)} placeholder="Igual al nombre si no tienes" />
+          </Field>
+          <Field label="RUC">
+            <input className={inputCls} value={empresa.ruc} onChange={(e) => handleChangeEmpresa('ruc', e.target.value)} placeholder="20•••••••••" maxLength={11} />
+          </Field>
+          <Field label="Correo del negocio">
+            <input type="email" className={inputCls} value={empresa.correoContacto} onChange={(e) => handleChangeEmpresa('correoContacto', e.target.value)} placeholder="hola@negocio.com" />
+          </Field>
+          <Field label="Teléfono del negocio">
+            <input type="tel" className={inputCls} value={empresa.telefonoContacto} onChange={(e) => handleChangeEmpresa('telefonoContacto', e.target.value)} placeholder="987654321" />
+          </Field>
+          <p className="text-xs text-gray-400">El correo y teléfono se pre-cargan con los de tu cuenta. Solo cámbialos si tu negocio usa otros.</p>
+        </div>
+      </SeccionSheet>
+
+      {/* Galería */}
+      <SeccionSheet open={sheet === 'galeria'} onClose={cerrar} titulo="Galería"
+        subtitulo="Fotos de tu local y trabajos"
+        footer={<BotonListo onClick={cerrar} />}>
+        <div className="grid grid-cols-3 gap-3">
+          {imagenes.map((i) => (
+            <div key={i.idImagen} className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 group">
+              <img src={i.urlImagen} alt={i.descripcion || 'Imagen'} className="w-full h-full object-cover" />
+              <button type="button" onClick={() => eliminarImagen(i.idImagen)}
+                className="absolute top-1.5 right-1.5 p-1 bg-white/90 text-red-500 rounded-full shadow hover:bg-white transition"
+                aria-label="Eliminar imagen">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+          <label className={`aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center text-center cursor-pointer transition ${
+            subiendoGaleria ? 'border-blue-300 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/40'}`}>
+            {subiendoGaleria ? <Loader2 className="w-5 h-5 animate-spin text-blue-500" /> : <Plus className="w-6 h-6 text-gray-300" />}
+            <span className="text-[11px] text-gray-400 mt-1 px-1">Agregar</span>
+            <input type="file" accept="image/*" onChange={subirImagenGaleria} disabled={subiendoGaleria} className="hidden" />
+          </label>
+        </div>
+        <p className="text-xs text-gray-400 mt-3">Se agregan al instante. PNG/JPG/HEIC.</p>
+      </SeccionSheet>
+
+      {/* Redes sociales */}
+      <SeccionSheet open={sheet === 'redes'} onClose={cerrar} titulo="Redes sociales"
+        subtitulo="Conecta tus perfiles para tu sitio"
+        footer={<BotonListo onClick={cerrar} />}>
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
+          <select value={nuevaRedTipo} onChange={(e) => setNuevaRedTipo(e.target.value)}
+            className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-40">
+            {RED_OPCIONES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          <input type="url" value={nuevaRedUrl} onChange={(e) => setNuevaRedUrl(e.target.value)}
+            placeholder="https://instagram.com/tubarberia"
+            className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white" />
+          <button type="button" onClick={agregarRed}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition">
+            <Plus className="w-4 h-4" /> Agregar
+          </button>
+        </div>
+        {redes.length === 0 ? (
+          <p className="text-sm text-gray-400">Aún no hay redes configuradas.</p>
+        ) : (
+          <div className="space-y-2">
+            {redes.map((r) => {
+              const RIcon = redIcon(r.tipo)
+              return (
+                <div key={r.idRedSocial} className="flex items-center gap-3 border border-gray-100 bg-gray-50/60 rounded-xl px-3 py-2.5 text-sm">
+                  <div className="w-8 h-8 rounded-lg bg-white border border-gray-100 flex items-center justify-center text-blue-600 shrink-0">
+                    <RIcon className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold capitalize text-gray-800 leading-tight">{r.tipo}</p>
+                    <a href={r.url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline text-xs truncate block">{r.url}</a>
+                  </div>
+                  <button type="button" onClick={() => eliminarRed(r.idRedSocial)} className="text-gray-300 hover:text-red-500 shrink-0" aria-label="Eliminar">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </SeccionSheet>
     </AdminLayout>
   )
 }
 
 /* ---------------------------------------------------------------- helpers UI */
-function Card({ icon: Icon, title, desc, actions, children }:
-  { icon: any; title: string; desc?: string; actions?: React.ReactNode; children: React.ReactNode }) {
+function BotonGuardar({ onClick, cargando, label = 'Guardar cambios' }:
+  { onClick: () => void; cargando: boolean; label?: string }) {
   return (
-    <section className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6">
-      <div className="flex items-start justify-between gap-3 mb-5">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-            <Icon className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="font-semibold text-gray-900 leading-tight">{title}</h2>
-            {desc && <p className="text-xs text-gray-400 mt-0.5">{desc}</p>}
-          </div>
-        </div>
-        {actions && <div className="shrink-0">{actions}</div>}
-      </div>
-      {children}
-    </section>
+    <button type="button" onClick={onClick} disabled={cargando}
+      className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 transition">
+      {cargando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+      {cargando ? 'Guardando...' : label}
+    </button>
+  )
+}
+
+function BotonListo({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick}
+      className="w-full px-5 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition">
+      Listo
+    </button>
   )
 }
 

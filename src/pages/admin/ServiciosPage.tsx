@@ -54,7 +54,7 @@ export function ServiciosPage() {
   // Gestor de categorías (modal)
   const [catModalOpen, setCatModalOpen] = useState(false)
   const [catForm, setCatForm] = useState({ nombre: '', descripcion: '', orden: 1 })
-  const [catEditingId, setCatEditingId] = useState<number | null>(null)
+  const [catEditingId, setCatEditingId] = useState<number | 'new' | null>(null)
   const [catSubmitting, setCatSubmitting] = useState(false)
   const [catConfirmDelete, setCatConfirmDelete] = useState<number | null>(null)
 
@@ -217,6 +217,12 @@ export function ServiciosPage() {
     setCatEditingId(null)
   }
 
+  const nuevaCategoria = () => {
+    setCatForm({ nombre: '', descripcion: '', orden: categorias.length + 1 })
+    setCatEditingId('new')
+    setCatConfirmDelete(null)
+  }
+
   const editCategoria = (cat: Categoria) => {
     setCatForm({ nombre: cat.nombre, descripcion: cat.descripcion || '', orden: cat.orden ?? 1 })
     setCatEditingId(cat.idCategoria)
@@ -237,7 +243,7 @@ export function ServiciosPage() {
         orden: catForm.orden,
         estaActivo: true, // evita que el backend desactive la categoría al editar
       }
-      if (catEditingId) {
+      if (typeof catEditingId === 'number') {
         // ⚠️ CONFIRMAR en Swagger la ruta exacta del PUT (la dejé como /{id})
         await apiClient.put(`/api/Categorias/${catEditingId}`, payload)
         toast.success('Categoría actualizada')
@@ -322,10 +328,6 @@ export function ServiciosPage() {
   return (
     <AdminLayout title="Servicios" subtitle="Servicios y categorías">
       <div className={s.toolbar}>
-        <div className={s.toolbarText}>
-          <h1 className={s.h1}>Servicios</h1>
-          <p className={s.sub}>Gestiona tu catálogo y sus categorías</p>
-        </div>
         <motion.button
           whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
           className={s.newBtn}
@@ -501,15 +503,57 @@ export function ServiciosPage() {
               </div>
 
               <div className={s.form}>
+                {catEditingId === 'new' ? (
+                  <div className={s.catRowEdit}>
+                    <p className={s.catFormTitle}>Nueva categoría</p>
+                    <div className={s.field}>
+                      <label className={s.label}>Nombre *</label>
+                      <input className={s.input} autoFocus value={catForm.nombre} onChange={(e) => setCatForm({ ...catForm, nombre: e.target.value })} placeholder="Ej: Cortes" />
+                    </div>
+                    <div className={s.field}>
+                      <label className={s.label}>Descripción</label>
+                      <input className={s.input} value={catForm.descripcion} onChange={(e) => setCatForm({ ...catForm, descripcion: e.target.value })} placeholder="Opcional" />
+                    </div>
+                    <div className={s.actions}>
+                      <button type="button" className={s.btnGhost} onClick={resetCatForm}>Cancelar</button>
+                      <button type="button" className={s.btnPrimary} disabled={catSubmitting} onClick={saveCategoria}>
+                        {catSubmitting ? 'Guardando...' : 'Agregar'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" className={s.catAddBtn} onClick={nuevaCategoria}>
+                    <Plus width={16} height={16} /> Nueva categoría
+                  </button>
+                )}
+
                 <div className={s.catList}>
-                  {categorias.length === 0 && <p className={s.hint}>Aún no hay categorías. Crea la primera abajo.</p>}
+                  {categorias.length === 0 && <p className={s.hint}>Aún no hay categorías. Crea la primera con el botón de arriba.</p>}
                   {categorias.map((cat) => {
                     const n = countServicios(cat.idCategoria)
-                    return (
+                    const editing = catEditingId === cat.idCategoria
+                    return editing ? (
+                      <div key={cat.idCategoria} className={s.catRowEdit}>
+                        <div className={s.field}>
+                          <label className={s.label}>Nombre *</label>
+                          <input className={s.input} autoFocus value={catForm.nombre} onChange={(e) => setCatForm({ ...catForm, nombre: e.target.value })} placeholder="Ej: Cortes" />
+                        </div>
+                        <div className={s.field}>
+                          <label className={s.label}>Descripción</label>
+                          <input className={s.input} value={catForm.descripcion} onChange={(e) => setCatForm({ ...catForm, descripcion: e.target.value })} placeholder="Opcional" />
+                        </div>
+                        <div className={s.actions}>
+                          <button type="button" className={s.btnGhost} onClick={resetCatForm}>Cancelar</button>
+                          <button type="button" className={s.btnPrimary} disabled={catSubmitting} onClick={saveCategoria}>
+                            {catSubmitting ? 'Guardando...' : 'Guardar'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
                       <div key={cat.idCategoria} className={s.catRow}>
                         <div className={s.catRowInfo}>
                           <div className={s.catName}>{cat.nombre}</div>
-                          <div className={s.catCount}>{n} {n === 1 ? 'servicio' : 'servicios'}</div>
+                          <div className={s.catCount}>{n} {n === 1 ? 'servicio' : 'servicios'}{cat.descripcion ? ` · ${cat.descripcion}` : ''}</div>
                         </div>
                         {catConfirmDelete === cat.idCategoria ? (
                           <div className={s.catConfirm}>
@@ -520,13 +564,7 @@ export function ServiciosPage() {
                         ) : (
                           <div className={s.catRowActions}>
                             <button className={s.catIconBtn} onClick={() => editCategoria(cat)} title="Editar" aria-label="Editar categoría"><Edit2 width={16} height={16} /></button>
-                            <button
-                              className={`${s.catIconBtn} ${s.catIconBtnDanger}`}
-                              disabled={n > 0}
-                              title={n > 0 ? 'No puedes eliminar una categoría con servicios' : 'Eliminar'}
-                              onClick={() => setCatConfirmDelete(cat.idCategoria)}
-                              aria-label="Eliminar categoría"
-                            >
+                            <button className={`${s.catIconBtn} ${s.catIconBtnDanger}`} disabled={n > 0} title={n > 0 ? 'No puedes eliminar una categoría con servicios' : 'Eliminar'} onClick={() => setCatConfirmDelete(cat.idCategoria)} aria-label="Eliminar categoría">
                               <Trash2 width={16} height={16} />
                             </button>
                           </div>
@@ -534,28 +572,6 @@ export function ServiciosPage() {
                       </div>
                     )
                   })}
-                </div>
-
-                <div className={s.catFormBox}>
-                  <p className={s.catFormTitle}>{catEditingId ? 'Editar categoría' : 'Nueva categoría'}</p>
-                  <div className={s.field}>
-                    <label className={s.label}>Nombre *</label>
-                    <input className={s.input} type="text" value={catForm.nombre} onChange={(e) => setCatForm({ ...catForm, nombre: e.target.value })} placeholder="Ej: Cortes" />
-                  </div>
-                  <div className={s.field}>
-                    <label className={s.label}>Descripción</label>
-                    <input className={s.input} type="text" value={catForm.descripcion} onChange={(e) => setCatForm({ ...catForm, descripcion: e.target.value })} />
-                  </div>
-                  <div className={s.field}>
-                    <label className={s.label}>Orden</label>
-                    <input className={s.input} type="number" value={catForm.orden} onChange={(e) => setCatForm({ ...catForm, orden: parseInt(e.target.value) || 0 })} min="0" />
-                  </div>
-                  <div className={s.actions}>
-                    {catEditingId && <button type="button" className={s.btnGhost} onClick={resetCatForm}>Cancelar</button>}
-                    <button type="button" className={s.btnPrimary} disabled={catSubmitting} onClick={saveCategoria}>
-                      {catSubmitting ? 'Guardando...' : catEditingId ? 'Guardar cambios' : 'Agregar categoría'}
-                    </button>
-                  </div>
                 </div>
               </div>
             </motion.div>

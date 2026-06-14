@@ -11,6 +11,7 @@ import { sedesService } from '@/services/sedesService'
 import { apiClient, getActiveTenant } from '@/services/apiClient'
 import { novedadesService } from '@/services/novedadesService'
 import { AccountMenu } from '@/components/AccountMenu'
+import Monograma, { iniciales } from '@/components/Monograma'
 import styles from '@/styles/PublicSedeDetail.module.css'
 
 // Rutas de imágenes (uploads relativos → URL absoluta del API)
@@ -52,7 +53,7 @@ function TrabajadorModal({ trabajador, brand, onReservar, onClose }: any) {
           <div className={styles.modalPhoto}>
             {trabajador.urlFotoPerfil
               ? <img src={img(trabajador.urlFotoPerfil)} alt={trabajador.nombreCompleto} />
-              : <Scissors width={40} height={40} color="#9ca3af" />}
+              : <Monograma fill texto={trabajador.nombreCompleto} style={{ fontSize: 34 }} />}
           </div>
           <h2 className={styles.modalName}>{trabajador.nombreCompleto}</h2>
           <p className={styles.modalSpec}>{trabajador.especializacion || 'Barbero'}</p>
@@ -501,7 +502,7 @@ export function PublicSedeDetailPage() {
               <img src={src} alt={`${sede.nombre} ${i + 1}`} />
             </button>
           )) : (
-            <div className={styles.mHeroEmpty}><Scissors width={56} height={56} /></div>
+            <div className={styles.mHeroEmpty}><Monograma fill texto={sede.nombre} color={brand} /></div>
           )}
         </div>
         <div className={styles.heroControls}>
@@ -588,8 +589,8 @@ export function PublicSedeDetailPage() {
               )}
             </>
           ) : (
-            <div className={`${styles.dHeroBig} ${styles.dHeroBigSolo}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Scissors width={64} height={64} color="#d1d5db" />
+            <div className={`${styles.dHeroBig} ${styles.dHeroBigSolo}`}>
+              <Monograma fill texto={sede.nombre} color={brand} />
             </div>
           )}
           {galeria.length > 0 && (
@@ -625,7 +626,9 @@ export function PublicSedeDetailPage() {
                   {(verTodosServicios ? serviciosFiltrados : serviciosFiltrados.slice(0, 5)).map((s, idx) => (
                     <motion.div key={s.idServicio || idx} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }} className={styles.servCard}>
                       <div className={styles.servLeft}>
-                        {img(s.urlImagen) && <img className={styles.servImg} src={img(s.urlImagen)} alt={s.nombre} />}
+                        {img(s.urlImagen)
+                          ? <img className={styles.servImg} src={img(s.urlImagen)} alt={s.nombre} />
+                          : <div className={styles.servImgFb} style={{ background: brand }}>{iniciales(s.nombre)}</div>}
                         <div style={{ minWidth: 0 }}>
                           <div className={styles.servTitleRow}>
                             <span className={styles.servTitle}>{s.nombre}</span>
@@ -685,7 +688,7 @@ export function PublicSedeDetailPage() {
                   {trabajadores.map((t, idx) => (
                     <button key={t.idTrabajador || idx} className={styles.teamItem} onClick={() => setTrabajadorSel(t)}>
                       <div className={styles.teamPhoto}>
-                        {t.urlFotoPerfil ? <img src={img(t.urlFotoPerfil)} alt={t.nombreCompleto} /> : <Scissors width={36} height={36} color="#9ca3af" />}
+                        {t.urlFotoPerfil ? <img src={img(t.urlFotoPerfil)} alt={t.nombreCompleto} /> : <Monograma fill texto={t.nombreCompleto} style={{ fontSize: 30 }} />}
                       </div>
                       <div className={styles.teamName}>{t.nombreCompleto}</div>
                       {t.especializacion && <div className={styles.teamSpec}>{t.especializacion}</div>}

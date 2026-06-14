@@ -309,10 +309,6 @@ export function TrabajadoresPage() {
   return (
     <AdminLayout title="Trabajadores" subtitle="Tu equipo y sus horarios">
       <div className={s.toolbar}>
-        <div className={s.toolbarText}>
-          <h1 className={s.h1}>Tu equipo</h1>
-          <p className={s.sub}>Gestiona los trabajadores de tu barbería</p>
-        </div>
         <motion.button
           whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.96 }}

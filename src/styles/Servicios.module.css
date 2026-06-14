@@ -165,3 +165,7 @@
 .catConfirmNo { color: var(--color-text-light, #4b5563); font-weight: 600; background: none; border: none; cursor: pointer; font-family: inherit; font-size: 0.82rem; }
 .catFormBox { border-top: 1px solid var(--color-border, #e5e7eb); padding-top: 16px; display: flex; flex-direction: column; gap: 10px; }
 .catFormTitle { font-size: 0.88rem; font-weight: 700; color: var(--color-text-dark, #111827); }
+/* ===== Categorías: edición en línea ===== */
+.catRowEdit { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1.5px solid var(--brand, #2855F6); border-radius: 12px; background: rgba(40, 85, 246, .035); }
+.catAddBtn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 11px 14px; cursor: pointer; border: 1.5px dashed var(--color-border, #d1d5db); background: #fff; color: var(--brand, #2855F6); border-radius: 12px; font-size: 0.9rem; font-weight: 700; font-family: inherit; transition: border-color .15s ease, background .15s ease; margin-bottom: 14px; }
+.catAddBtn:hover { border-color: var(--brand, #2855F6); background: rgba(40, 85, 246, .05); }

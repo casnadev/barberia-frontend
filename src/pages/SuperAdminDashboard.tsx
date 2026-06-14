@@ -5,7 +5,7 @@ import { confirmDialog } from '@/components/ConfirmDialog'
 import {
   Scissors, Plus, Building2, MapPin, KeyRound, Power,
   X, Check, Mail, Phone, CreditCard,
-  Store, Trash2, Send, Loader2, Pencil,
+  Store, Trash2, Send, Loader2, Pencil, RefreshCw,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { AccountMenu } from '@/components/AccountMenu'
@@ -119,13 +119,18 @@ export function SuperAdminDashboard() {
 
       // 3) Sede inicial por defecto (el admin no puede crear sedes solo)
       const base = slugify(nombre)
+      const esEmail = form.canal === 'Email'
+      const telOwner = (form.ownerTelefono || '').replace(/\D/g, '')
       const sedeBase = {
         idEmpresa: empresa.id,
-        nombre: 'Sede principal',
+        nombre,                                                  // ← nombre del negocio (no "Sede principal")
         direccion: '', departamento: '', provincia: '', distrito: '',
         latitud: 0, longitud: 0,
-        telefono: '', whatsappContacto: '', correoContacto: '',
+        telefono: esEmail ? '' : telOwner,                       // pre-carga teléfono si el alta fue por WhatsApp
+        whatsappContacto: esEmail ? '' : telOwner,
+        correoContacto: esEmail ? form.ownerCorreo.trim() : '',  // pre-carga correo si el alta fue por Email
         zonaHoraria: 'America/Lima', moneda: 'PEN',
+        crearTrabajadorDueno: true,   // el dueño nace también como barbero (1 sede = 1 dueño-trabajador)
       }
       try {
         await empresasService.createSede({ ...sedeBase, subdominio: base, slug: base })
@@ -673,6 +678,10 @@ function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: () => voi
                 <div className="mt-3 pl-6 space-y-2">
                   <input className={inputCls} value={editSlug} placeholder="nuevo-slug"
                     onChange={(e) => setEditSlug(e.target.value)} />
+                  <button type="button" onClick={() => setEditSlug(slugify(s.nombre))}
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-700">
+                    <RefreshCw className="w-3 h-3" /> Regenerar desde el nombre ({slugify(s.nombre) || '—'})
+                  </button>
                   <p className="text-[11px] text-amber-600 leading-snug">
                     ⚠ Cambiará la URL pública a <strong>{(editSlug.trim() || '...')}.barber.pe</strong> y romperá los enlaces anteriores de esta sede.
                   </p>
