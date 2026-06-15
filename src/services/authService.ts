@@ -86,6 +86,19 @@ export const authService = {
   },
 
   /**
+   * Login con Google. Recibe el ID token (credential) que entrega Google
+   * Identity Services en el front y lo manda al backend, que lo valida y
+   * devuelve la MISMA sesión que el login normal (token + cookie bp_rt).
+   * A diferencia de `login`, NO traga el error: lo relanza para que la página
+   * pueda mostrar el mensaje del backend (p.ej. "no hay cuenta con ese correo").
+   */
+  loginGoogle: async (credential: string): Promise<LoginResponse | null> => {
+    const response = await apiClient.post('/api/Auth/google', { Credential: credential })
+    const responseData = response.data.data || response.data
+    return mapLoginResponse(responseData)
+  },
+
+  /**
    * SSO cross-subdominio: recupera la sesión SIN pedir credenciales.
    *
    * El login deja un refresh token en una cookie httpOnly `bp_rt` con

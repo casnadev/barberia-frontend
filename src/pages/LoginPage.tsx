@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import {
-  Scissors, ArrowLeft, Delete, ShieldCheck, KeyRound, Send, Loader2, LogIn,
-  CalendarCheck, Users, Wallet, Eye, EyeOff, MailCheck, MessageCircle,
+  ArrowLeft, Delete, ShieldCheck, KeyRound, Send, Loader2, LogIn,
+  Eye, EyeOff, MailCheck, MessageCircle,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { pinAuthService } from '@/services/pinAuthService'
@@ -18,24 +18,24 @@ function nombreDispositivoCorto(): string {
   const has = (s: string) => ua.includes(s)
   const navegador =
     has('Edg') ? 'Edge' :
-    has('OPR') || has('Opera') ? 'Opera' :
-    has('Chrome') ? 'Chrome' :
-    has('Firefox') ? 'Firefox' :
-    has('Safari') ? 'Safari' : 'Navegador'
+      has('OPR') || has('Opera') ? 'Opera' :
+        has('Chrome') ? 'Chrome' :
+          has('Firefox') ? 'Firefox' :
+            has('Safari') ? 'Safari' : 'Navegador'
   const so =
     has('Windows') ? 'Windows' :
-    has('Android') ? 'Android' :
-    has('iPhone') ? 'iPhone' :
-    has('iPad') ? 'iPad' :
-    has('Mac') ? 'Mac' :
-    has('Linux') ? 'Linux' : 'dispositivo'
+      has('Android') ? 'Android' :
+        has('iPhone') ? 'iPhone' :
+          has('iPad') ? 'iPad' :
+            has('Mac') ? 'Mac' :
+              has('Linux') ? 'Linux' : 'dispositivo'
   return `${navegador} en ${so}`.slice(0, 120)
 }
 export function LoginPage() {
   const navigate = useNavigate()
   const { setUser, setToken } = useAuthStore()
 
-  const [view, setView] = useState<View>('pin')
+  const [view, setView] = useState<View>('password')
   const [loading, setLoading] = useState(false)
   const [flujo, setFlujo] = useState<'enroll' | 'recover' | 'password'>('recover')
 
@@ -50,6 +50,11 @@ export function LoginPage() {
 
   const [correo, setCorreo] = useState('')
   const [password, setPassword] = useState('')
+
+  // Google Sign-In. Si no hay VITE_GOOGLE_CLIENT_ID en el .env, el botón no
+  // aparece (no rompe nada).
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
+  const googleBtnRef = useRef<HTMLDivElement>(null)
 
   const [nuevaPass, setNuevaPass] = useState('')
   const [repitePass, setRepitePass] = useState('')
@@ -194,66 +199,102 @@ export function LoginPage() {
     finally { setLoading(false) }
   }
 
+  // ----------------------------------------------------------- Google
+  const handleGoogleCredential = async (resp: { credential?: string }) => {
+    if (!resp?.credential) return
+    setLoading(true)
+    try {
+      const res = await authService.loginGoogle(resp.credential)
+      if (res?.token && res.user) await entrar(res.token, res.user as any)
+      else toast.error('No se pudo iniciar sesión con Google.')
+    } catch (e: any) {
+      const d = e?.response?.data
+      toast.error(d?.mensaje || d?.detail || d?.message || 'No se pudo iniciar sesión con Google.')
+    } finally { setLoading(false) }
+  }
+
+  // Carga GSI (si falta) y dibuja el botón cuando estamos en la vista password.
+  // Espera (poll) a que window.google.accounts.id exista DE VERDAD antes de
+  // pintar; así no falla aunque el script aún no haya terminado de cargar
+  // (caso típico con React StrictMode en dev, que corre los efectos 2 veces).
+  useEffect(() => {
+    if (!googleClientId || view !== 'password') return
+    let cancelado = false
+
+    const pintarBoton = () => {
+      const g = (window as any).google
+      if (cancelado || !g?.accounts?.id || !googleBtnRef.current) return
+      g.accounts.id.initialize({ client_id: googleClientId, callback: handleGoogleCredential })
+      googleBtnRef.current.innerHTML = ''
+      g.accounts.id.renderButton(googleBtnRef.current, {
+        type: 'standard', theme: 'outline', size: 'large',
+        text: 'continue_with', shape: 'pill', logo_alignment: 'center',
+        locale: 'es', width: Math.min(googleBtnRef.current.offsetWidth || 320, 400),
+      })
+    }
+
+    // Asegura el script una sola vez.
+    const ID = 'google-gsi-script'
+    if (!document.getElementById(ID)) {
+      const s = document.createElement('script')
+      s.src = 'https://accounts.google.com/gsi/client'
+      s.async = true; s.defer = true; s.id = ID
+      document.head.appendChild(s)
+    }
+
+    // Si ya está listo, pinta; si no, espera hasta que la librería cargue.
+    if ((window as any).google?.accounts?.id) {
+      pintarBoton()
+      return
+    }
+    const intervalo = setInterval(() => {
+      if ((window as any).google?.accounts?.id) {
+        clearInterval(intervalo)
+        pintarBoton()
+      }
+    }, 100)
+
+    return () => { cancelado = true; clearInterval(intervalo) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, googleClientId])
+
   const limpiar = () => { setCodigo(''); setNuevoPin(''); setRepitePin(''); setNuevaPass(''); setRepitePass('') }
   const irA = (v: View) => { setPinError(''); limpiar(); setView(v) }
 
   // ================================================================= UI
   return (
     <div className="min-h-screen flex bg-white">
-      {/* ===================== PANEL DE MARCA (desktop) ===================== */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white p-12 flex-col justify-between">
-        {/* blobs decorativos */}
-        <div className="pointer-events-none absolute -top-24 -left-24 w-96 h-96 bg-blue-400/30 rounded-full blur-3xl" />
-        <div className="pointer-events-none absolute bottom-[-10%] right-[-5%] w-[28rem] h-[28rem] bg-cyan-300/15 rounded-full blur-3xl" />
-        <div className="pointer-events-none absolute top-1/3 right-1/4 w-72 h-72 bg-indigo-400/20 rounded-full blur-3xl" />
+      {/* ===================== PANEL IMAGEN (desktop) ===================== */}
+      <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
+        {/* foto de barbería */}
+        <img src="/login-barberia.jpg" alt="Barbería profesional" className="absolute inset-0 w-full h-full object-cover" />
+        {/* degradado para legibilidad del lema */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
 
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="relative z-10 flex items-center gap-3">
-          <div className="w-11 h-11 bg-white/15 backdrop-blur rounded-2xl flex items-center justify-center ring-1 ring-white/20">
-            <Scissors className="w-6 h-6 text-white" />
-          </div>
-          <span className="text-xl font-bold tracking-tight">Barber.PE</span>
-        </motion.div>
-
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="relative z-10">
-          <h2 className="text-4xl font-bold leading-tight tracking-tight">
+        {/* lema */}
+        <div className="absolute inset-x-0 bottom-0 p-12 text-white">
+          <motion.h2 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="text-4xl font-bold leading-tight tracking-tight">
             Tu barbería,<br /><span className="text-blue-200">en orden.</span>
-          </h2>
-          <p className="mt-4 text-blue-100/80 text-lg max-w-sm">
-            Reservas, agenda, caja y tu equipo — todo en un solo lugar.
-          </p>
-
-          <div className="mt-10 space-y-4">
-            {[
-              { icon: CalendarCheck, t: 'Reservas y agenda online' },
-              { icon: Users, t: 'Tu equipo y sus comisiones' },
-              { icon: Wallet, t: 'Caja, pagos y reportes' },
-            ].map((f, i) => (
-              <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 + i * 0.08 }} className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-white/10 ring-1 ring-white/15 flex items-center justify-center">
-                  <f.icon className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-blue-50/90">{f.t}</span>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        <div className="relative z-10 text-xs text-blue-200/60">© {new Date().getFullYear()} Barber.PE · Hecho en Perú</div>
+          </motion.h2>
+          <motion.p initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+            className="mt-4 text-white/85 text-lg max-w-sm">
+            Reservas, agenda y caja en un solo lugar.
+          </motion.p>
+        </div>
       </div>
 
       {/* ===================== PANEL DE FORMULARIO ===================== */}
-      <div className="flex-1 flex items-center justify-center p-6 relative">
-        {/* glow sutil de fondo (solo móvil, para que no se vea vacío) */}
-        <div className="lg:hidden pointer-events-none absolute top-0 inset-x-0 h-64 bg-gradient-to-b from-blue-50 to-transparent" />
+      <div className="flex-1 flex items-center justify-center p-6 relative overflow-hidden">
+        {/* Fondo móvil: imagen de barbería + overlay (en desktop la imagen vive en el panel izquierdo) */}
+        <img src="/login-barberia.jpg" alt="" aria-hidden="true" className="lg:hidden absolute inset-0 w-full h-full object-cover" />
+        <div className="lg:hidden absolute inset-0 bg-black/60" />
 
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="relative w-full max-w-sm">
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl shadow-black/20 p-7 lg:bg-transparent lg:rounded-none lg:shadow-none lg:p-0">
           {/* Logo (solo móvil) */}
           <div className="lg:hidden text-center mb-7">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl mx-auto mb-3 flex items-center justify-center shadow-lg shadow-blue-500/25">
-              <Scissors className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Barber.PE</h1>
+            <img src="/barber-logo-black.png" alt="Barber.PE" className="h-11 mx-auto" />
           </div>
 
           <AnimatePresence mode="wait">
@@ -261,8 +302,8 @@ export function LoginPage() {
             {view === 'pin' && (
               <motion.div key="pin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <div className="hidden lg:block mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Bienvenido de nuevo</h2>
-                  <p className="text-gray-400 text-sm mt-1">Ingresa tu PIN para continuar</p>
+                  <h2 className="text-2xl font-bold text-gray-900">Ingresa tu PIN</h2>
+                  <p className="text-gray-400 text-sm mt-1">Usa tu PIN de 6 dígitos para continuar</p>
                 </div>
                 <p className="lg:hidden text-center text-gray-500 text-sm mb-5">Ingresa tu PIN</p>
 
@@ -273,8 +314,7 @@ export function LoginPage() {
                         {pin[i] ?? ''}
                       </span>
                     ) : (
-                      <div key={i} className={`w-3.5 h-3.5 rounded-full transition-all duration-200 ${
-                        i < pin.length ? 'bg-blue-600 scale-110 shadow-sm shadow-blue-600/40' : 'bg-gray-200'}`} />
+                      <div key={i} className={`w-3.5 h-3.5 rounded-full transition-all duration-200 ${i < pin.length ? 'bg-blue-600 scale-110 shadow-sm shadow-blue-600/40' : 'bg-gray-200'}`} />
                     )
                   )}
                   <button type="button" onClick={() => setShowPin((s) => !s)}
@@ -287,7 +327,7 @@ export function LoginPage() {
 
                 {/* Teclado premium */}
                 <div className="grid grid-cols-3 gap-3 max-w-[300px] mx-auto lg:mx-0">
-                  {['1','2','3','4','5','6','7','8','9'].map((d) => (
+                  {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => (
                     <button key={d} onClick={() => pressDigit(d)} disabled={loading}
                       className="aspect-square rounded-2xl text-2xl font-light text-gray-700 bg-white border border-gray-100 hover:bg-blue-50 hover:text-blue-700 active:bg-blue-600 active:text-white active:border-blue-600 active:scale-90 transition-all duration-150 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
                       {d}
@@ -332,9 +372,7 @@ export function LoginPage() {
                 <button onClick={enviarCodigoEnrolar} disabled={loading} className={btnPrimary + ' mt-2 mb-3'}>
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} Enviarme el código
                 </button>
-                <button onClick={() => irA('enroll-code')} className="w-full text-blue-600 font-medium py-2 text-sm hover:underline">
-                  Ya tengo un código
-                </button>
+
               </motion.div>
             )}
 
@@ -476,9 +514,7 @@ export function LoginPage() {
                 <button onClick={enviarCodigoPassword} disabled={loading} className={btnPrimary + ' mt-2'}>
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} Enviarme el enlace
                 </button>
-                <button onClick={() => irA('set-password')} className="w-full text-blue-600 font-medium py-2 text-sm hover:underline">
-                  Ya tengo un código
-                </button>
+
               </motion.div>
             )}
 
@@ -510,11 +546,11 @@ export function LoginPage() {
             {/* ---------------- INGRESO TRADICIONAL ---------------- */}
             {view === 'password' && (
               <motion.div key="password" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <Back onClick={() => irA('pin')} />
-                <h2 className="text-2xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <ShieldCheck className="w-6 h-6 text-blue-600" /> Acceso al sistema
-                </h2>
-                <p className="text-sm text-gray-500 mb-5">Ingreso con contraseña.</p>
+                <div className="hidden lg:block mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">Bienvenido a Barber.pe</h2>
+                  <p className="text-gray-400 text-sm mt-1">Ingresa para gestionar tu barbería</p>
+                </div>
+                <p className="lg:hidden text-center text-gray-500 text-sm mb-5">Ingresa para gestionar tu barbería</p>
 
                 <Label>Correo o teléfono</Label>
                 <Input value={correo} onChange={setCorreo} placeholder="Correo o teléfono" />
@@ -530,6 +566,18 @@ export function LoginPage() {
                   className="w-full text-gray-400 text-sm py-2 mt-1 hover:text-gray-600 transition">
                   ¿Olvidaste tu contraseña? Créala aquí
                 </button>
+
+                {googleClientId && (
+                  <>
+                    <div className="flex items-center gap-3 my-4">
+                      <div className="h-px flex-1 bg-gray-200" />
+                      <span className="text-xs text-gray-400">o</span>
+                      <div className="h-px flex-1 bg-gray-200" />
+                    </div>
+                    {/* Botón oficial de Google (lo inyecta Identity Services) */}
+                    <div ref={googleBtnRef} className="w-full flex justify-center" style={{ colorScheme: 'light' }} />
+                  </>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -538,6 +586,12 @@ export function LoginPage() {
             <button onClick={() => irA('password')}
               className="block w-full mt-7 text-xs text-gray-400 hover:text-blue-600 text-center lg:text-left font-semibold tracking-wide uppercase transition">
               Ingreso Tradicional
+            </button>
+          )}
+          {view === 'password' && (
+            <button onClick={() => irA('pin')}
+              className="block w-full mt-7 text-xs text-gray-400 hover:text-blue-600 text-center lg:text-left font-semibold tracking-wide uppercase transition">
+              Ingresar con PIN
             </button>
           )}
         </motion.div>
