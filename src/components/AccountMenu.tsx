@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { User, LogOut, LogIn, UserPlus, Settings, ExternalLink, LifeBuoy } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { authService } from '@/services/authService'
 import { getActiveTenant, buildImageUrl } from '@/services/apiClient'
 import { miCuentaService } from '@/services/miCuentaService'
 import { perfilService } from '@/services/perfilService'
@@ -66,7 +67,15 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
   }, [user?.id, user?.rol, user?.urlFotoPerfil])
 
   const go = (path: string) => { setOpen(false); navigate(path) }
-  const onLogout = () => { setOpen(false); logout(); navigate('/') }
+  const onLogout = async () => {
+    setOpen(false)
+    // 1) Backend: revoca la sesión y borra la cookie SSO `bp_rt`. Sin esto, el
+    //    logout es solo cosmético y el SSO te vuelve a loguear al recargar.
+    await authService.logout()
+    // 2) Limpia el estado local (store + localStorage + tenant + sessionStorage).
+    logout()
+    navigate('/')
+  }
 
   // ← NUEVO: "Mi perfil" robusto. Si el padre pasó onMiPerfil (dashboard), se usa
   //   ese (comportamiento de siempre). Si no (micrositio público), abrimos el
@@ -99,7 +108,7 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
         aria-expanded={open}
       >
         {user?.urlFotoPerfil
-          ? <img src={buildImageUrl(user.urlFotoPerfil)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} />
+          ? <img src={buildImageUrl(user.urlFotoPerfil)} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} />
           : <User width={20} height={20} />}
       </button>
 

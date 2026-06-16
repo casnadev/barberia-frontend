@@ -71,9 +71,12 @@ export function LoginPage() {
       } catch { /* sin sede aun */ }
     }
     const rutas: Record<string, string> = {
-      SuperAdmin: '/super-admin', Admin: '/dashboard', Trabajador: '/mi-agenda', Cliente: '/mi-perfil',
+      SuperAdmin: '/super-admin', Admin: '/dashboard', Trabajador: '/mi-agenda',
     }
-    navigate(rutas[user.rol] ?? '/dashboard')
+    // Cliente: vuelve a la landing principal (desde ahí sigue navegando, elige
+    // una sede o abre su perfil por el AccountMenu). Los de back-office van a
+    // su panel correspondiente.
+    navigate(user.rol === 'Cliente' ? '/' : (rutas[user.rol] ?? '/dashboard'))
   }
 
   // ----------------------------------------------------------- PIN diario

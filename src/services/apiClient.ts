@@ -204,3 +204,14 @@ export const buildImageUrl = (ruta?: string | null): string => {
 }
 
 export { API_BASE_URL }
+
+/**
+ * URL canónica del micrositio público de una sede.
+ *  - Producción (host *.barber.pe): subdominio propio → https://<sub>.barber.pe
+ *  - Dev/local (sin subdominios reales): se usa el query param ?s=<sub>
+ * Mismo criterio que el "Ver sitio" del panel; centralizado aquí para reusar.
+ */
+export const urlMicrositio = (subdominio: string): string =>
+  window.location.hostname.endsWith('barber.pe')
+    ? `https://${subdominio}.barber.pe`
+    : `/?s=${encodeURIComponent(subdominio)}`

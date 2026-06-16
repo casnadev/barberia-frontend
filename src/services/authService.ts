@@ -9,6 +9,7 @@ export interface LoginUserData {
   idEmpresa?: number
   idSede?: number
   debeCambiarPassword?: boolean
+  urlFotoPerfil?: string | null
 }
 
 export interface LoginResponse {
@@ -49,6 +50,7 @@ function mapLoginResponse(responseData: any, correoFallback = ''): LoginResponse
       idEmpresa: responseData.idEmpresa,
       idSede: responseData.idSede,
       debeCambiarPassword: responseData.debeCambiarPassword,
+      urlFotoPerfil: responseData.urlFotoPerfil ?? undefined,
     },
   }
 }
@@ -239,9 +241,19 @@ export const authService = {
   },
 
   /**
-   * Logout - Limpiar localStorage
+   * Logout REAL. Llama al backend para (1) revocar la sesión en BD y (2) borrar
+   * la cookie httpOnly compartida `bp_rt` (Domain=.barber.pe). Sin esto, la
+   * cookie sobrevive al "logout" local y el SSO (bootstrapSession) vuelve a
+   * loguear al usuario al recargar o al manipular la URL. `withCredentials` ya
+   * está activo en apiClient, así que la cookie viaja sola. Aunque la red falle,
+   * limpiamos el estado local igual.
    */
-  logout: (): void => {
+  logout: async (): Promise<void> => {
+    try {
+      await apiClient.post('/api/Auth/logout', {})
+    } catch {
+      /* sin red: igual limpiamos local abajo */
+    }
     try {
       localStorage.removeItem('token')
       localStorage.removeItem('user')

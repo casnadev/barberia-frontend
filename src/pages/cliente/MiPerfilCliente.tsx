@@ -190,7 +190,7 @@ export function MiPerfilCliente() {
             <div className="flex items-center gap-4">
               <div className={`w-14 h-14 rounded-full overflow-hidden flex items-center justify-center text-white text-xl font-bold ${perfil?.urlFotoPerfil ? '' : `bg-gradient-to-br ${AVATARS[avatar]}`}`}>
                 {perfil?.urlFotoPerfil
-                  ? <img src={buildImageUrl(perfil.urlFotoPerfil)} alt="" className="w-full h-full object-cover" />
+                  ? <img src={buildImageUrl(perfil.urlFotoPerfil)} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                   : (perfil?.nombreCompleto || user?.nombreCompleto || 'C').trim().charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
@@ -471,7 +471,7 @@ function EditarPerfilModal({ perfil, idCliente, avatar, onAvatar, onClose, onSav
           <label className="text-xs text-gray-500">Foto de perfil</label>
           <div className="flex items-center gap-3 mt-1">
             <div className={`w-16 h-16 rounded-full overflow-hidden flex items-center justify-center text-white text-xl font-bold shrink-0 ${foto ? '' : `bg-gradient-to-br ${AVATARS[avatar]}`}`}>
-              {foto ? <img src={buildImageUrl(foto)} alt="" className="w-full h-full object-cover" /> : inicial}
+              {foto ? <img src={buildImageUrl(foto)} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : inicial}
             </div>
             <div className="space-y-1">
               <label className="inline-flex items-center gap-1 text-sm text-blue-700 bg-blue-50 rounded-lg px-3 py-1.5 font-medium cursor-pointer">

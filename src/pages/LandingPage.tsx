@@ -9,7 +9,9 @@ import {
 import { landingService, type SedeDestacada } from '@/services/landingService'
 import { planesService, type PlanPublico } from '@/services/planesService'
 import { resenasPublicasService, type ResenaDestacada } from '@/services/resenasPublicasService'
-import { setTenant, buildImageUrl, apiClient } from '@/services/apiClient'
+import { setTenant, buildImageUrl, apiClient, urlMicrositio } from '@/services/apiClient'
+import { useAuthStore } from '@/store/authStore'
+import { AccountMenu } from '@/components/AccountMenu'
 import styles from './Landing.module.css'
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -69,6 +71,7 @@ const BADGES = [
 /* ════════════════════════════════════════════════════════════════════════ */
 export default function LandingPage() {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [faq, setFaq] = useState<number | null>(0)
@@ -113,7 +116,16 @@ export default function LandingPage() {
 
   /* ── acciones ─────────────────────────────────────────────────────── */
   const irA = (id: string) => { setMenuOpen(false); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
-  const verSede = (s: SedeDestacada) => { if (s.subdominio) setTenant(s.subdominio); navigate(`/sede/${s.idSede}`) }
+  const verSede = (s: SedeDestacada) => {
+    if (!s.subdominio) { navigate(`/sede/${s.idSede}`); return }   // sin subdominio: fallback path
+    const url = urlMicrositio(s.subdominio)
+    if (url.startsWith('http')) {
+      window.location.href = url                                    // prod: carga al subdominio canónico
+    } else {
+      setTenant(s.subdominio)                                       // dev: ?s= manda en esta pestaña
+      navigate(`/sede/${s.idSede}${url.slice(1)}`)
+    }
+  }
   const abrirDemo = () => { setEnviado(false); setErr(''); setDemoOpen(true) }
   const scrollRail = (ref: React.RefObject<HTMLDivElement>, dir: 1 | -1) =>
     ref.current?.scrollBy({ left: dir * Math.min(ref.current.clientWidth * 0.8, 520), behavior: 'smooth' })
@@ -156,16 +168,28 @@ export default function LandingPage() {
             {navLinks.map(([n, id]) => <a key={id} onClick={() => irA(id)}>{n}</a>)}
           </nav>
           <div className={styles.navCta}>
-            <Link to="/login" className={styles.linkLogin}>Iniciar sesión</Link>
-            <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={abrirDemo}>Empieza GRATIS</button>
+            {user ? (
+              <AccountMenu variant="plain" />
+            ) : (
+              <>
+                <Link to="/login" className={styles.linkLogin}>Iniciar sesión</Link>
+                <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={abrirDemo}>Empieza GRATIS</button>
+              </>
+            )}
             <button className={styles.hamb} aria-label="Menú" onClick={() => setMenuOpen((v) => !v)}>{menuOpen ? <X size={22} /> : <Menu size={22} />}</button>
           </div>
         </div>
         {menuOpen && (
           <div className={styles.mobileMenu}>
             {navLinks.map(([n, id]) => <a key={id} onClick={() => irA(id)}>{n}</a>)}
-            <Link to="/login" className={`${styles.btn} ${styles.btnGhost}`}>Iniciar sesión</Link>
-            <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={abrirDemo}>Empieza GRATIS</button>
+            {user ? (
+              <AccountMenu variant="plain" />
+            ) : (
+              <>
+                <Link to="/login" className={`${styles.btn} ${styles.btnGhost}`}>Iniciar sesión</Link>
+                <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={abrirDemo}>Empieza GRATIS</button>
+              </>
+            )}
           </div>
         )}
       </header>

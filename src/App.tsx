@@ -40,6 +40,23 @@ function RouteFallback() {
 }
 
 function ProtectedRoute({ children, requiredRole, skipTenant }: any) {
+  // ── Confinamiento del panel ─────────────────────────────────────────────
+  // El panel admin NO debe vivir en el subdominio PÚBLICO de una sede
+  // (nacho.barber.pe/dashboard). Si defines VITE_PANEL_HOST (ej. "app.barber.pe"
+  // o "barber.pe"), al entrar a una ruta protegida desde el subdominio de una
+  // sede te redirige al host canónico del panel. La cookie SSO (.barber.pe)
+  // restaura la sesión allí sin volver a pedir login. Si NO defines la env,
+  // el comportamiento actual no cambia.
+  if (
+    PANEL_HOST &&
+    window.location.hostname.endsWith('barber.pe') &&
+    getSubdominio() !== null &&
+    window.location.hostname !== PANEL_HOST
+  ) {
+    window.location.replace(`https://${PANEL_HOST}${window.location.pathname}${window.location.search}`)
+    return null
+  }
+
   const { user } = useAuthStore()
   if (!user) return <Navigate to="/login" />
 
@@ -64,6 +81,10 @@ function ProtectedRoute({ children, requiredRole, skipTenant }: any) {
 const ROOT_HOSTS = ['localhost', '127.0.0.1', 'barber.pe', 'www.barber.pe', 'app.barber.pe', 'admin.barber.pe']
 // Etiquetas de subdominio reservadas para el panel (no son sedes).
 const SUBS_RESERVADOS = ['www', 'app', 'admin', 'api', 'panel']
+// Host canónico del panel admin (opcional). Si se define (ej. "app.barber.pe"
+// o "barber.pe"), el panel se confina a ese host y deja de abrirse en el
+// subdominio público de cada sede. Ver ProtectedRoute.
+const PANEL_HOST = (import.meta.env.VITE_PANEL_HOST as string | undefined)?.trim() || ''
 
 function getSubdominio(): string | null {
   const host = window.location.hostname
