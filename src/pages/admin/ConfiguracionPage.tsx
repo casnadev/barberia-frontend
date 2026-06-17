@@ -316,7 +316,6 @@ export function ConfiguracionPage() {
   // Guarda sede + datos del negocio (empresa) en una sola acción. Devuelve true si OK.
   const guardarConfig = async (): Promise<boolean> => {
     if (!sede.nombre?.trim()) { toast.error('El nombre de la barbería es obligatorio'); return false }
-    if (!sede.telefono?.trim()) { toast.error('El teléfono es obligatorio'); return false }
     if (empresa.idEmpresa != null && !empresa.nombreComercial?.trim()) { toast.error('El nombre del negocio es obligatorio.'); return false }
     try {
       setSubmitting(true)
