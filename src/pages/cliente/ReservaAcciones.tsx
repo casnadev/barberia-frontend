@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { X, Clock, MapPin, User, Star, Check, CalendarClock, Scissors } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { reservasService } from '@/services/reservasService' // ← para conectar endpoints reales
+import { reservasService } from '@/services/reservasService' // ← endpoints reales
 import styles from '@/styles/ReservaAcciones.module.css'
 
 interface Reserva {
@@ -17,12 +17,18 @@ interface Reserva {
   sede: string
   estado: 'Pendiente' | 'Confirmada' | 'Atendida' | 'Cancelada'
   idTrabajador: number
+  idServicio: number
 }
 
 interface FormReprogramar {
   fechaNueva: string
-  horaNueva: string
   motivo: string
+}
+
+interface Slot {
+  horaInicio: string
+  horaFin: string
+  etiqueta: string
 }
 
 type DoneType = 'confirmada' | 'cancelada' | 'reprogramada' | 'resena' | null
@@ -36,9 +42,19 @@ export function ReservaAcciones() {
   const [calificacion, setCalificacion] = useState(0)
   const [resena, setResena] = useState('')
   const [showReprog, setShowReprog] = useState(false)
-  const [formReprogramar, setFormReprogramar] = useState<FormReprogramar>({ fechaNueva: '', horaNueva: '', motivo: '' })
+  const [formReprogramar, setFormReprogramar] = useState<FormReprogramar>({ fechaNueva: '', motivo: '' })
+  const [slots, setSlots] = useState<Slot[]>([])
+  const [slotSel, setSlotSel] = useState('')
+  const [loadingSlots, setLoadingSlots] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [done, setDone] = useState<DoneType>(null)
+
+  // Fecha local (Perú) en formato YYYY-MM-DD, para el min del date picker
+  const hoy = (() => {
+    const d = new Date()
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+    return d.toISOString().slice(0, 10)
+  })()
 
   // Deep-link desde el correo: si la URL pide reprogramar, abrimos el form
   useEffect(() => {
@@ -46,6 +62,16 @@ export function ReservaAcciones() {
   }, [location.pathname])
 
   useEffect(() => { loadReserva() }, [token])
+
+  // Al abrir el bloque de reprogramar, preselecciona una fecha y carga slots
+  useEffect(() => {
+    if (showReprog && reserva && !formReprogramar.fechaNueva) {
+      const inicial = reserva.fecha >= hoy ? reserva.fecha : hoy
+      setFormReprogramar((f) => ({ ...f, fechaNueva: inicial }))
+      cargarSlots(inicial)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showReprog, reserva])
 
   const loadReserva = async () => {
     try {
@@ -62,10 +88,23 @@ export function ReservaAcciones() {
         sede: data.sede,
         estado: data.estado,
         idTrabajador: data.idTrabajador,
+        idServicio: data.idServicio,
       })
     } catch {
       toast.error('No pudimos cargar la reserva. El enlace no es válido o expiró.')
     } finally { setLoading(false) }
+  }
+
+  // Carga los horarios libres del barbero para una fecha (mismo motor que el step 3)
+  const cargarSlots = async (fecha: string) => {
+    if (!reserva || !fecha) return
+    setLoadingSlots(true); setSlotSel('')
+    try {
+      const data = await reservasService.getSlotsDisponibles(reserva.idTrabajador, fecha, reserva.idServicio)
+      setSlots(Array.isArray(data) ? data : [])
+    } catch {
+      setSlots([])
+    } finally { setLoadingSlots(false) }
   }
 
   // Cierre inteligente: intenta cerrar la pestaña; si no, vuelve atrás (Gmail) o a barber.pe
@@ -100,8 +139,8 @@ export function ReservaAcciones() {
   }
 
   const handleReprogramar = async () => {
-    if (!token || !formReprogramar.fechaNueva || !formReprogramar.horaNueva) {
-      toast.error('Completa fecha y hora'); return
+    if (!token || !formReprogramar.fechaNueva || !slotSel) {
+      toast.error('Elige una fecha y un horario disponible'); return
     }
     if (!reserva) return
     setIsSubmitting(true)
@@ -109,7 +148,7 @@ export function ReservaAcciones() {
       await reservasService.reprogramarPorToken(token, {
         idTrabajador: reserva.idTrabajador,
         fechaReserva: formReprogramar.fechaNueva,  // "YYYY-MM-DD"
-        horaInicio: formReprogramar.horaNueva,     // "HH:mm"
+        horaInicio: slotSel,                       // "HH:mm" (slot válido)
       })
       setDone('reprogramada')
     } catch (err: any) {
@@ -263,12 +302,60 @@ export function ReservaAcciones() {
             ) : (
               <div className={styles.block}>
                 <div className={styles.blockTitle}><CalendarClock size={17} /> Reprogramar cita</div>
-                <div className={styles.inputRow}>
-                  <input type="date" className={styles.input} value={formReprogramar.fechaNueva} onChange={(e) => setFormReprogramar({ ...formReprogramar, fechaNueva: e.target.value })} />
-                  <input type="time" className={styles.input} value={formReprogramar.horaNueva} onChange={(e) => setFormReprogramar({ ...formReprogramar, horaNueva: e.target.value })} />
-                </div>
+
+                <input
+                  type="date"
+                  className={styles.input}
+                  min={hoy}
+                  value={formReprogramar.fechaNueva}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setFormReprogramar({ ...formReprogramar, fechaNueva: v })
+                    cargarSlots(v)
+                  }}
+                />
+
+                {/* Horarios disponibles (mismo cálculo que el step 3 de reserva) */}
+                {loadingSlots ? (
+                  <p style={{ margin: '12px 2px', color: '#6b7280', fontSize: 14 }}>Buscando horarios disponibles…</p>
+                ) : formReprogramar.fechaNueva && slots.length === 0 ? (
+                  <p style={{ margin: '12px 2px', color: '#6b7280', fontSize: 14 }}>
+                    No hay horarios disponibles ese día. Prueba con otra fecha.
+                  </p>
+                ) : slots.length > 0 ? (
+                  <>
+                    <div style={{ margin: '12px 2px 6px', color: '#6b7280', fontSize: 13, fontWeight: 600 }}>
+                      Elige un horario:
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(82px, 1fr))', gap: 8, marginBottom: 4 }}>
+                      {slots.map((s) => (
+                        <button
+                          key={s.etiqueta}
+                          type="button"
+                          onClick={() => setSlotSel(s.etiqueta)}
+                          style={{
+                            padding: '10px 6px',
+                            borderRadius: 10,
+                            border: slotSel === s.etiqueta ? '1.5px solid #15110e' : '1.5px solid #e5e7eb',
+                            background: slotSel === s.etiqueta ? '#15110e' : '#fff',
+                            color: slotSel === s.etiqueta ? '#fff' : '#1f2937',
+                            fontWeight: 600,
+                            fontSize: 13.5,
+                            cursor: 'pointer',
+                            transition: 'all .15s',
+                          }}
+                        >
+                          {a12h(s.etiqueta)}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+
                 <textarea className={styles.textarea} placeholder="Motivo (opcional)" value={formReprogramar.motivo} onChange={(e) => setFormReprogramar({ ...formReprogramar, motivo: e.target.value })} rows={2} />
-                <button className={styles.btnPrimary} onClick={handleReprogramar} disabled={isSubmitting}>{isSubmitting ? 'Reprogramando…' : 'Confirmar nueva fecha'}</button>
+                <button className={styles.btnPrimary} onClick={handleReprogramar} disabled={isSubmitting || !slotSel}>
+                  {isSubmitting ? 'Reprogramando…' : 'Confirmar nueva fecha'}
+                </button>
               </div>
             )}
 
