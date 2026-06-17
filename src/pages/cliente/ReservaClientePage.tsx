@@ -683,12 +683,12 @@ export function ReservaClientePage() {
 
                   <div className={styles.contactSection}>
                     <div className={styles.contactInputGroup}>
-                      <label className={styles.contactLabel}>Nombre</label>
+                      <label className={styles.contactLabel}>Ingresa tu nombre</label>
                       <input
                         type="text"
                         value={formData.nombre}
                         onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                        placeholder="Tu nombre"
+                        placeholder="Tu nombre (aparecerá en tu reseña)"
                         className={styles.contactInput}
                       />
                     </div>
@@ -728,10 +728,9 @@ export function ReservaClientePage() {
 
                   <div className={styles.infoMessages}>
                     <div className={styles.infoMessage}>
-                      <p className={styles.infoMessageText}>Te enviaremos un enlace de confirmación</p>
-                    </div>
-                    <div className={styles.infoMessage}>
-                      <p className={styles.infoMessageText}>Necesitamos saber que eres tú para continuar</p>
+                      <p className={styles.infoMessageText}>
+                        Te enviaremos un enlace de confirmación, necesitamos saber que eres tú para continuar.
+                      </p>
                     </div>
                   </div>
                 </motion.div>
