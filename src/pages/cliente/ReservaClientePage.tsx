@@ -372,19 +372,17 @@ export function ReservaClientePage() {
     )
   }
 
-  // ── Pantalla de ÉXITO (full-screen, estilo Yape/Fresha) ──────────────────────
+  // ── Pantalla de ÉXITO (full-screen, oscuro · "reserva realizada, falta confirmar") ──
   if (exito) {
-    const brand = (sede as any)?.colorPrimarioHex || '#2855F6'
     return (
       <div style={{
         position: 'fixed', inset: 0, zIndex: 100, color: '#fff',
-        background: `linear-gradient(160deg, ${brand}, ${brand}cc)`,
+        background: 'linear-gradient(165deg, #1c1c1e 0%, #0a0a0b 100%)',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         padding: 24, textAlign: 'center',
       }}>
         <style>{`
           @keyframes bpPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
-          @keyframes bpDraw{to{stroke-dashoffset:0}}
           @keyframes bpFade{to{opacity:1;transform:translateY(0)}}
         `}</style>
 
@@ -392,19 +390,17 @@ export function ReservaClientePage() {
           width: 120, height: 120, borderRadius: 999, background: 'rgba(255,255,255,.18)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'bpPop .5s ease-out',
         }}>
-          <svg width="74" height="74" viewBox="0 0 52 52" aria-hidden="true">
-            <circle cx="26" cy="26" r="24" fill="none" stroke="#fff" strokeWidth="3" strokeOpacity=".5" />
-            <path d="M14 27 l8 8 l16 -18" fill="none" stroke="#fff" strokeWidth="4"
-              strokeLinecap="round" strokeLinejoin="round"
-              style={{ strokeDasharray: 48, strokeDashoffset: 48, animation: 'bpDraw .5s .35s ease-out forwards' }} />
+          <svg width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <path d="m3 7 9 6 9-6" />
           </svg>
         </div>
 
         <h1 style={{ fontSize: 26, fontWeight: 800, marginTop: 24, opacity: 0, transform: 'translateY(8px)', animation: 'bpFade .4s .5s forwards' }}>
-          ¡Reserva confirmada!
+          ¡Reserva realizada!
         </h1>
-        <p style={{ fontSize: 15, maxWidth: 340, lineHeight: 1.5, color: 'rgba(255,255,255,.92)', opacity: 0, transform: 'translateY(8px)', animation: 'bpFade .4s .65s forwards' }}>
-          Te enviaremos los detalles por {exito.canal}.
+        <p style={{ fontSize: 15, maxWidth: 360, lineHeight: 1.5, color: 'rgba(255,255,255,.92)', opacity: 0, transform: 'translateY(8px)', animation: 'bpFade .4s .65s forwards' }}>
+          Revisa tu {exito.canal} y confirma tu cita.
         </p>
 
         <div style={{ marginTop: 20, width: '100%', maxWidth: 360, background: 'rgba(255,255,255,.14)', borderRadius: 16, padding: '14px 18px', textAlign: 'left', opacity: 0, animation: 'bpFade .4s .8s forwards' }}>
@@ -415,7 +411,7 @@ export function ReservaClientePage() {
 
         <div style={{ marginTop: 28, width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 10, opacity: 0, animation: 'bpFade .4s .95s forwards' }}>
           {user?.rol === 'Cliente' && (
-            <button onClick={() => navigate('/mi-perfil')} style={{ background: '#fff', color: brand, border: 'none', borderRadius: 999, padding: '13px', fontWeight: 800, fontSize: 15, cursor: 'pointer' }}>
+            <button onClick={() => navigate('/mi-perfil')} style={{ background: '#fff', color: '#111', border: 'none', borderRadius: 999, padding: '13px', fontWeight: 800, fontSize: 15, cursor: 'pointer' }}>
               Ver mis citas
             </button>
           )}

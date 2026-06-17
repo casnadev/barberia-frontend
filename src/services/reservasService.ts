@@ -257,6 +257,10 @@ export const reservasService = {
   // El backend ya carga la reserva con IgnoreQueryFilters, así que funciona
   // aunque la cita sea de otra sede que la del subdominio actual.
 
+  obtenerPorToken: async (token: string) => {
+    const res = await apiClient.get(`/api/Reservas/token/${encodeURIComponent(token)}`)
+    return res.data?.data ?? res.data
+  },
   confirmarPorToken: async (token: string) => {
     const res = await apiClient.post(`/api/Reservas/token/${encodeURIComponent(token)}/confirmar`, {})
     return res.data?.data ?? res.data

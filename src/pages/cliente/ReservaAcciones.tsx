@@ -16,6 +16,7 @@ interface Reserva {
   profesional: string
   sede: string
   estado: 'Pendiente' | 'Confirmada' | 'Atendida' | 'Cancelada'
+  idTrabajador: number
 }
 
 interface FormReprogramar {
@@ -49,15 +50,21 @@ export function ReservaAcciones() {
   const loadReserva = async () => {
     try {
       if (!token) { toast.error('Token inválido'); navigate('/'); return }
-      // TODO: conectar endpoint real:
-      // const data = await reservasService.obtenerPorToken(token); setReserva(data)
+      const data = await reservasService.obtenerPorToken(token)
       setReserva({
-        idReserva: 1, nombreCliente: 'Juan Pérez', telefonoCliente: '943811931',
-        servicio: 'Corte + Barba', fecha: '2026-05-26', hora: '14:00',
-        profesional: 'Rambo Barber', sede: 'Sede Central', estado: 'Pendiente',
+        idReserva: data.idReserva,
+        nombreCliente: data.nombreCliente,
+        telefonoCliente: data.telefonoCliente,
+        servicio: data.servicio,
+        fecha: data.fecha,                     // "YYYY-MM-DD"
+        hora: (data.hora || '').slice(0, 5),   // "HH:mm"
+        profesional: data.profesional,
+        sede: data.sede,
+        estado: data.estado,
+        idTrabajador: data.idTrabajador,
       })
     } catch {
-      toast.error('Error cargando reserva')
+      toast.error('No pudimos cargar la reserva. El enlace no es válido o expiró.')
     } finally { setLoading(false) }
   }
 
@@ -74,31 +81,45 @@ export function ReservaAcciones() {
     if (!token) return
     setIsSubmitting(true)
     try {
-      // await reservasService.confirmarPorToken(token)
+      await reservasService.confirmarPorToken(token)
       setDone('confirmada')
-    } catch { toast.error('Error al confirmar') } finally { setIsSubmitting(false) }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.response?.data?.message || 'Error al confirmar')
+    } finally { setIsSubmitting(false) }
   }
 
   const handleCancelar = async () => {
     if (!token) return
     setIsSubmitting(true)
     try {
-      // await reservasService.cancelarPorToken(token)
+      await reservasService.cancelarPorToken(token)
       setDone('cancelada')
-    } catch { toast.error('Error al cancelar') } finally { setIsSubmitting(false) }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.response?.data?.message || 'Error al cancelar')
+    } finally { setIsSubmitting(false) }
   }
 
   const handleReprogramar = async () => {
     if (!token || !formReprogramar.fechaNueva || !formReprogramar.horaNueva) {
       toast.error('Completa fecha y hora'); return
     }
+    if (!reserva) return
     setIsSubmitting(true)
     try {
-      // await reservasService.reprogramarPorToken(token, formReprogramar)
+      await reservasService.reprogramarPorToken(token, {
+        idTrabajador: reserva.idTrabajador,
+        fechaReserva: formReprogramar.fechaNueva,  // "YYYY-MM-DD"
+        horaInicio: formReprogramar.horaNueva,     // "HH:mm"
+      })
       setDone('reprogramada')
-    } catch { toast.error('Error al reprogramar') } finally { setIsSubmitting(false) }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.response?.data?.message || 'Error al reprogramar')
+    } finally { setIsSubmitting(false) }
   }
 
+  // NOTA: la reseña por token aún no tiene endpoint anónimo en el backend.
+  // Para que guarde de verdad hay que crear POST /api/Reservas/token/{token}/resena
+  // y luego conectar reservasService.resenaPorToken aquí.
   const handleCalificar = async () => {
     if (calificacion === 0) { toast.error('Selecciona una calificación'); return }
     setIsSubmitting(true)
