@@ -280,4 +280,12 @@ export const reservasService = {
     const res = await apiClient.put(`/api/Reservas/token/${encodeURIComponent(token)}/reprogramar`, payload)
     return res.data?.data ?? res.data
   },
+
+  resenaPorToken: async (token: string, calificacion: number, resena?: string) => {
+    const res = await apiClient.post(`/api/Reservas/token/${encodeURIComponent(token)}/resena`, {
+      puntuacion: calificacion,
+      comentario: resena?.trim() || undefined,
+    })
+    return res.data?.data ?? res.data
+  },
 }

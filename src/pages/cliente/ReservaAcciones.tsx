@@ -173,16 +173,16 @@ export function ReservaAcciones() {
     } finally { setIsSubmitting(false) }
   }
 
-  // NOTA: la reseña por token aún no tiene endpoint anónimo en el backend.
-  // Para que guarde de verdad hay que crear POST /api/Reservas/token/{token}/resena
-  // y luego conectar reservasService.resenaPorToken aquí.
   const handleCalificar = async () => {
+    if (!token) return
     if (calificacion === 0) { toast.error('Selecciona una calificación'); return }
     setIsSubmitting(true)
     try {
-      // await reservasService.resenaPorToken(token, calificacion, resena)
+      await reservasService.resenaPorToken(token, calificacion, resena)
       setDone('resena')
-    } catch { toast.error('Error al guardar') } finally { setIsSubmitting(false) }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.response?.data?.message || 'Error al guardar la reseña')
+    } finally { setIsSubmitting(false) }
   }
 
   // Helpers de fecha/hora
