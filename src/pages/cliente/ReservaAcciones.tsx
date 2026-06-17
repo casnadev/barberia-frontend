@@ -123,11 +123,9 @@ export function ReservaAcciones() {
 
   // Cierre inteligente: intenta cerrar la pestaña; si no, vuelve atrás (Gmail) o a barber.pe
   const cerrar = () => {
-    try { window.close() } catch { /* noop */ }
-    setTimeout(() => {
-      if (window.history.length > 1) window.history.back()
-      else window.location.href = reserva?.subdominio ? `https://${reserva.subdominio}.barber.pe` : 'https://barber.pe'
-    }, 150)
+    window.location.href = reserva?.subdominio
+      ? `https://${reserva.subdominio}.barber.pe`
+      : 'https://barber.pe'
   }
 
   const handleConfirmar = async () => {
@@ -246,8 +244,7 @@ export function ReservaAcciones() {
         <h1 className={styles.successTitle}>{titulo}</h1>
         <p className={styles.successSub}>{subtitulo}</p>
         <div className={styles.successBtns}>
-          <button className={styles.btnLight} onClick={cerrar}>Cerrar</button>
-          <button className={styles.btnOutlineLight} onClick={() => { window.location.href = reserva?.subdominio ? `https://${reserva.subdominio}.barber.pe` : 'https://barber.pe' }}>Volver al inicio</button>
+          <button className={styles.btnLight} onClick={cerrar}>Visitar sitio</button>
         </div>
       </div>
     )
@@ -276,7 +273,7 @@ export function ReservaAcciones() {
             {reserva.sede}
           </span>
         )}
-        <button className={styles.closeBtn} aria-label="Cerrar" onClick={cerrar}><X size={18} /></button>
+        
       </header>
 
       <main className={styles.wrap}>
