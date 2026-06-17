@@ -18,6 +18,8 @@ interface Reserva {
   estado: 'Pendiente' | 'Confirmada' | 'Atendida' | 'Cancelada'
   idTrabajador: number
   idServicio: number
+  logoSede?: string
+  subdominio?: string
 }
 
 interface Slot {
@@ -81,6 +83,8 @@ export function ReservaAcciones() {
         estado: data.estado,
         idTrabajador: data.idTrabajador,
         idServicio: data.idServicio,
+        logoSede: data.urlLogo,
+        subdominio: data.subdominio,
       })
     } catch {
       toast.error('No pudimos cargar la reserva. El enlace no es válido o expiró.')
@@ -258,10 +262,18 @@ export function ReservaAcciones() {
   return (
     <div className={styles.page}>
       <header className={styles.topbar}>
-        <span className={styles.brand}>
-          <span className={styles.brandMark}><Scissors size={15} /></span>
-          barber<span className={styles.brandPe}>.pe</span>
-        </span>
+        {reserva.logoSede ? (
+          <img
+            src={reserva.logoSede}
+            alt={reserva.sede}
+            style={{ height: 28, maxWidth: 150, objectFit: 'contain' }}
+          />
+        ) : (
+          <span className={styles.brand}>
+            <span className={styles.brandMark}><Scissors size={15} /></span>
+            {reserva.sede}
+          </span>
+        )}
         <button className={styles.closeBtn} aria-label="Cerrar" onClick={cerrar}><X size={18} /></button>
       </header>
 
