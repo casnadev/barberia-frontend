@@ -244,12 +244,13 @@ export function ConfiguracionPage() {
 
   // Sube por apiClient (NO fetch): así pasa por el interceptor que comprime y
   // convierte HEIC -> JPEG antes de enviar. El tamaño lo controla la compresión.
-  const subirImagen = async (file: File): Promise<string | null> => {
+  const subirImagen = async (file: File, comoJpeg = false): Promise<string | null> => {
     const esImagen = file.type.startsWith('image/') || /\.(heic|heif)$/i.test(file.name)
     if (!esImagen) { toast.error('Por favor selecciona una imagen'); return null }
     const form = new FormData()
     form.append('Archivo', file)
-    const res = await apiClient.post('/api/Upload', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+    const endpoint = comoJpeg ? '/api/Upload?jpg=true' : '/api/Upload'
+    const res = await apiClient.post(endpoint, form, { headers: { 'Content-Type': 'multipart/form-data' } })
     const json = res.data
     return json?.data?.url ?? json?.url ?? null
   }
@@ -263,7 +264,7 @@ export function ConfiguracionPage() {
 
   const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
-    try { setSubiendoBanner(true); const url = await subirImagen(file); if (url) { setBannerPreview(url); handleChange('urlBanner', url); toast.success('Banner subido') } }
+    try { setSubiendoBanner(true); const url = await subirImagen(file, true); if (url) { setBannerPreview(url); handleChange('urlBanner', url); toast.success('Banner subido') } }
     catch (err: any) { toast.error(err.response?.data?.message || err.message || 'Error subiendo el banner') }
     finally { setSubiendoBanner(false); e.target.value = '' }
   }
