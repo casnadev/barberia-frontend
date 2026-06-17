@@ -145,10 +145,12 @@ export function ReservaAcciones() {
     if (!reserva) return
     setIsSubmitting(true)
     try {
+      // .NET espera TimeOnly en formato "HH:mm:ss" (no "HH:mm")
+      const horaInicio = /^\d{2}:\d{2}$/.test(slotSel) ? `${slotSel}:00` : slotSel
       await reservasService.reprogramarPorToken(token, {
         idTrabajador: reserva.idTrabajador,
         fechaReserva: formReprogramar.fechaNueva,  // "YYYY-MM-DD"
-        horaInicio: slotSel,                       // "HH:mm" (slot válido)
+        horaInicio,                                // "HH:mm:ss" (slot válido)
       })
       setDone('reprogramada')
     } catch (err: any) {
@@ -330,15 +332,15 @@ export function ReservaAcciones() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(82px, 1fr))', gap: 8, marginBottom: 4 }}>
                       {slots.map((s) => (
                         <button
-                          key={s.etiqueta}
+                          key={s.horaInicio}
                           type="button"
-                          onClick={() => setSlotSel(s.etiqueta)}
+                          onClick={() => setSlotSel(s.horaInicio)}
                           style={{
                             padding: '10px 6px',
                             borderRadius: 10,
-                            border: slotSel === s.etiqueta ? '1.5px solid #15110e' : '1.5px solid #e5e7eb',
-                            background: slotSel === s.etiqueta ? '#15110e' : '#fff',
-                            color: slotSel === s.etiqueta ? '#fff' : '#1f2937',
+                            border: slotSel === s.horaInicio ? '1.5px solid #15110e' : '1.5px solid #e5e7eb',
+                            background: slotSel === s.horaInicio ? '#15110e' : '#fff',
+                            color: slotSel === s.horaInicio ? '#fff' : '#1f2937',
                             fontWeight: 600,
                             fontSize: 13.5,
                             cursor: 'pointer',
