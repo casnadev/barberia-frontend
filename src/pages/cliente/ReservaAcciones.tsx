@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { X, Clock, MapPin, User, Star, Check, CalendarClock, Scissors, RotateCcw } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
+import { setTenant } from '@/services/apiClient'
 import { reservasService } from '@/services/reservasService' // ← endpoints reales
 import styles from '@/styles/ReservaAcciones.module.css'
 
@@ -71,6 +72,7 @@ export function ReservaAcciones() {
     try {
       if (!token) { toast.error('Token inválido'); navigate('/'); return }
       const data = await reservasService.obtenerPorToken(token)
+      if (data.subdominio) setTenant(data.subdominio)   // ← slots usan la sede correcta
       setReserva({
         idReserva: data.idReserva,
         nombreCliente: data.nombreCliente,
@@ -124,7 +126,7 @@ export function ReservaAcciones() {
     try { window.close() } catch { /* noop */ }
     setTimeout(() => {
       if (window.history.length > 1) window.history.back()
-      else window.location.href = 'https://barber.pe'
+      else window.location.href = reserva?.subdominio ? `https://${reserva.subdominio}.barber.pe` : 'https://barber.pe'
     }, 150)
   }
 
@@ -245,7 +247,7 @@ export function ReservaAcciones() {
         <p className={styles.successSub}>{subtitulo}</p>
         <div className={styles.successBtns}>
           <button className={styles.btnLight} onClick={cerrar}>Cerrar</button>
-          <button className={styles.btnOutlineLight} onClick={() => { window.location.href = 'https://barber.pe' }}>Volver al inicio</button>
+          <button className={styles.btnOutlineLight} onClick={() => { window.location.href = reserva?.subdominio ? `https://${reserva.subdominio}.barber.pe` : 'https://barber.pe' }}>Volver al inicio</button>
         </div>
       </div>
     )
