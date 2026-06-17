@@ -13,6 +13,10 @@ export interface Cliente {
   registradoEn?: string
   activo?: boolean
   bloqueadoWeb?: boolean
+  motivoBloqueoWeb?: string
+  fechaBloqueoWeb?: string
+  motivoSolicitudDesbloqueo?: string
+  fechaSolicitudDesbloqueo?: string
   contadorNoShows?: number
   totalReservas?: number
   reservasAtendidas?: number
@@ -113,16 +117,25 @@ export const clientesService = {
    * Desbloquea un cliente que fue bloqueado por no-shows
    * Reseta el contador de inasistencias
    */
-  desbloquearCliente: async (id: number) => {
+  desbloquearCliente: async (id: number, motivo: string) => {
     try {
       console.log(`🔓 Desbloqueando cliente ${id}...`)
-      const res = await apiClient.post(`/api/Clientes/${id}/desbloquear`, {})
+      const res = await apiClient.post(`/api/Clientes/${id}/desbloquear`, { motivo })
       console.log('✅ Cliente desbloqueado:', res.data)
       return res.data.data || res.data
     } catch (error) {
       console.error('❌ Error desbloqueando cliente:', error)
       throw error
     }
+  },
+
+  /**
+   * El propio cliente bloqueado solicita la reactivación de su cuenta.
+   * Anónimo: se identifica por su teléfono.
+   */
+  solicitarDesbloqueo: async (telefono: string, motivo: string) => {
+    const res = await apiClient.post('/api/Clientes/solicitar-desbloqueo', { telefono, motivo })
+    return res.data.data || res.data
   },
 
   /**

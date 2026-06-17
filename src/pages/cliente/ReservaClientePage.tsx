@@ -5,6 +5,8 @@ import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { sedesService } from '@/services/sedesService'
 import { reservasService } from '@/services/reservasService'
+import { clientesService } from '@/services/clientesService'
+import { mensajeError } from '@/utils/apiError'
 import { buildImageUrl } from '@/services/apiClient'
 import { confirmDialog } from '@/components/ConfirmDialog'
 import { useAuthStore } from '@/store/authStore'
@@ -73,6 +75,14 @@ export function ReservaClientePage() {
   const [currentWeekStart, setCurrentWeekStart] = useState(0)
   const [autoFocused, setAutoFocused] = useState(false)
   const [exito, setExito] = useState<null | { servicios: string; fecha: string; hora: string; sede: string; canal: string }>(null)
+
+  // Bloqueo por inasistencias: si el backend rechaza con 403 "bloqueada",
+  // mostramos un modal para que el cliente pueda solicitar el desbloqueo.
+  const [bloqueoMsg, setBloqueoMsg] = useState<string | null>(null)
+  const [solTel, setSolTel] = useState('')
+  const [solMotivo, setSolMotivo] = useState('')
+  const [enviandoSol, setEnviandoSol] = useState(false)
+  const [solEnviada, setSolEnviada] = useState(false)
 
   // Vibración + sonido corto y agradable al confirmar (sin necesidad de archivos).
   const celebrar = () => {
@@ -318,9 +328,36 @@ export function ReservaClientePage() {
       celebrar()
     } catch (error: any) {
       console.error('❌ ERROR al crear reserva:', error.response?.data || error.message)
-      toast.error(error.response?.data?.title || 'Error al crear reserva')
+      const status = error?.response?.status
+      const detail = error?.response?.data?.detail || ''
+      if (status === 403 && /bloquead/i.test(detail)) {
+        // Cuenta bloqueada por inasistencias → ofrecer solicitar desbloqueo.
+        setBloqueoMsg(detail)
+        setSolTel(formData.tipoContacto === 'whatsapp' ? formData.contacto : '')
+        setSolMotivo('')
+        setSolEnviada(false)
+      } else {
+        toast.error(mensajeError(error, 'No se pudo crear la reserva'))
+      }
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const enviarSolicitudDesbloqueo = async () => {
+    const tel = solTel.trim()
+    const motivo = solMotivo.trim()
+    if (tel.length < 6) { toast.error('Ingresa tu número de teléfono'); return }
+    if (motivo.length < 5) { toast.error('Cuéntanos brevemente el motivo (mínimo 5 caracteres)'); return }
+    try {
+      setEnviandoSol(true)
+      await clientesService.solicitarDesbloqueo(tel, motivo)
+      setSolEnviada(true)
+      toast.success('Solicitud enviada')
+    } catch (e) {
+      toast.error(mensajeError(e, 'No se pudo enviar la solicitud'))
+    } finally {
+      setEnviandoSol(false)
     }
   }
 
@@ -780,6 +817,76 @@ export function ReservaClientePage() {
         onSelectDate={setSelectedFecha}
         onClose={() => setShowCalendar(false)}
       />
+
+      {bloqueoMsg && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}
+          onClick={() => !enviandoSol && setBloqueoMsg(null)}
+        >
+          <div
+            style={{ background: '#fff', borderRadius: 18, padding: 24, width: '100%', maxWidth: 420, boxShadow: '0 16px 50px rgba(0,0,0,.25)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {solEnviada ? (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
+                <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#111' }}>Solicitud enviada</h3>
+                <p style={{ margin: '0 0 18px', fontSize: 14, color: '#6b7280' }}>
+                  La barbería revisará tu solicitud y reactivará tu cuenta si corresponde. Te avisarán por tu medio de contacto.
+                </p>
+                <button
+                  onClick={() => setBloqueoMsg(null)}
+                  style={{ padding: '11px 18px', borderRadius: 10, border: 'none', background: '#111', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', width: '100%' }}
+                >
+                  Entendido
+                </button>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 34, marginBottom: 6 }}>🚫</div>
+                <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#111' }}>Cuenta bloqueada</h3>
+                <p style={{ margin: '0 0 16px', fontSize: 14, color: '#6b7280', lineHeight: 1.5 }}>{bloqueoMsg}</p>
+
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 5 }}>Tu teléfono</label>
+                <input
+                  value={solTel}
+                  onChange={(e) => setSolTel(e.target.value)}
+                  placeholder="Ej: 999888777"
+                  inputMode="tel"
+                  style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 12px', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 12 }}
+                />
+
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 5 }}>Motivo de tu solicitud</label>
+                <textarea
+                  value={solMotivo}
+                  onChange={(e) => setSolMotivo(e.target.value)}
+                  placeholder="Cuéntale a la barbería por qué deberían reactivar tu cuenta."
+                  rows={3}
+                  maxLength={300}
+                  style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 12px', fontSize: 14, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
+                />
+
+                <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+                  <button
+                    onClick={() => setBloqueoMsg(null)}
+                    disabled={enviandoSol}
+                    style={{ flex: 1, padding: '11px 16px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#fff', fontSize: 14, fontWeight: 600, color: '#374151', cursor: 'pointer' }}
+                  >
+                    Cerrar
+                  </button>
+                  <button
+                    onClick={enviarSolicitudDesbloqueo}
+                    disabled={enviandoSol}
+                    style={{ flex: 1, padding: '11px 16px', borderRadius: 10, border: 'none', background: '#111', color: '#fff', fontSize: 14, fontWeight: 700, cursor: enviandoSol ? 'default' : 'pointer', opacity: enviandoSol ? .7 : 1 }}
+                  >
+                    {enviandoSol ? 'Enviando…' : 'Solicitar desbloqueo'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

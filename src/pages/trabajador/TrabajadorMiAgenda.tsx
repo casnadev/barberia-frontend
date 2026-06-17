@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
 import { useAuthStore } from '@/store/authStore'
 import { reservasService } from '@/services/reservasService'
+import { mensajeError } from '@/utils/apiError'
 import {
   panelTrabajadorService,
   type MisComisiones, type PagoTrabajador, type ResenaTrabajador,
@@ -230,7 +231,7 @@ function DisponibilidadTab({ idT, idSede }: { idT: number | null; idSede: number
     if (payload.length === 0) return toast.error('Activa al menos un día')
     setSaving(true)
     try { await panelTrabajadorService.guardarDisponibilidad(idT, payload); toast.success('Horario guardado') }
-    catch (e: any) { toast.error(e?.response?.data?.mensaje || 'No se pudo guardar') } finally { setSaving(false) }
+    catch (e: any) { toast.error(mensajeError(e, 'No se pudo guardar')) } finally { setSaving(false) }
   }
 
   return (
@@ -300,7 +301,7 @@ function DescansosSection({ idT, idSede }: { idT: number | null; idSede: number 
       toast.success('Descanso solicitado · queda pendiente de aprobación')
       setIni(''); setFin(''); setMotivo(''); setTipo(TIPOS_DESCANSO[0])
       cargar()
-    } catch (e: any) { toast.error(e?.response?.data?.mensaje || 'No se pudo solicitar') } finally { setSaving(false) }
+    } catch (e: any) { toast.error(mensajeError(e, 'No se pudo solicitar')) } finally { setSaving(false) }
   }
 
   const eliminar = async (id: number) => {
@@ -457,7 +458,7 @@ function AtenderModal({ reserva, onClose, onDone }: any) {
     try {
       await panelTrabajadorService.atender(rid(reserva), { metodoPago: metodo, numeroOperacion: operacion, rutaImagenEvidencia: evidencia })
       toast.success('Cita atendida · venta y comisión generadas'); onDone()
-    } catch (e: any) { toast.error(e?.response?.data?.mensaje || 'No se pudo atender') } finally { setSaving(false) }
+    } catch (e: any) { toast.error(mensajeError(e, 'No se pudo atender la cita')) } finally { setSaving(false) }
   }
   const field = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none'
   return (
@@ -531,7 +532,7 @@ function ConfigModal({ perfil, onClose, onSaved }: { perfil: MiPerfilTrabajador 
       toast.success('Perfil actualizado')
       await onSaved()
       onClose()
-    } catch (e: any) { toast.error(e?.response?.data?.mensaje || 'No se pudo guardar') } finally { setSaving(false) }
+    } catch (e: any) { toast.error(mensajeError(e, 'No se pudo guardar')) } finally { setSaving(false) }
   }
 
   const field = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none'

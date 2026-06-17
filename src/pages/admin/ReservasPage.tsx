@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { AdminLayout } from '@/components/AdminLayout'
 import { confirmDialog } from '@/components/ConfirmDialog'
+import { mensajeError } from '@/utils/apiError'
 import s from '@/styles/Reservas.module.css'
 import d from '@/styles/Dashboard.module.css'
 
@@ -98,7 +99,7 @@ export function ReservasPage() {
       toast.success('Reserva confirmada')
       setSelected(null)
       loadReservas()
-    } catch { toast.error('Error al confirmar reserva') }
+    } catch (e) { toast.error(mensajeError(e, 'No se pudo confirmar la reserva')) }
   }
 
   const doCancelar = async (id: number) => {
@@ -115,7 +116,7 @@ export function ReservasPage() {
       toast.success('Reserva cancelada')
       setSelected(null)
       loadReservas()
-    } catch { toast.error('Error al cancelar reserva') }
+    } catch (e) { toast.error(mensajeError(e, 'No se pudo cancelar la reserva')) }
   }
 
   const doAtender = async (id: number) => {
@@ -124,7 +125,7 @@ export function ReservasPage() {
       toast.success('Reserva marcada como atendida')
       setSelected(null)
       loadReservas()
-    } catch { toast.error('Error al marcar como atendida') }
+    } catch (e) { toast.error(mensajeError(e, 'No se pudo marcar como atendida')) }
   }
 
   // Conteos (completada agrupa con atendida)

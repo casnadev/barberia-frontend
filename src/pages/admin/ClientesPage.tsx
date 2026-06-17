@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { clientesService, Cliente } from '@/services/clientesService'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
+import { mensajeError } from '@/utils/apiError'
 import { Eye, Unlock, Search, Phone, Mail, Calendar, MessageSquare, Users, Info, X, Gift, Plus, Trash2, ImagePlus, ShieldCheck, Pencil, EyeOff } from 'lucide-react'
 import { AdminLayout } from '@/components/AdminLayout'
 import { novedadesService, type Novedad } from '@/services/novedadesService'
@@ -19,6 +20,11 @@ export function ClientesPage() {
   const [visibleMobile, setVisibleMobile] = useState(8)   // "Ver más" solo en móvil
   const [novedadOpen, setNovedadOpen] = useState(false)   // modal "Nueva novedad"
   const [moderacionOpen, setModeracionOpen] = useState(false) // modal "Moderación"
+
+  // Modal de desbloqueo (pide motivo al admin)
+  const [desbloqueoTarget, setDesbloqueoTarget] = useState<number | null>(null)
+  const [desbloqueoMotivo, setDesbloqueoMotivo] = useState('')
+  const [desbloqueando, setDesbloqueando] = useState(false)
 
   // Al recargar la lista (búsqueda/refresh) reseteamos el "Ver más" de móvil.
   useEffect(() => { setVisibleMobile(8) }, [clientes])
@@ -53,20 +59,28 @@ export function ClientesPage() {
     setShowDetailModal(true)
   }
 
-  const handleDesbloquear = async (id: number) => {
-    if (!(await confirmDialog({
-      title: 'Desbloquear cliente',
-      message: '¿Deseas desbloquear este cliente? Recuperará el acceso para reservar.',
-      confirmText: 'Desbloquear',
-      cancelText: 'Cancelar',
-    }))) return
+  const handleDesbloquear = (id: number) => {
+    setDesbloqueoMotivo('')
+    setDesbloqueoTarget(id)
+  }
+
+  const confirmDesbloqueo = async () => {
+    if (desbloqueoTarget == null) return
+    const motivo = desbloqueoMotivo.trim()
+    if (motivo.length < 5) {
+      toast.error('Indica un motivo (mínimo 5 caracteres)')
+      return
+    }
     try {
-      await clientesService.desbloquearCliente(id)
+      setDesbloqueando(true)
+      await clientesService.desbloquearCliente(desbloqueoTarget, motivo)
       toast.success('Cliente desbloqueado')
+      setDesbloqueoTarget(null)
       await loadClientes()
     } catch (error) {
-      console.error('Error:', error)
-      toast.error('Error al desbloquear cliente')
+      toast.error(mensajeError(error, 'No se pudo desbloquear el cliente'))
+    } finally {
+      setDesbloqueando(false)
     }
   }
 
@@ -181,6 +195,9 @@ export function ClientesPage() {
                         <span className={`${s.badge} ${cliente.bloqueadoWeb ? s.badgeBlocked : s.badgeActive}`}>
                           {cliente.bloqueadoWeb ? '🚫 Bloqueado' : '✅ Activo'}
                         </span>
+                        {cliente.bloqueadoWeb && cliente.fechaSolicitudDesbloqueo && (
+                          <span title={cliente.motivoSolicitudDesbloqueo} style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: '#b45309', whiteSpace: 'nowrap', cursor: 'help' }}>🙋 solicitó</span>
+                        )}
                       </td>
                       <td><span className={s.cellIcon}><Calendar width={14} height={14} /> {fecha(cliente.fechaCreacion)}</span></td>
                       <td>
@@ -210,6 +227,9 @@ export function ClientesPage() {
                       <span className={`${s.badge} ${cliente.bloqueadoWeb ? s.badgeBlocked : s.badgeActive}`}>
                         {cliente.bloqueadoWeb ? '🚫 Bloqueado' : '✅ Activo'}
                       </span>
+                      {cliente.bloqueadoWeb && cliente.fechaSolicitudDesbloqueo && (
+                        <span className="text-xs font-bold" style={{ color: '#b45309' }}>🙋 solicitó desbloqueo</span>
+                      )}
                       <span className="text-xs text-gray-500 flex items-center gap-1"><Calendar width={12} height={12} /> {cliente.totalReservas || 0} reservas</span>
                     </div>
                   </div>
@@ -295,6 +315,19 @@ export function ClientesPage() {
                 </span>
               </div>
 
+              {selectedCliente.bloqueadoWeb && selectedCliente.fechaSolicitudDesbloqueo && (
+                <div className={s.dField}>
+                  <span className={s.dLabel}>🙋 Solicitó desbloqueo</span>
+                  <span className={s.dValue} style={{ display: 'block' }}>
+                    <span style={{ fontStyle: 'italic', color: '#b45309' }}>
+                      “{selectedCliente.motivoSolicitudDesbloqueo}”
+                    </span>
+                    <br />
+                    <small style={{ color: '#9ca3af' }}>{fecha(selectedCliente.fechaSolicitudDesbloqueo, true)}</small>
+                  </span>
+                </div>
+              )}
+
               <div className={s.dField}>
                 <span className={s.dLabel}>Registrado desde</span>
                 <span className={s.dValue}><Calendar width={15} height={15} /> {fecha(selectedCliente.fechaCreacion, true)}</span>
@@ -318,6 +351,59 @@ export function ClientesPage() {
           </div>
         </div>
       )}
+      {desbloqueoTarget != null && (() => {
+        const cli = clientes.find((c) => c.idCliente === desbloqueoTarget)
+        return (
+          <div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}
+            onClick={() => !desbloqueando && setDesbloqueoTarget(null)}
+          >
+            <div
+              style={{ background: '#fff', borderRadius: 16, padding: 22, width: '100%', maxWidth: 420, boxShadow: '0 10px 40px rgba(0,0,0,.2)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 700, color: '#111' }}>Desbloquear cliente</h3>
+              <p style={{ margin: '0 0 14px', fontSize: 14, color: '#6b7280' }}>
+                {cli?.nombreCompleto || cli?.telefono || 'Cliente'} recuperará el acceso para reservar. Indica el motivo (queda registrado).
+              </p>
+
+              {cli?.fechaSolicitudDesbloqueo && (
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 12px', marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#b45309', marginBottom: 2 }}>🙋 El cliente escribió:</div>
+                  <div style={{ fontSize: 13, color: '#92400e', fontStyle: 'italic' }}>“{cli.motivoSolicitudDesbloqueo}”</div>
+                </div>
+              )}
+
+              <textarea
+                value={desbloqueoMotivo}
+                onChange={(e) => setDesbloqueoMotivo(e.target.value)}
+                placeholder="Ej: Habló con la barbería y se comprometió a asistir."
+                rows={3}
+                maxLength={300}
+                autoFocus
+                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 12px', fontSize: 14, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
+              />
+
+              <div style={{ display: 'flex', gap: 10, marginTop: 16, justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setDesbloqueoTarget(null)}
+                  disabled={desbloqueando}
+                  style={{ padding: '10px 16px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#fff', fontSize: 14, fontWeight: 600, color: '#374151', cursor: 'pointer' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDesbloqueo}
+                  disabled={desbloqueando}
+                  style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#059669', color: '#fff', fontSize: 14, fontWeight: 700, cursor: desbloqueando ? 'default' : 'pointer', opacity: desbloqueando ? .7 : 1 }}
+                >
+                  {desbloqueando ? 'Desbloqueando…' : 'Desbloquear'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
       {novedadOpen && <NovedadModal onClose={() => setNovedadOpen(false)} />}
       {moderacionOpen && <ModeracionNovedadesModal onClose={() => setModeracionOpen(false)} />}
     </AdminLayout>
