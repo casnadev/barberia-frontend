@@ -63,9 +63,9 @@ function parseCoordsLocal(texto: string): { lat: number; lng: number } | null {
   const t = (texto || '').trim()
   if (!t) return null
   const patrones = [
+    /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,
     /@(-?\d+\.\d+),(-?\d+\.\d+)/,
     /[?&](?:q|query|ll|center|destination|daddr)=(-?\d+\.\d+),(-?\d+\.\d+)/,
-    /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,
     /^\s*(-?\d{1,3}(?:\.\d+)?)\s*[,;]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/,
   ]
   for (const re of patrones) {
@@ -279,8 +279,12 @@ export function ConfiguracionPage() {
 
   // Pega coords o un enlace de Maps → rellena latitud/longitud solo.
   const aplicarUbicacion = async (raw: string) => {
-    const t = (raw || '').trim()
+    let t = (raw || '').trim()
     if (!t) return
+    // Si viene texto alrededor del enlace (o basura pegada antes), nos quedamos
+    // SOLO con la URL. Si son coordenadas sueltas, queda igual.
+    const link = t.match(/https?:\/\/[^\s]+/)
+    if (link) t = link[0]
     const local = parseCoordsLocal(t)
     if (local) {
       setSede((prev) => ({ ...prev, latitud: local.lat, longitud: local.lng }))
@@ -675,7 +679,7 @@ export function ConfiguracionPage() {
                 className={inputCls}
                 value={ubicTexto}
                 onChange={(e) => setUbicTexto(e.target.value)}
-                onPaste={(e) => { const txt = e.clipboardData.getData('text'); setUbicTexto(txt); setTimeout(() => aplicarUbicacion(txt), 0) }}
+                onPaste={(e) => { e.preventDefault(); const txt = (e.clipboardData.getData('text') || '').trim(); setUbicTexto(txt); aplicarUbicacion(txt) }}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); aplicarUbicacion(ubicTexto) } }}
                 placeholder="-11.83, -77.10  ó  https://maps.app.goo.gl/..."
               />
