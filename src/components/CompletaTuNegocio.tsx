@@ -93,8 +93,9 @@ export function CompletaTuNegocio() {
         ))}
       </div>
 
-      <p className="text-xs text-gray-400 mt-3">
-        Cuando completes los {data.total}, tu página de reservas se activa.
+      <p className="text-xs text-gray-500 mt-4">
+        Ya puedes recibir reservas. Completa estos datos para que tus clientes vean tu mejor versión
+        (descripción del sitio, horarios, servicios y tu equipo).
       </p>
     </div>
   )

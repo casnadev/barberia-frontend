@@ -8,6 +8,7 @@ import { reservasService } from '@/services/reservasService'
 import { toast } from 'sonner'
 import { AdminLayout } from '@/components/AdminLayout'
 import { CompletaTuNegocio } from '@/components/CompletaTuNegocio'
+import { AvisoBanner } from '@/components/AvisoBanner'
 import s from '@/styles/Dashboard.module.css'
 
 type RangoKey = 'hoy' | 'semana' | 'mes' | 'custom'
@@ -105,6 +106,7 @@ export function DashboardPage() {
   return (
     <AdminLayout title="Dashboard" subtitle="Resumen de tu barbería">
 
+      <AvisoBanner />
       <CompletaTuNegocio />
       {/* Selector de rango */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>

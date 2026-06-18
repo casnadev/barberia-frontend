@@ -183,6 +183,50 @@ export const authService = {
     }
   },
 
+  /** Ingreso tradicional: envía OTP al correo para confirmarlo al activar. */
+  accesoEnviarOtp: async (correo: string): Promise<{ ok: boolean; mensaje?: string }> => {
+    try {
+      const r = await apiClient.post('/api/Auth/acceso/enviar-otp', { correo })
+      return { ok: true, mensaje: r.data?.mensaje }
+    } catch (error: any) {
+      return { ok: false, mensaje: apiError(error, 'No se pudo enviar el código.') }
+    }
+  },
+
+  /** Ingreso tradicional: activar (inline si el correo ya está confirmado; con codigo si no). */
+  accesoActivar: async (
+    correo: string,
+    passwordNueva: string,
+    codigo?: string,
+  ): Promise<{ ok: boolean; mensaje?: string }> => {
+    try {
+      const r = await apiClient.post('/api/Auth/acceso/activar', { correo, passwordNueva, codigo })
+      return { ok: true, mensaje: r.data?.mensaje }
+    } catch (error: any) {
+      return { ok: false, mensaje: apiError(error, 'No se pudo activar el ingreso tradicional.') }
+    }
+  },
+
+  /** Ingreso tradicional: desactivar (conserva correo y contraseña). */
+  accesoDesactivar: async (): Promise<{ ok: boolean; mensaje?: string }> => {
+    try {
+      const r = await apiClient.post('/api/Auth/acceso/desactivar', {})
+      return { ok: true, mensaje: r.data?.mensaje }
+    } catch (error: any) {
+      return { ok: false, mensaje: apiError(error, 'No se pudo desactivar.') }
+    }
+  },
+
+  /** Ingreso tradicional: reactivar con el correo y contraseña ya guardados. */
+  accesoReactivar: async (): Promise<{ ok: boolean; mensaje?: string }> => {
+    try {
+      const r = await apiClient.post('/api/Auth/acceso/reactivar', {})
+      return { ok: true, mensaje: r.data?.mensaje }
+    } catch (error: any) {
+      return { ok: false, mensaje: apiError(error, 'No se pudo reactivar.') }
+    }
+  },
+
   /**
    * Obtener token del localStorage
    */

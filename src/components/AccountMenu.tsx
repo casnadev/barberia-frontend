@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { User, LogOut, LogIn, UserPlus, Settings, ExternalLink, LifeBuoy } from 'lucide-react'
+import { User, LogOut, LogIn, UserPlus, Settings, ExternalLink, LifeBuoy, KeyRound } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/authService'
 import { getActiveTenant, buildImageUrl } from '@/services/apiClient'
@@ -9,6 +9,7 @@ import { miCuentaService } from '@/services/miCuentaService'
 import { perfilService } from '@/services/perfilService'
 import { panelTrabajadorService } from '@/services/panelTrabajadorService'
 import { MiPerfilAdminModal } from '@/components/MiPerfilAdminModal'   // ← NUEVO
+import { AccesoModal } from '@/components/AccesoModal'
 import { SoporteModal } from '@/components/SoporteModal'
 import { useSoporteStore } from '@/store/soporteStore'
 import s from '@/styles/AccountMenu.module.css'
@@ -27,7 +28,7 @@ const PanelIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
-export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil }: { variant?: 'floating' | 'plain'; siteLink?: boolean; onMiPerfil?: () => void }) {
+export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil, onAcceso }: { variant?: 'floating' | 'plain'; siteLink?: boolean; onMiPerfil?: () => void; onAcceso?: () => void }) {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const [open, setOpen] = useState(false)
@@ -35,6 +36,7 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
   //   cuando el padre no pasa `onMiPerfil` (ej. el micrositio público). En el
   //   dashboard, AdminHeader sigue pasando su propio onMiPerfil y este queda en false.
   const [perfilOpen, setPerfilOpen] = useState(false)
+  const [accesoOpen, setAccesoOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -84,6 +86,12 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
     setOpen(false)
     if (onMiPerfil) onMiPerfil()
     else setPerfilOpen(true)
+  }
+
+  const abrirAcceso = () => {
+    setOpen(false)
+    if (onAcceso) onAcceso()
+    else setAccesoOpen(true)
   }
 
   // "Ver sitio": abre la landing de la SEDE ACTIVA (la del dropdown).
@@ -145,6 +153,11 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
                     </button>
                   )}
                   {user.rol === 'Admin' && (
+                    <button className={s.item} onClick={abrirAcceso}>
+                      <KeyRound className={s.itemIcon} width={18} height={18} /> Acceso
+                    </button>
+                  )}
+                  {user.rol === 'Admin' && (
                     <button className={s.item} onClick={() => go('/admin/configuracion')}>
                       <Settings className={s.itemIcon} width={18} height={18} /> Configuración
                     </button>
@@ -191,7 +204,10 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
       {/* ← NUEVO: modal de "Mi perfil" como respaldo (micrositio). Solo Admin lo
           puede abrir; en el dashboard queda en false porque allí se usa onMiPerfil. */}
       {user?.rol === 'Admin' && (
-        <MiPerfilAdminModal open={perfilOpen} onClose={() => setPerfilOpen(false)} />
+        <>
+          <MiPerfilAdminModal open={perfilOpen} onClose={() => setPerfilOpen(false)} />
+          <AccesoModal open={accesoOpen} onClose={() => setAccesoOpen(false)} />
+        </>
       )}
 
       {/* Modal de soporte (controlado por store). */}
