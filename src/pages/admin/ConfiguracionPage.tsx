@@ -5,6 +5,7 @@ import {
   X, Upload, Plus, Instagram, Facebook, Globe, Music2, Youtube, Twitter, Link2, Copy, ExternalLink, Info,
 } from 'lucide-react'
 import { apiClient } from '@/services/apiClient'
+import { geoService } from '@/services/geoService'
 import { AdminLayout } from '@/components/AdminLayout'
 import SeccionFila from '@/components/SeccionFila'
 import SeccionSheet from '@/components/SeccionSheet'
@@ -54,6 +55,38 @@ const redIcon = (tipo: string) => RED_OPCIONES.find((o) => o.value === (tipo || 
 const inputCls =
   'w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition'
 
+// --- Ubicación: parser local de coordenadas (coords sueltas o URL larga) ---
+function esCoordValida(lat: number, lng: number) {
+  return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && (lat !== 0 || lng !== 0)
+}
+function parseCoordsLocal(texto: string): { lat: number; lng: number } | null {
+  const t = (texto || '').trim()
+  if (!t) return null
+  const patrones = [
+    /@(-?\d+\.\d+),(-?\d+\.\d+)/,
+    /[?&](?:q|query|ll|center|destination|daddr)=(-?\d+\.\d+),(-?\d+\.\d+)/,
+    /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,
+    /^\s*(-?\d{1,3}(?:\.\d+)?)\s*[,;]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/,
+  ]
+  for (const re of patrones) {
+    const m = t.match(re)
+    if (m) {
+      const lat = parseFloat(m[1]); const lng = parseFloat(m[2])
+      if (esCoordValida(lat, lng)) return { lat, lng }
+    }
+  }
+  return null
+}
+function pareceLink(t: string) {
+  return /^https?:\/\//i.test((t || '').trim())
+}
+// Mini-mapa de confirmación con OpenStreetMap (sin API key).
+function osmEmbedSrc(lat: number, lng: number) {
+  const dx = 0.004, dy = 0.003
+  const bbox = `${lng - dx},${lat - dy},${lng + dx},${lat + dy}`
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${lat},${lng}`
+}
+
 // Colores sugeridos (vivos) para el tema de la sede.
 const COLOR_PRESETS = ['#2855F6', '#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#0d9488', '#dc2626', '#111827']
 const DEFAULT_BRAND = '#2855F6'
@@ -84,6 +117,8 @@ export function ConfiguracionPage() {
 
   // Editor abierto del hub (null = ninguno).
   const [sheet, setSheet] = useState<SheetId>(null)
+  const [ubicTexto, setUbicTexto] = useState('')
+  const [resolviendoUbic, setResolviendoUbic] = useState(false)
   const cerrar = () => setSheet(null)
 
   const [sede, setSede] = useState<Sede>({
@@ -241,6 +276,31 @@ export function ConfiguracionPage() {
 
   const handleChange = (field: keyof Sede, value: string | number) =>
     setSede((prev) => ({ ...prev, [field]: value }))
+
+  // Pega coords o un enlace de Maps → rellena latitud/longitud solo.
+  const aplicarUbicacion = async (raw: string) => {
+    const t = (raw || '').trim()
+    if (!t) return
+    const local = parseCoordsLocal(t)
+    if (local) {
+      setSede((prev) => ({ ...prev, latitud: local.lat, longitud: local.lng }))
+      toast.success('Ubicación detectada ✓')
+      return
+    }
+    if (pareceLink(t)) {
+      setResolviendoUbic(true)
+      const r = await geoService.resolver(t)
+      setResolviendoUbic(false)
+      if (r.ok && r.lat != null && r.lng != null) {
+        setSede((prev) => ({ ...prev, latitud: r.lat!, longitud: r.lng! }))
+        toast.success('Ubicación detectada ✓')
+      } else {
+        toast.error(r.mensaje || 'No pude leer la ubicación. Pega las coordenadas, ej: -11.83, -77.10')
+      }
+      return
+    }
+    toast.error('Pega coordenadas (ej: -11.83, -77.10) o un enlace de Google Maps')
+  }
 
   // Sube por apiClient (NO fetch): así pasa por el interceptor que comprime y
   // convierte HEIC -> JPEG antes de enviar. El tamaño lo controla la compresión.
@@ -605,6 +665,34 @@ export function ConfiguracionPage() {
         subtitulo="Para que te ubiquen en el mapa"
         footer={<BotonGuardar onClick={guardarYcerrar} cargando={submitting} />}>
         <div className="space-y-4">
+          <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3 space-y-2">
+            <p className="text-sm font-semibold text-gray-800">Pega tu ubicación de Google Maps</p>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              En Google Maps mantén pulsado el punto de tu local y copia las <b>coordenadas</b>, o usa <b>Compartir</b> y pega el enlace. Llenamos latitud y longitud por ti.
+            </p>
+            <div className="flex gap-2">
+              <input
+                className={inputCls}
+                value={ubicTexto}
+                onChange={(e) => setUbicTexto(e.target.value)}
+                onPaste={(e) => { const txt = e.clipboardData.getData('text'); setUbicTexto(txt); setTimeout(() => aplicarUbicacion(txt), 0) }}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); aplicarUbicacion(ubicTexto) } }}
+                placeholder="-11.83, -77.10  ó  https://maps.app.goo.gl/..."
+              />
+              <button
+                type="button"
+                onClick={() => aplicarUbicacion(ubicTexto)}
+                disabled={resolviendoUbic}
+                className="shrink-0 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-50"
+              >
+                {resolviendoUbic ? '…' : 'Usar'}
+              </button>
+            </div>
+            <a href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1">
+              Abrir Google Maps <ExternalLink width={12} height={12} />
+            </a>
+          </div>
+
           <Field label="Dirección">
             <input className={inputCls} value={sede.direccion || ''} onChange={(e) => handleChange('direccion', e.target.value)} placeholder="Av. Principal 123, Lima" />
           </Field>
@@ -619,6 +707,31 @@ export function ConfiguracionPage() {
               <input type="number" step="0.0001" className={inputCls} value={sede.longitud ?? ''} onChange={(e) => handleChange('longitud', parseFloat(e.target.value) || 0)} placeholder="-77.0342" />
             </Field>
           </div>
+          <p className="text-xs text-gray-400 -mt-2">Se llenan solos al pegar arriba. Puedes ajustarlos a mano si quieres.</p>
+
+          {esCoordValida(Number(sede.latitud), Number(sede.longitud)) && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-gray-600">¿Es aquí? Verifica el pin:</p>
+              <div className="rounded-xl overflow-hidden border border-gray-200">
+                <iframe
+                  title="Ubicación en el mapa"
+                  src={osmEmbedSrc(Number(sede.latitud), Number(sede.longitud))}
+                  className="w-full block"
+                  style={{ height: 190, border: 0 }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+              <a
+                href={`https://www.google.com/maps?q=${Number(sede.latitud)},${Number(sede.longitud)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+              >
+                Ver en Google Maps <ExternalLink width={12} height={12} />
+              </a>
+            </div>
+          )}
         </div>
       </SeccionSheet>
 

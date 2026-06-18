@@ -287,20 +287,21 @@ export function PublicSedeDetailPage() {
   const handleNovedades = () => navigate('/novedades')
   const handleShare = async () => {
     const url = window.location.href
+    const mensaje = '¡Hola! Encontré un excelente establecimiento en Barber.pe y quiero que le des un vistazo!'
     // 1) Share nativo (móvil / contexto seguro)
     if (navigator.share) {
-      try { await navigator.share({ title: sede?.nombre, text: `Visita ${sede?.nombre}`, url }) } catch { /* cancelado */ }
+      try { await navigator.share({ title: sede?.nombre, text: mensaje, url }) } catch { /* cancelado */ }
       return
     }
     // 2) Copiar al portapapeles (con fallback para http/LAN sin contexto seguro)
     let copiado = false
     try {
-      if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(url); copiado = true }
+      if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(`${mensaje} ${url}`); copiado = true }
     } catch { /* sigue al fallback */ }
     if (!copiado) {
       try {
         const ta = document.createElement('textarea')
-        ta.value = url
+        ta.value = `${mensaje} ${url}`
         ta.style.position = 'fixed'
         ta.style.left = '-9999px'
         document.body.appendChild(ta)
