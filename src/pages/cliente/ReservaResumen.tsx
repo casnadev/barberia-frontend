@@ -1,4 +1,5 @@
 import { MapPin, User, Clock, Calendar as CalendarIcon } from 'lucide-react'
+import { buildImageUrl } from '@/services/apiClient'
 import styles from '@/styles/ReservaClientePage.module.css'
 
 interface ReservaResumenProps {
@@ -106,8 +107,17 @@ export function ReservaResumen({
                   </p>
                   {selectedTrabajador && (
                     <div className="flex items-center gap-1.5">
-                      <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-xs font-semibold text-gray-600 flex-shrink-0">
-                        {selectedTrabajador.nombreCompleto.charAt(0).toUpperCase()}
+                      <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-xs font-semibold text-gray-600 flex-shrink-0 overflow-hidden">
+                        {selectedTrabajador.urlFotoPerfil ? (
+                          <img
+                            src={buildImageUrl(selectedTrabajador.urlFotoPerfil)}
+                            alt={selectedTrabajador.nombreCompleto}
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; const p = e.currentTarget.parentElement; if (p) p.textContent = selectedTrabajador.nombreCompleto.charAt(0).toUpperCase() }}
+                          />
+                        ) : (
+                          selectedTrabajador.nombreCompleto.charAt(0).toUpperCase()
+                        )}
                       </div>
                       <p className="text-xs font-medium text-gray-700">
                         {selectedTrabajador.nombreCompleto.split(' ')[0]}

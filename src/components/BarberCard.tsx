@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Check } from 'lucide-react'
 
@@ -20,6 +21,7 @@ export function BarberCard({
   isSelected = false,
   onSelect
 }: BarberCardProps) {
+  const [imgError, setImgError] = useState(false)
   return (
     <motion.div
       layout
@@ -49,11 +51,12 @@ export function BarberCard({
             <div className="flex items-center gap-3 flex-1 min-w-0">
               {/* Avatar Circle */}
               <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gray-300 overflow-hidden shadow-sm">
-                {avatar ? (
+                {avatar && !imgError ? (
                   <img
                     src={avatar}
                     alt={name}
                     className="w-full h-full object-cover"
+                    onError={() => setImgError(true)}
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">

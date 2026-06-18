@@ -56,9 +56,10 @@ function TrabajadorModal({ trabajador, brand, onReservar, onClose }: any) {
               : <Monograma fill texto={trabajador.nombreCompleto} style={{ fontSize: 34 }} />}
           </div>
           <h2 className={styles.modalName}>{trabajador.nombreCompleto}</h2>
-          <p className={styles.modalSpec}>{trabajador.especializacion || 'Barbero'}</p>
+          <p className={styles.modalSpec}>{trabajador.especialidad || 'Barbero'}</p>
         </div>
-        {trabajador.descripcionCorta && <p className={styles.modalDesc}>{trabajador.descripcionCorta}</p>}
+        {trabajador.experiencia && <p className={styles.modalDesc} style={{ fontWeight: 600, marginBottom: 6 }}>Experiencia: {trabajador.experiencia}</p>}
+        {trabajador.descripcion && <p className={styles.modalDesc}>{trabajador.descripcion}</p>}
         <button className={styles.modalCta} style={{ background: brand }} onClick={onReservar}>Reservar ahora</button>
       </motion.div>
     </motion.div>
@@ -892,7 +893,11 @@ export function PublicSedeDetailPage() {
           <TrabajadorModal
             trabajador={trabajadorSel}
             brand={brand}
-            onReservar={() => { setTrabajadorSel(null); handleReservar() }}
+            onReservar={() => {
+              const id = trabajadorSel?.idTrabajador
+              setTrabajadorSel(null)
+              navigate(id ? `/reservar-publica?trabajador=${id}` : '/reservar-publica')
+            }}
             onClose={() => setTrabajadorSel(null)}
           />
         )}

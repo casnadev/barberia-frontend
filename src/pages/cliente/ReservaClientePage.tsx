@@ -39,7 +39,8 @@ interface Servicio {
 
 interface FormData {
   nombre: string
-  contacto: string
+  telefono: string
+  correo: string
   tipoContacto: 'whatsapp' | 'email'
 }
 
@@ -57,11 +58,15 @@ export function ReservaClientePage() {
   const [step, setStep] = useState(1)
   const [selectedServicios, setSelectedServicios] = useState<Servicio[]>([])
   const [selectedTrabajador, setSelectedTrabajador] = useState<Trabajador | null>(null)
+  // Cuando se entra desde el modal de un trabajador en la landing (?trabajador=ID)
+  // queda preseleccionado y se SALTA el paso "Elige tu Profesional".
+  const [trabajadorBloqueado, setTrabajadorBloqueado] = useState(false)
   const [selectedFecha, setSelectedFecha] = useState<string>('')
   const [selectedHora, setSelectedHora] = useState<string>('')
   const [formData, setFormData] = useState<FormData>({
     nombre: '',
-    contacto: '',
+    telefono: '',
+    correo: '',
     tipoContacto: 'whatsapp',
   })
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([])
@@ -146,11 +151,10 @@ export function ReservaClientePage() {
     setFormData((prev) => ({
       ...prev,
       nombre: user.nombreCompleto || prev.nombre,
-      ...(user.correo
-        ? { tipoContacto: 'email' as const, contacto: user.correo }
-        : user.telefono
-          ? { tipoContacto: 'whatsapp' as const, contacto: user.telefono }
-          : {}),
+      telefono: user.telefono || prev.telefono,
+      correo: user.correo || prev.correo,
+      // Canal por defecto: correo si lo tiene, si no WhatsApp.
+      tipoContacto: user.correo ? 'email' : (user.telefono ? 'whatsapp' : prev.tipoContacto),
     }))
   }, [user])
   const loadInitialData = async () => {
@@ -172,13 +176,26 @@ export function ReservaClientePage() {
       setServicios(servData || [])
       setSede(sedeData)
 
+      // Preselección de trabajador desde ?trabajador=<id> (viene del modal de la landing)
+      const preTrabId = Number(new URLSearchParams(window.location.search).get('trabajador'))
+      let bloqueado = false
+      if (preTrabId) {
+        const preT = (trabData || []).find((t) => t.idTrabajador === preTrabId)
+        if (preT) {
+          setSelectedTrabajador(preT)
+          setTrabajadorBloqueado(true)
+          bloqueado = true
+        }
+      }
+
       // Preselección desde ?servicio=<id>
       const preId = Number(new URLSearchParams(window.location.search).get('servicio'))
       if (preId) {
         const pre = (servData || []).find((x) => (x.idServicio || x.id) === preId)
         if (pre) {
           setSelectedServicios([pre])
-          setStep(2)
+          // Si además ya hay trabajador bloqueado, saltamos directo a Fecha/Hora.
+          setStep(bloqueado ? 3 : 2)
         }
       }
     } catch (error) {
@@ -290,7 +307,8 @@ export function ReservaClientePage() {
   }
 
   const handleConfirmReserva = async () => {
-    if (!selectedTrabajador || !selectedFecha || !selectedHora || !formData.contacto || !formData.nombre.trim()) {
+    const contactoActual = (formData.tipoContacto === 'whatsapp' ? formData.telefono : formData.correo).trim()
+    if (!selectedTrabajador || !selectedFecha || !selectedHora || !contactoActual || !formData.nombre.trim()) {
       toast.error('Por favor completa todos los campos')
       return
     }
@@ -306,8 +324,8 @@ export function ReservaClientePage() {
         idTrabajador: selectedTrabajador.idTrabajador, // 0 = máxima disponibilidad (auto-asigna)
         idServicios,
         nombreCliente: formData.nombre.trim(),
-        telefonoCliente: formData.tipoContacto === 'whatsapp' ? formData.contacto : undefined,
-        correoCliente: formData.tipoContacto === 'email' ? formData.contacto : undefined,
+        telefonoCliente: formData.telefono.trim() || undefined,
+        correoCliente: formData.correo.trim() || undefined,
         canalConfirmacion: formData.tipoContacto === 'whatsapp' ? 'WhatsApp' : 'Email',
         fechaReserva: selectedFecha,
         horaInicio: selectedHora + ':00',
@@ -333,7 +351,7 @@ export function ReservaClientePage() {
       if (status === 403 && /bloquead/i.test(detail)) {
         // Cuenta bloqueada por inasistencias → ofrecer solicitar desbloqueo.
         setBloqueoMsg(detail)
-        setSolTel(formData.tipoContacto === 'whatsapp' ? formData.contacto : '')
+        setSolTel(formData.telefono.trim())
         setSolMotivo('')
         setSolEnviada(false)
       } else {
@@ -366,7 +384,9 @@ export function ReservaClientePage() {
   const desktopWeekDays = getDesktopWeekDays()
 
   const handleBack = () => {
-    if (step > 1) {
+    if (step === 3 && trabajadorBloqueado) {
+      setStep(1)
+    } else if (step > 1) {
       setStep(step - 1)
     } else {
       navigate(volverA)
@@ -374,7 +394,7 @@ export function ReservaClientePage() {
   }
 
   const handleClose = async () => {
-    const hayProgreso = step > 1 || selectedServicios.length > 0 || !!selectedTrabajador || !!selectedFecha || !!selectedHora || !!formData.contacto
+    const hayProgreso = step > 1 || selectedServicios.length > 0 || !!selectedTrabajador || !!selectedFecha || !!selectedHora || !!formData.telefono || !!formData.correo
     if (hayProgreso && !(await confirmDialog({
       title: 'Descartar cita',
       message: 'Se perderán los datos ingresados. ¿Deseas descartar la cita?',
@@ -557,8 +577,17 @@ export function ReservaClientePage() {
                   {selectedTrabajador && (
                     <div className="flex items-center justify-between mb-6 px-0.5">
                       <div className="flex items-center gap-2">
-                        <div className="w-9 h-9 rounded-full bg-gray-300 flex items-center justify-center text-xs font-semibold text-gray-600 flex-shrink-0">
-                          {selectedTrabajador.nombreCompleto.charAt(0).toUpperCase()}
+                        <div className="w-9 h-9 rounded-full bg-gray-300 flex items-center justify-center text-xs font-semibold text-gray-600 flex-shrink-0 overflow-hidden">
+                          {selectedTrabajador.urlFotoPerfil ? (
+                            <img
+                              src={buildImageUrl(selectedTrabajador.urlFotoPerfil)}
+                              alt={selectedTrabajador.nombreCompleto}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; const p = e.currentTarget.parentElement; if (p) p.textContent = selectedTrabajador.nombreCompleto.charAt(0).toUpperCase() }}
+                            />
+                          ) : (
+                            selectedTrabajador.nombreCompleto.charAt(0).toUpperCase()
+                          )}
                         </div>
                         <span className="font-semibold text-gray-900 text-sm">
                           {selectedTrabajador.nombreCompleto.split(' ')[0]}
@@ -697,7 +726,7 @@ export function ReservaClientePage() {
                     <div className={styles.contactTypeSelector}>
                       <button
                         type="button"
-                        onClick={() => setFormData({ ...formData, tipoContacto: 'whatsapp', contacto: '' })}
+                        onClick={() => setFormData({ ...formData, tipoContacto: 'whatsapp' })}
                         className={`${styles.contactTypeButton} ${formData.tipoContacto === 'whatsapp' ? styles.contactTypeButtonActive : ''}`}
                         aria-label="Confirmar por WhatsApp"
                         title="WhatsApp"
@@ -714,7 +743,7 @@ export function ReservaClientePage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setFormData({ ...formData, tipoContacto: 'email', contacto: '' })}
+                        onClick={() => setFormData({ ...formData, tipoContacto: 'email' })}
                         className={`${styles.contactTypeButton} ${formData.tipoContacto === 'email' ? styles.contactTypeButtonActive : ''}`}
                         aria-label="Confirmar por correo"
                         title="Correo electrónico"
@@ -738,8 +767,11 @@ export function ReservaClientePage() {
                       </label>
                       <input
                         type={formData.tipoContacto === 'whatsapp' ? 'tel' : 'email'}
-                        value={formData.contacto}
-                        onChange={(e) => setFormData({ ...formData, contacto: e.target.value })}
+                        value={formData.tipoContacto === 'whatsapp' ? formData.telefono : formData.correo}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          [formData.tipoContacto === 'whatsapp' ? 'telefono' : 'correo']: e.target.value,
+                        })}
                         placeholder={formData.tipoContacto === 'whatsapp' ? 'Ej: 960935527' : 'tu@email.com'}
                         className={styles.contactInput}
                       />
@@ -787,7 +819,7 @@ export function ReservaClientePage() {
           <button
             onClick={() => {
               if (step === 1) {
-                setStep(2)
+                setStep(trabajadorBloqueado ? 3 : 2)
               } else if (step === 2) {
                 setStep(3)
               } else if (step === 3) {
@@ -800,7 +832,7 @@ export function ReservaClientePage() {
               (step === 1 && selectedServicios.length === 0) ||
               (step === 2 && !selectedTrabajador) ||
               (step === 3 && (!selectedFecha || !selectedHora)) ||
-              (step === 4 && (!formData.contacto || !formData.nombre.trim())) ||
+              (step === 4 && (!(formData.tipoContacto === 'whatsapp' ? formData.telefono.trim() : formData.correo.trim()) || !formData.nombre.trim())) ||
               isSubmitting
             }
             className={styles.floatingButton}
