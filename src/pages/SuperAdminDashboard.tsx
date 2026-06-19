@@ -395,12 +395,6 @@ export function SuperAdminDashboard() {
                 </p>
               </Field>
 
-              <Field label="Nombre del dueño (opcional)">
-                <input className={inputCls} value={form.ownerNombre}
-                  onChange={(e) => setForm({ ...form, ownerNombre: e.target.value })}
-                  placeholder="Se usará el nombre del negocio" />
-              </Field>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">¿Cómo recibirá su acceso?</label>
                 <div className="grid grid-cols-2 gap-2">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getActiveTenant, setTenant } from '@/services/apiClient'
 import { sedeTenantService } from '@/services/sedeTenantService'
+import { useAuthStore } from '@/store/authStore'
 import styles from '@/styles/TenantGate.module.css'
 
 /**
@@ -31,15 +32,31 @@ export function TenantGate({ children }: { children: React.ReactNode }) {
         const lista = sedesCache ?? (sedesCache = await sedeTenantService.getMisSedes())
         if (cancelado) return
 
-        const subs = lista.map((s) => s.subdominio)
         const current = getActiveTenant()
 
-        // Si el tenant activo no es una de MIS sedes (obsoleto/heredado),
-        // lo corrijo a mi primera sede y recargo una sola vez.
-        if (lista.length > 0 && !subs.includes(current)) {
-          setTenant(lista[0].subdominio)
-          window.location.reload()
-          return
+        // Sedes ACTIVAS de mi empresa (estado !== false; undefined = activa).
+        const activas = lista.filter((s) => s.estado !== false)
+        const sedeActual = lista.find((s) => s.subdominio === current)
+        const actualEsValida = !!sedeActual && sedeActual.estado !== false
+
+        // Si la sede activa NO sirve (desactivada, eliminada u obsoleta):
+        if (!actualEsValida) {
+          if (activas.length > 0) {
+            // Tengo otras sedes activas → cambio a la primera y recargo una vez.
+            setTenant(activas[0].subdominio)
+            window.location.reload()
+            return
+          }
+          // No me queda NINGUNA sede activa. Solo deslogueo si REALMENTE estaba
+          // dentro de una sede (current seteado) que ahora está caída; así evito
+          // deslogueos en estados ambiguos (sin tenant aún). Voy a la página
+          // pública, que mostrará "establecimiento no disponible".
+          if (current) {
+            clearSedesCache()
+            useAuthStore.getState().logout()
+            window.location.href = '/'
+            return
+          }
         }
 
         setReady(true)

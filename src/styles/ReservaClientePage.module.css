@@ -608,8 +608,8 @@
 /* Check de selección (esquina superior) */
 .contactCheck {
   position: absolute;
-  top: -7px;
-  right: -7px;
+  top: 6px;
+  right: 6px;
   width: 22px;
   height: 22px;
   border-radius: 50%;

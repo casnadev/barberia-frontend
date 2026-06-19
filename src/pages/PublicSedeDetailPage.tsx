@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   MapPin, Phone, Clock, Star, ChevronRight, ChevronLeft, Scissors,
-  Heart, Share2, AlertCircle, X, ChevronDown, Instagram, Facebook, Globe,
+  Heart, Share2, X, ChevronDown, Instagram, Facebook, Globe,
   Gift,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -352,11 +352,31 @@ export function PublicSedeDetailPage() {
   if (error || !sede) {
     return (
       <div className={styles.errorWrap}>
-        <div className={styles.errorCard}>
-          <AlertCircle width={48} height={48} color="#ef4444" style={{ margin: '0 auto 16px' }} />
-          <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>Error cargando</h1>
-          <p style={{ color: '#4b5563', marginBottom: 16 }}>{error || 'Barbería no encontrada'}</p>
-          <button className={styles.errorBtn} onClick={() => (window.location.href = '/')}>Volver al inicio</button>
+        <div
+          className={styles.errorCard}
+          style={{ textAlign: 'center', maxWidth: 440, padding: '40px 32px' }}
+        >
+          <img
+            src="/barber-logo.png"
+            alt="Barber.pe"
+            style={{ width: 84, height: 84, objectFit: 'contain', margin: '0 auto 20px', display: 'block', opacity: 0.95 }}
+          />
+          <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 10, color: '#111827' }}>
+            Establecimiento no disponible
+          </h1>
+          <p style={{ color: '#4b5563', marginBottom: 8, lineHeight: 1.5 }}>
+            Por el momento este establecimiento no está disponible.
+          </p>
+          <p style={{ color: '#9ca3af', fontSize: 14, marginBottom: 22 }}>
+            Gracias por tu visita 💈
+          </p>
+          <a
+            href="https://barber.pe"
+            className={styles.errorBtn}
+            style={{ display: 'inline-block', textDecoration: 'none' }}
+          >
+            Ir a Barber.pe
+          </a>
         </div>
       </div>
     )
@@ -371,7 +391,12 @@ export function PublicSedeDetailPage() {
 
   // Galería
   const galeria: string[] = (Array.isArray(sede?.imagenes) ? sede.imagenes : []).map((im: any) => img(im.urlImagen)).filter(Boolean)
-  const heroImgs = galeria.length ? galeria : (sede?.urlBanner ? [img(sede.urlBanner)] : [])
+  // Banner por defecto: si la sede aún no subió portada ni galería, usamos el
+  // logo de Barber.pe (asset del front, ruta absoluta /barber-logo.png) para que
+  // la landing nunca se vea vacía y se pueda confirmar/compartir desde el alta.
+  const heroImgs = galeria.length
+    ? galeria
+    : [sede?.urlBanner ? img(sede.urlBanner) : '/barber-logo.png']
 
   // Redes
   const redes: any[] = Array.isArray(sede?.redesSociales) ? sede.redesSociales : []
