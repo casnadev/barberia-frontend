@@ -324,7 +324,14 @@ export function ReservaAcciones() {
             <p style={{ margin: '2px 0 14px', color: '#6b7280', fontSize: 14.5, textAlign: 'center', lineHeight: 1.5 }}>
               Esta cita está cancelada. ¡Esperamos verte pronto! Cuando quieras, reserva de nuevo.
             </p>
-            <button className={styles.btnPrimary} onClick={() => navigate('/reservar-publica')}>
+            <button className={styles.btnPrimary} onClick={() => {
+              // "Reservar de nuevo" debe ir a la página pública de ESTA sede
+              // ({sede}.barber.pe), no a barber.pe. navigate() es relativo y se
+              // quedaba en el host actual, por eso caía en barber.pe.
+              window.location.href = reserva?.subdominio
+                ? `https://${reserva.subdominio}.barber.pe/reservar-publica`
+                : '/reservar-publica'
+            }}>
               <RotateCcw size={17} /> Reservar de nuevo
             </button>
           </div>

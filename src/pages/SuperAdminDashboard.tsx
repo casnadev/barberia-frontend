@@ -570,21 +570,28 @@ function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: () => voi
   const crear = async () => {
     if (form.nombre.trim().length < 2) { toast.error('Ponle nombre a la sede.'); return }
     setSaving(true)
+    const payload = {
+      idEmpresa: empresa.id,
+      nombre: form.nombre.trim(),
+      direccion: form.direccion.trim(),
+      departamento: '', provincia: '', distrito: '',
+      latitud: 0, longitud: 0,
+      telefono: form.telefono.trim(),
+      whatsappContacto: form.whatsapp.trim(),
+      correoContacto: '',
+      zonaHoraria: 'America/Lima', moneda: 'PEN',
+    }
     try {
-      const base = slugify(`${empresa.nombreComercial}-${form.nombre}`) || slugify(form.nombre)
-      await empresasService.createSede({
-        idEmpresa: empresa.id,
-        nombre: form.nombre.trim(),
-        subdominio: base,
-        slug: base,
-        direccion: form.direccion.trim(),
-        departamento: '', provincia: '', distrito: '',
-        latitud: 0, longitud: 0,
-        telefono: form.telefono.trim(),
-        whatsappContacto: form.whatsapp.trim(),
-        correoContacto: '',
-        zonaHoraria: 'America/Lima', moneda: 'PEN',
-      })
+      // El subdominio sale SOLO del nombre de la sede (ej. "nachobarber"),
+      // NO del nombre comercial. Si ese slug ya está en uso, reintenta una
+      // sola vez con un sufijo único de la empresa.
+      const base = slugify(form.nombre) || `sede-${empresa.id}`
+      try {
+        await empresasService.createSede({ ...payload, subdominio: base, slug: base })
+      } catch {
+        const alt = `${base}-${empresa.id}`
+        await empresasService.createSede({ ...payload, subdominio: alt, slug: alt })
+      }
       toast.success('Sede creada.')
       setForm({ nombre: '', direccion: '', telefono: '', whatsapp: '' })
       await load()
