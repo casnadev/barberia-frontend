@@ -36,6 +36,15 @@ export function SoporteModal() {
     if (!open) return
     setMotivo(MOTIVOS[0]); setDescripcion('')   // reset al abrir
     ;(async () => {
+      // /api/Sedes/actual solo tiene sentido en el subdominio de una sede.
+      // En el panel (barber.pe / app.barber.pe) no hay tenant → daría 400.
+      // Evitamos la llamada para no ensuciar la consola.
+      const host = window.location.hostname.toLowerCase()
+      const label = host.split('.')[0]
+      const RESERVADOS = ['www', 'app', 'admin', 'api', 'barber', 'localhost', '127']
+      const enSedeSubdominio =
+        host.endsWith('barber.pe') && host.split('.').length > 2 && !RESERVADOS.includes(label)
+      if (!enSedeSubdominio) { setSede({}); return }
       try {
         const res = await apiClient.get('/api/Sedes/actual')
         const d: any = res.data?.data ?? res.data
