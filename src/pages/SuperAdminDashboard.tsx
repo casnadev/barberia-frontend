@@ -78,7 +78,7 @@ export function SuperAdminDashboard() {
 
   const stats = useMemo(() => {
     const total = empresas.length
-    const activas = empresas.filter((e) => owners[e.id]?.estado !== false && owners[e.id]).length
+    const activas = empresas.filter((e) => !e.pausada).length
     const sinAcceso = empresas.filter((e) => owners[e.id] == null).length
     return { total, activas, sinAcceso }
   }, [empresas, owners])
@@ -191,13 +191,11 @@ export function SuperAdminDashboard() {
   }
 
   const toggleEstado = async (e: Empresa) => {
-    const owner = owners[e.id]
-    if (!owner) return
-    const activar = owner.estado === false
+    const activar = e.pausada === true   // si está pausada → reactivar; si no → pausar
     try {
-      await empresasService.setUsuarioEstado(owner.id, activar)
-      setOwners((m) => ({ ...m, [e.id]: { ...owner, estado: activar } }))
-      toast.success(activar ? 'Barbería activada.' : 'Barbería desactivada.')
+      await empresasService.setEmpresaEstado(e.id, activar)
+      setEmpresas((list) => list.map((x) => (x.id === e.id ? { ...x, pausada: !activar } : x)))
+      toast.success(activar ? 'Barbería reactivada.' : 'Barbería pausada.')
     } catch { toast.error('No se pudo cambiar el estado.') }
   }
 
@@ -293,7 +291,7 @@ export function SuperAdminDashboard() {
           <div className="grid gap-3 sm:grid-cols-2">
             {empresas.map((e) => {
               const owner = owners[e.id]
-              const inactivo = owner?.estado === false
+              const inactivo = e.pausada === true
               const esPrueba = (e.planActual || '').toLowerCase().includes('prueba')
               return (
                 <motion.div key={e.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -359,7 +357,7 @@ export function SuperAdminDashboard() {
                       className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition">
                       <MapPin className="w-4 h-4" /> Sedes
                     </button>
-                    <button onClick={() => toggleEstado(e)} disabled={!owner}
+                    <button onClick={() => toggleEstado(e)}
                       className={`inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition disabled:opacity-40 ml-auto ${
                         inactivo ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}>
                       <Power className="w-4 h-4" /> {inactivo ? 'Activar' : 'Desactivar'}
@@ -698,14 +696,6 @@ function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: () => voi
         <p className="text-sm font-medium text-gray-700">Agregar sede</p>
         <input className={inputCls} placeholder="Nombre de la sede" value={form.nombre}
           onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
-        <input className={inputCls} placeholder="Dirección" value={form.direccion}
-          onChange={(e) => setForm({ ...form, direccion: e.target.value })} />
-        <div className="grid grid-cols-2 gap-2">
-          <input className={inputCls} placeholder="Teléfono" value={form.telefono}
-            onChange={(e) => setForm({ ...form, telefono: e.target.value })} />
-          <input className={inputCls} placeholder="WhatsApp" value={form.whatsapp}
-            onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} />
-        </div>
         <button onClick={crear} disabled={saving}
           className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl transition disabled:opacity-50">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Agregar

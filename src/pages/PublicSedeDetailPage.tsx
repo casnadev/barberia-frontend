@@ -357,7 +357,7 @@ export function PublicSedeDetailPage() {
           style={{ textAlign: 'center', maxWidth: 440, padding: '40px 32px' }}
         >
           <img
-            src="/barber-logo.png"
+            src="/barber-logo-black.png"
             alt="Barber.pe"
             style={{ width: 84, height: 84, objectFit: 'contain', margin: '0 auto 20px', display: 'block', opacity: 0.95 }}
           />
@@ -368,7 +368,7 @@ export function PublicSedeDetailPage() {
             Por el momento este establecimiento no está disponible.
           </p>
           <p style={{ color: '#9ca3af', fontSize: 14, marginBottom: 22 }}>
-            Gracias por tu visita 💈
+            Gracias por tu visita.
           </p>
           <a
             href="https://barber.pe"

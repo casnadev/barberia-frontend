@@ -3,6 +3,7 @@ import { useEffect, useState, lazy, Suspense } from 'react'        // ← + lazy
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/authService'
 import { TenantGate } from '@/components/TenantGate' // ← NUEVO (se queda eager)
+import { SedeActivaGate } from '@/components/Sedeactivagate' // guard pausa trabajador/cliente
 import { ConfirmHost } from '@/components/ConfirmDialog' // ← se queda eager
 
 // --- Páginas con carga diferida (code-splitting): cada una baja al entrar a su ruta ---
@@ -286,12 +287,12 @@ export function App() {
 
         {/* TRABAJADOR */}
         <Route path="/mi-agenda" element={
-          <ProtectedRoute requiredRole="Trabajador"><TrabajadorMiAgenda /></ProtectedRoute>
+          <ProtectedRoute requiredRole="Trabajador"><SedeActivaGate><TrabajadorMiAgenda /></SedeActivaGate></ProtectedRoute>
         } />
 
         {/* CLIENTE - PERFIL */}
         <Route path="/mi-perfil" element={
-          <ProtectedRoute requiredRole="Cliente"><MiPerfilCliente /></ProtectedRoute>
+          <ProtectedRoute requiredRole="Cliente"><SedeActivaGate><MiPerfilCliente /></SedeActivaGate></ProtectedRoute>
         } />
 
         {/* CLIENTE LOGUEADO */}

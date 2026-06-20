@@ -10,6 +10,8 @@ export interface Empresa {
   totalSedes?: number
   planActual?: string
   fechaFinPlan?: string
+  /** True si la empresa está pausada (sin sedes activas). El público no la ve. */
+  pausada?: boolean
   /** Dueño incrustado por el backend (evita pedir admins uno por uno). */
   owner?: Admin | null
 }
@@ -178,6 +180,12 @@ export const empresasService = {
 
   setUsuarioEstado: async (idUsuario: number, activo: boolean) => {
     const res = await apiClient.patch(`/api/superadmin/usuarios/${idUsuario}/estado`, { activo })
+    return res.data
+  },
+
+  /** Pausa/reactiva la barbería: apaga/prende TODAS sus sedes (no toca el login del dueño). */
+  setEmpresaEstado: async (idEmpresa: number, activa: boolean) => {
+    const res = await apiClient.patch(`/api/superadmin/empresas/${idEmpresa}/estado`, { activo: activa })
     return res.data
   },
 
