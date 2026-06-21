@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { Scissors, User, Building2, Save, Loader2, Sparkles } from 'lucide-react'
+import { User, Building2, Save, Loader2, Sparkles } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { perfilService } from '@/services/perfilService'
 
@@ -91,10 +91,8 @@ export function CompletarPerfilAdmin() {
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-8 px-4">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="max-w-xl mx-auto">
         <div className="text-center mb-6">
-          <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl mx-auto mb-3 flex items-center justify-center shadow-lg shadow-blue-500/30">
-            <Scissors className="w-7 h-7 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">¡Bienvenido a Barber.PE!</h1>
+          <img src="/barber-logo-black.png" alt="Barber.PE" className="h-12 mx-auto mb-3" />
+          <h1 className="text-2xl font-bold text-gray-900">¡Te damos la bienvenida!</h1>
           <p className="text-gray-500 mt-1 flex items-center justify-center gap-1.5 text-sm">
             <Sparkles className="w-4 h-4 text-blue-500" />
             Revisa tus datos pre-cargados y edítalos a tu gusto.

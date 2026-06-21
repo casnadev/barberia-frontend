@@ -119,3 +119,10 @@
 @media (max-width: 1023px) {
   .item { padding: 15px 14px; font-size: 16px; }
 }
+
+/* ---------- NAV DE LANDING DENTRO DEL MENÚ (fusión avatar + hamburguesa) ----------
+   Solo visible en mobile, donde la barra superior de la landing se oculta. */
+.mobileNav { display: none; }
+@media (max-width: 760px) {
+  .mobileNav { display: flex; flex-direction: column; }
+}

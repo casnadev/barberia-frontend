@@ -2,25 +2,20 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import {
-  ArrowLeft, ArrowRight, Mail, Phone, Loader2, Eye, EyeOff, UserPlus, LogIn,
-} from 'lucide-react'
+import { ArrowLeft, ArrowRight, Mail, Phone, Loader2, Eye, EyeOff, UserPlus, LogIn } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/authService'
 import { setTenant, clearTenant } from '@/services/apiClient'
+
+const LOGO = '/barber-logo-black.png'
 
 type Tipo = 'Cliente' | 'Profesional'
 type Canal = 'Email' | 'WhatsApp'
 type View = 'choose' | 'login' | 'password' | 'code' | 'finalize'
 
 /**
- * Acceso unificado estilo Fresha (Opción B).
- *  choose   → elige Cliente/Profesional (Img 5).
- *  login    → correo o teléfono (toggle) + Continuar (Img 6 oscuro pro / Img 7 claro cliente).
- *             → acceso/iniciar decide: password (login) o codigo (activar/registrar).
- *  password → contraseña de retorno → /login.
- *  code     → ingresa el código (Img 1).
- *  finalize → datos + contraseña, solo si hace falta (Img 2) → crea/reclama y entra.
+ * Acceso unificado estilo Fresha (Opción B). Tarjeta blanca siempre (para que el
+ * logo negro luzca); el fondo cambia entre cliente (claro) y profesional (oscuro).
  */
 export function AccesoPage() {
   const navigate = useNavigate()
@@ -46,11 +41,7 @@ export function AccesoPage() {
   const googleBtnRef = useRef<HTMLDivElement>(null)
 
   const dark = tipo === 'Profesional'
-  const T = dark ? THEME_DARK : THEME_LIGHT
-
-  // El "identificador" final según el canal (correo o teléfono con prefijo).
-  const idValor = () =>
-    canal === 'Email' ? identificador.trim().toLowerCase() : `+51${identificador.replace(/\D/g, '')}`
+  const idValor = () => (canal === 'Email' ? identificador.trim().toLowerCase() : `+51${identificador.replace(/\D/g, '')}`)
 
   // -------------------------------------------------------------- entrar
   const entrar = (token: string, user: any) => {
@@ -72,7 +63,6 @@ export function AccesoPage() {
       toast.error(e?.response?.data?.detail || e?.message || 'No se pudo iniciar sesión con Google.')
     } finally { setLoading(false) }
   }
-
   useEffect(() => {
     if (!googleClientId || view !== 'login') return
     let cancelado = false
@@ -82,7 +72,7 @@ export function AccesoPage() {
       g.accounts.id.initialize({ client_id: googleClientId, callback: handleGoogleCredential })
       googleBtnRef.current.innerHTML = ''
       g.accounts.id.renderButton(googleBtnRef.current, {
-        type: 'standard', theme: dark ? 'filled_black' : 'outline', size: 'large',
+        type: 'standard', theme: 'outline', size: 'large',
         text: 'continue_with', shape: 'pill', logo_alignment: 'center', locale: 'es',
         width: Math.min(googleBtnRef.current.offsetWidth || 320, 400),
       })
@@ -97,7 +87,7 @@ export function AccesoPage() {
     const iv = setInterval(() => { if ((window as any).google?.accounts?.id) { clearInterval(iv); pintar() } }, 100)
     return () => { cancelado = true; clearInterval(iv) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, dark, googleClientId])
+  }, [view, googleClientId])
 
   // -------------------------------------------------------------- login (acceso/iniciar)
   const continuar = async () => {
@@ -105,21 +95,17 @@ export function AccesoPage() {
     setLoading(true)
     try {
       const r = await authService.accesoIniciar(tipo, idValor())
-      if (r?.accion === 'password') {
-        setView('password')
-      } else {
+      if (r?.accion === 'password') setView('password')
+      else {
         setEsNuevo(!!r?.esNuevo)
-        // precarga el contacto verificado en el formulario final
         if (canal === 'Email') setCorreo(idValor()); else setTelefono(idValor())
         setView('code')
         toast.success('Te enviamos un código de verificación.')
       }
-    } catch (e: any) {
-      toast.error(e?.message || 'No pudimos continuar. Revisa el dato.')
-    } finally { setLoading(false) }
+    } catch (e: any) { toast.error(e?.message || 'No pudimos continuar. Revisa el dato.') }
+    finally { setLoading(false) }
   }
 
-  // -------------------------------------------------------------- password (retorno)
   const entrarConPassword = async () => {
     if (!password) { toast.error('Ingresa tu contraseña.'); return }
     setLoading(true)
@@ -127,18 +113,15 @@ export function AccesoPage() {
       const res = await authService.login(idValor(), password)
       if (!res) { toast.error('Acceso o contraseña incorrectos.'); return }
       entrar(res.token, res.user)
-    } catch (e: any) {
-      toast.error(e?.message || 'Acceso o contraseña incorrectos.')
-    } finally { setLoading(false) }
+    } catch (e: any) { toast.error(e?.message || 'Acceso o contraseña incorrectos.') }
+    finally { setLoading(false) }
   }
 
-  // -------------------------------------------------------------- código
   const continuarConCodigo = () => {
     if (codigo.length !== 6) { toast.error('Ingresa los 6 dígitos.'); return }
     setView('finalize')
   }
 
-  // -------------------------------------------------------------- finalizar (crear/reclamar)
   const crearCuenta = async () => {
     if (!nombre.trim()) { toast.error('Ingresa tu nombre.'); return }
     if (tipo === 'Profesional' && !nombreNegocio.trim()) { toast.error('Ingresa el nombre de tu negocio.'); return }
@@ -149,164 +132,143 @@ export function AccesoPage() {
         tipo, identificador: idValor(), codigo: codigo.trim(),
         nombre: nombre.trim(), apellido: apellido.trim() || undefined,
         correo: correo.trim() || undefined, telefono: telefono.trim() || undefined,
-        nombreNegocio: tipo === 'Profesional' ? nombreNegocio.trim() : undefined,
-        password,
+        nombreNegocio: tipo === 'Profesional' ? nombreNegocio.trim() : undefined, password,
       })
       if (!resp) { toast.error('No pudimos crear la cuenta.'); return }
       entrar(resp.token, resp.user)
-    } catch (e: any) {
-      toast.error(e?.message || 'No pudimos crear la cuenta. Revisa el código.')
-    } finally { setLoading(false) }
+    } catch (e: any) { toast.error(e?.message || 'No pudimos crear la cuenta. Revisa el código.') }
+    finally { setLoading(false) }
   }
 
+  // Fondo: claro para cliente; oscuro para profesional. La tarjeta siempre blanca.
+  const pageBg = view === 'choose' ? 'bg-gray-50' : (dark ? 'bg-neutral-900' : 'bg-gray-50')
+
   return (
-    <div className={`min-h-screen flex items-center justify-center px-4 py-10 transition-colors ${view === 'choose' ? 'bg-gray-50' : T.page}`}>
-      <div className="w-full max-w-md">
+    <div className={`min-h-screen flex items-center justify-center px-4 py-10 transition-colors ${pageBg}`}>
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl shadow-black/10 border border-gray-100 p-8">
         <AnimatePresence mode="wait">
 
-          {/* =============================================== SELECTOR (Img 5) */}
+          {/* ===================================================== SELECTOR */}
           {view === 'choose' && (
             <motion.div key="choose" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <button onClick={() => navigate('/')} className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 mb-6">
+              <button onClick={() => navigate('/')} className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 mb-5">
                 <ArrowLeft className="w-4 h-4" /> Inicio
               </button>
-              <h1 className="text-2xl font-bold text-center text-gray-900 mb-8">Regístrate o inicia sesión</h1>
+              <img src={LOGO} alt="Barber.PE" className="h-9 mx-auto mb-7" />
 
               <button onClick={() => { setTipo('Cliente'); setView('login') }}
-                className="w-full flex items-center justify-between text-left border border-gray-200 rounded-2xl p-5 mb-4 hover:border-gray-400 hover:shadow-sm transition">
+                className="w-full flex items-center justify-between text-left border border-gray-200 rounded-2xl p-5 mb-4 hover:border-gray-900 hover:shadow-md transition group">
                 <div>
                   <div className="font-semibold text-gray-900">Soy cliente</div>
-                  <div className="text-sm text-gray-500">Reserva en barberías cerca de ti</div>
+                  <div className="text-sm text-gray-500">Reserva 24/7 a cualquier hora</div>
                 </div>
-                <ArrowRight className="w-5 h-5 text-gray-400" />
+                <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-900 transition" />
               </button>
 
               <button onClick={() => { setTipo('Profesional'); setView('login') }}
-                className="w-full flex items-center justify-between text-left border border-gray-200 rounded-2xl p-5 hover:border-gray-400 hover:shadow-sm transition">
+                className="w-full flex items-center justify-between text-left border border-gray-200 rounded-2xl p-5 hover:border-gray-900 hover:shadow-md transition group">
                 <div>
                   <div className="font-semibold text-gray-900">Tengo un negocio</div>
                   <div className="text-sm text-gray-500">Gestiona tu barbería y hazla crecer</div>
                 </div>
-                <ArrowRight className="w-5 h-5 text-gray-400" />
+                <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-900 transition" />
               </button>
             </motion.div>
           )}
 
-          {/* =============================================== LOGIN (Img 6/7) */}
+          {/* ===================================================== LOGIN */}
           {view === 'login' && (
             <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <Back T={T} onClick={() => setView('choose')} />
-              <h1 className={`text-2xl font-bold text-center mb-1 ${T.title}`}>
-                {dark ? 'Barber.PE para profesionales' : 'Barber.PE para clientes'}
-              </h1>
-              <p className={`text-sm text-center mb-6 ${T.sub}`}>
-                Crea una cuenta o inicia sesión {dark ? 'para gestionar tu negocio.' : 'para reservar y gestionar tus citas.'}
+              <Back onClick={() => setView('choose')} />
+              <img src={LOGO} alt="Barber.PE" className="h-8 mx-auto mb-3" />
+              <p className="text-sm text-center text-gray-500 mb-1 font-medium">
+                {dark ? 'para profesionales' : 'para clientes'}
+              </p>
+              <p className="text-sm text-center text-gray-500 mb-6">
+                Escoger el método de acceso
               </p>
 
-              {/* Toggle Correo / WhatsApp */}
               <div className="grid grid-cols-2 gap-2 mb-4">
-                <button onClick={() => { setCanal('Email'); setIdentificador('') }}
-                  className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition ${canal === 'Email' ? T.toggleOn : T.toggleOff}`}>
-                  <Mail className="w-4 h-4" /> Correo
-                </button>
-                <button onClick={() => { setCanal('WhatsApp'); setIdentificador('') }}
-                  className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition ${canal === 'WhatsApp' ? T.toggleOn : T.toggleOff}`}>
-                  <Phone className="w-4 h-4" /> WhatsApp
-                </button>
+                <Toggle active={canal === 'Email'} onClick={() => { setCanal('Email'); setIdentificador('') }}><Mail className="w-4 h-4" /> Correo</Toggle>
+                <Toggle active={canal === 'WhatsApp'} onClick={() => { setCanal('WhatsApp'); setIdentificador('') }}><Phone className="w-4 h-4" /> WhatsApp</Toggle>
               </div>
 
               {canal === 'Email' ? (
-                <input value={identificador} onChange={(e) => setIdentificador(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && continuar()}
-                  placeholder="Introduce tu correo" autoCapitalize="none"
-                  className={`w-full px-4 py-3 rounded-xl border mb-2 focus:outline-none focus:ring-2 transition ${T.input}`} />
+                <Input value={identificador} onChange={setIdentificador} placeholder="Introduce tu correo" onEnter={continuar} />
               ) : (
-                <div className="flex gap-2 mb-2">
-                  <span className={`flex items-center px-3 rounded-xl border text-sm ${T.input}`}>+51</span>
+                <div className="flex gap-2 mb-4">
+                  <span className="flex items-center px-3 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-600">+51</span>
                   <input value={identificador} onChange={(e) => setIdentificador(e.target.value.replace(/\D/g, '').slice(0, 9))}
-                    onKeyDown={(e) => e.key === 'Enter' && continuar()} inputMode="numeric"
-                    placeholder="987654321"
-                    className={`flex-1 px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition ${T.input}`} />
+                    onKeyDown={(e) => e.key === 'Enter' && continuar()} inputMode="numeric" placeholder="987654321"
+                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
                 </div>
               )}
-              <p className={`text-xs mb-4 ${T.sub}`}>Te enviaremos un código de verificación.</p>
+              <p className="text-xs text-gray-400 -mt-2 mb-4">Te enviaremos un código de verificación.</p>
 
-              <button onClick={continuar} disabled={loading}
-                className={`w-full inline-flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition disabled:opacity-50 active:scale-[0.99] ${T.primary}`}>
+              <button onClick={continuar} disabled={loading} className={btnDark}>
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />} Continuar
               </button>
 
               {googleClientId && (
                 <>
                   <div className="flex items-center gap-3 my-4">
-                    <div className={`flex-1 border-t ${dark ? 'border-neutral-800' : 'border-gray-200'}`} />
-                    <span className={`text-xs ${T.sub}`}>o</span>
-                    <div className={`flex-1 border-t ${dark ? 'border-neutral-800' : 'border-gray-200'}`} />
+                    <div className="flex-1 border-t border-gray-200" /><span className="text-xs text-gray-400">o</span><div className="flex-1 border-t border-gray-200" />
                   </div>
                   <div ref={googleBtnRef} className="flex justify-center" />
                 </>
               )}
 
-              <button onClick={() => setTipo(dark ? 'Cliente' : 'Profesional')}
-                className={`w-full text-sm py-3 transition ${T.ghost}`}>
+              <button onClick={() => setTipo(dark ? 'Cliente' : 'Profesional')} className="w-full text-sm py-3 text-gray-400 hover:text-gray-700 transition">
                 {dark ? '¿Eres cliente? Ir a clientes' : '¿Tienes un negocio? Ir a profesionales'}
               </button>
-              {/* Social (Google) → se conecta reusando tu loginGoogle de LoginPage. */}
             </motion.div>
           )}
 
-          {/* =============================================== PASSWORD (retorno) */}
+          {/* ===================================================== PASSWORD */}
           {view === 'password' && (
             <motion.div key="password" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <Back T={T} onClick={() => setView('login')} />
-              <h1 className={`text-2xl font-bold mb-1 ${T.title}`}>Ingresa tu contraseña</h1>
-              <p className={`text-sm mb-5 ${T.sub}`}>
-                Para <span className="font-semibold">{identificador}</span>.
-              </p>
-              <PassInput T={T} value={password} onChange={setPassword} onEnter={entrarConPassword} placeholder="Tu contraseña" />
-              <button onClick={entrarConPassword} disabled={loading}
-                className={`w-full inline-flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition disabled:opacity-50 mt-1 ${T.primary}`}>
+              <Back onClick={() => setView('login')} />
+              <img src={LOGO} alt="Barber.PE" className="h-8 mx-auto mb-5" />
+              <h1 className="text-xl font-bold text-center text-gray-900 mb-1">Ingresa tu contraseña</h1>
+              <p className="text-sm text-center text-gray-500 mb-5">{identificador}</p>
+              <PassInput value={password} onChange={setPassword} onEnter={entrarConPassword} placeholder="Tu contraseña" />
+              <button onClick={entrarConPassword} disabled={loading} className={btnPrimary + ' mt-1'}>
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />} Entrar
               </button>
             </motion.div>
           )}
 
-          {/* =============================================== CÓDIGO (Img 1) */}
+          {/* ===================================================== CÓDIGO */}
           {view === 'code' && (
             <motion.div key="code" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <Back T={T} onClick={() => setView('login')} />
-              <h1 className={`text-2xl font-bold text-center mb-1 ${T.title}`}>Confirma tu código</h1>
-              <p className={`text-sm text-center mb-6 ${T.sub}`}>Te enviamos un código a <span className="font-semibold">{idValor()}</span>.</p>
+              <Back onClick={() => setView('login')} />
+              <img src={LOGO} alt="Barber.PE" className="h-8 mx-auto mb-5" />
+              <h1 className="text-xl font-bold text-center text-gray-900 mb-1">Confirma tu código</h1>
+              <p className="text-sm text-center text-gray-500 mb-6">Te enviamos un código a <span className="font-semibold">{idValor()}</span>.</p>
               <input value={codigo} onChange={(e) => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 inputMode="numeric" placeholder="••••••"
-                className={`w-full text-center text-2xl tracking-[0.5em] font-mono px-4 py-3 rounded-xl border mb-4 focus:outline-none focus:ring-2 transition ${T.input}`} />
-              <button onClick={continuarConCodigo} className={`w-full font-semibold py-3 rounded-xl transition ${T.primary}`}>Continuar</button>
-              <button onClick={continuar} disabled={loading} className={`w-full text-sm py-3 transition ${T.ghost}`}>¿No te llegó? Reenviar código</button>
+                className="w-full text-center text-2xl tracking-[0.5em] font-mono px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+              <button onClick={continuarConCodigo} className={btnDark}>Continuar</button>
+              <button onClick={continuar} disabled={loading} className="w-full text-sm py-3 text-gray-400 hover:text-gray-700 transition">¿No te llegó? Reenviar código</button>
             </motion.div>
           )}
 
-          {/* =============================================== FINALIZAR (Img 2) */}
+          {/* ===================================================== FINALIZAR */}
           {view === 'finalize' && (
             <motion.div key="finalize" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <Back T={T} onClick={() => setView('code')} />
-              <h1 className={`text-2xl font-bold text-center mb-1 ${T.title}`}>Finaliza tu registro</h1>
-              <p className={`text-sm text-center mb-5 ${T.sub}`}>Necesitamos algunos datos más.</p>
+              <Back onClick={() => setView('code')} />
+              <img src={LOGO} alt="Barber.PE" className="h-8 mx-auto mb-4" />
+              <h1 className="text-xl font-bold text-center text-gray-900 mb-1">Finaliza tu registro</h1>
+              <p className="text-sm text-center text-gray-500 mb-5">Necesitamos algunos datos más.</p>
 
-              {tipo === 'Profesional' && (<><FieldLabel T={T}>Nombre del negocio</FieldLabel>
-                <TInput T={T} value={nombreNegocio} onChange={setNombreNegocio} placeholder="Mi Barbería" /></>)}
-              <FieldLabel T={T}>Nombre</FieldLabel>
-              <TInput T={T} value={nombre} onChange={setNombre} placeholder="Tu nombre" />
-              <FieldLabel T={T}>Apellido</FieldLabel>
-              <TInput T={T} value={apellido} onChange={setApellido} placeholder="Tu apellido" />
-              <FieldLabel T={T}>Correo</FieldLabel>
-              <TInput T={T} value={correo} onChange={setCorreo} placeholder="tucorreo@gmail.com" readOnly={canal === 'Email'} />
-              <FieldLabel T={T}>Teléfono</FieldLabel>
-              <TInput T={T} value={telefono} onChange={setTelefono} placeholder="+51987654321" readOnly={canal === 'WhatsApp'} />
-              <FieldLabel T={T}>Crea tu contraseña</FieldLabel>
-              <PassInput T={T} value={password} onChange={setPassword} placeholder="Mínimo 8 caracteres" />
+              {tipo === 'Profesional' && (<><Label>Nombre del negocio</Label><Input value={nombreNegocio} onChange={setNombreNegocio} placeholder="Mi Barbería" /></>)}
+              <Label>Nombre</Label><Input value={nombre} onChange={setNombre} placeholder="Tu nombre" />
+              <Label>Apellido</Label><Input value={apellido} onChange={setApellido} placeholder="Tu apellido" />
+              <Label>Correo</Label><Input value={correo} onChange={setCorreo} placeholder="tucorreo@gmail.com" readOnly={canal === 'Email'} />
+              <Label>Teléfono</Label><Input value={telefono} onChange={setTelefono} placeholder="+51987654321" readOnly={canal === 'WhatsApp'} />
+              <Label>Crea tu contraseña</Label><PassInput value={password} onChange={setPassword} placeholder="Mínimo 8 caracteres" />
 
-              <button onClick={crearCuenta} disabled={loading}
-                className={`w-full inline-flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition disabled:opacity-50 mt-2 ${T.primary}`}>
+              <button onClick={crearCuenta} disabled={loading} className={btnDark + ' mt-2'}>
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5" />} Aceptar y crear cuenta
               </button>
             </motion.div>
@@ -318,42 +280,37 @@ export function AccesoPage() {
   )
 }
 
-// ─────────────────────────────────────────────────────────────── temas
-const THEME_LIGHT = {
-  page: 'bg-gray-50', title: 'text-gray-900', sub: 'text-gray-500', label: 'text-gray-500',
-  input: 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-blue-500 focus:bg-white',
-  primary: 'bg-gray-900 text-white hover:bg-black shadow-lg shadow-gray-900/10',
-  ghost: 'text-gray-400 hover:text-gray-700',
-  toggleOn: 'bg-blue-50 border-blue-500 text-blue-700', toggleOff: 'bg-gray-50 border-gray-200 text-gray-500',
-}
-const THEME_DARK = {
-  page: 'bg-neutral-950', title: 'text-white', sub: 'text-gray-400', label: 'text-gray-300',
-  input: 'bg-neutral-900 border-neutral-700 text-white placeholder-gray-500 focus:ring-blue-500',
-  primary: 'bg-white text-black hover:bg-gray-100',
-  ghost: 'text-gray-400 hover:text-white',
-  toggleOn: 'bg-neutral-800 border-blue-500 text-white', toggleOff: 'bg-neutral-900 border-neutral-700 text-gray-400',
-}
-type Theme = typeof THEME_LIGHT
+// ───────────────────────────────────────────── estilos + componentes
+const btnDark = 'w-full inline-flex items-center justify-center gap-2 bg-gray-900 hover:bg-black text-white font-semibold py-3 rounded-xl transition disabled:opacity-50 active:scale-[0.99] shadow-lg shadow-gray-900/10'
+const btnPrimary = 'w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition disabled:opacity-50 active:scale-[0.99] shadow-lg shadow-blue-600/20'
 
-// ─────────────────────────────────────────────────────────────── componentes
-function Back({ T, onClick }: { T: Theme; onClick: () => void }) {
-  return <button onClick={onClick} className={`inline-flex items-center gap-1 text-sm mb-4 transition ${T.ghost}`}><ArrowLeft className="w-4 h-4" /> Atrás</button>
+function Back({ onClick }: { onClick: () => void }) {
+  return <button onClick={onClick} className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 mb-4 transition"><ArrowLeft className="w-4 h-4" /> Atrás</button>
 }
-function FieldLabel({ T, children }: { T: Theme; children: React.ReactNode }) {
-  return <label className={`block text-xs font-medium mb-1.5 ${T.label}`}>{children}</label>
+function Label({ children }: { children: React.ReactNode }) {
+  return <label className="block text-xs font-medium text-gray-500 mb-1.5">{children}</label>
 }
-function TInput({ T, value, onChange, placeholder, readOnly }: { T: Theme; value: string; onChange: (v: string) => void; placeholder?: string; readOnly?: boolean }) {
-  return <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} readOnly={readOnly} autoCapitalize="none"
-    className={`w-full px-4 py-3 rounded-xl border mb-4 focus:outline-none focus:ring-2 transition ${T.input} ${readOnly ? 'opacity-70 cursor-not-allowed' : ''}`} />
+function Toggle({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick}
+      className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition ${active ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+      {children}
+    </button>
+  )
 }
-function PassInput({ T, value, onChange, placeholder, onEnter }: { T: Theme; value: string; onChange: (v: string) => void; placeholder?: string; onEnter?: () => void }) {
+function Input({ value, onChange, placeholder, readOnly, onEnter }: { value: string; onChange: (v: string) => void; placeholder?: string; readOnly?: boolean; onEnter?: () => void }) {
+  return <input value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && onEnter) onEnter() }}
+    placeholder={placeholder} readOnly={readOnly} autoCapitalize="none"
+    className={`w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition ${readOnly ? 'text-gray-500 cursor-not-allowed' : ''}`} />
+}
+function PassInput({ value, onChange, placeholder, onEnter }: { value: string; onChange: (v: string) => void; placeholder?: string; onEnter?: () => void }) {
   const [show, setShow] = useState(false)
   return (
     <div className="relative mb-4">
       <input value={value} onChange={(e) => onChange(e.target.value)} type={show ? 'text' : 'password'} placeholder={placeholder}
-        onKeyDown={(e) => e.key === 'Enter' && onEnter?.()}
-        className={`w-full px-4 py-3 pr-12 rounded-xl border focus:outline-none focus:ring-2 transition ${T.input}`} />
-      <button type="button" onClick={() => setShow((s) => !s)} className={`absolute right-3 top-1/2 -translate-y-1/2 transition ${T.ghost}`}>
+        onKeyDown={(e) => { if (e.key === 'Enter' && onEnter) onEnter() }}
+        className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+      <button type="button" onClick={() => setShow((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition">
         {show ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
       </button>
     </div>

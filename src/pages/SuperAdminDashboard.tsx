@@ -247,7 +247,7 @@ export function SuperAdminDashboard() {
               <Scissors className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-gray-900 leading-tight">Barber.PE</h1>
+              <img src="/barber-logo-black.png" alt="Barber.PE" className="h-5" />
               <p className="text-xs text-gray-500 -mt-0.5">Panel maestro</p>
             </div>
           </div>

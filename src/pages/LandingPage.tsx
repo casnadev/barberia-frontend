@@ -169,27 +169,22 @@ export default function LandingPage() {
           </nav>
           <div className={styles.navCta}>
             {user ? (
-              <AccountMenu variant="plain" />
+              <AccountMenu variant="plain" navLinks={navLinks.map(([n, id]) => ({ label: n, onClick: () => irA(id) }))} />
             ) : (
               <>
-                <Link to="/acceso" className={styles.linkLogin}>Iniciar sesión</Link>
+                <Link to="/login" className={styles.linkLogin}>Iniciar sesión</Link>
                 <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={abrirDemo}>Registrarse</button>
               </>
             )}
-            <button className={styles.hamb} aria-label="Menú" onClick={() => setMenuOpen((v) => !v)}>{menuOpen ? <X size={22} /> : <Menu size={22} />}</button>
+            {!user && (
+              <button className={styles.hamb} aria-label="Menú" onClick={() => setMenuOpen((v) => !v)}>{menuOpen ? <X size={22} /> : <Menu size={22} />}</button>
+            )}
           </div>
         </div>
-        {menuOpen && (
+        {menuOpen && !user && (
           <div className={styles.mobileMenu}>
             {navLinks.map(([n, id]) => <a key={id} onClick={() => irA(id)}>{n}</a>)}
-            {user ? (
-              <AccountMenu variant="plain" />
-            ) : (
-              <>
-                <Link to="/acceso" className={`${styles.btn} ${styles.btnGhost}`}>Iniciar sesión</Link>
-                <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={abrirDemo}>Registrarse</button>
-              </>
-            )}
+            <Link to="/login" className={`${styles.btn} ${styles.btnGhost}`}>Iniciar sesión</Link>
           </div>
         )}
       </header>

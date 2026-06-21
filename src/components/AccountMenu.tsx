@@ -28,7 +28,7 @@ const PanelIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
-export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil, onAcceso }: { variant?: 'floating' | 'plain'; siteLink?: boolean; onMiPerfil?: () => void; onAcceso?: () => void }) {
+export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil, onAcceso, navLinks }: { variant?: 'floating' | 'plain'; siteLink?: boolean; onMiPerfil?: () => void; onAcceso?: () => void; navLinks?: { label: string; onClick: () => void }[] }) {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const [open, setOpen] = useState(false)
@@ -144,6 +144,16 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
                     </div>
                   </div>
                   <div className={s.sep} />
+                  {navLinks && navLinks.length > 0 && (
+                    <div className={s.mobileNav}>
+                      {navLinks.map((l) => (
+                        <button key={l.label} className={s.item} onClick={() => { setOpen(false); l.onClick() }}>
+                          {l.label}
+                        </button>
+                      ))}
+                      <div className={s.sep} />
+                    </div>
+                  )}
                   <button className={s.item} onClick={() => go(PANEL_POR_ROL[user.rol] || '/')}>
                     <PanelIcon className={s.itemIcon} /> Mi panel
                   </button>

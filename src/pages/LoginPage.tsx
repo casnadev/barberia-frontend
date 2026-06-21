@@ -352,9 +352,6 @@ export function LoginPage() {
                 </div>
 
                 <div className="mt-3 space-y-2.5 text-center lg:text-left">
-                  <button onClick={() => irA('enroll-id')} className="block w-full lg:w-auto text-blue-600 font-semibold text-sm hover:underline">
-                    Es mi primera vez aquí →
-                  </button>
                   <button onClick={() => irA('recover-id')} className="block w-full lg:w-auto text-gray-400 text-sm hover:text-gray-600">
                     Olvidé mi PIN
                   </button>
@@ -409,7 +406,7 @@ export function LoginPage() {
               <motion.div key="recover-id" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <Back onClick={() => irA('pin')} />
                 <h2 className="text-2xl font-bold text-gray-900 mb-1">Olvidé mi PIN</h2>
-                <p className="text-sm text-gray-500 mb-6">Te enviaremos un código para crear uno nuevo.</p>
+                <p className="text-sm text-gray-500 mb-6">Te enviaremos un código.</p>
 
                 <Label>Correo o teléfono</Label>
                 <Input value={identificador} onChange={setIdentificador} placeholder="Correo o teléfono" />
@@ -506,16 +503,16 @@ export function LoginPage() {
             {view === 'recover-pass-id' && (
               <motion.div key="recover-pass-id" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <Back onClick={() => irA('password')} />
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Crea tu contraseña</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Olvidé mi contraseña</h2>
                 <p className="text-sm text-gray-500 mb-6">
-                  Te enviaremos un enlace para crear (o recuperar) tu contraseña de acceso.
+                  Te enviaremos un código.
                 </p>
 
                 <Label>Correo o teléfono</Label>
                 <Input value={identificador} onChange={setIdentificador} placeholder="tucorreo@gmail.com o 987654321" />
 
                 <button onClick={enviarCodigoPassword} disabled={loading} className={btnPrimary + ' mt-2'}>
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} Enviarme el enlace
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} Enviarme el código
                 </button>
 
               </motion.div>
@@ -550,7 +547,7 @@ export function LoginPage() {
             {view === 'password' && (
               <motion.div key="password" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <div className="hidden lg:block mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Bienvenido a Barber.pe</h2>
+                  <img src="/barber-logo-black.png" alt="Barber.PE" className="h-9 mb-2" />
                   <p className="text-gray-400 text-sm mt-1">Ingresa para gestionar tu barbería</p>
                 </div>
                 <p className="lg:hidden text-center text-gray-500 text-sm mb-5">Ingresa para gestionar tu barbería</p>
@@ -565,12 +562,13 @@ export function LoginPage() {
                 <button onClick={loginPassword} disabled={loading} className={btnPrimary + ' mt-1'}>
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />} Entrar
                 </button>
-                <button onClick={() => navigate('/registro')} className="w-full text-gray-400 text-sm py-2 hover:text-gray-600">
-                  ¿No tienes cuenta? Regístrate
-                </button>
                 <button onClick={() => irA('recover-pass-id')}
                   className="w-full text-gray-400 text-sm py-2 mt-1 hover:text-gray-600 transition">
-                  ¿Olvidaste tu contraseña? Créala aquí
+                  Olvidé mi contraseña
+                </button>
+                <button onClick={() => navigate('/acceso')}
+                  className="w-full text-blue-600 text-sm py-1 hover:text-blue-700 transition font-medium">
+                  ¿No tienes cuenta? Regístrate
                 </button>
 
                 {googleClientId && (
@@ -590,13 +588,13 @@ export function LoginPage() {
 
           {view === 'pin' && (
             <button onClick={() => irA('password')}
-              className="block w-full mt-7 text-xs text-gray-400 hover:text-blue-600 text-center lg:text-left font-semibold tracking-wide uppercase transition">
+              className="block w-full mt-7 text-xs text-blue-600 hover:text-blue-700 text-center lg:text-left font-bold tracking-wide uppercase transition">
               Ingreso Tradicional
             </button>
           )}
           {view === 'password' && (
             <button onClick={() => irA('pin')}
-              className="block w-full mt-7 text-xs text-gray-400 hover:text-blue-600 text-center lg:text-left font-semibold tracking-wide uppercase transition">
+              className="block w-full mt-7 text-xs text-blue-600 hover:text-blue-700 text-center lg:text-left font-bold tracking-wide uppercase transition">
               Ingresar con PIN
             </button>
           )}
