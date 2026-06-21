@@ -561,6 +561,7 @@
   justify-content: center;
   gap: 0.6rem;
   min-height: 62px;
+  min-width: 0; /* clave: deja que las columnas del grid encojan y no desborden en móvil */
   padding: 0.75rem 0.9rem;
   border-radius: 0.9rem;
   border: 1.5px solid var(--color-border);
@@ -572,10 +573,14 @@
   transition: all 160ms ease;
 }
 
-.contactTypeButton:hover {
-  border-color: var(--color-primary);
-  box-shadow: 0 4px 14px rgba(17, 24, 39, 0.12);
-  transform: translateY(-2px);
+/* Solo en dispositivos con puntero real: evita el "hover pegado" al tocar en móvil
+   (que dejaba el botón elevado/descuadrado tras seleccionarlo). */
+@media (hover: hover) {
+  .contactTypeButton:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 14px rgba(17, 24, 39, 0.12);
+    transform: translateY(-2px);
+  }
 }
 
 .contactTypeButtonActive,

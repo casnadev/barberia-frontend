@@ -55,6 +55,10 @@ const GENEROS = [
   { v: 'Otro', l: 'Otro' }, { v: 'PrefieroNoDecir', l: 'Prefiero no decir' },
 ]
 
+// Selectores de cumpleaños (más fáciles que el datepicker nativo).
+const MESES_CUMPLE = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+const ANIOS_CUMPLE = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i)
+
 type Tab = 'citas' | 'historial' | 'novedades'
 
 /* ============================================================ */
@@ -186,11 +190,6 @@ export function MiPerfilCliente() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             className="bg-white border border-gray-200 rounded-2xl p-6">
             <div className="flex items-center gap-4">
-              <div className={`w-14 h-14 rounded-full overflow-hidden flex items-center justify-center text-white text-xl font-bold ${perfil?.urlFotoPerfil ? '' : `bg-gradient-to-br ${AVATARS[avatar]}`}`}>
-                {perfil?.urlFotoPerfil
-                  ? <img src={buildImageUrl(perfil.urlFotoPerfil)} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                  : (perfil?.nombreCompleto || user?.nombreCompleto || 'C').trim().charAt(0).toUpperCase()}
-              </div>
               <div className="min-w-0">
                 <h2 className="text-lg font-semibold text-gray-900 truncate">{perfil?.nombreCompleto || user?.nombreCompleto || 'Cliente'}</h2>
                 <p className="text-sm text-gray-500">{atendidas > 0 ? `${atendidas} ${atendidas === 1 ? 'visita' : 'visitas'}` : 'Bienvenido de vuelta'}</p>
@@ -470,19 +469,39 @@ function EditarPerfilModal({ perfil, idCliente, avatar, onAvatar, onClose, onSav
     setSaving(true)
     try {
       await miCuentaService.actualizarMiPerfil(idCliente, { nombreCompleto: nombre, telefono, correo, fechaNacimiento: fecha || null, genero, urlFotoPerfil: foto })
+      // Refresca el avatar del AccountMenu de inmediato (la foto subida manda).
+      const au = useAuthStore.getState().user
+      if (au) useAuthStore.getState().setUser({ ...au, urlFotoPerfil: foto || null })
       toast.success('Perfil actualizado'); onSaved()
     } catch (e: any) { toast.error(e?.response?.data?.mensaje || 'No se pudo guardar') } finally { setSaving(false) }
   }
 
   const field = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none'
   const inicial = (nombre || 'C').trim().charAt(0).toUpperCase()
+
+  // Cumpleaños como día/mes/año (se recompone a YYYY-MM-DD para el backend).
+  const [cy, cm, cd] = fecha ? fecha.split('-') : ['', '', '']
+  const cumpDia = cd ? String(Number(cd)) : ''
+  const cumpMes = cm ? String(Number(cm)) : ''
+  const cumpAnio = cy || ''
+  const maxDiaCumple = (cumpMes && cumpAnio) ? new Date(Number(cumpAnio), Number(cumpMes), 0).getDate() : 31
+  const setCumple = (d: string, m: string, a: string) => {
+    if (d && m && a) {
+      const maxD = new Date(Number(a), Number(m), 0).getDate()
+      const dd = String(Math.min(Number(d), maxD)).padStart(2, '0')
+      setFecha(`${a}-${String(Number(m)).padStart(2, '0')}-${dd}`)
+    } else {
+      setFecha('')
+    }
+  }
+
   return (
     <Modal title="Editar mis datos" onClose={onClose}>
       <div className="space-y-3">
         <div>
           <label className="text-xs text-gray-500">Foto de perfil</label>
           <div className="flex items-center gap-3 mt-1">
-            <div className={`w-16 h-16 rounded-full overflow-hidden flex items-center justify-center text-white text-xl font-bold shrink-0 ${foto ? '' : `bg-gradient-to-br ${AVATARS[avatar]}`}`}>
+            <div className={`w-16 h-16 rounded-full overflow-hidden flex items-center justify-center text-white text-xl font-bold shrink-0 ${foto ? '' : 'bg-gradient-to-br from-slate-400 to-slate-500'}`}>
               {foto ? <img src={buildImageUrl(foto)} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : inicial}
             </div>
             <div className="space-y-1">
@@ -494,19 +513,26 @@ function EditarPerfilModal({ perfil, idCliente, avatar, onAvatar, onClose, onSav
             </div>
           </div>
         </div>
-        <div>
-          <label className="text-xs text-gray-500">Color (respaldo si no usas foto)</label>
-          <div className="flex gap-2 mt-1">
-            {AVATARS.map((g, i) => (
-              <button key={i} onClick={() => onAvatar(i)}
-                className={`w-10 h-10 rounded-full bg-gradient-to-br ${g} flex items-center justify-center text-white font-bold ring-2 transition ${avatar === i ? 'ring-blue-500' : 'ring-transparent'}`}>{inicial}</button>
-            ))}
-          </div>
-        </div>
         <div><label className="text-xs text-gray-500">Nombre completo</label><input className={field} value={nombre} onChange={e => setNombre(e.target.value)} /></div>
         <div><label className="text-xs text-gray-500">Teléfono</label><input className={field} value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="9XXXXXXXX" inputMode="numeric" /></div>
         <div><label className="text-xs text-gray-500">Correo</label><input className={field} value={correo} onChange={e => setCorreo(e.target.value)} type="email" /></div>
-        <div><label className="text-xs text-gray-500">Cumpleaños</label><input className={field} value={fecha} onChange={e => setFecha(e.target.value)} type="date" /></div>
+        <div>
+          <label className="text-xs text-gray-500">Cumpleaños</label>
+          <div className="grid grid-cols-3 gap-2 mt-1">
+            <select className={field} value={cumpDia} onChange={e => setCumple(e.target.value, cumpMes, cumpAnio)}>
+              <option value="">Día</option>
+              {Array.from({ length: maxDiaCumple }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <select className={field} value={cumpMes} onChange={e => setCumple(cumpDia, e.target.value, cumpAnio)}>
+              <option value="">Mes</option>
+              {MESES_CUMPLE.map((nm, i) => <option key={i} value={i + 1}>{nm}</option>)}
+            </select>
+            <select className={field} value={cumpAnio} onChange={e => setCumple(cumpDia, cumpMes, e.target.value)}>
+              <option value="">Año</option>
+              {ANIOS_CUMPLE.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+        </div>
         <div><label className="text-xs text-gray-500">Género</label>
           <select className={field} value={genero} onChange={e => setGenero(e.target.value)}>
             <option value="">—</option>{GENEROS.map(g => <option key={g.v} value={g.v}>{g.l}</option>)}
