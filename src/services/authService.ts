@@ -100,44 +100,67 @@ export const authService = {
     return mapLoginResponse(responseData)
   },
 
+  /** Opción B (acceso unificado): mete correo/teléfono → el backend decide si pedir contraseña o ya mandó un código. */
+  accesoIniciar: async (
+    tipo: string,
+    identificador: string,
+  ): Promise<{ accion: string; esNuevo: boolean; canal: string } | null> => {
+    try {
+      const r = await apiClient.post('/api/Auth/acceso/iniciar', { Tipo: tipo, Identificador: identificador })
+      return r.data.data || r.data
+    } catch (error: any) {
+      throw new Error(apiError(error, 'No pudimos continuar. Revisa el dato.'))
+    }
+  },
+
+  /** Auto-registro paso 1: pide el código. Si el contacto ya existe, relanza el error ("ya está en uso"). */
+  signupSolicitar: async (tipo: string, identificador: string): Promise<void> => {
+    try {
+      await apiClient.post('/api/Auth/signup/solicitar', { Tipo: tipo, Identificador: identificador })
+    } catch (error: any) {
+      throw new Error(apiError(error, 'No pudimos enviar el código.'))
+    }
+  },
+
+  /** Auto-registro paso 2: crea la cuenta + contraseña y devuelve la sesión (igual que login). */
+  signupCompletar: async (payload: {
+    tipo: string; identificador: string; codigo: string; nombre: string
+    apellido?: string; correo?: string; telefono?: string; nombreNegocio?: string; password: string
+  }): Promise<LoginResponse | null> => {
+    try {
+      const response = await apiClient.post('/api/Auth/signup/completar', {
+        Tipo: payload.tipo, Identificador: payload.identificador, Codigo: payload.codigo,
+        Nombre: payload.nombre, Apellido: payload.apellido, Correo: payload.correo,
+        Telefono: payload.telefono, NombreNegocio: payload.nombreNegocio, Password: payload.password,
+      })
+      const responseData = response.data.data || response.data
+      return mapLoginResponse(responseData)
+    } catch (error: any) {
+      throw new Error(apiError(error, 'No pudimos crear la cuenta.'))
+    }
+  },
+
   /**
    * SSO cross-subdominio: recupera la sesión SIN pedir credenciales.
-   *
-   * El login deja un refresh token en una cookie httpOnly `bp_rt` con
-   * Domain=.barber.pe, que el navegador envía a barber.pe, app.barber.pe y a
-   * cualquier <sede>.barber.pe. Al abrir un subdominio nuevo, el localStorage
-   * de ESE origin está vacío, así que llamamos a /refresh con body vacío: el
-   * backend lee la cookie compartida y, si es válida, devuelve un nuevo par
-   * de tokens. Así el usuario aparece logueado en cualquier subdominio.
-   *
-   * Devuelve la sesión restaurada (y la persiste en este origin) o null si no
-   * hay sesión activa (entonces el usuario navega como anónimo, sin romper nada).
    */
   bootstrapSession: async (): Promise<LoginResponse | null> => {
     try {
-      // body {} → fuerza a que el backend resuelva el refresh desde la cookie.
       const response = await apiClient.post('/api/Auth/refresh', {})
       const responseData = response.data.data || response.data
 
       const loginData = mapLoginResponse(responseData)
       if (!loginData) return null
 
-      // Persistir en este origin para que apiClient adjunte el Bearer en las
-      // siguientes peticiones, igual que tras un login normal.
       localStorage.setItem('token', loginData.token)
       localStorage.setItem('user', JSON.stringify(loginData.user))
       console.log('🔁 Sesión restaurada por SSO:', loginData.user.nombreCompleto)
       return loginData
     } catch {
-      // 401/SIN_SESION → no hay sesión en este navegador: anónimo. Sin ruido.
       return null
     }
   },
 
-  /**
-   * Crear / recuperar contraseña por OTP - paso 1: envía el enlace (correo o WhatsApp).
-   * Respuesta uniforme: el backend siempre responde ok (no revela si la cuenta existe).
-   */
+  /** Crear / recuperar contraseña por OTP - paso 1: envía el enlace (correo o WhatsApp). */
   solicitarPassword: async (identificador: string): Promise<{ ok: boolean; mensaje?: string }> => {
     try {
       const r = await apiClient.post('/api/Auth/password/solicitar', { identificador })
@@ -147,9 +170,7 @@ export const authService = {
     }
   },
 
-  /**
-   * Crear / recuperar contraseña por OTP - paso 2: valida el código y fija la contraseña.
-   */
+  /** Crear / recuperar contraseña por OTP - paso 2: valida el código y fija la contraseña. */
   establecerPassword: async (
     identificador: string,
     codigo: string,
@@ -165,10 +186,7 @@ export const authService = {
     }
   },
 
-  /**
-   * Cambia la contraseña del usuario logueado (requiere la contraseña actual).
-   * Para crear una por primera vez sin tenerla, usar solicitarPassword (enlace OTP).
-   */
+  /** Cambia la contraseña del usuario logueado (requiere la contraseña actual). */
   cambiarPassword: async (
     passwordActual: string,
     passwordNueva: string,
@@ -227,9 +245,7 @@ export const authService = {
     }
   },
 
-  /**
-   * Obtener token del localStorage
-   */
+  /** Obtener token del localStorage */
   getStoredToken: (): string | null => {
     try {
       const token = localStorage.getItem('token')
@@ -241,9 +257,7 @@ export const authService = {
     }
   },
 
-  /**
-   * Obtener usuario del localStorage
-   */
+  /** Obtener usuario del localStorage */
   getStoredUser: (): LoginUserData | null => {
     try {
       const userJson = localStorage.getItem('user')
@@ -260,9 +274,7 @@ export const authService = {
     }
   },
 
-  /**
-   * Guardar token en localStorage
-   */
+  /** Guardar token en localStorage */
   saveToken: (token: string): void => {
     try {
       localStorage.setItem('token', token)
@@ -272,9 +284,7 @@ export const authService = {
     }
   },
 
-  /**
-   * Guardar usuario en localStorage
-   */
+  /** Guardar usuario en localStorage */
   saveUser: (user: LoginUserData): void => {
     try {
       localStorage.setItem('user', JSON.stringify(user))
@@ -284,14 +294,7 @@ export const authService = {
     }
   },
 
-  /**
-   * Logout REAL. Llama al backend para (1) revocar la sesión en BD y (2) borrar
-   * la cookie httpOnly compartida `bp_rt` (Domain=.barber.pe). Sin esto, la
-   * cookie sobrevive al "logout" local y el SSO (bootstrapSession) vuelve a
-   * loguear al usuario al recargar o al manipular la URL. `withCredentials` ya
-   * está activo en apiClient, así que la cookie viaja sola. Aunque la red falle,
-   * limpiamos el estado local igual.
-   */
+  /** Logout REAL: revoca sesión en BD + borra cookie bp_rt + limpia local. */
   logout: async (): Promise<void> => {
     try {
       await apiClient.post('/api/Auth/logout', {})
@@ -307,11 +310,9 @@ export const authService = {
     }
   },
 
-  /**
-   * Verificar si el usuario está autenticado
-   */
+  /** Verificar si el usuario está autenticado */
   isAuthenticated: (): boolean => {
     const token = authService.getStoredToken()
     return !!token
-  }
+  },
 }

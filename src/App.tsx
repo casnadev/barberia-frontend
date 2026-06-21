@@ -8,10 +8,12 @@ import { ConfirmHost } from '@/components/ConfirmDialog' // ← se queda eager
 
 // --- Páginas con carga diferida (code-splitting): cada una baja al entrar a su ruta ---
 const LoginPage = lazy(() => import('@/pages/LoginPage').then(m => ({ default: m.LoginPage })))
+const SignupPage = lazy(() => import('@/pages/SignupPage').then(m => ({ default: m.SignupPage })))
 const DashboardPage = lazy(() => import('@/pages/admin/DashboardPage').then(m => ({ default: m.DashboardPage })))
 const ClientesPage = lazy(() => import('@/pages/admin/ClientesPage').then(m => ({ default: m.ClientesPage })))
 const ReservasPage = lazy(() => import('@/pages/admin/ReservasPage').then(m => ({ default: m.ReservasPage })))
 const AgendaPage = lazy(() => import('@/pages/admin/AgendaPage').then(m => ({ default: m.AgendaPage })))
+const AccesoPage = lazy(() => import('@/pages/AccesoPage').then(m => ({ default: m.AccesoPage })))
 const SuperAdminDashboard = lazy(() => import('@/pages/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })))
 const ReservaClientePage = lazy(() => import('@/pages/cliente/ReservaClientePage').then(m => ({ default: m.ReservaClientePage })))
 const ReservaAcciones = lazy(() => import('@/pages/cliente/ReservaAcciones').then(m => ({ default: m.ReservaAcciones })))
@@ -172,6 +174,7 @@ export function App() {
         {/* LOGIN */}
         <Route path="/login" element={<LoginPage />} />
 
+        <Route path="/registro" element={<SignupPage />} />
         {/* HOME: landing en el dominio raíz, microsite en subdominio ← CAMBIO */}
         <Route path="/" element={<HomeRoute />} />
 
@@ -188,6 +191,7 @@ export function App() {
 
         {/* RESERVAR PÚBLICA */}
         <Route path="/reservar/:idSede" element={<ReservaClientePage />} />
+        <Route path="/acceso" element={<AccesoPage />} />
         <Route path="/reservar-publica" element={<ReservaClientePage />} />
 
         {/* SUPER ADMIN */}

@@ -126,7 +126,7 @@ export default function LandingPage() {
       navigate(`/sede/${s.idSede}${url.slice(1)}`)
     }
   }
-  const abrirDemo = () => { setEnviado(false); setErr(''); setDemoOpen(true) }
+  const abrirDemo = () => navigate('/acceso')   // ahora entran solos: al acceso unificado
   const scrollRail = (ref: React.RefObject<HTMLDivElement>, dir: 1 | -1) =>
     ref.current?.scrollBy({ left: dir * Math.min(ref.current.clientWidth * 0.8, 520), behavior: 'smooth' })
 
@@ -172,8 +172,8 @@ export default function LandingPage() {
               <AccountMenu variant="plain" />
             ) : (
               <>
-                <Link to="/login" className={styles.linkLogin}>Iniciar sesión</Link>
-                <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={abrirDemo}>Empieza GRATIS</button>
+                <Link to="/acceso" className={styles.linkLogin}>Iniciar sesión</Link>
+                <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={abrirDemo}>Registrarse</button>
               </>
             )}
             <button className={styles.hamb} aria-label="Menú" onClick={() => setMenuOpen((v) => !v)}>{menuOpen ? <X size={22} /> : <Menu size={22} />}</button>
@@ -186,8 +186,8 @@ export default function LandingPage() {
               <AccountMenu variant="plain" />
             ) : (
               <>
-                <Link to="/login" className={`${styles.btn} ${styles.btnGhost}`}>Iniciar sesión</Link>
-                <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={abrirDemo}>Empieza GRATIS</button>
+                <Link to="/acceso" className={`${styles.btn} ${styles.btnGhost}`}>Iniciar sesión</Link>
+                <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={abrirDemo}>Registrarse</button>
               </>
             )}
           </div>
@@ -443,7 +443,7 @@ export default function LandingPage() {
             <p>No necesitas tarjeta de crédito ni instalar nada. Si usas otro sistema, te ayudamos con la migración completamente GRATIS.</p>
             <div className={styles.ctaBtns}>
               <button className={`${styles.btn} ${styles.btnLight} ${styles.btnLg}`} onClick={abrirDemo}>Empieza ahora gratis</button>
-              <a className={`${styles.btn} ${styles.btnOutline} ${styles.btnLg}`} href={waLink('Hola barber.pe 👋 Quiero agendar una reunión.')} target="_blank" rel="noopener noreferrer">Agendar reunión</a>
+              
             </div>
             <p className={styles.ctaFine}>Empieza hoy, tienes 30 días de garantía.</p>
           </Reveal>

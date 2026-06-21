@@ -565,6 +565,9 @@ export function LoginPage() {
                 <button onClick={loginPassword} disabled={loading} className={btnPrimary + ' mt-1'}>
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />} Entrar
                 </button>
+                <button onClick={() => navigate('/registro')} className="w-full text-gray-400 text-sm py-2 hover:text-gray-600">
+                  ¿No tienes cuenta? Regístrate
+                </button>
                 <button onClick={() => irA('recover-pass-id')}
                   className="w-full text-gray-400 text-sm py-2 mt-1 hover:text-gray-600 transition">
                   ¿Olvidaste tu contraseña? Créala aquí
