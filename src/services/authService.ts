@@ -10,6 +10,7 @@ export interface LoginUserData {
   idSede?: number
   debeCambiarPassword?: boolean
   urlFotoPerfil?: string | null
+  subdominio?: string
 }
 
 export interface LoginResponse {
@@ -51,6 +52,7 @@ function mapLoginResponse(responseData: any, correoFallback = ''): LoginResponse
       idSede: responseData.idSede,
       debeCambiarPassword: responseData.debeCambiarPassword,
       urlFotoPerfil: responseData.urlFotoPerfil ?? undefined,
+      subdominio: responseData.subdominio ?? undefined,
     },
   }
 }

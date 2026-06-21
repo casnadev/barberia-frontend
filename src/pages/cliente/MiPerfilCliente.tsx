@@ -14,6 +14,7 @@ import { miCuentaService, type MiPerfil } from '@/services/miCuentaService'
 import { buildImageUrl } from '@/services/apiClient'
 import { novedadesService, type Novedad } from '@/services/novedadesService'
 import { AccountMenu } from '@/components/AccountMenu'
+import { CompletaTuPerfil } from '@/components/CompletaTuPerfil'
 import { Fab } from '@/components/Fab'
 import { SlotPicker } from '@/components/SlotPicker'
 
@@ -172,12 +173,9 @@ export function MiPerfilCliente() {
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-gray-100">
         <div className="mx-auto max-w-[1380px] px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center">
-              <Scissors className="w-5 h-5 text-white" />
-            </div>
-            <h1 className="font-bold text-gray-900">Mi cuenta</h1>
-          </div>
+          <button onClick={() => navigate('/')} className="flex items-center" aria-label="Ir al inicio">
+            <img src="/barber-logo-black.png" alt="Barber.PE" className="h-7 w-auto" />
+          </button>
           <AccountMenu variant="plain" siteLink />
         </div>
       </header>
@@ -204,6 +202,20 @@ export function MiPerfilCliente() {
               <div className="flex items-center gap-2"><Cake className="w-4 h-4 text-gray-400" /> {perfil?.fechaNacimiento ? new Date(perfil.fechaNacimiento).toLocaleDateString('es-PE') : <span className="text-gray-400">Sin fecha</span>}</div>
             </div>
           </motion.div>
+
+          {perfil && (
+            <CompletaTuPerfil
+              pasos={[
+                { clave: 'nombre', etiqueta: 'Tu nombre', hecho: !!perfil.nombreCompleto },
+                { clave: 'telefono', etiqueta: 'Tu teléfono', hecho: !!telReal },
+                { clave: 'correo', etiqueta: 'Tu correo', hecho: !!mailReal },
+                { clave: 'cumple', etiqueta: 'Tu cumpleaños', hecho: !!perfil.fechaNacimiento },
+                { clave: 'genero', etiqueta: 'Tu género', hecho: !!perfil.genero },
+              ]}
+              onCompletar={() => setEditOpen(true)}
+              nota="Con tu perfil completo reservas más rápido y recibes mejores recordatorios."
+            />
+          )}
 
           <button onClick={() => navigate('/reservar-publica')}
             className="hidden md:flex w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl p-4 items-center justify-center gap-2 font-semibold transition">

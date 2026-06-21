@@ -8,7 +8,6 @@ import { ConfirmHost } from '@/components/ConfirmDialog' // ← se queda eager
 
 // --- Páginas con carga diferida (code-splitting): cada una baja al entrar a su ruta ---
 const LoginPage = lazy(() => import('@/pages/LoginPage').then(m => ({ default: m.LoginPage })))
-const SignupPage = lazy(() => import('@/pages/SignupPage').then(m => ({ default: m.SignupPage })))
 const DashboardPage = lazy(() => import('@/pages/admin/DashboardPage').then(m => ({ default: m.DashboardPage })))
 const ClientesPage = lazy(() => import('@/pages/admin/ClientesPage').then(m => ({ default: m.ClientesPage })))
 const ReservasPage = lazy(() => import('@/pages/admin/ReservasPage').then(m => ({ default: m.ReservasPage })))
@@ -174,7 +173,8 @@ export function App() {
         {/* LOGIN */}
         <Route path="/login" element={<LoginPage />} />
 
-        <Route path="/registro" element={<SignupPage />} />
+        {/* Registro unificado: vive en /acceso (AccesoPage). El antiguo /registro
+            (SignupPage) se eliminó por no usarse. */}
         {/* HOME: landing en el dominio raíz, microsite en subdominio ← CAMBIO */}
         <Route path="/" element={<HomeRoute />} />
 

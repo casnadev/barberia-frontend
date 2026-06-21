@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { Fab } from '@/components/Fab'
 import { AgendaBoard, type TrabajadorPropio } from '@/components/AgendaBoard'
 import {
-  Scissors, CalendarCheck, Check, X, DollarSign, Star, Wallet, Camera,
+  CalendarCheck, Check, X, DollarSign, Star, Wallet, Camera,
   CalendarDays, CalendarOff, Plus, Trash2, Mail, Phone,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -18,6 +18,7 @@ import {
   type DisponibilidadDia, type DescansoTrabajador, type MiPerfilTrabajador,
 } from '@/services/panelTrabajadorService'
 import { AccountMenu } from '@/components/AccountMenu'
+import { CompletaTuPerfil } from '@/components/CompletaTuPerfil'
 import { buildImageUrl } from '@/services/apiClient'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
@@ -49,6 +50,7 @@ export function TrabajadorMiAgenda() {
 
   const showConfig = params.get('config') === '1'
   const cerrarConfig = () => { params.delete('config'); setParams(params, { replace: true }) }
+  const abrirConfig = () => { params.set('config', '1'); setParams(params, { replace: true }) }
 
   useEffect(() => { cargar() }, [])
 
@@ -96,13 +98,9 @@ export function TrabajadorMiAgenda() {
       {/* Header limpio: marca + cuenta */}
       <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-gray-100">
         <div className="mx-auto max-w-[1380px] px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center"><Scissors className="w-5 h-5 text-white" /></div>
-            <div>
-              <h1 className="font-bold text-gray-900 leading-tight">{nombre || user?.nombreCompleto || 'Mi agenda'}</h1>
-              <p className="text-xs text-gray-500">Barbero</p>
-            </div>
-          </div>
+          <button onClick={() => navigate('/')} className="flex items-center" aria-label="Ir al inicio">
+            <img src="/barber-logo-black.png" alt="Barber.PE" className="h-7 w-auto" />
+          </button>
           <AccountMenu variant="plain" siteLink />
         </div>
       </header>
@@ -115,6 +113,21 @@ export function TrabajadorMiAgenda() {
           <Kpi icon={Wallet} tone="violet" label="Comisión pendiente" value={soles(comisiones?.comisionesTotalPendiente)} />
           <Kpi icon={DollarSign} tone="amber" label="Comisión pagada" value={soles(comisiones?.comisionesTotalPagado)} />
         </div>
+
+        {/* Completa tu perfil (datos públicos que ven tus clientes) */}
+        {!loading && perfil && (
+          <CompletaTuPerfil
+            pasos={[
+              { clave: 'foto', etiqueta: 'Foto de perfil', hecho: !!perfil.urlFotoPerfil },
+              { clave: 'telefono', etiqueta: 'Tu teléfono', hecho: !!perfil.telefono },
+              { clave: 'especialidad', etiqueta: 'Especialidad', hecho: !!perfil.especialidad },
+              { clave: 'experiencia', etiqueta: 'Experiencia', hecho: !!perfil.experiencia },
+              { clave: 'descripcion', etiqueta: 'Descripción', hecho: !!perfil.descripcion },
+            ]}
+            onCompletar={abrirConfig}
+            nota="Estos datos son los que ven tus clientes en tu perfil público."
+          />
+        )}
 
         {/* Tabs desktop + botón Reservar */}
         <div className="hidden md:flex items-center justify-between gap-3 mb-5">

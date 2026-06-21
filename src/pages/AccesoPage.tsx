@@ -32,7 +32,6 @@ export function AccesoPage() {
   const [esNuevo, setEsNuevo] = useState(true)
 
   const [nombre, setNombre] = useState('')
-  const [apellido, setApellido] = useState('')
   const [correo, setCorreo] = useState('')
   const [telefono, setTelefono] = useState('')
   const [nombreNegocio, setNombreNegocio] = useState('')
@@ -46,8 +45,12 @@ export function AccesoPage() {
   // -------------------------------------------------------------- entrar
   const entrar = (token: string, user: any) => {
     setToken(token); setUser(user)
-    if (user.rol === 'Cliente') { clearTenant(); navigate('/') }
-    else { try { if (user.subdominio) setTenant(user.subdominio) } catch { /* sin sede aún */ } navigate('/dashboard') }
+    // TODOS los roles entran a la landing (barber.pe) ya logueados; desde el
+    // AccountMenu cada quien salta a su panel. Esto evita que un admin recién
+    // creado (sin sede aún) caiga en /dashboard y rebote al login.
+    if (user.rol === 'Cliente') clearTenant()
+    else { try { if (user.subdominio) setTenant(user.subdominio) } catch { /* sin sede aún */ } }
+    navigate('/')
     toast.success('¡Listo! Sesión iniciada.')
   }
 
@@ -130,7 +133,7 @@ export function AccesoPage() {
     try {
       const resp = await authService.signupCompletar({
         tipo, identificador: idValor(), codigo: codigo.trim(),
-        nombre: nombre.trim(), apellido: apellido.trim() || undefined,
+        nombre: nombre.trim(),
         correo: correo.trim() || undefined, telefono: telefono.trim() || undefined,
         nombreNegocio: tipo === 'Profesional' ? nombreNegocio.trim() : undefined, password,
       })
@@ -258,17 +261,44 @@ export function AccesoPage() {
             <motion.div key="finalize" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <Back onClick={() => setView('code')} />
               <img src={LOGO} alt="Barber.PE" className="h-8 mx-auto mb-4" />
-              <h1 className="text-xl font-bold text-center text-gray-900 mb-1">Finaliza tu registro</h1>
-              <p className="text-sm text-center text-gray-500 mb-5">Necesitamos algunos datos más.</p>
+              <h1 className="text-xl font-bold text-center text-gray-900 mb-1">
+                {tipo === 'Profesional' ? 'Crea tu negocio' : 'Casi listo'}
+              </h1>
+              <p className="text-sm text-center text-gray-500 mb-5">
+                {tipo === 'Profesional'
+                  ? 'Solo el nombre de tu negocio para empezar.'
+                  : 'Solo tu nombre para empezar.'}
+              </p>
 
-              {tipo === 'Profesional' && (<><Label>Nombre del negocio</Label><Input value={nombreNegocio} onChange={setNombreNegocio} placeholder="Mi Barbería" /></>)}
-              <Label>Nombre</Label><Input value={nombre} onChange={setNombre} placeholder="Tu nombre" />
-              <Label>Apellido</Label><Input value={apellido} onChange={setApellido} placeholder="Tu apellido" />
-              <Label>Correo</Label><Input value={correo} onChange={setCorreo} placeholder="tucorreo@gmail.com" readOnly={canal === 'Email'} />
-              <Label>Teléfono</Label><Input value={telefono} onChange={setTelefono} placeholder="+51987654321" readOnly={canal === 'WhatsApp'} />
-              <Label>Crea tu contraseña</Label><PassInput value={password} onChange={setPassword} placeholder="Mínimo 8 caracteres" />
+              {tipo === 'Profesional' && (
+                <><Label>Nombre del negocio</Label>
+                <Input value={nombreNegocio} onChange={setNombreNegocio} placeholder="Mi Barbería" /></>
+              )}
 
-              <button onClick={crearCuenta} disabled={loading} className={btnDark + ' mt-2'}>
+              <Label>{tipo === 'Profesional' ? 'Tu nombre completo' : 'Tu nombre'}</Label>
+              <Input value={nombre} onChange={setNombre} placeholder="Nombre y apellido" />
+
+              {/* Contacto verificado por OTP: viene precargado y de solo lectura. */}
+              {canal === 'Email' ? (
+                <><Label>Correo verificado</Label>
+                <Input value={correo} onChange={setCorreo} readOnly /></>
+              ) : (
+                <><Label>Teléfono verificado</Label>
+                <Input value={telefono} onChange={setTelefono} readOnly /></>
+              )}
+
+              <Label>Crea tu contraseña</Label>
+              <PassInput value={password} onChange={setPassword} placeholder="Mínimo 8 caracteres" />
+
+              <div className="mb-4 rounded-xl bg-blue-50 border border-blue-100 px-3 py-2.5">
+                <p className="text-xs text-blue-800 leading-relaxed">
+                  {tipo === 'Profesional'
+                    ? 'Al entrar podrás personalizar tu negocio y completar tus datos cuando quieras.'
+                    : 'Al entrar podrás reservar de inmediato y completar tu perfil (teléfono o correo, cumpleaños y más) cuando quieras.'}
+                </p>
+              </div>
+
+              <button onClick={crearCuenta} disabled={loading} className={btnDark + ' mt-1'}>
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5" />} Aceptar y crear cuenta
               </button>
             </motion.div>

@@ -64,19 +64,17 @@ export function LoginPage() {
     setToken(token); setUser(user)
     if (user.rol === 'SuperAdmin') clearTenant()
     else if (subdominio) setTenant(subdominio)
-    else {
+    else if (user.rol === 'Admin' || user.rol === 'Trabajador') {
+      // Pre-resuelve el tenant para que "Mi panel" abra sin fricción. Si aún no
+      // tiene sede (admin recién creado), no pasa nada: queda sin tenant.
       try {
         const sedes = await sedeTenantService.getMisSedes()
         if (sedes[0]?.subdominio) setTenant(sedes[0].subdominio)
       } catch { /* sin sede aun */ }
     }
-    const rutas: Record<string, string> = {
-      SuperAdmin: '/super-admin', Admin: '/dashboard', Trabajador: '/mi-agenda',
-    }
-    // Cliente: vuelve a la landing principal (desde ahí sigue navegando, elige
-    // una sede o abre su perfil por el AccountMenu). Los de back-office van a
-    // su panel correspondiente.
-    navigate(user.rol === 'Cliente' ? '/' : (rutas[user.rol] ?? '/dashboard'))
+    // TODOS los roles entran a la landing (barber.pe) ya logueados. Desde el
+    // AccountMenu ("Mi panel") cada quien salta a su panel según su rol.
+    navigate('/')
   }
 
   // ----------------------------------------------------------- PIN diario
