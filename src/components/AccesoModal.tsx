@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, KeyRound, Lock, Check, ChevronRight } from 'lucide-react'
+import { X, KeyRound, Lock, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { perfilService } from '@/services/perfilService'
 import { authService } from '@/services/authService'
@@ -42,9 +42,10 @@ export function AccesoModal({ open, onClose }: { open: boolean; onClose: () => v
   const [codigo, setCodigo] = useState('')
   const [busy, setBusy] = useState(false)
 
-  // Cambiar contraseña (cuando ya está activo)
+  // Cambiar contraseña (cuando ya está activo) — por código, igual que el PIN
   const [cambiarAbierto, setCambiarAbierto] = useState(false)
-  const [passActual, setPassActual] = useState('')
+  const [cambiarOtpEnviado, setCambiarOtpEnviado] = useState(false)
+  const [codigoCambiar, setCodigoCambiar] = useState('')
   const [passNueva, setPassNueva] = useState('')
   const [passNuevaRep, setPassNuevaRep] = useState('')
 
@@ -71,7 +72,7 @@ export function AccesoModal({ open, onClose }: { open: boolean; onClose: () => v
   function resetTransitorios() {
     setPinAbierto(false); setPinOtpEnviado(false); setPinCodigo(''); setPinNuevo(''); setPinRepite('')
     setPass(''); setPassRep(''); setOtpEnviado(false); setCodigo('')
-    setCambiarAbierto(false); setPassActual(''); setPassNueva(''); setPassNuevaRep('')
+    setCambiarAbierto(false); setCambiarOtpEnviado(false); setCodigoCambiar(''); setPassNueva(''); setPassNuevaRep('')
   }
 
   const identificadorPin = (correoRegistrado || telefono).trim()
@@ -86,7 +87,7 @@ export function AccesoModal({ open, onClose }: { open: boolean; onClose: () => v
     else toast.error(r.mensaje || 'No se pudo enviar el código')
   }
   const guardarPin = async () => {
-    if (!/^\d{4,6}$/.test(pinNuevo)) return toast.error('El PIN debe tener entre 4 y 6 dígitos')
+    if (!/^\d{6}$/.test(pinNuevo)) return toast.error('El PIN debe tener exactamente 6 dígitos')
     if (pinNuevo !== pinRepite) return toast.error('Los PIN no coinciden')
     if (!pinCodigo.trim()) return toast.error('Ingresa el código que te enviamos')
     setPinBusy(true)
@@ -124,16 +125,26 @@ export function AccesoModal({ open, onClose }: { open: boolean; onClose: () => v
     } else toast.error(r.mensaje || 'No se pudo activar')
   }
 
-  // ---- Cambiar contraseña (ya activo) ----
-  const cambiarPass = async () => {
-    if (!passActual) return toast.error('Ingresa tu contraseña actual')
+  // ---- Cambiar contraseña (ya activo) — por código, idéntico al PIN ----
+  const enviarCodigoCambiar = async () => {
+    const id = (correoRegistrado || telefono).trim()
+    if (!id) return toast.error('No hay correo ni teléfono para enviar el código')
+    setBusy(true)
+    const r = await authService.solicitarPassword(id)
+    setBusy(false)
+    if (r.ok) { setCambiarOtpEnviado(true); toast.success('Código enviado') }
+    else toast.error(r.mensaje || 'No se pudo enviar el código')
+  }
+  const guardarCambiarPass = async () => {
+    if (!codigoCambiar.trim()) return toast.error('Ingresa el código que te enviamos')
     if (passNueva.length < 8) return toast.error('La nueva contraseña debe tener al menos 8 caracteres')
     if (passNueva !== passNuevaRep) return toast.error('Las contraseñas no coinciden')
+    const id = (correoRegistrado || telefono).trim()
     setBusy(true)
-    const r = await authService.cambiarPassword(passActual, passNueva)
+    const r = await authService.establecerPassword(id, codigoCambiar.trim(), passNueva)
     setBusy(false)
-    if (r.ok) { toast.success('Contraseña actualizada'); setCambiarAbierto(false); setPassActual(''); setPassNueva(''); setPassNuevaRep('') }
-    else toast.error(r.mensaje || 'No se pudo cambiar la contraseña')
+    if (r.ok) { toast.success('Contraseña guardada'); setTienePassword(true); setActivo(true); setCambiarAbierto(false); setCambiarOtpEnviado(false); setCodigoCambiar(''); setPassNueva(''); setPassNuevaRep('') }
+    else toast.error(r.mensaje || 'No se pudo guardar la contraseña')
   }
 
   const desactivar = async () => {
@@ -196,9 +207,9 @@ export function AccesoModal({ open, onClose }: { open: boolean; onClose: () => v
                     </>
                   ) : (
                     <>
-                      <input className={field} value={pinCodigo} onChange={e => setPinCodigo(e.target.value)} placeholder="Código del correo" inputMode="numeric" />
-                      <input className={field} type="password" value={pinNuevo} onChange={e => setPinNuevo(e.target.value)} placeholder="Nuevo PIN (4 a 6 dígitos)" inputMode="numeric" />
-                      <input className={field} type="password" value={pinRepite} onChange={e => setPinRepite(e.target.value)} placeholder="Repite el PIN" inputMode="numeric" />
+                      <input className={field} value={pinCodigo} onChange={e => setPinCodigo(e.target.value)} placeholder="Código del correo" inputMode="numeric" maxLength={6} />
+                      <input className={field} type="password" value={pinNuevo} onChange={e => setPinNuevo(e.target.value.replace(/\D/g, ''))} placeholder="Nuevo PIN (6 dígitos)" inputMode="numeric" maxLength={6} />
+                      <input className={field} type="password" value={pinRepite} onChange={e => setPinRepite(e.target.value.replace(/\D/g, ''))} placeholder="Repite el PIN" inputMode="numeric" maxLength={6} />
                       <button onClick={guardarPin} disabled={pinBusy} className="w-full bg-gray-900 hover:bg-black text-white rounded-xl py-2 text-sm font-semibold disabled:opacity-50">{pinBusy ? 'Guardando…' : 'Guardar PIN'}</button>
                     </>
                   )}
@@ -212,68 +223,43 @@ export function AccesoModal({ open, onClose }: { open: boolean; onClose: () => v
                 <span className="w-8 h-8 rounded-lg bg-gray-50 text-gray-500 flex items-center justify-center shrink-0"><Lock className="w-4 h-4" /></span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-900">Ingreso tradicional</span>
+                    <span className="text-sm font-medium text-gray-900 whitespace-nowrap">Ingreso tradicional</span>
                     {tienePassword && activo && <span className="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full inline-flex items-center gap-1"><Check className="w-3 h-3" /> Activo</span>}
                     {tienePassword && !activo && <span className="text-[11px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Desactivado</span>}
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5">Entra también con tu correo + una contraseña.</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Correo + Contraseña</p>
                 </div>
+                {!cambiarAbierto && (
+                  tienePassword && !activo
+                    ? <button onClick={reactivar} disabled={busy} className="text-sm text-blue-600 font-medium px-2 py-1 hover:underline shrink-0 disabled:opacity-50">Reactivar</button>
+                    : <button onClick={() => setCambiarAbierto(true)} className="text-sm text-blue-600 font-medium px-2 py-1 hover:underline shrink-0">{tienePassword ? 'Cambiar contraseña' : 'Crear contraseña'}</button>
+                )}
               </div>
 
-              {/* Caso A: sin contraseña -> formulario de activación */}
-              {!tienePassword && (
-                <div className="mt-3 space-y-2">
-                  <label className="text-xs text-gray-500">Correo</label>
-                  <input className={field} type="email" value={correo} onChange={e => { setCorreo(e.target.value); setOtpEnviado(false) }} placeholder="tucorreo@ejemplo.com" />
-                  <label className="text-xs text-gray-500">Contraseña</label>
-                  <input className={field} type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Mínimo 8 caracteres" />
-                  <label className="text-xs text-gray-500">Repetir contraseña</label>
-                  <input className={field} type="password" value={passRep} onChange={e => setPassRep(e.target.value)} placeholder="Repite la contraseña" />
-                  {requiereOtp && otpEnviado && (
-                    <>
-                      <label className="text-xs text-gray-500">Código del correo</label>
-                      <input className={field} value={codigo} onChange={e => setCodigo(e.target.value)} placeholder="Código de 6 dígitos" inputMode="numeric" />
-                    </>
-                  )}
-                  {requiereOtp && !otpEnviado && (
-                    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-2">Confirmaremos tu correo con un código antes de activar.</p>
-                  )}
-                  <button onClick={activar} disabled={busy} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-50">
-                    {busy ? 'Procesando…' : (requiereOtp && !otpEnviado ? 'Enviar código y continuar' : 'Activar ingreso tradicional')}
-                  </button>
-                </div>
-              )}
+              {/* Crear / Cambiar contraseña → flujo por código, idéntico al PIN */}
 
-              {/* Caso B: con contraseña y activo */}
-              {tienePassword && activo && (
+              {cambiarAbierto && (
                 <div className="mt-3 space-y-2">
-                  <div className="text-sm text-gray-700">{correoRegistrado}</div>
-                  {!cambiarAbierto ? (
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => setCambiarAbierto(true)} className="text-sm text-blue-600 font-medium hover:underline inline-flex items-center">Cambiar contraseña <ChevronRight className="w-4 h-4" /></button>
-                      <button onClick={desactivar} disabled={busy} className="text-sm text-rose-600 font-medium hover:underline ml-auto disabled:opacity-50">Desactivar</button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <input className={field} type="password" value={passActual} onChange={e => setPassActual(e.target.value)} placeholder="Contraseña actual" />
-                      <input className={field} type="password" value={passNueva} onChange={e => setPassNueva(e.target.value)} placeholder="Nueva contraseña (mín. 8)" />
-                      <input className={field} type="password" value={passNuevaRep} onChange={e => setPassNuevaRep(e.target.value)} placeholder="Repite la nueva" />
+                  {!cambiarOtpEnviado ? (
+                    <>
+                      <p className="text-xs text-gray-500">Te enviaremos un código a {correoRegistrado || telefono || 'tu contacto'} para confirmar.</p>
                       <div className="flex gap-2">
-                        <button onClick={cambiarPass} disabled={busy} className="flex-1 bg-gray-900 hover:bg-black text-white rounded-xl py-2 text-sm font-semibold disabled:opacity-50">{busy ? 'Guardando…' : 'Guardar'}</button>
+                        <button onClick={enviarCodigoCambiar} disabled={busy} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2 text-sm font-semibold disabled:opacity-50">{busy ? 'Enviando…' : 'Enviar código'}</button>
                         <button onClick={() => setCambiarAbierto(false)} className="px-3 text-sm text-gray-500">Cancelar</button>
                       </div>
-                    </div>
+                    </>
+                  ) : (
+                    <>
+                      <input className={field} value={codigoCambiar} onChange={e => setCodigoCambiar(e.target.value)} placeholder="Código del correo" inputMode="numeric" maxLength={6} />
+                      <input className={field} type="password" value={passNueva} onChange={e => setPassNueva(e.target.value)} placeholder="Nueva contraseña (mín. 8)" />
+                      <input className={field} type="password" value={passNuevaRep} onChange={e => setPassNuevaRep(e.target.value)} placeholder="Repite la contraseña" />
+                      <button onClick={guardarCambiarPass} disabled={busy} className="w-full bg-gray-900 hover:bg-black text-white rounded-xl py-2 text-sm font-semibold disabled:opacity-50">{busy ? 'Guardando…' : (tienePassword ? 'Guardar contraseña' : 'Crear contraseña')}</button>
+                    </>
                   )}
                 </div>
               )}
 
-              {/* Caso C: con contraseña pero desactivado */}
-              {tienePassword && !activo && (
-                <div className="mt-3 space-y-2">
-                  <p className="text-xs text-gray-500">Tu correo y contraseña están guardados. Reactiva cuando quieras, sin reescribir nada.</p>
-                  <button onClick={reactivar} disabled={busy} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-50">{busy ? 'Procesando…' : 'Reactivar ingreso tradicional'}</button>
-                </div>
-              )}
+              {/* Reactivar y Crear/Cambiar viven en el botón del header (vista = PIN) */}
             </div>
 
           </div>

@@ -164,11 +164,9 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
                       <User className={s.itemIcon} width={18} height={18} /> Mi perfil
                     </button>
                   )}
-                  {user.rol === 'Admin' && (
-                    <button className={s.item} onClick={abrirAcceso}>
-                      <KeyRound className={s.itemIcon} width={18} height={18} /> Acceso
-                    </button>
-                  )}
+                  <button className={s.item} onClick={abrirAcceso}>
+                    <KeyRound className={s.itemIcon} width={18} height={18} /> Acceso
+                  </button>
                   {user.rol === 'Admin' && (
                     <button className={s.item} onClick={() => go('/admin/configuracion')}>
                       <Settings className={s.itemIcon} width={18} height={18} /> Configuración
@@ -218,10 +216,10 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
       {/* ← NUEVO: modal de "Mi perfil" como respaldo (micrositio). Solo Admin lo
           puede abrir; en el dashboard queda en false porque allí se usa onMiPerfil. */}
       {user?.rol === 'Admin' && (
-        <>
-          <MiPerfilAdminModal open={perfilOpen} onClose={() => setPerfilOpen(false)} />
-          <AccesoModal open={accesoOpen} onClose={() => setAccesoOpen(false)} />
-        </>
+        <MiPerfilAdminModal open={perfilOpen} onClose={() => setPerfilOpen(false)} />
+      )}
+      {user && (
+        <AccesoModal open={accesoOpen} onClose={() => setAccesoOpen(false)} />
       )}
 
       {/* Modal de soporte (controlado por store). */}

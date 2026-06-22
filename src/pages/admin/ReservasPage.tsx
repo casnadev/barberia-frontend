@@ -185,14 +185,12 @@ export function ReservasPage() {
             transition={{ delay: i * 0.06 }}
           >
             <div className={d.kpiTop}>
-              <div>
-                <p className={d.kpiLabel}>{c.label}</p>
-                <p className={d.kpiValue} style={{ color: c.color }}>{c.value}</p>
-              </div>
+              <p className={d.kpiLabel}>{c.label}</p>
               <div className={d.kpiIcon} style={{ background: c.tint, color: c.color }}>
-                <c.icon width={22} height={22} />
+                <c.icon width={19} height={19} />
               </div>
             </div>
+            <p className={d.kpiValue} style={{ color: c.color }}>{c.value}</p>
           </motion.div>
         ))}
       </div>

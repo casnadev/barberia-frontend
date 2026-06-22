@@ -10,6 +10,7 @@ import { CalendarModal } from '@/pages/cliente/CalendarModal'
 import { buildImageUrl } from '@/services/apiClient'
 import { ventasService, type VentaResumen } from '@/services/ventasService'
 import { mensajeError } from '@/utils/apiError'
+import { montoFmt } from '@/utils/kpiMonto'
 
 const soles = (n?: number) => `S/ ${(Number(n) || 0).toFixed(2)}`
 const isoLocal = (d: Date) => {
@@ -189,14 +190,18 @@ export function VentasPage() {
 }
 
 function ResumenCard({ icon: Icon, tone, label, value }: { icon: any; tone: 'amber' | 'emerald'; label: string; value: string }) {
-  const tones: Record<string, string> = { amber: 'bg-amber-50 text-amber-600', emerald: 'bg-emerald-50 text-emerald-600' }
+  const tones: Record<string, { chip: string; num: string }> = {
+    amber: { chip: 'bg-amber-50 text-amber-600', num: 'text-amber-600' },
+    emerald: { chip: 'bg-emerald-50 text-emerald-600', num: 'text-emerald-600' },
+  }
+  const t = tones[tone]
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">{label}</span>
-        <span className={`w-8 h-8 rounded-xl flex items-center justify-center ${tones[tone]}`}><Icon className="w-4 h-4" /></span>
+    <div className="bg-white border border-[#ECEEF1] rounded-2xl p-[15px] shadow-sm">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10.5px] font-bold uppercase tracking-[0.045em] text-[#9098A4]">{label}</span>
+        <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${t.chip}`}><Icon className="w-[18px] h-[18px]" /></span>
       </div>
-      <p className="text-xl font-bold text-gray-900 mt-1">{value}</p>
+      <p className={`mt-3.5 text-[1.6rem] leading-none font-extrabold tracking-tight whitespace-nowrap tabular-nums ${t.num}`}>{montoFmt(value, 'text-[0.6em] font-bold opacity-60 mr-0.5')}</p>
     </div>
   )
 }

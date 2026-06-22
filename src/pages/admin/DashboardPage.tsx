@@ -10,6 +10,7 @@ import { AdminLayout } from '@/components/AdminLayout'
 import { CompletaTuNegocio } from '@/components/CompletaTuNegocio'
 import { CalendarModal } from '@/pages/cliente/CalendarModal'
 import { AvisoBanner } from '@/components/AvisoBanner'
+import { montoFmt } from '@/utils/kpiMonto'
 import s from '@/styles/Dashboard.module.css'
 
 type RangoKey = 'hoy' | 'semana' | 'mes' | 'custom'
@@ -160,15 +161,13 @@ export function DashboardPage() {
             transition={{ delay: i * 0.06 }}
           >
             <div className={s.kpiTop}>
-              <div>
-                <p className={s.kpiLabel}>{k.label}</p>
-                <p className={`${s.kpiValue} ${s[k.tone]}`}>{k.value}</p>
-                {k.sub && <p className={s.kpiSub}>{k.sub}</p>}
-              </div>
+              <p className={s.kpiLabel}>{k.label}</p>
               <div className={`${s.kpiIcon} ${s[k.tint]}`}>
-                <k.icon width={22} height={22} />
+                <k.icon width={19} height={19} />
               </div>
             </div>
+            <p className={`${s.kpiValue} ${s[k.tone]}`}>{montoFmt(k.value, s.kpiCur)}</p>
+            {k.sub && <p className={s.kpiSub}>{k.sub}</p>}
           </motion.div>
         ))}
       </div>

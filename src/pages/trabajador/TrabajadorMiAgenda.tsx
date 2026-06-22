@@ -13,6 +13,7 @@ import { confirmDialog } from '@/components/ConfirmDialog'
 import { useAuthStore } from '@/store/authStore'
 import { reservasService } from '@/services/reservasService'
 import { ventasService, type VentaResumen } from '@/services/ventasService'
+import { montoFmt } from '@/utils/kpiMonto'
 import { mensajeError } from '@/utils/apiError'
 import {
   panelTrabajadorService,
@@ -209,12 +210,20 @@ export function TrabajadorMiAgenda() {
 
 /* ---------- KPI ---------- */
 function Kpi({ icon: Icon, tone, label, value }: { icon: any; tone: string; label: string; value: string }) {
-  const t = { blue: 'bg-blue-100 text-blue-600', emerald: 'bg-emerald-100 text-emerald-600', violet: 'bg-violet-100 text-violet-600', amber: 'bg-amber-100 text-amber-600' }[tone] || 'bg-gray-100 text-gray-600'
+  const map: Record<string, { chip: string; num: string }> = {
+    blue: { chip: 'bg-blue-50 text-blue-600', num: 'text-blue-600' },
+    emerald: { chip: 'bg-emerald-50 text-emerald-600', num: 'text-emerald-600' },
+    violet: { chip: 'bg-violet-50 text-violet-600', num: 'text-violet-600' },
+    amber: { chip: 'bg-amber-50 text-amber-600', num: 'text-amber-600' },
+  }
+  const t = map[tone] || { chip: 'bg-gray-100 text-gray-600', num: 'text-gray-900' }
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4">
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-2 ${t}`}><Icon className="w-5 h-5" /></div>
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="text-lg font-bold text-gray-900">{value}</p>
+    <div className="bg-white border border-[#ECEEF1] rounded-2xl p-[15px] shadow-sm">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10.5px] font-bold uppercase tracking-[0.045em] text-[#9098A4]">{label}</span>
+        <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${t.chip}`}><Icon className="w-[18px] h-[18px]" /></span>
+      </div>
+      <p className={`mt-3.5 text-[1.6rem] leading-none font-extrabold tracking-tight whitespace-nowrap tabular-nums ${t.num}`}>{montoFmt(value, 'text-[0.6em] font-bold opacity-60 mr-0.5')}</p>
     </div>
   )
 }
@@ -645,10 +654,10 @@ function ComisionesTab({ idT, comisiones }: { idT: number | null; comisiones: Mi
   useEffect(() => { if (idT) panelTrabajadorService.getMisPagos(idT).then(setPagos) }, [idT])
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-white border border-gray-200 rounded-2xl p-4"><p className="text-xs text-gray-500">Ganado (total)</p><p className="text-xl font-bold text-gray-900">{soles(comisiones?.comisionesTotalCalculado)}</p></div>
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4"><p className="text-xs text-amber-700">Pendiente de pago</p><p className="text-xl font-bold text-amber-700">{soles(comisiones?.comisionesTotalPendiente)}</p></div>
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4"><p className="text-xs text-emerald-700">Pagado</p><p className="text-xl font-bold text-emerald-700">{soles(comisiones?.comisionesTotalPagado)}</p></div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <Kpi icon={Wallet} tone="violet" label="Ganado (total)" value={soles(comisiones?.comisionesTotalCalculado)} />
+        <Kpi icon={Clock} tone="amber" label="Pendiente de pago" value={soles(comisiones?.comisionesTotalPendiente)} />
+        <Kpi icon={Check} tone="emerald" label="Pagado" value={soles(comisiones?.comisionesTotalPagado)} />
       </div>
       <section>
         <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Wallet className="w-5 h-5 text-gray-500" /> Historial de pagos</h3>

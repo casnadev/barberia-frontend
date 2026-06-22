@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import {
-  ArrowLeft, Delete, ShieldCheck, KeyRound, Send, Loader2, LogIn,
+  ArrowLeft, ArrowRight, Delete, ShieldCheck, KeyRound, Send, Loader2, LogIn,
   Eye, EyeOff, MailCheck, MessageCircle,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
@@ -12,7 +12,7 @@ import { authService } from '@/services/authService'
 import { setTenant, clearTenant } from '@/services/apiClient'
 import { sedeTenantService } from '@/services/sedeTenantService'
 
-type View = 'pin' | 'password' | 'enroll-id' | 'enroll-code' | 'recover-id' | 'recover-code' | 'sent' | 'recover-pass-id' | 'set-password'
+type View = 'pin' | 'password' | 'login-otp' | 'enroll-id' | 'enroll-code' | 'recover-id' | 'recover-code' | 'sent' | 'recover-pass-id' | 'set-password'
 function nombreDispositivoCorto(): string {
   const ua = navigator.userAgent
   const has = (s: string) => ua.includes(s)
@@ -197,6 +197,34 @@ export function LoginPage() {
       if (res?.token && res.user) await entrar(res.token, res.user as any)
       else toast.error('Acceso o contraseña incorrectos.')
     } catch { toast.error('Acceso o contraseña incorrectos.') }
+    finally { setLoading(false) }
+  }
+
+  // ----------------------------------------------------------- login por OTP
+  const continuarLogin = async () => {
+    if (!identificador.trim()) { toast.error('Ingresa tu correo o teléfono.'); return }
+    setLoading(true)
+    try {
+      const r = await authService.loginOtpSolicitar(identificador.trim())
+      if (r.esNuevo) {
+        toast.error('El correo o teléfono no está registrado. ¡Crea una cuenta!')
+      } else {
+        setCodigo('')
+        setView('login-otp')
+        toast.success(`Te enviamos un código por ${r.canal === 'WhatsApp' ? 'WhatsApp' : 'correo'}.`)
+      }
+    } catch (e: any) { toast.error(e?.message || 'No pudimos continuar. Revisa el dato.') }
+    finally { setLoading(false) }
+  }
+
+  const validarLoginOtp = async () => {
+    if (codigo.length !== 6) { toast.error('Ingresa los 6 dígitos.'); return }
+    setLoading(true)
+    try {
+      const res = await authService.loginOtpValidar(identificador.trim(), codigo)
+      if (res?.token && res.user) await entrar(res.token, res.user as any, (res as any).subdominio)
+      else toast.error('Código inválido o expirado.')
+    } catch (e: any) { toast.error(e?.message || 'Código inválido o expirado.') }
     finally { setLoading(false) }
   }
 
@@ -546,26 +574,18 @@ export function LoginPage() {
               <motion.div key="password" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <div className="hidden lg:block mb-6">
                   <img src="/barber-logo-black.png" alt="Barber.PE" className="h-9 mb-2" />
-                  <p className="text-gray-400 text-sm mt-1">Ingresa para gestionar tu barbería</p>
+                  <p className="text-gray-400 text-sm mt-1">Reserva y gestiona fácil, rápido!</p>
                 </div>
-                <p className="lg:hidden text-center text-gray-500 text-sm mb-5">Ingresa para gestionar tu barbería</p>
+                <p className="lg:hidden text-center text-gray-500 text-sm mb-5">Reserva y gestiona fácil, rápido!</p>
 
-                <Label>Correo o teléfono</Label>
-                <Input value={correo} onChange={setCorreo} placeholder="Correo o teléfono" />
-                <Label>Contraseña</Label>
-                <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="••••••••"
-                  onKeyDown={(e) => e.key === 'Enter' && loginPassword()}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+                <label className="block text-sm font-bold text-gray-900 mb-1.5">Correo o Teléfono</label>
+                <Input value={identificador} onChange={setIdentificador} placeholder="" />
 
-                <button onClick={loginPassword} disabled={loading} className={btnPrimary + ' mt-1'}>
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />} Entrar
-                </button>
-                <button onClick={() => irA('recover-pass-id')}
-                  className="w-full text-gray-400 text-sm py-2 mt-1 hover:text-gray-600 transition">
-                  Olvidé mi contraseña
+                <button onClick={continuarLogin} disabled={loading} className={btnPrimary + ' mt-1'}>
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />} Continuar
                 </button>
                 <button onClick={() => navigate('/acceso')}
-                  className="w-full text-blue-600 text-sm py-1 hover:text-blue-700 transition font-medium">
+                  className="w-full text-blue-600 text-sm py-1 mt-2 hover:text-blue-700 transition font-medium">
                   ¿No tienes cuenta? Regístrate
                 </button>
 
@@ -580,6 +600,26 @@ export function LoginPage() {
                     <div ref={googleBtnRef} className="w-full flex justify-center" style={{ colorScheme: 'light' }} />
                   </>
                 )}
+              </motion.div>
+            )}
+
+            {view === 'login-otp' && (
+              <motion.div key="login-otp" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <button onClick={() => irA('password')} className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 mb-5 transition">
+                  <ArrowLeft className="w-4 h-4" /> Volver
+                </button>
+                <h2 className="text-lg font-bold text-gray-900">Ingresa tu código</h2>
+                <p className="text-gray-500 text-sm mb-5">Te enviamos un código de 6 dígitos a <span className="font-semibold text-gray-700">{identificador}</span>.</p>
+
+                <Digits value={codigo} onChange={setCodigo} />
+
+                <button onClick={validarLoginOtp} disabled={loading || codigo.length !== 6} className={btnPrimary}>
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />} Entrar
+                </button>
+                <button onClick={continuarLogin} disabled={loading}
+                  className="w-full text-blue-600 text-sm py-2 mt-1 hover:text-blue-700 transition font-medium disabled:opacity-50">
+                  Reenviar código
+                </button>
               </motion.div>
             )}
           </AnimatePresence>

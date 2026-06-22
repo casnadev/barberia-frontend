@@ -110,24 +110,24 @@ export function ClientesPage() {
       <div className={s.kpis}>
         <div className={s.kpi}>
           <div className={s.kpiTop}>
-            <div className={`${s.kpiIcon} ${s.kpiBlue}`}><Users width={20} height={20} /></div>
             <span className={s.kpiLabel}>Total de clientes</span>
+            <div className={`${s.kpiIcon} ${s.kpiBlue}`}><Users width={19} height={19} /></div>
           </div>
           <div className={s.kpiValue}>{totalClientes}</div>
           <div className={s.kpiHint}>Registrados en el sistema</div>
         </div>
         <div className={s.kpi}>
           <div className={s.kpiTop}>
-            <div className={`${s.kpiIcon} ${s.kpiGreen}`}><Unlock width={20} height={20} /></div>
             <span className={s.kpiLabel}>Clientes activos</span>
+            <div className={`${s.kpiIcon} ${s.kpiGreen}`}><Unlock width={19} height={19} /></div>
           </div>
           <div className={`${s.kpiValue} ${s.kpiValueGreen}`}>{clientesActivos}</div>
           <div className={s.kpiHint}>Con acceso habilitado</div>
         </div>
         <div className={s.kpi}>
           <div className={s.kpiTop}>
-            <div className={`${s.kpiIcon} ${s.kpiRed}`}><Users width={20} height={20} /></div>
             <span className={s.kpiLabel}>Clientes bloqueados</span>
+            <div className={`${s.kpiIcon} ${s.kpiRed}`}><Users width={19} height={19} /></div>
           </div>
           <div className={`${s.kpiValue} ${s.kpiValueRed}`}>{clientesBloqueados}</div>
           <div className={s.kpiHint}>Por inasistencias</div>

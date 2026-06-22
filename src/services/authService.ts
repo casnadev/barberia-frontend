@@ -115,6 +115,31 @@ export const authService = {
     }
   },
 
+  /** Login por OTP — paso 1: si el contacto existe manda el código; si no, esNuevo=true. */
+  loginOtpSolicitar: async (
+    identificador: string,
+  ): Promise<{ accion: string; esNuevo: boolean; canal: string }> => {
+    try {
+      const r = await apiClient.post('/api/Auth/login-otp/solicitar', { Identificador: identificador })
+      return r.data.data || r.data
+    } catch (error: any) {
+      throw new Error(apiError(error, 'No pudimos continuar. Revisa el dato.'))
+    }
+  },
+
+  /** Login por OTP — paso 2: valida el código y devuelve el token (entra). */
+  loginOtpValidar: async (
+    identificador: string,
+    codigo: string,
+  ): Promise<LoginResponse | null> => {
+    try {
+      const r = await apiClient.post('/api/Auth/login-otp/validar', { Identificador: identificador, Codigo: codigo })
+      return mapLoginResponse(r.data.data || r.data)
+    } catch (error: any) {
+      throw new Error(apiError(error, 'Código inválido o expirado.'))
+    }
+  },
+
   /** Auto-registro paso 1: pide el código. Si el contacto ya existe, relanza el error ("ya está en uso"). */
   signupSolicitar: async (tipo: string, identificador: string): Promise<void> => {
     try {
