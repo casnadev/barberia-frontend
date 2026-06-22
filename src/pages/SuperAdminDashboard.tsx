@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { AccountMenu } from '@/components/AccountMenu'
+import { DirectorioPanel } from '@/components/DirectorioPanel'
 import {
   empresasService, type Empresa, type Admin, type Plan,
   type SedeAdmin, type CanalAcceso,
@@ -42,6 +43,7 @@ export function SuperAdminDashboard() {
   const { user } = useAuthStore()
 
   const [empresas, setEmpresas] = useState<Empresa[]>([])
+  const [seccion, setSeccion] = useState<'barberias' | 'directorio'>('barberias')
   const [owners, setOwners] = useState<Record<number, Admin | null>>({})
   const [planes, setPlanes] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
@@ -248,6 +250,23 @@ export function SuperAdminDashboard() {
       </header>
 
       <main className="max-w-[1380px] mx-auto px-4 py-7">
+        {/* Selector de sección: Barberías | Directorio */}
+        <div className="inline-flex items-center gap-1 p-1 mb-6 bg-white border border-gray-200 rounded-xl">
+          <button onClick={() => setSeccion('barberias')}
+            className={`text-sm font-semibold px-4 py-2 rounded-lg transition ${
+              seccion === 'barberias' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+            Barberías
+          </button>
+          <button onClick={() => setSeccion('directorio')}
+            className={`text-sm font-semibold px-4 py-2 rounded-lg transition ${
+              seccion === 'directorio' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+            Directorio
+          </button>
+        </div>
+
+        {seccion === 'directorio' && <DirectorioPanel />}
+
+        {seccion === 'barberias' && (<>
         {/* Stats + acción */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
           <div className="grid grid-cols-3 gap-3 flex-1 max-w-md">
@@ -367,6 +386,7 @@ export function SuperAdminDashboard() {
             })}
           </div>
         )}
+        </>)}
       </main>
 
       {/* ============================== ALTA MÍNIMA ============================== */}
