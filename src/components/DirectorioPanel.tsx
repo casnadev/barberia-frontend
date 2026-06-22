@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Search, Copy, Check, Loader2, X, ChevronLeft, ChevronRight,
-  Shield, Briefcase, Users, RefreshCw,
+  Shield, Briefcase, Users, RefreshCw, Mail, Phone, Trash2, AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -43,13 +43,17 @@ function Copiable({ valor }: { valor?: string }) {
 }
 
 /** Una fila de contacto. */
-function FilaContacto({ c, mostrarTipo }: { c: DirectorioContacto; mostrarTipo?: boolean }) {
+function FilaContacto({ c, mostrarTipo, onEliminar }: {
+  c: DirectorioContacto
+  mostrarTipo?: boolean
+  onEliminar?: (c: DirectorioContacto) => void
+}) {
   const estilo = TIPO_STYLE[c.tipo] ?? TIPO_STYLE.Cliente
   const Icono = estilo.icon
   return (
     <div className="flex items-center gap-3 px-3 py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50/70 transition">
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <p className="font-medium text-gray-900 truncate">{c.nombreCompleto || 'Sin nombre'}</p>
           {mostrarTipo && (
             <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full border ${estilo.badge}`}>
@@ -61,9 +65,148 @@ function FilaContacto({ c, mostrarTipo }: { c: DirectorioContacto; mostrarTipo?:
           )}
         </div>
         {c.ubicacion && <p className="text-xs text-gray-400 truncate mt-0.5">{c.ubicacion}</p>}
+
+        {/* MÓVIL: correo y teléfono apilados debajo del nombre (en ≥sm van en columnas). */}
+        <div className="sm:hidden mt-1.5 space-y-1">
+          <div className="flex items-center gap-1.5 text-sm">
+            <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" /><Copiable valor={c.correo} />
+          </div>
+          <div className="flex items-center gap-1.5 text-sm">
+            <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" /><Copiable valor={c.telefono} />
+          </div>
+        </div>
       </div>
+
+      {/* DESKTOP: columnas fijas (ocultas en móvil porque ya van arriba apiladas). */}
       <div className="hidden sm:block w-52 text-sm"><Copiable valor={c.correo} /></div>
-      <div className="w-32 text-sm"><Copiable valor={c.telefono} /></div>
+      <div className="hidden sm:block w-32 text-sm"><Copiable valor={c.telefono} /></div>
+
+      {onEliminar && (
+        <button
+          onClick={() => onEliminar(c)}
+          title="Dar de baja"
+          aria-label="Dar de baja"
+          className="p-2 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition shrink-0"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
+    </div>
+  )
+}
+
+type CampoBaja = 'correo' | 'telefono' | 'todo'
+
+/** Modal de confirmación MUY específico: el SuperAdmin ELIGE qué dar de baja. */
+function ModalConfirmarBaja({
+  contacto, eliminando, onCancelar, onConfirmar,
+}: {
+  contacto: DirectorioContacto
+  eliminando: boolean
+  onCancelar: () => void
+  onConfirmar: (campo: CampoBaja) => void
+}) {
+  const tieneCorreo = !!contacto.correo
+  const tieneTelefono = !!contacto.telefono
+  const soloUnDato = (tieneCorreo ? 1 : 0) + (tieneTelefono ? 1 : 0) === 1
+
+  // Opciones disponibles según los datos que tenga el contacto.
+  const opciones: { campo: CampoBaja; label: string; valor?: string; icono: any }[] = []
+  if (tieneCorreo) opciones.push({ campo: 'correo', label: 'Solo el correo', valor: contacto.correo, icono: Mail })
+  if (tieneTelefono) opciones.push({ campo: 'telefono', label: 'Solo el teléfono', valor: contacto.telefono, icono: Phone })
+  if (tieneCorreo && tieneTelefono) opciones.push({ campo: 'todo', label: 'Toda la cuenta (ambos)', icono: Trash2 })
+
+  // Por defecto NO marcamos "ambos": elegimos el primer dato disponible.
+  const [campo, setCampo] = useState<CampoBaja>(opciones[0]?.campo ?? 'todo')
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => !eliminando && onCancelar()}>
+      <div
+        className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-3 p-5 border-b border-gray-100">
+          <div className="p-2 rounded-xl bg-red-50 text-red-600 shrink-0">
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-lg font-bold text-gray-900">Dar de baja un contacto</h3>
+            <p className="text-sm text-gray-500 mt-0.5">Elige exactamente qué dar de baja.</p>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-3">
+          <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-3 text-sm space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-gray-900">{contacto.nombreCompleto || 'Sin nombre'}</span>
+              <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full border border-gray-200 text-gray-600">{contacto.tipo}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-gray-700">
+              <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              <span className="truncate">{contacto.correo || '— sin correo —'}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-gray-700">
+              <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              <span className="truncate">{contacto.telefono || '— sin teléfono —'}</span>
+            </div>
+            {contacto.ubicacion && <p className="text-xs text-gray-400 pt-0.5">{contacto.ubicacion}</p>}
+          </div>
+
+          {/* Selector: qué dar de baja */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">¿Qué deseas dar de baja?</p>
+            {opciones.map((o) => {
+              const activo = campo === o.campo
+              const Icono = o.icono
+              return (
+                <button
+                  key={o.campo}
+                  onClick={() => setCampo(o.campo)}
+                  disabled={eliminando}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition disabled:opacity-50 ${
+                    activo ? 'border-red-400 bg-red-50/60 ring-1 ring-red-200' : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <span className={`w-4 h-4 rounded-full border-2 shrink-0 ${activo ? 'border-red-500 bg-red-500' : 'border-gray-300'}`} />
+                  <Icono className={`w-4 h-4 shrink-0 ${activo ? 'text-red-600' : 'text-gray-400'}`} />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-gray-800">{o.label}</span>
+                    {o.valor && <span className="block text-xs text-gray-500 truncate">{o.valor}</span>}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+            {campo === 'todo' ? (
+              <>Se dará de baja <strong>toda la cuenta</strong> (correo y teléfono) y se revocarán sus sesiones. Ambos datos quedarán <strong>libres</strong> para registrarse de nuevo.</>
+            ) : soloUnDato ? (
+              <>Es el <strong>único dato</strong> de este contacto, así que dar de baja {campo === 'correo' ? 'el correo' : 'el teléfono'} dará de baja <strong>toda la cuenta</strong>. Quedará <strong>libre</strong> para registrarse de nuevo.</>
+            ) : (
+              <>Se dará de baja <strong>solo {campo === 'correo' ? 'el correo' : 'el teléfono'}</strong>. La cuenta seguirá activa con su {campo === 'correo' ? 'teléfono' : 'correo'}, y ese {campo === 'correo' ? 'correo' : 'teléfono'} quedará <strong>libre</strong> para registrarse de nuevo.</>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-100 bg-gray-50/60">
+          <button
+            onClick={onCancelar}
+            disabled={eliminando}
+            className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100 transition disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => onConfirmar(campo)}
+            disabled={eliminando}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition disabled:opacity-60"
+          >
+            {eliminando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            Sí, dar de baja
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -73,6 +216,11 @@ export function DirectorioPanel() {
   const [q, setQ] = useState('')
   const [buscando, setBuscando] = useState(false)
   const [resultados, setResultados] = useState<DirectorioContacto[] | null>(null)
+
+  // ---- Dar de baja (estado compartido por buscador y lista) ----
+  const [aEliminar, setAEliminar] = useState<DirectorioContacto | null>(null)
+  const [eliminando, setEliminando] = useState(false)
+  const [recarga, setRecarga] = useState(0)
 
   useEffect(() => {
     const term = q.trim()
@@ -89,7 +237,7 @@ export function DirectorioPanel() {
       }
     }, 350)
     return () => clearTimeout(t)
-  }, [q])
+  }, [q, recarga])
 
   // ---- Navegador por pestañas ----
   const [tab, setTab] = useState<Tab>('admins')
@@ -101,6 +249,23 @@ export function DirectorioPanel() {
   const [total, setTotal] = useState(0)
   const [cargando, setCargando] = useState(false)
   const tamano = 20
+
+  // ---- Dar de baja: lógica (el estado se declara arriba, junto al buscador) ----
+  const confirmarBaja = async (campo: CampoBaja) => {
+    if (!aEliminar) return
+    setEliminando(true)
+    try {
+      const msg = await directorioService.eliminar(aEliminar.tipo, aEliminar.id, campo)
+      toast.success(msg)
+      setAEliminar(null)
+      // Re-sincroniza ambas vistas (lista y buscador) con el servidor.
+      setRecarga((n) => n + 1)
+    } catch (e: any) {
+      toast.error(e?.response?.data?.detail || e?.response?.data?.mensaje || e?.message || 'No se pudo dar de baja.')
+    } finally {
+      setEliminando(false)
+    }
+  }
 
   useEffect(() => {
     directorioService.sedes().then(setSedes).catch(() => {})
@@ -130,7 +295,7 @@ export function DirectorioPanel() {
     }
     const t = setTimeout(cargar, 250)
     return () => { activo = false; clearTimeout(t) }
-  }, [tab, filtro, idSede, pagina])
+  }, [tab, filtro, idSede, pagina, recarga])
 
   const totalPaginas = Math.max(1, Math.ceil(total / tamano))
   const tabs: { id: Tab; label: string; icon: any }[] = useMemo(() => [
@@ -169,7 +334,7 @@ export function DirectorioPanel() {
                 <Loader2 className="w-5 h-5 animate-spin" />
               </div>
             ) : resultados && resultados.length > 0 ? (
-              resultados.map((c) => <FilaContacto key={`${c.tipo}-${c.id}`} c={c} mostrarTipo />)
+              resultados.map((c) => <FilaContacto key={`${c.tipo}-${c.id}`} c={c} mostrarTipo onEliminar={setAEliminar} />)
             ) : (
               <div className="text-center py-8 text-gray-400 text-sm">Sin coincidencias para «{q.trim()}».</div>
             )}
@@ -235,7 +400,7 @@ export function DirectorioPanel() {
         ) : data.length === 0 ? (
           <div className="text-center py-12 text-gray-400 text-sm">Sin resultados.</div>
         ) : (
-          <div>{data.map((c) => <FilaContacto key={`${c.tipo}-${c.id}`} c={c} />)}</div>
+          <div>{data.map((c) => <FilaContacto key={`${c.tipo}-${c.id}`} c={c} onEliminar={setAEliminar} />)}</div>
         )}
 
         {/* Paginación */}
@@ -256,6 +421,16 @@ export function DirectorioPanel() {
           </div>
         )}
       </div>
+
+      {/* Modal de confirmación de baja */}
+      {aEliminar && (
+        <ModalConfirmarBaja
+          contacto={aEliminar}
+          eliminando={eliminando}
+          onCancelar={() => { if (!eliminando) setAEliminar(null) }}
+          onConfirmar={confirmarBaja}
+        />
+      )}
     </div>
   )
 }

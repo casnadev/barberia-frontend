@@ -64,4 +64,25 @@ export const directorioService = {
     const res = await apiClient.get('/api/superadmin/directorio/sedes')
     return unwrap<DirectorioSede[]>(res)
   },
+
+  /**
+   * Da de baja un contacto: Admin, Trabajador o Cliente.
+   * `campo` elige qué dar de baja:
+   *   - 'correo'   → solo el correo
+   *   - 'telefono' → solo el teléfono
+   *   - 'todo'     → toda la cuenta (ambos)
+   * Libera el/los dato(s) para que puedan registrarse de nuevo.
+   * Devuelve el mensaje del backend (apto para mostrar en un toast).
+   */
+  eliminar: async (
+    tipo: DirectorioContacto['tipo'],
+    id: number,
+    campo: 'correo' | 'telefono' | 'todo' = 'todo',
+  ): Promise<string> => {
+    const res = await apiClient.delete(`/api/superadmin/directorio/contacto/${tipo}/${id}`, {
+      params: { campo },
+    })
+    const data = res.data ?? {}
+    return data.mensaje ?? data.message ?? 'Contacto dado de baja.'
+  },
 }
