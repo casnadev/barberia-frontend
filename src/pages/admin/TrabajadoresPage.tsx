@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, AlertCircle, X, Eye, EyeOff, Upload, Image as ImageIcon, KeyRound, Mail, MessageCircle } from 'lucide-react'
+import { Plus, Edit2, Trash2, AlertCircle, X, Eye, EyeOff, Upload, Image as ImageIcon, KeyRound } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { apiClient, buildImageUrl } from '@/services/apiClient'
@@ -18,6 +18,7 @@ interface Trabajador {
   experiencia?: string
   esDestacado?: boolean
   estado?: boolean
+  accesoHabilitado?: boolean 
   fechaIngreso?: string
 }
 
@@ -50,7 +51,6 @@ export function TrabajadoresPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
-  const [accesoPara, setAccesoPara] = useState<Trabajador | null>(null)  // selector Email/WhatsApp
   const [uploadingImage, setUploadingImage] = useState(false)
   const [previewImage, setPreviewImage] = useState<string>('')
 
@@ -183,22 +183,20 @@ export function TrabajadoresPage() {
     }
   }
 
-  const enviarAcceso = async (t: Trabajador, canal: 'Email' | 'WhatsApp') => {
-    setAccesoPara(null)
+  const toggleAcceso = async (t: Trabajador) => {
     if (!t.idTrabajador) return
+    const nuevo = !t.accesoHabilitado
+    // Optimista: pinto el cambio y revierto si falla.
+    setTrabajadores(prev => prev.map(x =>
+      x.idTrabajador === t.idTrabajador ? { ...x, accesoHabilitado: nuevo } : x))
     try {
-      await apiClient.post(`/api/Trabajadores/${t.idTrabajador}/dar-acceso`, { canal })
-      toast.success(`Código de acceso enviado por ${canal === 'Email' ? 'correo' : 'WhatsApp'}.`)
+      await apiClient.put(`/api/Trabajadores/${t.idTrabajador}/acceso`, { habilitado: nuevo })
+      toast.success(nuevo ? 'Acceso habilitado.' : 'Acceso deshabilitado.')
     } catch (err: any) {
-      toast.error(getApiError(err, 'No se pudo enviar el acceso.'))
+      setTrabajadores(prev => prev.map(x =>
+        x.idTrabajador === t.idTrabajador ? { ...x, accesoHabilitado: !nuevo } : x))
+      toast.error(getApiError(err, 'No se pudo cambiar el acceso.'))
     }
-  }
-
-  const darAcceso = (t: Trabajador) => {
-    if (!t.idTrabajador) return
-    if (!t.correo && !t.telefono) { toast.error('Asigna correo o teléfono al trabajador primero.'); return }
-    // Siempre abre el selector para que se vea a qué correo/teléfono se enviará.
-    setAccesoPara(t)
   }
 
   const handleEdit = (trabajador: Trabajador) => {
@@ -269,7 +267,13 @@ export function TrabajadoresPage() {
           ? <img src={buildImageUrl(t.urlFotoPerfil)} alt={t.nombreCompleto} />
           : <div className={s.mediaEmpty}><ImageIcon width={30} height={30} /></div>}
         <div className={s.cardActions}>
-          <button className={s.iconBtn} onClick={() => darAcceso(t)} title="Dar acceso" aria-label="Dar acceso">
+          <button
+            className={s.iconBtn}
+            onClick={() => toggleAcceso(t)}
+            title={t.accesoHabilitado ? 'Acceso habilitado — clic para bloquear' : 'Sin acceso — clic para habilitar'}
+            aria-label={t.accesoHabilitado ? 'Bloquear acceso' : 'Habilitar acceso'}
+            style={{ color: t.accesoHabilitado ? '#059669' : '#9ca3af' }}
+          >
             <KeyRound width={15} height={15} />
           </button>
           <button className={s.iconBtn} onClick={() => handleEdit(t)} title="Editar" aria-label="Editar">
@@ -471,49 +475,6 @@ export function TrabajadoresPage() {
         )}
       </AnimatePresence>
 
-      {/* Selector de canal para enviar el código de acceso */}
-      <AnimatePresence>
-        {accesoPara && (
-          <motion.div
-            className={s.overlay}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={() => setAccesoPara(null)}
-          >
-            <motion.div
-              className={s.confirm}
-              initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div className={s.confirmHead}>
-                <KeyRound width={22} height={22} color="#2563eb" />
-                <h3 className={s.confirmTitle}>Enviar código de acceso</h3>
-              </div>
-              <p className={s.confirmText}>¿Por dónde enviamos el código a <b>{accesoPara.nombreCompleto}</b>?</p>
-              <div className="grid grid-cols-2 gap-2.5 mt-1">
-                <button
-                  disabled={!accesoPara.correo}
-                  onClick={() => accesoPara.correo && enviarAcceso(accesoPara, 'Email')}
-                  className="flex flex-col items-center gap-1 py-3.5 px-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 font-semibold hover:bg-blue-100 active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
-                >
-                  <Mail width={20} height={20} /> Correo
-                  <span className="text-xs font-normal text-blue-600/80 truncate max-w-full">{accesoPara.correo || 'Sin correo'}</span>
-                </button>
-                <button
-                  disabled={!accesoPara.telefono}
-                  onClick={() => accesoPara.telefono && enviarAcceso(accesoPara, 'WhatsApp')}
-                  className="flex flex-col items-center gap-1 py-3.5 px-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 font-semibold hover:bg-emerald-100 active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
-                >
-                  <MessageCircle width={20} height={20} /> WhatsApp
-                  <span className="text-xs font-normal text-emerald-600/80 truncate max-w-full">{accesoPara.telefono || 'Sin teléfono'}</span>
-                </button>
-              </div>
-              <div className={s.confirmActions}>
-                <button className={s.btnGhost} onClick={() => setAccesoPara(null)}>Cancelar</button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </AdminLayout>
   )
 }

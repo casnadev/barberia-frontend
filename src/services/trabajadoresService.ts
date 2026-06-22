@@ -8,6 +8,7 @@ export interface Trabajador {
   urlFotoPerfil?: string
   especializacion?: string
   estado: boolean
+  accesoHabilitado?: boolean
   idSede?: number
   idEmpresa?: number
   comisionPorcentaje?: number
@@ -103,6 +104,16 @@ export const trabajadoresService = {
       console.error('❌ Error eliminando trabajador:', error)
       throw error
     }
+  },
+
+  /**
+   * Prende/apaga el acceso (login) de un trabajador. No envía nada: es un interruptor.
+   * Al apagar, el backend corta sus sesiones activas al instante.
+   */
+  cambiarAcceso: async (id: number, habilitado: boolean): Promise<boolean> => {
+    const res = await apiClient.put(`/api/Trabajadores/${id}/acceso`, { habilitado })
+    const data = res.data?.data ?? res.data
+    return data?.accesoHabilitado ?? habilitado
   },
 
   /**

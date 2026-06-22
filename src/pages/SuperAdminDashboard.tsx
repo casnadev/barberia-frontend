@@ -5,7 +5,7 @@ import { confirmDialog } from '@/components/ConfirmDialog'
 import {
   Scissors, Plus, Building2, MapPin, KeyRound, Power,
   X, Check, Mail, Phone, CreditCard,
-  Store, Trash2, Send, Loader2, Pencil, RefreshCw,
+  Store, Trash2, Loader2, Pencil, RefreshCw,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { AccountMenu } from '@/components/AccountMenu'
@@ -54,7 +54,6 @@ export function SuperAdminDashboard() {
   // Modales auxiliares
   const [planTarget, setPlanTarget] = useState<Empresa | null>(null)
   const [sedeTarget, setSedeTarget] = useState<Empresa | null>(null)
-  const [accesoTarget, setAccesoTarget] = useState<Empresa | null>(null)
 
   const loadAll = async () => {
     setLoading(true)
@@ -110,7 +109,7 @@ export function SuperAdminDashboard() {
       empresaIdNueva = empresa.id
 
       // 2) Admin (dueño): correo O teléfono real, sin contraseña → entra por PIN/OTP
-      const admin = await empresasService.createAdminEmpresa(empresa.id, {
+      await empresasService.createAdminEmpresa(empresa.id, {
         nombreCompleto: form.ownerNombre.trim() || undefined,
         correo: form.canal === 'Email' ? form.ownerCorreo.trim() : undefined,
         telefono: form.canal === 'WhatsApp' ? form.ownerTelefono.trim() : undefined,
@@ -154,15 +153,8 @@ export function SuperAdminDashboard() {
       toast.success(`"${nombre}" creada${prueba ? ` · plan ${prueba.nombre}` : ''}.`)
       setCrearOpen(false)
 
-      // 5) Ofrecer enviar el acceso (OTP) al dueño ahora
-      const canal = form.canal
-      const enviar = await confirmDialog({
-        title: 'Enviar acceso',
-        message: `¿Enviar el código de acceso al dueño por ${canal === 'Email' ? 'correo' : 'WhatsApp'} ahora?`,
-        confirmText: 'Enviar ahora',
-        cancelText: 'Más tarde',
-      })
-      if (enviar) await enviarAcceso(admin.id, canal)
+      // El Admin nace con acceso habilitado (Estado activo). Entra solo desde el
+      // login (OTP / contraseña / PIN); ya no enviamos ningún código al crearlo.
 
       await loadAll()
     } catch (err: any) {
@@ -176,18 +168,18 @@ export function SuperAdminDashboard() {
   }
 
   // ----------------------------------------------------------------- Acciones tarjeta
-  const enviarAcceso = async (idUsuario: number, canal: CanalAcceso) => {
+  const toggleAccesoAdmin = async (e: Empresa) => {
+    const owner = owners[e.id]
+    if (!owner) { toast.error('Esta barbería no tiene dueño asignado.'); return }
+    const habilitado = owner.estado === false ? true : false   // si está apagado → prender; si no → apagar
+    setOwners((m) => ({ ...m, [e.id]: { ...owner, estado: habilitado } }))
     try {
-      await empresasService.darAcceso(idUsuario, canal)
-      toast.success(`Código enviado por ${canal === 'Email' ? 'correo' : 'WhatsApp'}.`)
+      await empresasService.setUsuarioEstado(owner.id, habilitado)
+      toast.success(habilitado ? 'Acceso del Admin habilitado.' : 'Acceso del Admin deshabilitado.')
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'No se pudo enviar el acceso.')
+      setOwners((m) => ({ ...m, [e.id]: { ...owner, estado: !habilitado } }))
+      toast.error(err?.response?.data?.message || 'No se pudo cambiar el acceso.')
     }
-  }
-
-  const abrirAcceso = (e: Empresa) => {
-    if (!owners[e.id]) { toast.error('Esta barbería no tiene dueño asignado.'); return }
-    setAccesoTarget(e)
   }
 
   const toggleEstado = async (e: Empresa) => {
@@ -345,9 +337,12 @@ export function SuperAdminDashboard() {
 
                   {/* Acciones */}
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <button onClick={() => abrirAcceso(e)} disabled={!owner}
-                      className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition disabled:opacity-40">
-                      <Send className="w-4 h-4" /> Dar acceso
+                    <button onClick={() => toggleAccesoAdmin(e)} disabled={!owner}
+                      className={`inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition disabled:opacity-40 ${
+                        owner?.estado === false
+                          ? 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                          : 'bg-green-50 text-green-700 hover:bg-green-100'}`}>
+                      <KeyRound className="w-4 h-4" /> {owner?.estado === false ? 'Acceso apagado' : 'Acceso activo'}
                     </button>
                     <button onClick={() => setPlanTarget(e)}
                       className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition">
@@ -476,35 +471,6 @@ export function SuperAdminDashboard() {
             </div>
           </Modal>
         )}
-      </AnimatePresence>
-
-      {/* ============================== DAR ACCESO ============================== */}
-      <AnimatePresence>
-        {accesoTarget && (() => {
-          const owner = owners[accesoTarget.id]
-          return (
-            <Modal onClose={() => setAccesoTarget(null)}>
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">Enviar código de acceso</h2>
-              <p className="text-sm text-gray-500 mb-4">
-                ¿Por dónde enviamos el código al dueño de <strong className="text-gray-700">{accesoTarget.nombreComercial}</strong>?
-              </p>
-              <div className="grid grid-cols-2 gap-2.5">
-                <button disabled={!owner?.correo}
-                  onClick={async () => { if (owner?.correo) { await enviarAcceso(owner.id, 'Email'); setAccesoTarget(null) } }}
-                  className="flex flex-col items-center gap-1 py-3.5 px-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 font-semibold hover:bg-blue-100 transition disabled:opacity-40 disabled:cursor-not-allowed">
-                  <Mail className="w-5 h-5" /> Correo
-                  <span className="text-xs font-normal text-blue-600/80 truncate max-w-full">{owner?.correo || 'Sin correo'}</span>
-                </button>
-                <button disabled={!owner?.telefono}
-                  onClick={async () => { if (owner?.telefono) { await enviarAcceso(owner.id, 'WhatsApp'); setAccesoTarget(null) } }}
-                  className="flex flex-col items-center gap-1 py-3.5 px-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 font-semibold hover:bg-emerald-100 transition disabled:opacity-40 disabled:cursor-not-allowed">
-                  <Phone className="w-5 h-5" /> WhatsApp
-                  <span className="text-xs font-normal text-emerald-600/80 truncate max-w-full">{owner?.telefono || 'Sin teléfono'}</span>
-                </button>
-              </div>
-            </Modal>
-          )
-        })()}
       </AnimatePresence>
 
       {/* ============================== SEDES ============================== */}

@@ -12,7 +12,7 @@ import { authService } from '@/services/authService'
 import { setTenant, clearTenant } from '@/services/apiClient'
 import { sedeTenantService } from '@/services/sedeTenantService'
 
-type View = 'pin' | 'password' | 'login-otp' | 'enroll-id' | 'enroll-code' | 'recover-id' | 'recover-code' | 'sent' | 'recover-pass-id' | 'set-password'
+type View = 'pin' | 'password' | 'tradicional' | 'login-otp' | 'enroll-id' | 'enroll-code' | 'recover-id' | 'recover-code' | 'sent' | 'recover-pass-id' | 'set-password'
 function nombreDispositivoCorto(): string {
   const ua = navigator.userAgent
   const has = (s: string) => ua.includes(s)
@@ -569,7 +569,29 @@ export function LoginPage() {
               </motion.div>
             )}
 
-            {/* ---------------- INGRESO TRADICIONAL ---------------- */}
+            {/* ---------------- INGRESO TRADICIONAL (correo + contraseña) ---------------- */}
+            {view === 'tradicional' && (
+              <motion.div key="tradicional" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <Back onClick={() => irA('password')} />
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Ingreso tradicional</h2>
+                <p className="text-sm text-gray-500 mb-5">Entra con tu correo o teléfono y tu contraseña.</p>
+
+                <Label>Correo o teléfono</Label>
+                <Input value={correo} onChange={setCorreo} placeholder="tucorreo@gmail.com o 987654321" />
+                <Label>Contraseña</Label>
+                <PassInput value={password} onChange={setPassword} placeholder="Tu contraseña" />
+
+                <button onClick={loginPassword} disabled={loading} className={btnPrimary + ' mt-2'}>
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />} Entrar
+                </button>
+                <button onClick={() => irA('recover-pass-id')}
+                  className="w-full text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                  Olvidé mi contraseña
+                </button>
+              </motion.div>
+            )}
+
+            {/* ---------------- INGRESO POR CÓDIGO (OTP) ---------------- */}
             {view === 'password' && (
               <motion.div key="password" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <div className="hidden lg:block mb-6">
@@ -625,16 +647,26 @@ export function LoginPage() {
           </AnimatePresence>
 
           {view === 'pin' && (
-            <button onClick={() => irA('password')}
-              className="block w-full mt-7 text-xs text-blue-600 hover:text-blue-700 text-center lg:text-left font-bold tracking-wide uppercase transition">
-              Ingreso Tradicional
-            </button>
+            <div className="mt-7 flex items-center justify-center lg:justify-start gap-3 text-xs font-bold tracking-wide uppercase">
+              <button onClick={() => irA('password')} className="text-blue-600 hover:text-blue-700 transition">
+                Ingreso por código
+              </button>
+              <span className="text-gray-300">·</span>
+              <button onClick={() => irA('tradicional')} className="text-blue-600 hover:text-blue-700 transition">
+                Ingreso tradicional
+              </button>
+            </div>
           )}
           {view === 'password' && (
-            <button onClick={() => irA('pin')}
-              className="block w-full mt-7 text-xs text-blue-600 hover:text-blue-700 text-center lg:text-left font-bold tracking-wide uppercase transition">
-              Ingresar con PIN
-            </button>
+            <div className="mt-7 flex items-center justify-center lg:justify-start gap-3 text-xs font-bold tracking-wide uppercase">
+              <button onClick={() => irA('pin')} className="text-blue-600 hover:text-blue-700 transition">
+                Ingresar con PIN
+              </button>
+              <span className="text-gray-300">·</span>
+              <button onClick={() => irA('tradicional')} className="text-blue-600 hover:text-blue-700 transition">
+                Ingreso tradicional
+              </button>
+            </div>
           )}
         </motion.div>
       </div>
