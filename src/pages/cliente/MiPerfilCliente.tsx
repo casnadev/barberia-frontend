@@ -1,17 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Scissors, CalendarPlus, Phone, Mail, Star, Clock, CalendarCheck,
-  History, MapPin, ChevronRight, X, Check, CalendarClock, Cake,
-  Store, EyeOff, Eye, Bell, Gift, UserCog, Camera,
+  History, MapPin, ChevronRight, ChevronLeft, X, Check, CalendarClock, Cake,
+  Store, EyeOff, Eye, Bell, Gift, UserCog, Camera, Heart, ShieldCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
 import { useAuthStore } from '@/store/authStore'
+import { useFavoritosStore } from '@/store/favoritosStore'
 import { reservasService, type ReservaResumen } from '@/services/reservasService'
 import { miCuentaService, type MiPerfil } from '@/services/miCuentaService'
-import { buildImageUrl } from '@/services/apiClient'
+import { buildImageUrl, urlMicrositio, setTenant } from '@/services/apiClient'
+import { sedesService } from '@/services/sedesService'
 import { novedadesService, type Novedad } from '@/services/novedadesService'
 import { AccountMenu } from '@/components/AccountMenu'
 import { CompletaTuPerfil } from '@/components/CompletaTuPerfil'
@@ -39,9 +41,11 @@ const AVATARS = [
 ]
 const avatarKey = (id?: number) => `bp_avatar_${id}`
 const hiddenKey = (id?: number) => `bp_hidden_${id}`
+const favKey = (id?: number) => `bp_fav_sedes_${id}`
 const readLS = <T,>(k: string, fallback: T): T => {
   try { const v = localStorage.getItem(k); return v ? JSON.parse(v) as T : fallback } catch { return fallback }
 }
+const writeLS = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)) } catch { /* noop */ } }
 
 const hoyISO = () => new Date().toISOString().slice(0, 10)
 const fmtFecha = (iso?: string) => iso
@@ -59,7 +63,7 @@ const GENEROS = [
 const MESES_CUMPLE = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 const ANIOS_CUMPLE = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i)
 
-type Tab = 'citas' | 'historial' | 'novedades'
+type Tab = 'citas' | 'historial' | 'favoritos' | 'novedades'
 
 /* ============================================================ */
 export function MiPerfilCliente() {
@@ -67,6 +71,13 @@ export function MiPerfilCliente() {
   const [params, setParams] = useSearchParams()
   const { user } = useAuthStore()
   const idCliente = user?.id
+
+  // Reservar desde el panel del cliente = ir al marketplace barber.pe a elegir
+  // barbería (no hay una sede fija en su contexto, sobre todo para clientes nuevos).
+  const irAReservar = () => {
+    if (typeof window !== 'undefined' && window.location.hostname.endsWith('barber.pe')) window.location.href = 'https://barber.pe'
+    else navigate('/')
+  }
 
   const [perfil, setPerfil] = useState<MiPerfil | null>(null)
   const [reservas, setReservas] = useState<ReservaResumen[]>([])
@@ -170,6 +181,7 @@ export function MiPerfilCliente() {
   const TABS: { key: Tab; label: string; icon: any; badge?: number }[] = [
     { key: 'citas', label: 'Citas', icon: CalendarCheck, badge: proximas.length || undefined },
     { key: 'historial', label: 'Historial', icon: History },
+    { key: 'favoritos', label: 'Favoritos', icon: Heart },
     { key: 'novedades', label: 'Novedades', icon: Bell, badge: (novedades.length + novedadesAdmin.length) || undefined },
   ]
 
@@ -216,7 +228,7 @@ export function MiPerfilCliente() {
             />
           )}
 
-          <button onClick={() => navigate('/reservar-publica')}
+          <button onClick={irAReservar}
             className="hidden md:flex w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl p-4 items-center justify-center gap-2 font-semibold transition">
             <CalendarPlus className="w-5 h-5" /> Reservar una cita
           </button>
@@ -254,7 +266,7 @@ export function MiPerfilCliente() {
                 </motion.div>
               )}
               {proximas.length === 0 ? (
-                <Empty icon={CalendarCheck} text="No tienes citas próximas." cta="Reservar una cita" onCta={() => navigate('/reservar-publica')} />
+                <Empty icon={CalendarCheck} text="No tienes citas próximas." cta="Reservar una cita" onCta={irAReservar} />
               ) : (
                 <div className="space-y-3">
                   {proximas.map((r, i) => (
@@ -293,6 +305,8 @@ export function MiPerfilCliente() {
                 </>
               )}
             </div>
+          ) : tab === 'favoritos' ? (
+            <FavoritosTab reservas={reservas} onReservar={irAReservar} />
           ) : (
             /* NOVEDADES */
             <div className="space-y-3">
@@ -345,7 +359,7 @@ export function MiPerfilCliente() {
       </div>
 
       {/* FAB reservar (mobile) */}
-      <Fab onClick={() => navigate('/reservar-publica')} label="Reservar cita" icon={CalendarPlus} />
+      <Fab onClick={irAReservar} label="Reservar cita" icon={CalendarPlus} />
 
       {/* Bottom bar = navegación de tabs (mobile), acciones únicas */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-200 flex">
@@ -371,6 +385,134 @@ export function MiPerfilCliente() {
 }
 
 /* ---------------- subcomponentes ---------------- */
+/* ---------- Favoritos / Mis barberías ---------- */
+type SedeFav = { idSede: number; nombre: string; subdominio?: string; direccion?: string; urlLogo?: string; urlBanner?: string; color?: string }
+
+function FavoritosTab({ reservas, onReservar }: { reservas: ReservaResumen[]; onReservar: () => void }) {
+  const navigate = useNavigate()
+  const favsMap = useFavoritosStore(s => s.favs)
+  const toggleStore = useFavoritosStore(s => s.toggle)
+  const [enriquecidas, setEnriquecidas] = useState<Record<number, SedeFav>>({})
+  const [loading, setLoading] = useState(true)
+  const railRef = useRef<HTMLDivElement>(null)
+
+  // Sedes a mostrar = unión de (donde reservó) + (favoritas marcadas en cualquier
+  // parte). Únicas por idSede, con su subdominio para poder enriquecerlas.
+  const targets = useMemo(() => {
+    const map = new Map<number, { idSede: number; nombre: string; subdominio?: string }>()
+    reservas.forEach(r => {
+      if (r.idSede && !map.has(r.idSede)) map.set(r.idSede, { idSede: r.idSede, nombre: r.nombreSede || 'Barbería', subdominio: r.subdominio || undefined })
+    })
+    Object.values(favsMap).forEach(f => {
+      if (!map.has(f.idSede)) map.set(f.idSede, { idSede: f.idSede, nombre: f.nombre, subdominio: f.subdominio })
+    })
+    return Array.from(map.values())
+  }, [reservas, favsMap])
+
+  // Enriquece con datos públicos (banner, logo, dirección, color) las que falten.
+  // Caché por idSede para no re-fetchear al togglear un corazón.
+  useEffect(() => {
+    let cancel = false
+    const faltan = targets.filter(t => !enriquecidas[t.idSede])
+    if (faltan.length === 0) { setLoading(false); return }
+    setLoading(true)
+    Promise.all(faltan.map(async t => {
+      let extra: any = null
+      try { extra = t.subdominio ? await sedesService.getSedePublica(t.subdominio) : await sedesService.getSedePublicaPorId(t.idSede) } catch { /* noop */ }
+      return {
+        idSede: t.idSede,
+        nombre: extra?.nombre || t.nombre,
+        subdominio: t.subdominio || extra?.subdominio,
+        direccion: extra?.direccion,
+        urlLogo: extra?.urlLogo,
+        urlBanner: extra?.urlBanner,
+        color: extra?.colorPrimarioHex,
+      } as SedeFav
+    })).then(list => {
+      if (cancel) return
+      setEnriquecidas(prev => { const next = { ...prev }; list.forEach(s => { next[s.idSede] = s }); return next })
+      setLoading(false)
+    })
+    return () => { cancel = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targets])
+
+  // Lista final: usa la versión enriquecida (con banner) cuando ya está; si no, la mínima. Favoritas primero.
+  const sedes = useMemo(() => {
+    const list = targets.map(t => enriquecidas[t.idSede] || { idSede: t.idSede, nombre: t.nombre, subdominio: t.subdominio } as SedeFav)
+    return list.sort((a, b) => Number(!!favsMap[b.idSede]) - Number(!!favsMap[a.idSede]))
+  }, [targets, enriquecidas, favsMap])
+
+  const verSede = (sede: SedeFav) => {
+    if (!sede.subdominio) { navigate(`/sede/${sede.idSede}`); return }
+    const url = urlMicrositio(sede.subdominio)
+    if (url.startsWith('http')) window.location.href = url
+    else { setTenant(sede.subdominio); navigate(`/sede/${sede.idSede}${url.slice(1)}`) }
+  }
+
+  const scroll = (dir: number) => railRef.current?.scrollBy({ left: dir * 300, behavior: 'smooth' })
+
+  if (loading && sedes.length === 0) {
+    return <div className="text-center py-12 text-gray-400"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3" /> Cargando tus barberías…</div>
+  }
+
+  if (sedes.length === 0) {
+    return (
+      <div className="bg-white border border-dashed border-gray-300 rounded-2xl p-8 text-center">
+        <span className="inline-flex w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 items-center justify-center mb-3"><Heart className="w-6 h-6" /></span>
+        <p className="font-semibold text-gray-900">Aún no tienes barberías favoritas</p>
+        <p className="text-sm text-gray-500 mt-1 mb-4">Marca el corazón en cualquier barbería de barber.pe y aparecerá aquí para volver con un toque.</p>
+        <button onClick={onReservar} className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2.5 text-sm font-semibold"><CalendarPlus className="w-4 h-4" /> Explorar barberías</button>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div className="flex items-end justify-between mb-3 gap-3">
+        <div>
+          <h3 className="font-semibold text-gray-900">Mis barberías</h3>
+          <p className="text-sm text-gray-500">Tus favoritas y donde has reservado · toca el corazón para marcarlas.</p>
+        </div>
+        {sedes.length > 1 && (
+          <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+            <button onClick={() => scroll(-1)} className="w-9 h-9 rounded-full border border-gray-200 bg-white text-gray-500 hover:text-gray-900 flex items-center justify-center" aria-label="Anterior"><ChevronLeft className="w-4 h-4" /></button>
+            <button onClick={() => scroll(1)} className="w-9 h-9 rounded-full border border-gray-200 bg-white text-gray-500 hover:text-gray-900 flex items-center justify-center" aria-label="Siguiente"><ChevronRight className="w-4 h-4" /></button>
+          </div>
+        )}
+      </div>
+
+      <div ref={railRef} className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {sedes.map(sede => {
+          const esFav = !!favsMap[sede.idSede]
+          const inicial = (sede.nombre || 'B').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()
+          return (
+            <div key={sede.idSede} className="relative snap-start shrink-0 w-[280px] bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-lg hover:border-blue-200 transition">
+              <button onClick={() => toggleStore({ idSede: sede.idSede, nombre: sede.nombre, subdominio: sede.subdominio, logoUrl: sede.urlLogo, direccion: sede.direccion })} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/45 backdrop-blur flex items-center justify-center transition active:scale-90" aria-label={esFav ? 'Quitar de favoritos' : 'Añadir a favoritos'}>
+                <Heart className={`w-4 h-4 ${esFav ? 'fill-rose-500 text-rose-500' : 'text-white'}`} />
+              </button>
+              <button onClick={() => verSede(sede)} className="relative block w-full h-32 overflow-hidden bg-gradient-to-br from-slate-700 to-slate-900" style={sede.color ? { backgroundImage: `linear-gradient(135deg, ${sede.color}, #0f172a)` } : undefined}>
+                {sede.urlBanner
+                  ? <img src={buildImageUrl(sede.urlBanner)} alt="" className="w-full h-full object-cover" />
+                  : <span className="absolute inset-0 flex items-center justify-center text-white/60"><Scissors className="w-8 h-8" /></span>}
+              </button>
+              <button onClick={() => verSede(sede)} className="flex items-center gap-3 p-4 w-full text-left">
+                <span className="w-11 h-11 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center font-bold text-sm overflow-hidden shrink-0 border border-gray-200">
+                  {sede.urlLogo ? <img src={buildImageUrl(sede.urlLogo)} alt="" className="w-full h-full object-cover" /> : inicial}
+                </span>
+                <span className="min-w-0">
+                  <span className="flex items-center gap-1 font-semibold text-gray-900 text-sm truncate">{sede.nombre} <ShieldCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" /></span>
+                  <span className="flex items-center gap-1 text-xs text-gray-500 truncate"><MapPin className="w-3 h-3 shrink-0" /> {sede.direccion || 'Perú'}</span>
+                </span>
+              </button>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function Empty({ icon: Icon, text, cta, onCta }: { icon: any; text: string; cta?: string; onCta?: () => void }) {
   return (
     <div className="bg-white border border-dashed border-gray-300 rounded-2xl p-8 text-center">

@@ -40,7 +40,7 @@
 /* ---------- Contenedor del calendario ---------- */
 .calWrap { background: #fff; border: 1px solid #eef0f3; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(16,24,40,.04); }
 .gridScroll { overflow-x: hidden; }
-.gridInner { }
+.gridInner { position: relative; }
 
 /* ---------- Cabeceras de barberos (compactas) ---------- */
 .heads { display: flex; align-items: stretch; border-bottom: 1px solid #eef0f3; background: #fbfcfe; }
@@ -114,9 +114,17 @@
 
 /* ---------- Responsive ---------- */
 @media (max-width: 767px) {
-  :root { --ag-gutter: 46px; }
+  :root { --ag-gutter: 50px; }
   .dateLabel { font-size: 13px; }
   .turnBtn { min-width: 0; font-size: 13px; padding: 0 10px; }
+
+  /* Hoy / calendario / maximizar: los 3 en una sola fila horizontal. */
+  .toolbar { flex-wrap: nowrap; gap: 8px; }
+  .toolbar .spring { display: none; }
+  .dateNav { flex: 0 0 auto; }
+  .calBtn { flex: 1 1 auto; min-width: 0; padding: 0 12px; }
+  .dateLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .expandBtn { flex: 0 0 auto; }
 }
 
 /* ---------- Modo expandido (pantalla completa) ---------- */

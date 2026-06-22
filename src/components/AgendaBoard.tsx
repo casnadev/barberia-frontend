@@ -37,6 +37,12 @@ const fmt12 = (min: number) => {
   const h = Math.floor(min / 60), m = min % 60, p = h < 12 ? 'am' : 'pm', hh = (h % 12) || 12
   return `${hh}:${String(m).padStart(2, '0')} ${p}`
 }
+// Etiqueta compacta para el gutter de horas (evita que "10:00 am" se corte y
+// deja las horas perfectamente alineadas, estilo Fresha).
+const fmtHourShort = (min: number) => {
+  const h = Math.floor(min / 60), p = h < 12 ? 'am' : 'pm', hh = (h % 12) || 12
+  return `${hh} ${p}`
+}
 const colorEstado = (e?: string) => {
   switch ((e || '').toLowerCase()) {
     case 'pendiente': return '#f59e0b'
@@ -388,7 +394,7 @@ export function AgendaBoard({ mode = 'admin', trabajadorPropio, onAtenderTrabaja
           <div className={s.bodyScroll}>
             <div className={s.gutter} style={{ height: gridH }}>
               {marks.filter((m) => m % 60 === 0).map((m) => (
-                <div key={m} className={s.gLabel} style={{ top: `${yOf(m)}px` }}>{fmt12(m)}</div>
+                <div key={m} className={s.gLabel} style={{ top: `${yOf(m)}px` }}>{fmtHourShort(m)}</div>
               ))}
             </div>
             <div ref={areaRef} className={`${s.area} ${canDrag ? s.areaDrag : ''}`} style={{ height: gridH }}>

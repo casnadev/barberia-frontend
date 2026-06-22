@@ -54,6 +54,83 @@ export const ventasService = {
       return null
     }
   },
+
+  /** Registra una venta walk-in (cliente sin reserva). Trabajador → queda pendiente de aprobación. */
+  registrarWalkIn: async (payload: WalkInPayload): Promise<VentaResumen> => {
+    const res = await apiClient.post('/api/Ventas/walk-in', payload)
+    return res.data?.data ?? res.data
+  },
+
+  /** Listado de ventas con filtros (estado, rango de fechas). Paginado. */
+  listarVentas: async (filtros: { estado?: string; desde?: string; hasta?: string; pagina?: number; tamanoPagina?: number } = {}): Promise<VentaResumen[]> => {
+    const params = new URLSearchParams()
+    if (filtros.estado) params.set('estado', filtros.estado)
+    if (filtros.desde) params.set('desde', filtros.desde)
+    if (filtros.hasta) params.set('hasta', filtros.hasta)
+    params.set('pagina', String(filtros.pagina ?? 1))
+    params.set('tamanoPagina', String(filtros.tamanoPagina ?? 100))
+    const res = await apiClient.get(`/api/Ventas?${params.toString()}`)
+    const data = res.data?.data ?? res.data
+    return Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : []
+  },
+
+  /** Detalle completo de una venta (incluye servicios y motivo de rechazo). */
+  obtenerVenta: async (idVenta: number): Promise<VentaResumen | null> => {
+    try { const res = await apiClient.get(`/api/Ventas/${idVenta}`); return res.data?.data ?? res.data } catch { return null }
+  },
+
+  /** Admin: acepta una venta pendiente (verificó la evidencia). */
+  aceptar: async (idVenta: number, motivo?: string): Promise<VentaResumen> => {
+    const res = await apiClient.post(`/api/Ventas/${idVenta}/aceptar`, { motivo })
+    return res.data?.data ?? res.data
+  },
+
+  /** Admin: rechaza una venta pendiente (motivo obligatorio). */
+  rechazar: async (idVenta: number, motivo: string): Promise<VentaResumen> => {
+    const res = await apiClient.post(`/api/Ventas/${idVenta}/rechazar`, { motivo })
+    return res.data?.data ?? res.data
+  },
+
+  /** Trabajador: reenvía evidencia tras un rechazo → vuelve a pendiente. */
+  reenviarEvidencia: async (idVenta: number, rutaImagenEvidencia: string, numeroOperacion?: string): Promise<VentaResumen> => {
+    const res = await apiClient.post(`/api/Ventas/${idVenta}/reenviar-evidencia`, { rutaImagenEvidencia, numeroOperacion })
+    return res.data?.data ?? res.data
+  },
+}
+
+export interface DetalleWalkIn {
+  idServicio: number
+  idTrabajador: number
+  cantidad: number
+  precioUnitarioOverride?: number
+}
+
+export interface WalkInPayload {
+  idCliente?: number
+  telefonoCliente?: string
+  nombreCliente?: string
+  detalles: DetalleWalkIn[]
+  metodoPago: string
+  numeroOperacion?: string
+  rutaImagenEvidencia?: string
+  observacion?: string
+}
+
+export interface VentaResumen {
+  idVenta: number
+  fechaVenta?: string
+  total: number
+  metodoPago: string
+  numeroOperacion?: string
+  rutaImagenEvidencia?: string
+  estado: string
+  motivoRechazo?: string
+  idReserva?: number
+  idCliente?: number
+  nombreCliente?: string
+  telefonoCliente?: string
+  nombreUsuarioRegistra?: string
+  detalles?: Array<{ idServicio: number; nombreServicio: string; idTrabajador: number; nombreTrabajador: string; cantidad: number; precioUnitario: number; subtotal: number }>
 }
 
 export interface ResumenFinanciero {

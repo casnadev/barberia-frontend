@@ -47,6 +47,7 @@ export interface ResenaTrabajador {
 export interface MiPerfilTrabajador {
   idTrabajador: number
   idSede: number
+  subdominio?: string
   nombreCompleto?: string
   correo?: string
   telefono?: string

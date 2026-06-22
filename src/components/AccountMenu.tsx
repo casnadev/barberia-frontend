@@ -94,12 +94,14 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
     else setAccesoOpen(true)
   }
 
-  // "Ver sitio": abre la landing de la SEDE ACTIVA (la del dropdown).
-  // Capturamos el subdominio AQUÍ (en el panel, donde es correcto) y lo
-  // pasamos explícito por ?s=, para no depender de cómo la pestaña nueva
-  // relea el tenant (que es lo que caía en "demo"/principal).
+  // "Ver sitio": para Cliente abre el sitio principal (barber.pe, el marketplace
+  // de barberías). Para los demás roles, abre la landing de la SEDE ACTIVA.
   const abrirSitio = () => {
     setOpen(false)
+    if (user?.rol === 'Cliente') {
+      window.open(window.location.hostname.endsWith('barber.pe') ? 'https://barber.pe' : '/', '_blank', 'noopener')
+      return
+    }
     const sub = getActiveTenant()
     window.open(sub ? (window.location.hostname.endsWith('barber.pe') ? `https://${sub}.barber.pe` : `/?s=${encodeURIComponent(sub)}`) : '/', '_blank', 'noopener')
   }
@@ -182,9 +184,11 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
                       <Settings className={s.itemIcon} width={18} height={18} /> Configuración
                     </button>
                   )}
-                  <button className={s.item} onClick={abrirSoporte}>
-                    <LifeBuoy className={s.itemIcon} width={18} height={18} /> Ayuda y soporte
-                  </button>
+                  {!['Trabajador', 'Cliente'].includes(user.rol) && (
+                    <button className={s.item} onClick={abrirSoporte}>
+                      <LifeBuoy className={s.itemIcon} width={18} height={18} /> Ayuda y soporte
+                    </button>
+                  )}
                   {siteLink && (
                     <button className={s.item} onClick={abrirSitio}>
                       <ExternalLink className={s.itemIcon} width={18} height={18} /> Ver sitio

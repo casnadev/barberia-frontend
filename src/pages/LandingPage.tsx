@@ -11,6 +11,7 @@ import { planesService, type PlanPublico } from '@/services/planesService'
 import { resenasPublicasService, type ResenaDestacada } from '@/services/resenasPublicasService'
 import { setTenant, buildImageUrl, apiClient, urlMicrositio } from '@/services/apiClient'
 import { useAuthStore } from '@/store/authStore'
+import { useFavoritosStore } from '@/store/favoritosStore'
 import { AccountMenu } from '@/components/AccountMenu'
 import styles from './Landing.module.css'
 
@@ -72,6 +73,8 @@ const BADGES = [
 export default function LandingPage() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const favs = useFavoritosStore(s => s.favs)
+  const toggleFav = useFavoritosStore(s => s.toggle)
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [faq, setFaq] = useState<number | null>(0)
@@ -281,7 +284,14 @@ export default function LandingPage() {
           {sedes.map((s) => (
             <button className={styles.sedeCard} key={s.idSede} onClick={() => verSede(s)} title={`Ver ${s.nombre}`}>
               <div className={styles.sedeCover} style={s.portadaUrl ? { backgroundImage: `url(${buildImageUrl(s.portadaUrl)})` } : undefined}>
-                <span className={styles.heart}><Heart size={15} /></span>
+                <span
+                  className={styles.heart}
+                  role="button"
+                  aria-label={favs[s.idSede] ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+                  onClick={(e) => { e.stopPropagation(); toggleFav({ idSede: s.idSede, nombre: s.nombre, subdominio: s.subdominio, logoUrl: s.logoUrl, direccion: s.direccion }) }}
+                >
+                  <Heart size={15} fill={favs[s.idSede] ? 'currentColor' : 'none'} />
+                </span>
                 {!s.portadaUrl && <Scissors size={26} className={styles.sedeCoverIcon} />}
               </div>
               <div className={styles.sedeInfo}>

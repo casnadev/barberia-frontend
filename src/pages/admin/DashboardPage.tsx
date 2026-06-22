@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { DollarSign, Users, Calendar, Activity, Clock, Scissors, User, TrendingDown, Wallet, Calculator } from 'lucide-react'
+import { DollarSign, Users, Calendar, Activity, Clock, Scissors, User, TrendingDown, Wallet, Calculator, CalendarDays } from 'lucide-react'
 import { ventasService, type ResumenFinanciero } from '@/services/ventasService'
 import { clientesService } from '@/services/clientesService'
 import { reservasService } from '@/services/reservasService'
 import { toast } from 'sonner'
 import { AdminLayout } from '@/components/AdminLayout'
 import { CompletaTuNegocio } from '@/components/CompletaTuNegocio'
+import { CalendarModal } from '@/pages/cliente/CalendarModal'
 import { AvisoBanner } from '@/components/AvisoBanner'
 import s from '@/styles/Dashboard.module.css'
 
@@ -35,6 +36,7 @@ export function DashboardPage() {
   const hoyISO = isoLocal(new Date())
   const [desde, setDesde] = useState(hoyISO)
   const [hasta, setHasta] = useState(hoyISO)
+  const [calRango, setCalRango] = useState<'desde' | 'hasta' | null>(null)
 
   const [resumen, setResumen] = useState<ResumenFinanciero | null>(null)
   const [clientes, setClientes] = useState(0)
@@ -126,11 +128,19 @@ export function DashboardPage() {
         ))}
         {rango === 'custom' && (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <input type="date" value={desde} max={hasta} onChange={e => setDesde(e.target.value)}
-              style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '6px 10px', fontSize: 14 }} />
+            <button type="button" onClick={() => setCalRango('desde')}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid #e5e7eb', borderRadius: 8, padding: '6px 12px', fontSize: 14, fontWeight: 600, color: '#111827', background: '#fff', cursor: 'pointer' }}>
+              <CalendarDays width={14} height={14} color="#2563eb" /> {fmtCorta(desde)}
+            </button>
             <span style={{ color: '#9ca3af' }}>→</span>
-            <input type="date" value={hasta} min={desde} max={hoyISO} onChange={e => setHasta(e.target.value)}
-              style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '6px 10px', fontSize: 14 }} />
+            <button type="button" onClick={() => setCalRango('hasta')}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid #e5e7eb', borderRadius: 8, padding: '6px 12px', fontSize: 14, fontWeight: 600, color: '#111827', background: '#fff', cursor: 'pointer' }}>
+              <CalendarDays width={14} height={14} color="#2563eb" /> {fmtCorta(hasta)}
+            </button>
+            <CalendarModal isOpen={calRango === 'desde'} selectedDate={desde} allowPast
+              onSelectDate={(d) => { if (d <= hasta) setDesde(d) }} onClose={() => setCalRango(null)} />
+            <CalendarModal isOpen={calRango === 'hasta'} selectedDate={hasta} allowPast
+              onSelectDate={(d) => { if (d >= desde && d <= hoyISO) setHasta(d) }} onClose={() => setCalRango(null)} />
           </span>
         )}
       </div>

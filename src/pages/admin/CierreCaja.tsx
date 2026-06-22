@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Calculator, CheckCircle2, Loader2 } from 'lucide-react'
+import { Calculator, CheckCircle2, Loader2, CalendarDays } from 'lucide-react'
 import { toast } from 'sonner'
 import { AdminLayout } from '@/components/AdminLayout'
 import { cierreCajaService, type PreviewCierre, type CierreCaja as CierreItem } from '@/services/cierreCajaService'
+import { CalendarModal } from '@/pages/cliente/CalendarModal'
 
 const METODOS = [
   { key: 'Efectivo', sis: 'montoSistemaEfectivo', real: 'montoRealEfectivo' },
@@ -24,6 +25,7 @@ type Reales = { Efectivo: string; Yape: string; Plin: string; Otros: string }
 export function CierreCajaPage() {
   const hoy = isoLocal(new Date())
   const [fecha, setFecha] = useState(hoy)
+  const [calOpen, setCalOpen] = useState(false)
   const [preview, setPreview] = useState<PreviewCierre | null>(null)
   const [reales, setReales] = useState<Reales>({ Efectivo: '', Yape: '', Plin: '', Otros: '' })
   const [obs, setObs] = useState('')
@@ -88,8 +90,13 @@ export function CierreCajaPage() {
             <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center"><Calculator width={24} height={24} /></div>
             <div>
               <label className="text-xs text-gray-500 block">Fecha a cerrar</label>
-              <input type="date" value={fecha} max={hoy} onChange={e => setFecha(e.target.value)}
-                className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm mt-0.5" />
+              <button type="button" onClick={() => setCalOpen(true)}
+                className="inline-flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-1.5 text-sm mt-0.5 hover:border-blue-300 hover:bg-blue-50/40 transition">
+                <CalendarDays width={15} height={15} className="text-blue-600" />
+                <span className="font-medium text-gray-900">{fmtFecha(fecha)}</span>
+              </button>
+              <CalendarModal isOpen={calOpen} selectedDate={fecha} allowPast
+                onSelectDate={(d) => { if (d <= hoy) setFecha(d) }} onClose={() => setCalOpen(false)} />
             </div>
           </div>
           <div className="text-right">

@@ -25,6 +25,7 @@ const LibroReclamacionesPage = lazy(() => import('@/pages/legal/LibroReclamacion
 const ServiciosPage = lazy(() => import('@/pages/admin/ServiciosPage').then(m => ({ default: m.ServiciosPage })))
 const TrabajadoresPage = lazy(() => import('@/pages/admin/TrabajadoresPage').then(m => ({ default: m.TrabajadoresPage })))
 const PagosPage = lazy(() => import('@/pages/admin/PagosPage').then(m => ({ default: m.PagosPage })))
+const VentasPage = lazy(() => import('@/pages/admin/VentasPage').then(m => ({ default: m.VentasPage })))
 const CierreCajaPage = lazy(() => import('@/pages/admin/CierreCaja').then(m => ({ default: m.CierreCajaPage })))
 const ConfiguracionPage = lazy(() => import('@/pages/admin/ConfiguracionPage').then(m => ({ default: m.ConfiguracionPage })))
 const TrabajadorMiAgenda = lazy(() => import('@/pages/trabajador/TrabajadorMiAgenda').then(m => ({ default: m.TrabajadorMiAgenda })))
@@ -253,6 +254,14 @@ export function App() {
           element={
             <ProtectedRoute requiredRole="Admin">
               <PagosPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/ventas"
+          element={
+            <ProtectedRoute requiredRole="Admin">
+              <VentasPage />
             </ProtectedRoute>
           }
         />

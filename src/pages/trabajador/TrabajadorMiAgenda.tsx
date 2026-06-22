@@ -3,9 +3,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Fab } from '@/components/Fab'
 import { AgendaBoard, type TrabajadorPropio } from '@/components/AgendaBoard'
+import { CalendarModal } from '@/pages/cliente/CalendarModal'
 import {
   CalendarCheck, Check, X, DollarSign, Star, Wallet, Camera,
-  CalendarDays, CalendarOff, Plus, Trash2, Mail, Phone,
+  CalendarDays, CalendarOff, Plus, Trash2, Mail, Phone, Home, Clock, Calendar,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
@@ -19,7 +20,8 @@ import {
 } from '@/services/panelTrabajadorService'
 import { AccountMenu } from '@/components/AccountMenu'
 import { CompletaTuPerfil } from '@/components/CompletaTuPerfil'
-import { buildImageUrl } from '@/services/apiClient'
+import { buildImageUrl, setTenant } from '@/services/apiClient'
+import { CobrarVentaModal } from '@/components/CobrarVentaModal'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const METODOS = ['Efectivo', 'Yape', 'Plin', 'Tarjeta', 'Transferencia', 'Otro']
@@ -31,13 +33,13 @@ const fmtDia = (iso?: string) => iso
   ? new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
   : ''
 
-type Tab = 'agenda' | 'disponibilidad' | 'comisiones' | 'resenas'
+type Tab = 'inicio' | 'agenda' | 'disponibilidad' | 'comisiones' | 'resenas'
 
 export function TrabajadorMiAgenda() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
-  const [tab, setTab] = useState<Tab>('agenda')
+  const [tab, setTab] = useState<Tab>('inicio')
   const [idT, setIdT] = useState<number | null>(null)
   const [idSede, setIdSede] = useState<number | null>(null)
   const [perfil, setPerfil] = useState<MiPerfilTrabajador | null>(null)
@@ -47,6 +49,7 @@ export function TrabajadorMiAgenda() {
   const [foto, setFoto] = useState<string | undefined>(undefined)
   const [loading, setLoading] = useState(true)
   const [atender, setAtender] = useState<any | null>(null)
+  const [cobrar, setCobrar] = useState(false)
 
   const showConfig = params.get('config') === '1'
   const cerrarConfig = () => { params.delete('config'); setParams(params, { replace: true }) }
@@ -66,6 +69,9 @@ export function TrabajadorMiAgenda() {
       const lista = Array.isArray(res) ? res : []
       setReservas(lista)
       setPerfil(per)
+      // Fija el tenant a la sede del trabajador, para que los endpoints resueltos
+      // por subdominio (p.ej. /api/Servicios del walk-in) apunten a SU sede.
+      if (per?.subdominio) { try { setTenant(per.subdominio) } catch { /* noop */ } }
       setIdT(per?.idTrabajador ?? com?.idTrabajador ?? lista.find(r => r.idTrabajador)?.idTrabajador ?? null)
       setIdSede(per?.idSede ?? null)
       setNombre(per?.nombreCompleto || user?.nombreCompleto)
@@ -85,13 +91,23 @@ export function TrabajadorMiAgenda() {
   )
 
   const TABS: { key: Tab; label: string; icon: any }[] = [
+    { key: 'inicio', label: 'Inicio', icon: Home },
     { key: 'agenda', label: 'Agenda', icon: CalendarCheck },
     { key: 'disponibilidad', label: 'Horario', icon: CalendarDays },
     { key: 'comisiones', label: 'Comisiones', icon: DollarSign },
     { key: 'resenas', label: 'Reseñas', icon: Star },
   ]
 
-  const irReservar = () => navigate('/reservar-publica')
+  // El + genera una venta/reserva en SU sede (el wizard resuelve la sede por el
+  // tenant activo = su subdominio). Sin sede (caso teórico), al sitio principal.
+  const irReservar = () => {
+    if (idSede) { navigate('/reservar-publica'); return }
+    if (typeof window !== 'undefined' && window.location.hostname.endsWith('barber.pe')) {
+      window.location.href = 'https://barber.pe'
+    } else {
+      navigate('/')
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
@@ -106,29 +122,6 @@ export function TrabajadorMiAgenda() {
       </header>
 
       <div className="mx-auto max-w-[1380px] px-4 sm:px-6 py-6 pb-28 md:pb-10">
-        {/* KPIs */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          <Kpi icon={CalendarCheck} tone="blue" label="Citas hoy" value={String(hoyCount)} />
-          <Kpi icon={Check} tone="emerald" label="Atendidas hoy" value={String(atendidasHoy)} />
-          <Kpi icon={Wallet} tone="violet" label="Comisión pendiente" value={soles(comisiones?.comisionesTotalPendiente)} />
-          <Kpi icon={DollarSign} tone="amber" label="Comisión pagada" value={soles(comisiones?.comisionesTotalPagado)} />
-        </div>
-
-        {/* Completa tu perfil (datos públicos que ven tus clientes) */}
-        {!loading && perfil && (
-          <CompletaTuPerfil
-            pasos={[
-              { clave: 'foto', etiqueta: 'Foto de perfil', hecho: !!perfil.urlFotoPerfil },
-              { clave: 'telefono', etiqueta: 'Tu teléfono', hecho: !!perfil.telefono },
-              { clave: 'especialidad', etiqueta: 'Especialidad', hecho: !!perfil.especialidad },
-              { clave: 'experiencia', etiqueta: 'Experiencia', hecho: !!perfil.experiencia },
-              { clave: 'descripcion', etiqueta: 'Descripción', hecho: !!perfil.descripcion },
-            ]}
-            onCompletar={abrirConfig}
-            nota="Estos datos son los que ven tus clientes en tu perfil público."
-          />
-        )}
-
         {/* Tabs desktop + botón Reservar */}
         <div className="hidden md:flex items-center justify-between gap-3 mb-5">
           <div className="flex gap-1 bg-white border border-gray-200 rounded-2xl p-1 w-fit">
@@ -139,14 +132,31 @@ export function TrabajadorMiAgenda() {
               </button>
             ))}
           </div>
-          <button onClick={irReservar}
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm shadow-blue-600/20 active:scale-95 transition">
-            <Plus className="w-4 h-4" /> Reservar
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setCobrar(true)}
+              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm shadow-emerald-600/20 active:scale-95 transition">
+              <DollarSign className="w-4 h-4" /> Cobrar venta
+            </button>
+            <button onClick={irReservar}
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm shadow-blue-600/20 active:scale-95 transition">
+              <Plus className="w-4 h-4" /> Reservar
+            </button>
+          </div>
         </div>
 
         {loading ? (
           <div className="text-center py-12 text-gray-400"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3" /> Cargando…</div>
+        ) : tab === 'inicio' ? (
+          <InicioTab
+            nombre={nombre}
+            hoyCount={hoyCount}
+            atendidasHoy={atendidasHoy}
+            comisiones={comisiones}
+            reservas={reservas}
+            perfil={perfil}
+            onCompletar={abrirConfig}
+            onAtender={(r) => setAtender(r)}
+          />
         ) : tab === 'agenda' ? (
           trabajadorPropio
             ? <AgendaBoard mode="trabajador" trabajadorPropio={trabajadorPropio} onAtenderTrabajador={(r) => setAtender(r)} />
@@ -172,9 +182,16 @@ export function TrabajadorMiAgenda() {
 
       {atender && <AtenderModal reserva={atender} onClose={() => setAtender(null)} onDone={async () => { setAtender(null); await cargar() }} />}
 
+      {cobrar && idT != null && <CobrarVentaModal mode="trabajador" lockTrabajadorId={idT} onClose={() => setCobrar(false)} onDone={async () => { setCobrar(false); await cargar() }} />}
+
       {showConfig && <ConfigModal perfil={perfil} onClose={cerrarConfig} onSaved={async () => { await cargar() }} />}
 
       {/* FAB (móvil): reservar desde cualquier pestaña */}
+      <button onClick={() => setCobrar(true)} aria-label="Cobrar venta"
+        className="md:hidden fixed right-4 z-40 w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xl shadow-emerald-600/40 active:scale-95 hover:bg-emerald-700 transition"
+        style={{ bottom: 'calc(150px + env(safe-area-inset-bottom))' }}>
+        <DollarSign className="w-6 h-6" />
+      </button>
       <Fab onClick={irReservar} label="Reservar" />
     </div>
   )
@@ -188,6 +205,94 @@ function Kpi({ icon: Icon, tone, label, value }: { icon: any; tone: string; labe
       <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-2 ${t}`}><Icon className="w-5 h-5" /></div>
       <p className="text-xs text-gray-500">{label}</p>
       <p className="text-lg font-bold text-gray-900">{value}</p>
+    </div>
+  )
+}
+
+/* ---------- Inicio (mini-dashboard de HOY) ---------- */
+function InicioTab({ nombre, hoyCount, atendidasHoy, comisiones, reservas, perfil, onCompletar, onAtender }: {
+  nombre?: string
+  hoyCount: number
+  atendidasHoy: number
+  comisiones: MisComisiones | null
+  reservas: any[]
+  perfil: MiPerfilTrabajador | null
+  onCompletar: () => void
+  onAtender: (r: any) => void
+}) {
+  const hoy = hoyISO()
+  const citasHoy = reservas
+    .filter(r => (r.fechaReserva || '').slice(0, 10) === hoy && (r.estado || '') !== 'Cancelada')
+    .sort((a, b) => (a.horaInicio || '').localeCompare(b.horaInicio || ''))
+
+  const fechaLarga = new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })
+  const primerNombre = (nombre || '').trim().split(/\s+/)[0]
+
+  const badge = (estado: string) => {
+    const e = (estado || '').toLowerCase()
+    if (e === 'atendida') return 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    if (e === 'confirmada') return 'bg-blue-50 text-blue-700 border-blue-200'
+    if (e === 'noshow' || e === 'no_show') return 'bg-rose-50 text-rose-700 border-rose-200'
+    return 'bg-amber-50 text-amber-700 border-amber-200'
+  }
+  const accionable = (estado: string) => ['pendiente', 'confirmada', 'reprogramada'].includes((estado || '').toLowerCase())
+
+  return (
+    <div className="space-y-6">
+      {/* Saludo */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900">Hola{primerNombre ? `, ${primerNombre}` : ''} 👋</h2>
+        <p className="text-sm text-gray-500 capitalize">{fechaLarga} · tu resumen de hoy</p>
+      </div>
+
+      {/* KPIs de hoy */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Kpi icon={CalendarCheck} tone="blue" label="Citas hoy" value={String(hoyCount)} />
+        <Kpi icon={Check} tone="emerald" label="Atendidas hoy" value={String(atendidasHoy)} />
+        <Kpi icon={Wallet} tone="violet" label="Comisión pendiente" value={soles(comisiones?.comisionesTotalPendiente)} />
+        <Kpi icon={DollarSign} tone="amber" label="Comisión pagada" value={soles(comisiones?.comisionesTotalPagado)} />
+      </div>
+
+      {/* Completa tu perfil */}
+      {perfil && (
+        <CompletaTuPerfil
+          pasos={[
+            { clave: 'foto', etiqueta: 'Foto de perfil', hecho: !!perfil.urlFotoPerfil },
+            { clave: 'telefono', etiqueta: 'Tu teléfono', hecho: !!perfil.telefono },
+            { clave: 'especialidad', etiqueta: 'Especialidad', hecho: !!perfil.especialidad },
+            { clave: 'experiencia', etiqueta: 'Experiencia', hecho: !!perfil.experiencia },
+            { clave: 'descripcion', etiqueta: 'Descripción', hecho: !!perfil.descripcion },
+          ]}
+          onCompletar={onCompletar}
+          nota="Estos datos son los que ven tus clientes en tu perfil público."
+        />
+      )}
+
+      {/* Citas de hoy */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5">
+        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Clock className="w-4 h-4 text-gray-400" /> Citas de hoy</h3>
+        {citasHoy.length === 0 ? (
+          <p className="text-sm text-gray-400 border border-dashed border-gray-300 rounded-xl p-6 text-center">No tienes citas para hoy.</p>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {citasHoy.map(r => (
+              <div key={rid(r)} className="flex items-center gap-3 py-3">
+                <div className="w-14 shrink-0">
+                  <span className="text-sm font-semibold text-gray-900">{(r.horaInicio || '').slice(0, 5)}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-gray-900 truncate">{r.nombreCliente || r.nombreClienteSnap || 'Cliente'}</p>
+                  {r.nombreServicio && <p className="text-xs text-gray-400 truncate">{r.nombreServicio}</p>}
+                </div>
+                <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border shrink-0 ${badge(r.estado)}`}>{r.estado}</span>
+                {accionable(r.estado) && (
+                  <button onClick={() => onAtender(r)} className="text-xs font-semibold text-blue-600 hover:text-blue-700 shrink-0">Atender</button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -253,31 +358,50 @@ function DisponibilidadTab({ idT, idSede }: { idT: number | null; idSede: number
       <div className="bg-white border border-gray-200 rounded-2xl p-5 max-w-2xl">
         <h3 className="font-semibold text-gray-900 mb-1">Mi horario semanal</h3>
         <p className="text-sm text-gray-500 mb-4">Marca los días que atiendes. Tu horario debe estar dentro del horario de atención de la sede.</p>
-        <div className="space-y-2">
+        <div className="divide-y divide-gray-100">
           {DIAS.map((nombre, i) => {
             const s = sede[i]
             const cerrado = !s
+            const activo = dias[i].activo && !cerrado
+            const toggle = () => {
+              if (cerrado) return
+              setDias(d => d.map((x, j) => j === i
+                ? { ...x, activo: !x.activo, horaInicio: !x.activo && s ? s.ini : x.horaInicio, horaFin: !x.activo && s ? s.fin : x.horaFin }
+                : x))
+            }
             return (
-              <div key={i} className={`flex flex-wrap items-center gap-3 rounded-xl border p-3 ${cerrado ? 'border-gray-100 bg-gray-50 opacity-60' : dias[i].activo ? 'border-blue-200 bg-blue-50/40' : 'border-gray-200'}`}>
-                <label className="flex items-center gap-2 w-32 cursor-pointer">
-                  <input type="checkbox" disabled={cerrado} checked={dias[i].activo} onChange={e => setDias(d => d.map((x, j) => j === i ? { ...x, activo: e.target.checked, horaInicio: e.target.checked && s ? s.ini : x.horaInicio, horaFin: e.target.checked && s ? s.fin : x.horaFin } : x))} className="w-4 h-4 accent-blue-600" />
-                  <span className="text-sm font-medium text-gray-700">{nombre}</span>
-                </label>
+              <div key={i} className="flex items-center justify-between gap-3 py-3 flex-wrap">
+                <button type="button" onClick={toggle} disabled={cerrado}
+                  className={`flex items-center gap-2.5 text-left transition ${cerrado ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <span className={`w-10 h-6 rounded-full relative transition-colors shrink-0 ${activo ? 'bg-blue-600' : 'bg-gray-200'}`}>
+                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${activo ? 'left-[1.125rem]' : 'left-0.5'}`} />
+                  </span>
+                  <span>
+                    <span className={`block text-sm font-medium ${activo ? 'text-gray-900' : 'text-gray-500'}`}>{nombre}</span>
+                    <span className="block text-[11px] text-gray-400">{cerrado ? 'Sede cerrada' : `Sede ${s.ini}–${s.fin}`}</span>
+                  </span>
+                </button>
+
                 {cerrado ? (
-                  <span className="text-xs text-gray-400">Sede cerrada</span>
+                  <span className="text-sm text-gray-300">—</span>
+                ) : activo ? (
+                  <div className="flex items-center gap-2">
+                    <input type="time" min={s.ini} max={s.fin} value={dias[i].horaInicio}
+                      onChange={e => setDias(d => d.map((x, j) => j === i ? { ...x, horaInicio: e.target.value } : x))}
+                      className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <span className="text-gray-300">—</span>
+                    <input type="time" min={s.ini} max={s.fin} value={dias[i].horaFin}
+                      onChange={e => setDias(d => d.map((x, j) => j === i ? { ...x, horaFin: e.target.value } : x))}
+                      className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
                 ) : (
-                  <>
-                    <input type="time" min={s.ini} max={s.fin} disabled={!dias[i].activo} value={dias[i].horaInicio} onChange={e => setDias(d => d.map((x, j) => j === i ? { ...x, horaInicio: e.target.value } : x))} className="border border-gray-200 rounded-lg px-2 py-1 text-sm disabled:opacity-40" />
-                    <span className="text-gray-400">a</span>
-                    <input type="time" min={s.ini} max={s.fin} disabled={!dias[i].activo} value={dias[i].horaFin} onChange={e => setDias(d => d.map((x, j) => j === i ? { ...x, horaFin: e.target.value } : x))} className="border border-gray-200 rounded-lg px-2 py-1 text-sm disabled:opacity-40" />
-                    <span className="text-[11px] text-gray-400">Sede: {s.ini}–{s.fin}</span>
-                  </>
+                  <span className="text-sm text-gray-300">No atiendo</span>
                 )}
               </div>
             )
           })}
         </div>
-        <button onClick={guardar} disabled={saving} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-5 py-2.5 font-semibold disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar horario'}</button>
+        <button onClick={guardar} disabled={saving} className="mt-4 w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-5 py-2.5 font-semibold disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar horario'}</button>
       </div>
 
       {/* No disponibilidad / descansos */}
@@ -294,6 +418,7 @@ function DescansosSection({ idT, idSede }: { idT: number | null; idSede: number 
   const [fin, setFin] = useState('')
   const [motivo, setMotivo] = useState('')
   const [saving, setSaving] = useState(false)
+  const [calOpen, setCalOpen] = useState<'ini' | 'fin' | null>(null)
 
   const cargar = () => { if (idT) panelTrabajadorService.getDescansos(idT).then(setItems) }
   useEffect(() => { cargar() }, [idT])
@@ -330,30 +455,44 @@ function DescansosSection({ idT, idSede }: { idT: number | null; idSede: number 
   }
 
   const field = 'border border-gray-200 rounded-lg px-2.5 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none'
+  const fmtFechaCorta = (iso: string) => {
+    if (!iso) return ''
+    const [y, m, d] = iso.split('-')
+    return `${d}/${m}/${y}`
+  }
+  const triggerBtn = 'w-full flex items-center gap-2 border border-gray-200 rounded-lg px-2.5 py-2 text-sm text-left bg-white hover:border-blue-300 transition'
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-5 max-w-2xl">
       <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2"><CalendarOff className="w-5 h-5 text-gray-500" /> No disponibilidad</h3>
       <p className="text-sm text-gray-500 mb-4">Solicita días libres (vacaciones, permiso, etc.). Esto <b>no borra</b> tu horario semanal; solo bloquea esas fechas una vez que el administrador lo apruebe.</p>
 
       {/* Formulario */}
-      <div className="flex flex-wrap items-end gap-3 mb-4">
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Tipo</label>
-          <select className={field} value={tipo} onChange={e => setTipo(e.target.value)}>{TIPOS_DESCANSO.map(t => <option key={t} value={t}>{t}</option>)}</select>
+      <div className="mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Tipo</label>
+            <select className={`${field} w-full`} value={tipo} onChange={e => setTipo(e.target.value)}>{TIPOS_DESCANSO.map(t => <option key={t} value={t}>{t}</option>)}</select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Desde</label>
+            <button type="button" onClick={() => setCalOpen('ini')} className={triggerBtn}>
+              <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
+              <span className={ini ? 'text-gray-900' : 'text-gray-400'}>{ini ? fmtFechaCorta(ini) : 'Elegir fecha'}</span>
+            </button>
+          </div>
+          <div className="col-span-2 sm:col-span-1">
+            <label className="block text-xs text-gray-500 mb-1">Hasta</label>
+            <button type="button" onClick={() => setCalOpen('fin')} className={triggerBtn}>
+              <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
+              <span className={fin ? 'text-gray-900' : 'text-gray-400'}>{fin ? fmtFechaCorta(fin) : 'Elegir fecha'}</span>
+            </button>
+          </div>
+          <div className="col-span-2 sm:col-span-3">
+            <label className="block text-xs text-gray-500 mb-1">Motivo (opcional)</label>
+            <input className={`${field} w-full`} value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Ej. viaje familiar" />
+          </div>
         </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Desde</label>
-          <input type="date" className={field} value={ini} min={hoyISO()} onChange={e => setIni(e.target.value)} />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Hasta</label>
-          <input type="date" className={field} value={fin} min={ini || hoyISO()} onChange={e => setFin(e.target.value)} />
-        </div>
-        <div className="flex-1 min-w-[160px]">
-          <label className="block text-xs text-gray-500 mb-1">Motivo (opcional)</label>
-          <input className={`${field} w-full`} value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Ej. viaje familiar" />
-        </div>
-        <button onClick={solicitar} disabled={saving} className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50">
+        <button onClick={solicitar} disabled={saving} className="mt-3 inline-flex items-center justify-center gap-1.5 w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50">
           <Plus className="w-4 h-4" /> {saving ? 'Enviando…' : 'Solicitar'}
         </button>
       </div>
@@ -379,6 +518,14 @@ function DescansosSection({ idT, idSede }: { idT: number | null; idSede: number 
           ))}
         </div>
       )}
+
+      {/* Calendario reutilizable (mismo de la agenda). Sin fechas pasadas. */}
+      <CalendarModal
+        isOpen={calOpen !== null}
+        selectedDate={calOpen === 'fin' ? fin : ini}
+        onSelectDate={(date) => { if (calOpen === 'fin') setFin(date); else setIni(date) }}
+        onClose={() => setCalOpen(null)}
+      />
     </div>
   )
 }
@@ -467,10 +614,11 @@ function AtenderModal({ reserva, onClose, onDone }: any) {
     catch { toast.error('No se pudo subir la imagen') } finally { setSubiendo(false) }
   }
   const confirmar = async () => {
+    if (!evidencia) { toast.error('Adjunta la evidencia del pago para atender la cita'); return }
     setSaving(true)
     try {
       await panelTrabajadorService.atender(rid(reserva), { metodoPago: metodo, numeroOperacion: operacion, rutaImagenEvidencia: evidencia })
-      toast.success('Cita atendida · venta y comisión generadas'); onDone()
+      toast.success('Cita atendida · venta enviada para aprobación'); onDone()
     } catch (e: any) { toast.error(mensajeError(e, 'No se pudo atender la cita')) } finally { setSaving(false) }
   }
   const field = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none'
@@ -483,12 +631,12 @@ function AtenderModal({ reserva, onClose, onDone }: any) {
         </div>
         {metodo !== 'Efectivo' && <div><label className="text-xs text-gray-500">N° de operación (opcional)</label><input className={field} value={operacion} onChange={e => setOperacion(e.target.value)} /></div>}
         <div>
-          <label className="text-xs text-gray-500 flex items-center gap-1"><Camera className="w-3.5 h-3.5" /> Evidencia del pago (opcional)</label>
+          <label className="text-xs text-gray-500 flex items-center gap-1"><Camera className="w-3.5 h-3.5" /> Evidencia del pago <span className="text-rose-500 font-medium">(obligatoria)</span></label>
           <input type="file" accept="image/*" onChange={subir} className="block w-full text-sm text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:px-3 file:py-1.5 file:text-sm file:font-medium" />
           {subiendo && <p className="text-xs text-gray-400 mt-1">Subiendo…</p>}
           {evidencia && <img src={evidencia} alt="evidencia" className="mt-2 rounded-lg max-h-32 border border-gray-200" />}
         </div>
-        <button onClick={confirmar} disabled={saving || subiendo} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 font-semibold disabled:opacity-50">
+        <button onClick={confirmar} disabled={saving || subiendo || !evidencia} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 font-semibold disabled:opacity-50">
           {saving ? 'Procesando…' : 'Marcar como atendida'}
         </button>
       </div>

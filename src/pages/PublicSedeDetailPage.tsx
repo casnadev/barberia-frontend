@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { sedesService } from '@/services/sedesService'
 import { apiClient, getActiveTenant } from '@/services/apiClient'
+import { useFavoritosStore } from '@/store/favoritosStore'
 import { novedadesService } from '@/services/novedadesService'
 import { AccountMenu } from '@/components/AccountMenu'
 import Monograma, { iniciales } from '@/components/Monograma'
@@ -74,7 +75,6 @@ export function PublicSedeDetailPage() {
   const [trabajadores, setTrabajadores] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isFavorite, setIsFavorite] = useState(false)
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todos')
   const [trabajadorSel, setTrabajadorSel] = useState<any>(null)
   const [expandirHorarios, setExpandirHorarios] = useState(false)
@@ -314,20 +314,14 @@ export function PublicSedeDetailPage() {
     toast.success(copiado ? 'Link copiado al portapapeles' : url)
   }
 
-  // Favoritos: persisten en este dispositivo (localStorage), por sede.
-  const favKey = sede ? `fav_sede_${sede.idSede ?? sede.subdominio}` : null
-  useEffect(() => {
-    if (!favKey) return
-    try { setIsFavorite(localStorage.getItem(favKey) === '1') } catch { /* noop */ }
-  }, [favKey])
+  // Favoritos unificados: mismo store que la landing y el panel del cliente,
+  // para que el corazón se vea igual en todas partes (persiste en el dispositivo).
+  const favs = useFavoritosStore((st) => st.favs)
+  const toggleFav = useFavoritosStore((st) => st.toggle)
+  const isFavorite = sede ? !!favs[sede.idSede] : false
   const toggleFavorite = () => {
-    setIsFavorite((prev) => {
-      const next = !prev
-      try {
-        if (favKey) next ? localStorage.setItem(favKey, '1') : localStorage.removeItem(favKey)
-      } catch { /* noop */ }
-      return next
-    })
+    if (!sede) return
+    toggleFav({ idSede: sede.idSede, nombre: sede.nombre, subdominio: sede.subdominio, logoUrl: (sede as any).urlLogo, direccion: sede.direccion })
   }
   const scrollTo = (ref: React.RefObject<HTMLElement>) => ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
