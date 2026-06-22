@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
+import { mensajeError } from '@/utils/apiError'
 import { useAuthStore } from '@/store/authStore'
 import { useFavoritosStore } from '@/store/favoritosStore'
 import { reservasService, type ReservaResumen } from '@/services/reservasService'
@@ -77,6 +78,25 @@ export function MiPerfilCliente() {
   const irAReservar = () => {
     if (typeof window !== 'undefined' && window.location.hostname.endsWith('barber.pe')) window.location.href = 'https://barber.pe'
     else navigate('/')
+  }
+
+  const darDeBaja = async () => {
+    const ok = await confirmDialog({
+      title: 'Dar de baja tu cuenta',
+      message: 'Tu cuenta se desactivará y tu correo/teléfono quedarán libres para un registro futuro. Si tienes citas próximas o algo pendiente, igual se dará de baja. Conservamos tus datos por si necesitas soporte. ¿Quieres continuar?',
+      confirmText: 'Sí, dar de baja',
+      cancelText: 'Cancelar',
+      tone: 'danger',
+    })
+    if (!ok) return
+    try {
+      await miCuentaService.darmeDeBaja()
+      toast.success('Tu cuenta fue dada de baja.')
+      useAuthStore.getState().logout()
+      navigate('/')
+    } catch (e: any) {
+      toast.error(mensajeError(e, 'No se pudo dar de baja la cuenta.'))
+    }
   }
 
   const [perfil, setPerfil] = useState<MiPerfil | null>(null)
@@ -376,7 +396,7 @@ export function MiPerfilCliente() {
       {/* Modales */}
       {editOpen && perfil && idCliente && (
         <EditarPerfilModal perfil={perfil} idCliente={idCliente} avatar={avatar} onAvatar={elegirAvatar}
-          onClose={() => setEditOpen(false)} onSaved={async () => { setEditOpen(false); await cargar() }} />
+          onClose={() => setEditOpen(false)} onSaved={async () => { setEditOpen(false); await cargar() }} onDarDeBaja={darDeBaja} />
       )}
       {reprog && <ReprogramarModal reserva={reprog} onClose={() => setReprog(null)} onDone={async () => { setReprog(null); await cargar() }} />}
       {rate && <CalificarModal reserva={rate} onClose={() => setRate(null)} onDone={async () => { setRate(null); await cargar() }} />}
@@ -589,7 +609,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   )
 }
 
-function EditarPerfilModal({ perfil, idCliente, avatar, onAvatar, onClose, onSaved }: { perfil: MiPerfil; idCliente: number; avatar: number; onAvatar: (i: number) => void; onClose: () => void; onSaved: () => void }) {
+function EditarPerfilModal({ perfil, idCliente, avatar, onAvatar, onClose, onSaved, onDarDeBaja }: { perfil: MiPerfil; idCliente: number; avatar: number; onAvatar: (i: number) => void; onClose: () => void; onSaved: () => void; onDarDeBaja: () => void }) {
   const [nombre, setNombre] = useState(perfil.nombreCompleto || '')
   const [telefono, setTelefono] = useState(perfil.telefono && perfil.telefono !== TEL_DEFAULT ? perfil.telefono : '')
   const [correo, setCorreo] = useState(perfil.correo && perfil.correo !== MAIL_DEFAULT ? perfil.correo : '')
@@ -681,6 +701,12 @@ function EditarPerfilModal({ perfil, idCliente, avatar, onAvatar, onClose, onSav
           </select>
         </div>
         <button onClick={guardar} disabled={saving || subiendo} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2.5 font-semibold disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar'}</button>
+
+        <div className="pt-3 mt-1 border-t border-gray-100">
+          <button onClick={onDarDeBaja} className="w-full text-sm text-rose-600 hover:text-rose-700 hover:underline py-1.5">
+            Dar de baja mi cuenta
+          </button>
+        </div>
       </div>
     </Modal>
   )

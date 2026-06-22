@@ -8,6 +8,8 @@ export interface PreviewCierre {
   montoSistemaOtros: number
   montoSistemaTotal: number
   cantidadVentas: number
+  montoPendienteAprobacion?: number
+  cantidadPendiente?: number
 }
 
 export interface CierreCaja {

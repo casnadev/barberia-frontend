@@ -63,6 +63,18 @@ const datos = (reserva: Reserva) => {
     precio: x.precioServicioSnap ?? x.precioServicio,
     estadoRaw: reserva.estado || 'Desconocido',
     est: (reserva.estado || '').toLowerCase(),
+    estadoPago: (reserva as any).estadoPago as string | undefined,
+  }
+}
+
+// Estado del pago (venta enlazada) → etiqueta + estilo del pill. null = aún no se cobró.
+const pagoMeta = (estadoPago?: string): { label: string; cls: string } | null => {
+  switch (estadoPago) {
+    case 'PendienteAprobacion': return { label: 'Pago pendiente', cls: 'bg-amber-100 text-amber-800' }
+    case 'Registrada':          return { label: 'Pagado',         cls: 'bg-emerald-100 text-emerald-800' }
+    case 'Rechazada':           return { label: 'Pago rechazado', cls: 'bg-rose-100 text-rose-800' }
+    case 'Anulada':             return { label: 'Anulada',        cls: 'bg-gray-200 text-gray-700' }
+    default:                    return null
   }
 }
 
@@ -255,6 +267,11 @@ export function ReservasPage() {
                   <p className="mt-0.5 text-xs text-white/85 flex items-center gap-1 truncate">
                     <Scissors width={11} height={11} className="shrink-0" /> {x.servicio || 'Servicio'}
                   </p>
+                  {pagoMeta(x.estadoPago) && (
+                    <span className={`mt-2 inline-flex items-center gap-1 text-[10px] font-bold rounded-full px-2 py-0.5 ${pagoMeta(x.estadoPago)!.cls}`}>
+                      <DollarSign width={10} height={10} /> {pagoMeta(x.estadoPago)!.label}
+                    </span>
+                  )}
                 </motion.button>
               )
             })}

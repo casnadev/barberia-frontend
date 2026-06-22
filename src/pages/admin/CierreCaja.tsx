@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Calculator, CheckCircle2, Loader2, CalendarDays } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Calculator, CheckCircle2, Loader2, CalendarDays, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { AdminLayout } from '@/components/AdminLayout'
 import { cierreCajaService, type PreviewCierre, type CierreCaja as CierreItem } from '@/services/cierreCajaService'
@@ -100,11 +101,27 @@ export function CierreCajaPage() {
             </div>
           </div>
           <div className="text-right">
-            <p className="text-xs text-gray-400 uppercase tracking-wide">Ventas del día</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wide">Ventas aceptadas</p>
             <p className="font-bold text-gray-900">{preview?.cantidadVentas ?? 0} · {money(preview?.montoSistemaTotal)}</p>
+            {(preview?.cantidadPendiente ?? 0) > 0 && (
+              <p className="text-xs text-amber-600 font-semibold mt-0.5">+ {preview?.cantidadPendiente} pendiente{(preview?.cantidadPendiente ?? 0) > 1 ? 's' : ''} ({money(preview?.montoPendienteAprobacion)})</p>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Aviso: ventas pendientes de aprobación (no entran al cierre) */}
+      {(preview?.cantidadPendiente ?? 0) > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4 flex items-start gap-3">
+          <span className="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><AlertTriangle className="w-5 h-5" /></span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-900">
+              Tienes {preview?.cantidadPendiente} venta{(preview?.cantidadPendiente ?? 0) > 1 ? 's' : ''} pendiente{(preview?.cantidadPendiente ?? 0) > 1 ? 's' : ''} de aprobación ({money(preview?.montoPendienteAprobacion)})
+            </p>
+            <p className="text-xs text-amber-700 mt-0.5">No entran en este cierre. Revísalas y apruébalas en <Link to="/admin/ventas" className="underline font-semibold">Ventas</Link> si correspondían a hoy; lo que apruebes después contará en el cierre de su fecha.</p>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-16 text-gray-400"><Loader2 className="w-6 h-6 animate-spin" /></div>

@@ -30,6 +30,11 @@ export interface ActualizarMiPerfilPayload {
  * backend no tiene como 'cumpleaños'/'direccion').
  */
 export const miCuentaService = {
+  /** El cliente da de baja su propia cuenta (soft-delete; libera correo/teléfono). */
+  darmeDeBaja: async () => {
+    const res = await apiClient.post('/api/Clientes/darme-de-baja', {})
+    return res.data
+  },
   getMiPerfil: async (idCliente: number): Promise<MiPerfil | null> => {
     try {
       const res = await apiClient.get(`/api/Clientes/${idCliente}`)

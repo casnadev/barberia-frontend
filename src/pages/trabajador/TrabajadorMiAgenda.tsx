@@ -5,13 +5,14 @@ import { Fab } from '@/components/Fab'
 import { AgendaBoard, type TrabajadorPropio } from '@/components/AgendaBoard'
 import { CalendarModal } from '@/pages/cliente/CalendarModal'
 import {
-  CalendarCheck, Check, X, DollarSign, Star, Wallet, Camera,
-  CalendarDays, CalendarOff, Plus, Trash2, Mail, Phone, Home, Clock, Calendar,
+  CalendarCheck, Check, X, DollarSign, Star, Wallet, Camera, AlertTriangle,
+  CalendarDays, CalendarOff, Plus, Trash2, Mail, Phone, Home, Clock, Calendar, MapPin,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
 import { useAuthStore } from '@/store/authStore'
 import { reservasService } from '@/services/reservasService'
+import { ventasService, type VentaResumen } from '@/services/ventasService'
 import { mensajeError } from '@/utils/apiError'
 import {
   panelTrabajadorService,
@@ -117,6 +118,15 @@ export function TrabajadorMiAgenda() {
           <button onClick={() => navigate('/')} className="flex items-center" aria-label="Ir al inicio">
             <img src="/barber-logo-black.png" alt="Barber.PE" className="h-7 w-auto" />
           </button>
+          {perfil?.nombreSede && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-white max-w-[55%]">
+              <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <div className="min-w-0 leading-tight">
+                <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">Sede activa</p>
+                <p className="text-xs font-bold text-gray-900 truncate">{perfil.nombreSede}</p>
+              </div>
+            </div>
+          )}
           <AccountMenu variant="plain" siteLink />
         </div>
       </header>
@@ -210,6 +220,102 @@ function Kpi({ icon: Icon, tone, label, value }: { icon: any; tone: string; labe
 }
 
 /* ---------- Inicio (mini-dashboard de HOY) ---------- */
+/* ---------- Aviso de ventas rechazadas (el trabajador re-sube evidencia) ---------- */
+function VentasRechazadasAviso() {
+  const [ventas, setVentas] = useState<VentaResumen[]>([])
+  const [reenviar, setReenviar] = useState<VentaResumen | null>(null)
+
+  const iso = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+  const cargar = async () => {
+    try {
+      const hoy = new Date(); const desde = new Date(hoy); desde.setDate(desde.getDate() - 30)
+      const data = await ventasService.listarVentas({ estado: 'Rechazada', desde: iso(desde), hasta: iso(hoy), tamanoPagina: 50 })
+      setVentas(Array.isArray(data) ? data : [])
+    } catch { /* silencioso: no romper el inicio */ }
+  }
+  useEffect(() => { cargar() }, [])
+
+  if (ventas.length === 0) return null
+  return (
+    <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4">
+      <p className="font-semibold text-rose-900 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> Tienes {ventas.length} venta{ventas.length > 1 ? 's' : ''} rechazada{ventas.length > 1 ? 's' : ''}</p>
+      <p className="text-xs text-rose-700 mt-0.5">Revisa el motivo y vuelve a subir la evidencia para que el administrador la apruebe.</p>
+      <div className="mt-3 space-y-2">
+        {ventas.map(v => (
+          <div key={v.idVenta} className="bg-white border border-rose-100 rounded-xl p-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-medium text-gray-900 truncate">{v.nombreCliente || 'Cliente a pie'}</span>
+              <span className="text-sm text-gray-500 shrink-0">{soles(v.total)} · {v.metodoPago}</span>
+            </div>
+            {v.motivoRechazo && <p className="text-xs text-rose-700 mt-1"><strong>Motivo:</strong> {v.motivoRechazo}</p>}
+            <button onClick={() => setReenviar(v)} className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-rose-700 hover:text-rose-800">
+              <Camera className="w-3.5 h-3.5" /> Reenviar evidencia
+            </button>
+          </div>
+        ))}
+      </div>
+      {reenviar && <ReenviarEvidenciaModal venta={reenviar} onClose={() => setReenviar(null)} onDone={async () => { setReenviar(null); await cargar() }} />}
+    </div>
+  )
+}
+
+function ReenviarEvidenciaModal({ venta, onClose, onDone }: { venta: VentaResumen; onClose: () => void; onDone: () => void }) {
+  const [evidencia, setEvidencia] = useState('')
+  const [operacion, setOperacion] = useState(venta.numeroOperacion || '')
+  const [subiendo, setSubiendo] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  const subir = async (e: any) => {
+    const file = e.target.files?.[0]; if (!file) return
+    setSubiendo(true)
+    try { const url = await panelTrabajadorService.subirEvidencia(file); setEvidencia(url); toast.success('Imagen subida') }
+    catch { toast.error('No se pudo subir la imagen') } finally { setSubiendo(false) }
+  }
+  const confirmar = async () => {
+    if (!evidencia) { toast.error('Adjunta la nueva evidencia'); return }
+    setSaving(true)
+    try {
+      await ventasService.reenviarEvidencia(venta.idVenta, evidencia, operacion.trim() || undefined)
+      toast.success('Evidencia reenviada · pendiente de aprobación')
+      onDone()
+    } catch (e: any) { toast.error(mensajeError(e, 'No se pudo reenviar')) } finally { setSaving(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-gray-900">Reenviar evidencia</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+        </div>
+        {venta.motivoRechazo && (
+          <p className="text-sm text-rose-700 bg-rose-50 border border-rose-100 rounded-xl p-3 mb-3"><strong>Motivo del rechazo:</strong> {venta.motivoRechazo}</p>
+        )}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-500">{venta.nombreCliente || 'Cliente a pie'}</span>
+            <span className="font-semibold text-gray-900">{soles(venta.total)} · {venta.metodoPago}</span>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 flex items-center gap-1"><Camera className="w-3.5 h-3.5" /> Nueva evidencia del pago <span className="text-rose-500 font-medium">(obligatoria)</span></label>
+            <input type="file" accept="image/*" onChange={subir} className="block w-full text-sm text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:px-3 file:py-1.5 file:text-sm file:font-medium" />
+            {subiendo && <p className="text-xs text-gray-400 mt-1">Subiendo…</p>}
+            {evidencia && <img src={evidencia} alt="evidencia" className="mt-2 rounded-lg max-h-40 border border-gray-200" />}
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">N° de operación (opcional)</label>
+            <input value={operacion} onChange={e => setOperacion(e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+          </div>
+          <button onClick={confirmar} disabled={saving || subiendo || !evidencia} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 font-semibold disabled:opacity-50">
+            {saving ? 'Reenviando…' : 'Reenviar para aprobación'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function InicioTab({ nombre, hoyCount, atendidasHoy, comisiones, reservas, perfil, onCompletar, onAtender }: {
   nombre?: string
   hoyCount: number
@@ -244,6 +350,9 @@ function InicioTab({ nombre, hoyCount, atendidasHoy, comisiones, reservas, perfi
         <h2 className="text-lg font-semibold text-gray-900">Hola{primerNombre ? `, ${primerNombre}` : ''} 👋</h2>
         <p className="text-sm text-gray-500 capitalize">{fechaLarga} · tu resumen de hoy</p>
       </div>
+
+      {/* Aviso: ventas rechazadas por el admin (re-subir evidencia) */}
+      <VentasRechazadasAviso />
 
       {/* KPIs de hoy */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -696,6 +805,23 @@ function ConfigModal({ perfil, onClose, onSaved }: { perfil: MiPerfilTrabajador 
     } catch (e: any) { toast.error(mensajeError(e, 'No se pudo guardar')) } finally { setSaving(false) }
   }
 
+  const darDeBaja = async () => {
+    const ok = await confirmDialog({
+      title: 'Dar de baja tu cuenta',
+      message: 'Tu cuenta se desactivará y tu correo/teléfono quedarán libres para un registro futuro. Si tienes citas próximas o comisiones pendientes, igual se dará de baja. Conservamos tus datos por si necesitas soporte. ¿Quieres continuar?',
+      confirmText: 'Sí, dar de baja',
+      cancelText: 'Cancelar',
+      tone: 'danger',
+    })
+    if (!ok) return
+    try {
+      await panelTrabajadorService.darmeDeBaja()
+      toast.success('Tu cuenta fue dada de baja.')
+      useAuthStore.getState().logout()
+      window.location.href = '/'
+    } catch (e: any) { toast.error(mensajeError(e, 'No se pudo dar de baja la cuenta.')) }
+  }
+
   const field = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none'
   const inicial = (nombre || 'B').trim().charAt(0).toUpperCase()
   return (
@@ -721,6 +847,12 @@ function ConfigModal({ perfil, onClose, onSaved }: { perfil: MiPerfilTrabajador 
         <div><label className="text-xs text-gray-500">Descripción</label><textarea className={field} rows={3} value={descripcion} onChange={e => setDescripcion(e.target.value)} /></div>
         {perfil?.porcentajeComision != null && <p className="text-xs text-gray-400">Tu comisión: <span className="font-semibold text-gray-600">{perfil.porcentajeComision}%</span> (la define el administrador)</p>}
         <button onClick={guardar} disabled={saving || subiendo} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2.5 font-semibold disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar cambios'}</button>
+
+        <div className="pt-3 mt-1 border-t border-gray-100">
+          <button onClick={darDeBaja} className="w-full text-sm text-rose-600 hover:text-rose-700 hover:underline py-1.5">
+            Dar de baja mi cuenta
+          </button>
+        </div>
       </div>
     </Shell>
   )

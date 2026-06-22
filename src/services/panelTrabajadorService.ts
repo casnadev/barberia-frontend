@@ -48,6 +48,7 @@ export interface MiPerfilTrabajador {
   idTrabajador: number
   idSede: number
   subdominio?: string
+  nombreSede?: string
   nombreCompleto?: string
   correo?: string
   telefono?: string
@@ -63,6 +64,11 @@ export interface AtenderPayload { metodoPago?: string; numeroOperacion?: string;
 const unwrap = (res: any) => res?.data?.data ?? res?.data
 
 export const panelTrabajadorService = {
+  /** El trabajador da de baja su propia cuenta (soft-delete; libera correo/teléfono). */
+  darmeDeBaja: async () => {
+    const res = await apiClient.post('/api/Trabajadores/darme-de-baja', {})
+    return res.data
+  },
   /** Resumen de comisiones del propio trabajador. Devuelve también su idTrabajador. */
   getMisComisiones: async (): Promise<MisComisiones | null> => {
     try { return unwrap(await apiClient.get('/api/Pagos/mis-comisiones')) || null }
