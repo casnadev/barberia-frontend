@@ -8,6 +8,8 @@ export interface DirectorioContacto {
   telefono?: string
   ubicacion?: string
   activo?: boolean | null
+  /** Rol real cuando es una cuenta de login (Admin/Trabajador/SuperAdmin). Sirve para mostrar con honestidad los logins huérfanos. */
+  rol?: string
 }
 
 export interface BuscarContactoResponse {
