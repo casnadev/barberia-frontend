@@ -35,7 +35,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const { setUser, setToken } = useAuthStore()
 
-  const [view, setView] = useState<View>('password')
+  const [view, setView] = useState<View>('tradicional')
   const [loading, setLoading] = useState(false)
   const [flujo, setFlujo] = useState<'enroll' | 'recover' | 'password'>('recover')
 
@@ -233,12 +233,20 @@ export function LoginPage() {
     if (!resp?.credential) return
     setLoading(true)
     try {
-      const res = await authService.loginGoogle(resp.credential)
-      if (res?.token && res.user) await entrar(res.token, res.user as any)
+      // En /login NO se crea cuenta: solo entra si ya existe (cliente, admin o
+      // trabajador). Si no existe, el backend avisa y mandamos a registrarse.
+      const res = await authService.loginGoogle(resp.credential, undefined, false)
+      if (res && 'token' in res && res.token) await entrar(res.token, (res as any).user)
       else toast.error('No se pudo iniciar sesión con Google.')
     } catch (e: any) {
       const d = e?.response?.data
-      toast.error(d?.mensaje || d?.detail || d?.message || 'No se pudo iniciar sesión con Google.')
+      const msg = d?.detail || d?.mensaje || d?.message || ''
+      if (e?.response?.status === 404 || /no tienes una cuenta/i.test(msg)) {
+        toast.error('Parece que no tienes una cuenta creada. Regístrate para continuar.')
+        setTimeout(() => navigate('/acceso'), 1200)
+      } else {
+        toast.error(msg || 'No se pudo iniciar sesión con Google.')
+      }
     } finally { setLoading(false) }
   }
 
@@ -247,7 +255,7 @@ export function LoginPage() {
   // pintar; así no falla aunque el script aún no haya terminado de cargar
   // (caso típico con React StrictMode en dev, que corre los efectos 2 veces).
   useEffect(() => {
-    if (!googleClientId || view !== 'password') return
+    if (!googleClientId || view !== 'tradicional') return
     let cancelado = false
 
     const pintarBoton = () => {
@@ -431,11 +439,10 @@ export function LoginPage() {
             {view === 'recover-id' && (
               <motion.div key="recover-id" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <Back onClick={() => irA('pin')} />
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Olvidé mi PIN</h2>
-                <p className="text-sm text-gray-500 mb-6">Te enviaremos un código.</p>
+                <p className="text-sm text-gray-500 mb-6">Te enviaremos un código para restablecer tu PIN.</p>
 
-                <Label>Correo o teléfono</Label>
-                <Input value={identificador} onChange={setIdentificador} placeholder="Correo o teléfono" />
+                <label className="block text-sm font-bold text-blue-700 mb-2">Correo o teléfono</label>
+                <Input value={identificador} onChange={setIdentificador} placeholder="tucorreo@gmail.com o 987654321" />
 
                 <button onClick={enviarCodigoRecuperar} disabled={loading} className={btnPrimary + ' mt-2'}>
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} Enviarme un código
@@ -528,13 +535,10 @@ export function LoginPage() {
             {/* ---------------- CONTRASEÑA: identificador ---------------- */}
             {view === 'recover-pass-id' && (
               <motion.div key="recover-pass-id" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <Back onClick={() => irA('password')} />
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Olvidé mi contraseña</h2>
-                <p className="text-sm text-gray-500 mb-6">
-                  Te enviaremos un código.
-                </p>
+                <Back onClick={() => irA('tradicional')} />
+                <p className="text-sm text-gray-500 mb-6">Te enviaremos un código para restablecer tu contraseña.</p>
 
-                <Label>Correo o teléfono</Label>
+                <label className="block text-sm font-bold text-blue-700 mb-2">Correo o teléfono</label>
                 <Input value={identificador} onChange={setIdentificador} placeholder="tucorreo@gmail.com o 987654321" />
 
                 <button onClick={enviarCodigoPassword} disabled={loading} className={btnPrimary + ' mt-2'}>
@@ -569,17 +573,19 @@ export function LoginPage() {
               </motion.div>
             )}
 
-            {/* ---------------- INGRESO TRADICIONAL (correo + contraseña) ---------------- */}
+            {/* ---------------- INGRESO TRADICIONAL (principal: correo + contraseña) ---------------- */}
             {view === 'tradicional' && (
               <motion.div key="tradicional" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <Back onClick={() => irA('password')} />
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Ingreso tradicional</h2>
-                <p className="text-sm text-gray-500 mb-5">Entra con tu correo o teléfono y tu contraseña.</p>
+                <div className="hidden lg:block mb-6">
+                  <img src="/barber-logo-black.png" alt="Barber.PE" className="h-9 mb-2" />
+                  <p className="text-gray-400 text-sm mt-1">Reserva y gestiona fácil, rápido!</p>
+                </div>
+                <p className="lg:hidden text-center text-gray-500 text-sm mb-5">Reserva y gestiona fácil, rápido!</p>
 
                 <Label>Correo o teléfono</Label>
                 <Input value={correo} onChange={setCorreo} placeholder="tucorreo@gmail.com o 987654321" />
                 <Label>Contraseña</Label>
-                <PassInput value={password} onChange={setPassword} placeholder="Tu contraseña" />
+                <PassInput value={password} onChange={setPassword} onEnter={loginPassword} placeholder="Tu contraseña" />
 
                 <button onClick={loginPassword} disabled={loading} className={btnPrimary + ' mt-2'}>
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />} Entrar
@@ -588,26 +594,8 @@ export function LoginPage() {
                   className="w-full text-gray-400 text-sm py-2 hover:text-gray-600 transition">
                   Olvidé mi contraseña
                 </button>
-              </motion.div>
-            )}
-
-            {/* ---------------- INGRESO POR CÓDIGO (OTP) ---------------- */}
-            {view === 'password' && (
-              <motion.div key="password" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <div className="hidden lg:block mb-6">
-                  <img src="/barber-logo-black.png" alt="Barber.PE" className="h-9 mb-2" />
-                  <p className="text-gray-400 text-sm mt-1">Reserva y gestiona fácil, rápido!</p>
-                </div>
-                <p className="lg:hidden text-center text-gray-500 text-sm mb-5">Reserva y gestiona fácil, rápido!</p>
-
-                <label className="block text-sm font-bold text-gray-900 mb-1.5">Correo o Teléfono</label>
-                <Input value={identificador} onChange={setIdentificador} placeholder="" />
-
-                <button onClick={continuarLogin} disabled={loading} className={btnPrimary + ' mt-1'}>
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />} Continuar
-                </button>
                 <button onClick={() => navigate('/acceso')}
-                  className="w-full text-blue-600 text-sm py-1 mt-2 hover:text-blue-700 transition font-medium">
+                  className="w-full text-blue-600 text-sm py-1 hover:text-blue-700 transition font-medium">
                   ¿No tienes cuenta? Regístrate
                 </button>
 
@@ -618,10 +606,24 @@ export function LoginPage() {
                       <span className="text-xs text-gray-400">o</span>
                       <div className="h-px flex-1 bg-gray-200" />
                     </div>
-                    {/* Botón oficial de Google (lo inyecta Identity Services) */}
                     <div ref={googleBtnRef} className="w-full flex justify-center" style={{ colorScheme: 'light' }} />
                   </>
                 )}
+              </motion.div>
+            )}
+
+            {/* ---------------- INGRESO POR CÓDIGO (OTP) — secundario ---------------- */}
+            {view === 'password' && (
+              <motion.div key="password" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <Back onClick={() => irA('tradicional')} />
+                <p className="text-sm text-gray-500 mb-5">Te enviamos un código a tu correo o teléfono. Ideal para trabajadores.</p>
+
+                <label className="block text-sm font-bold text-blue-700 mb-2">Correo o Teléfono</label>
+                <Input value={identificador} onChange={setIdentificador} placeholder="tucorreo@gmail.com o 987654321" />
+
+                <button onClick={continuarLogin} disabled={loading} className={btnPrimary + ' mt-1'}>
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />} Continuar
+                </button>
               </motion.div>
             )}
 
@@ -646,25 +648,36 @@ export function LoginPage() {
             )}
           </AnimatePresence>
 
-          {view === 'pin' && (
-            <div className="mt-7 flex items-center justify-center lg:justify-start gap-3 text-xs font-bold tracking-wide uppercase">
-              <button onClick={() => irA('password')} className="text-blue-600 hover:text-blue-700 transition">
-                Ingreso por código
-              </button>
-              <span className="text-gray-300">·</span>
-              <button onClick={() => irA('tradicional')} className="text-blue-600 hover:text-blue-700 transition">
-                Ingreso tradicional
-              </button>
-            </div>
-          )}
-          {view === 'password' && (
+          {view === 'tradicional' && (
             <div className="mt-7 flex items-center justify-center lg:justify-start gap-3 text-xs font-bold tracking-wide uppercase">
               <button onClick={() => irA('pin')} className="text-blue-600 hover:text-blue-700 transition">
                 Ingresar con PIN
               </button>
               <span className="text-gray-300">·</span>
+              <button onClick={() => irA('password')} className="text-blue-600 hover:text-blue-700 transition">
+                Ingresar con Código
+              </button>
+            </div>
+          )}
+          {view === 'pin' && (
+            <div className="mt-7 flex items-center justify-center lg:justify-start gap-3 text-xs font-bold tracking-wide uppercase">
               <button onClick={() => irA('tradicional')} className="text-blue-600 hover:text-blue-700 transition">
                 Ingreso tradicional
+              </button>
+              <span className="text-gray-300">·</span>
+              <button onClick={() => irA('password')} className="text-blue-600 hover:text-blue-700 transition">
+                Ingresar con Código
+              </button>
+            </div>
+          )}
+          {view === 'password' && (
+            <div className="mt-7 flex items-center justify-center lg:justify-start gap-3 text-xs font-bold tracking-wide uppercase">
+              <button onClick={() => irA('tradicional')} className="text-blue-600 hover:text-blue-700 transition">
+                Ingreso tradicional
+              </button>
+              <span className="text-gray-300">·</span>
+              <button onClick={() => irA('pin')} className="text-blue-600 hover:text-blue-700 transition">
+                Ingresar con PIN
               </button>
             </div>
           )}
@@ -676,7 +689,7 @@ export function LoginPage() {
 
 /* ---------------------------------------------------------------- helpers UI */
 const btnPrimary =
-  'w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition disabled:opacity-50 shadow-lg shadow-blue-600/20 active:scale-[0.99]'
+  'w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl transition disabled:opacity-50 shadow-lg shadow-blue-600/25 active:scale-[0.99]'
 
 function Back({ onClick }: { onClick: () => void }) {
   return (
@@ -687,22 +700,24 @@ function Back({ onClick }: { onClick: () => void }) {
 }
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <label className="block text-xs font-medium text-gray-500 mb-1.5">{children}</label>
+  return <label className="block text-xs font-semibold text-gray-500 mb-1.5">{children}</label>
 }
 
-function Input({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+function Input({ value, onChange, placeholder, onEnter }: { value: string; onChange: (v: string) => void; placeholder?: string; onEnter?: () => void }) {
   return (
     <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} autoCapitalize="none"
-      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+      onKeyDown={(e) => { if (e.key === 'Enter' && onEnter) onEnter() }}
+      className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl mb-4 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition" />
   )
 }
 
-function PassInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+function PassInput({ value, onChange, placeholder, onEnter }: { value: string; onChange: (v: string) => void; placeholder?: string; onEnter?: () => void }) {
   const [show, setShow] = useState(false)
   return (
     <div className="relative mb-4">
       <input value={value} onChange={(e) => onChange(e.target.value)} type={show ? 'text' : 'password'} placeholder={placeholder}
-        className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+        onKeyDown={(e) => { if (e.key === 'Enter' && onEnter) onEnter() }}
+        className="w-full px-4 py-3 pr-12 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition" />
       <button type="button" onClick={() => setShow((s) => !s)}
         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 active:scale-90 transition"
         aria-label={show ? 'Ocultar' : 'Mostrar'}>
@@ -712,20 +727,32 @@ function PassInput({ value, onChange, placeholder }: { value: string; onChange: 
   )
 }
 
+/** 6 casillas estilo OTP (mismo look que /acceso). Sin ojo; para PIN usa puntos. */
 function Digits({ value, onChange, secret }: { value: string; onChange: (v: string) => void; secret?: boolean }) {
-  const [show, setShow] = useState(false)
+  const refs = useRef<(HTMLInputElement | null)[]>([])
+  const chars = Array.from({ length: 6 }, (_, i) => value[i] ?? '')
+  const setAt = (i: number, d: string) => {
+    const arr = value.padEnd(6, ' ').split('')
+    arr[i] = d || ' '
+    onChange(arr.join('').replace(/ /g, '').slice(0, 6))
+  }
   return (
-    <div className="relative mb-4">
-      <input value={value} onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
-        inputMode="numeric" type={secret && !show ? 'password' : 'text'}
-        className={`w-full text-center text-2xl tracking-[0.4em] font-mono px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition ${secret ? 'pr-12' : ''}`} />
-      {secret && (
-        <button type="button" onClick={() => setShow((s) => !s)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 active:scale-90 transition"
-          aria-label={show ? 'Ocultar' : 'Mostrar'}>
-          {show ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-        </button>
-      )}
+    <div className="flex justify-center lg:justify-start gap-2 mb-4">
+      {chars.map((c, i) => (
+        <input key={i} ref={(el) => { refs.current[i] = el }}
+          value={secret && c ? '•' : c} inputMode="numeric" maxLength={1}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/\D/g, '')
+            if (!digits) return
+            if (digits.length === 1) { setAt(i, digits); if (i < 5) refs.current[i + 1]?.focus() }
+            else { const merged = (value.slice(0, i) + digits).slice(0, 6); onChange(merged); refs.current[Math.min(merged.length, 5)]?.focus() }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Backspace') { e.preventDefault(); if (value[i]) setAt(i, ''); else if (i > 0) { refs.current[i - 1]?.focus(); setAt(i - 1, '') } }
+          }}
+          onFocus={(e) => e.currentTarget.select()}
+          className="w-11 h-14 text-center text-2xl font-bold text-gray-900 rounded-xl border-2 border-gray-200 bg-gray-50 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition" />
+      ))}
     </div>
   )
 }

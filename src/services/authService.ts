@@ -96,10 +96,42 @@ export const authService = {
    * A diferencia de `login`, NO traga el error: lo relanza para que la página
    * pueda mostrar el mensaje del backend (p.ej. "no hay cuenta con ese correo").
    */
-  loginGoogle: async (credential: string): Promise<LoginResponse | null> => {
-    const response = await apiClient.post('/api/Auth/google', { Credential: credential })
-    const responseData = response.data.data || response.data
-    return mapLoginResponse(responseData)
+  loginGoogle: async (
+    credential: string,
+    tipo?: 'Cliente' | 'Profesional',
+    crearSiNoExiste = true,
+  ): Promise<LoginResponse | { necesitaCompletarProfesional: true; correo?: string; nombreCompleto?: string } | null> => {
+    const response = await apiClient.post('/api/Auth/google', {
+      Credential: credential, Tipo: tipo, CrearSiNoExiste: crearSiNoExiste,
+    })
+    const d = response.data.data || response.data
+    if (d?.necesitaCompletarProfesional) {
+      return { necesitaCompletarProfesional: true, correo: d.correo, nombreCompleto: d.nombreCompleto }
+    }
+    return mapLoginResponse(d)
+  },
+
+  /** Completa el registro PROFESIONAL iniciado con Google (negocio + contraseña). */
+  googleCompletarProfesional: async (payload: {
+    credential: string; nombreNegocio: string; nombre?: string; apellido?: string; password: string
+  }): Promise<LoginResponse | null> => {
+    const r = await apiClient.post('/api/Auth/google/completar-profesional', {
+      Credential: payload.credential,
+      NombreNegocio: payload.nombreNegocio,
+      Nombre: payload.nombre,
+      Apellido: payload.apellido,
+      Password: payload.password,
+    })
+    return mapLoginResponse(r.data.data || r.data)
+  },
+
+  /** Pre-chequeo de /acceso: ¿el correo/teléfono ya está registrado? (no manda OTP). */
+  accesoVerificar: async (
+    tipo: string,
+    identificador: string,
+  ): Promise<{ yaRegistrado: boolean; canal: string; mensaje?: string }> => {
+    const r = await apiClient.post('/api/Auth/acceso/verificar', { Tipo: tipo, Identificador: identificador })
+    return r.data.data || r.data
   },
 
   /** Opción B (acceso unificado): mete correo/teléfono → el backend decide si pedir contraseña o ya mandó un código. */
@@ -151,8 +183,8 @@ export const authService = {
 
   /** Auto-registro paso 2: crea la cuenta + contraseña y devuelve la sesión (igual que login). */
   signupCompletar: async (payload: {
-    tipo: string; identificador: string; codigo: string; nombre: string
-    apellido?: string; correo?: string; telefono?: string; nombreNegocio?: string; password: string
+    tipo: string; identificador: string; codigo: string; nombre?: string
+    apellido?: string; correo?: string; telefono?: string; nombreNegocio?: string; password?: string
   }): Promise<LoginResponse | null> => {
     try {
       const response = await apiClient.post('/api/Auth/signup/completar', {
