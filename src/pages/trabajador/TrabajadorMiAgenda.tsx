@@ -146,7 +146,7 @@ export function TrabajadorMiAgenda() {
           <div className="flex items-center gap-2">
             <button onClick={() => setCobrar(true)}
               className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm shadow-emerald-600/20 active:scale-95 transition">
-              <DollarSign className="w-4 h-4" /> Cobrar venta
+              <DollarSign className="w-4 h-4" /> Venta rápida
             </button>
             <button onClick={irReservar}
               className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm shadow-blue-600/20 active:scale-95 transition">

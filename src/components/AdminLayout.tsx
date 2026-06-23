@@ -73,14 +73,15 @@ export function AdminLayout({ title, subtitle, children }: { title: string; subt
         </div>
       </nav>
 
-      {/* Cobrar venta (walk-in) — FAB en móvil, botón en desktop. Disponible en todo el admin. */}
+      {/* Venta rápida (walk-in) — FAB en móvil (apilada ARRIBA del botón Reservar de
+          la agenda, a 150px), botón en desktop. Disponible en todo el admin. */}
       <button
         onClick={() => setCobrar(true)}
-        aria-label="Cobrar venta"
-        className="fixed right-4 md:right-6 bottom-20 md:bottom-6 z-40 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full md:rounded-2xl shadow-xl shadow-emerald-600/40 active:scale-95 transition flex items-center justify-center gap-2 w-14 h-14 md:w-auto md:h-auto md:px-5 md:py-3"
+        aria-label="Venta rápida"
+        className="fixed right-4 md:right-6 bottom-[calc(150px+env(safe-area-inset-bottom))] md:bottom-6 z-40 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full md:rounded-2xl shadow-xl shadow-emerald-600/40 active:scale-95 transition flex items-center justify-center gap-2 w-14 h-14 md:w-auto md:h-auto md:px-5 md:py-3"
       >
         <DollarSign className="w-6 h-6 md:w-5 md:h-5" />
-        <span className="hidden md:inline font-semibold">Cobrar venta</span>
+        <span className="hidden md:inline font-semibold">Venta rápida</span>
       </button>
 
       {cobrar && <CobrarVentaModal mode="admin" onClose={() => setCobrar(false)} onDone={() => setCobrar(false)} />}

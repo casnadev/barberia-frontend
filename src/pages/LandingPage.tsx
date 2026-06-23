@@ -172,7 +172,7 @@ export default function LandingPage() {
           </nav>
           <div className={styles.navCta}>
             {user ? (
-              <AccountMenu variant="plain" navLinks={navLinks.map(([n, id]) => ({ label: n, onClick: () => irA(id) }))} />
+              <AccountMenu variant="plain" />
             ) : (
               <>
                 <Link to="/login" className={styles.linkLogin}>Iniciar sesión</Link>
@@ -197,6 +197,11 @@ export default function LandingPage() {
         <div className={styles.heroBg} />
         <div className={`${styles.wrap} ${styles.heroIn}`}>
           <div className={styles.heroCopy}>
+            {user && (
+              <nav className={styles.heroNav}>
+                {navLinks.map(([n, id]) => <a key={id} onClick={() => irA(id)}>{n}</a>)}
+              </nav>
+            )}
             <Reveal><span className={styles.pill}>🇵🇪 Software para barberías · hecho en Perú</span></Reveal>
             <Reveal delay={0.05}>
               <h1>Más clientes en tu barbería <span className={styles.hl}>automatizando las citas por WhatsApp</span></h1>
