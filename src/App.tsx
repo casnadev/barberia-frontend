@@ -1,12 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect, useState, lazy, Suspense } from 'react'        // ← + lazy, Suspense
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/authService'
-import { TenantGate } from '@/components/TenantGate' // ← NUEVO (se queda eager)
-import { SedeActivaGate } from '@/components/Sedeactivagate' // guard pausa trabajador/cliente
-import { ConfirmHost } from '@/components/ConfirmDialog' // ← se queda eager
+import { TenantGate } from '@/components/TenantGate'
+import { SedeActivaGate } from '@/components/Sedeactivagate'
+import { ConfirmHost } from '@/components/ConfirmDialog'
 
-// --- Páginas con carga diferida (code-splitting): cada una baja al entrar a su ruta ---
+// --- Páginas con carga diferida (code-splitting) ---
 const LoginPage = lazy(() => import('@/pages/LoginPage').then(m => ({ default: m.LoginPage })))
 const DashboardPage = lazy(() => import('@/pages/admin/DashboardPage').then(m => ({ default: m.DashboardPage })))
 const ClientesPage = lazy(() => import('@/pages/admin/ClientesPage').then(m => ({ default: m.ClientesPage })))
@@ -30,35 +30,101 @@ const CierreCajaPage = lazy(() => import('@/pages/admin/CierreCaja').then(m => (
 const ConfiguracionPage = lazy(() => import('@/pages/admin/ConfiguracionPage').then(m => ({ default: m.ConfiguracionPage })))
 const TrabajadorMiAgenda = lazy(() => import('@/pages/trabajador/TrabajadorMiAgenda').then(m => ({ default: m.TrabajadorMiAgenda })))
 const CompletarPerfilAdmin = lazy(() => import('@/pages/CompletarPerfilAdmin').then(m => ({ default: m.CompletarPerfilAdmin })))
-const LandingPage = lazy(() => import('@/pages/LandingPage')) // ← NUEVO (export default)
+const LandingPage = lazy(() => import('@/pages/LandingPage'))
 
-// Fallback mientras baja el chunk de cada página (mismo spinner del index.html)
-function RouteFallback() {
-  return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0b1220' }}>
-      <div style={{ width: 36, height: 36, border: '3px solid rgba(255,255,255,0.15)', borderTopColor: '#2092B4', borderRadius: '50%', animation: 'appspin .8s linear infinite' }} />
-    </div>
-  )
+// ─────────────────────────────────────────────────────────────────────────────
+// CONFIGURACIÓN DE HOSTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Host canónico del panel. Define VITE_PANEL_HOST=barber.pe en .env.production.
+// Cuando está definido, CUALQUIER ruta de panel abierta desde un subdominio de
+// sede (kisha.barber.pe/login, urban.barber.pe/dashboard, etc.) es redirigida
+// aquí. La cookie SSO (.barber.pe) restaura la sesión sin pedir login de nuevo.
+const PANEL_HOST = (import.meta.env.VITE_PANEL_HOST as string | undefined)?.trim() || ''
+
+// Hosts que son el panel raíz (no micrositios de sede).
+const ROOT_HOSTS = new Set(['localhost', '127.0.0.1', 'barber.pe', 'www.barber.pe', 'app.barber.pe', 'admin.barber.pe'])
+
+// Etiquetas de subdominio reservadas para el panel (no son sedes).
+const SUBS_RESERVADOS = new Set(['www', 'app', 'admin', 'api', 'panel'])
+
+// Rutas que pertenecen al panel. Si se accede desde un subdominio de sede
+// serán redirigidas al PANEL_HOST. Las rutas públicas (/, /reservar, /novedades,
+// /confirmar/:token, etc.) NO están aquí y se muestran en el subdominio.
+const RUTAS_PANEL = [
+  '/login',
+  '/dashboard',
+  '/completar-perfil',
+  '/super-admin',
+  '/mi-agenda',
+  '/admin/',
+]
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Devuelve el subdominio de sede si el host actual es uno (ej. "kisha"). Null si es el panel raíz o IP. */
+function getSubdominio(): string | null {
+  const host = window.location.hostname
+  if (ROOT_HOSTS.has(host)) return null
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) return null // IP LAN/dev
+  const parts = host.split('.')
+  if (parts.length >= 3) {
+    const sub = parts[0]
+    return SUBS_RESERVADOS.has(sub.toLowerCase()) ? null : sub
+  }
+  return null
 }
 
-function ProtectedRoute({ children, requiredRole, skipTenant }: any) {
-  // ── Confinamiento del panel ─────────────────────────────────────────────
-  // El panel admin NO debe vivir en el subdominio PÚBLICO de una sede
-  // (nacho.barber.pe/dashboard). Si defines VITE_PANEL_HOST (ej. "app.barber.pe"
-  // o "barber.pe"), al entrar a una ruta protegida desde el subdominio de una
-  // sede te redirige al host canónico del panel. La cookie SSO (.barber.pe)
-  // restaura la sesión allí sin volver a pedir login. Si NO defines la env,
-  // el comportamiento actual no cambia.
-  if (
-    PANEL_HOST &&
-    window.location.hostname.endsWith('barber.pe') &&
-    getSubdominio() !== null &&
-    window.location.hostname !== PANEL_HOST
-  ) {
-    window.location.replace(`https://${PANEL_HOST}${window.location.pathname}${window.location.search}`)
-    return null
-  }
+/** ¿La ruta actual pertenece al panel (no al micrositio público)? */
+function esRutaDePanel(): boolean {
+  const path = window.location.pathname
+  return RUTAS_PANEL.some(r => path === r || path.startsWith(r))
+}
 
+/**
+ * Redirige al PANEL_HOST si:
+ *  - PANEL_HOST está definido en el env
+ *  - El host actual es un subdominio de sede (kisha.barber.pe)
+ *  - La ruta actual es de panel (/login, /dashboard, /admin/*, etc.)
+ *
+ * Preserva pathname + search + hash para que el usuario llegue exactamente
+ * a donde quería ir (ej. kisha.barber.pe/admin/agenda → barber.pe/admin/agenda).
+ * Devuelve true si va a redirigir (para que el caller haga return null).
+ */
+function redirigirSiEsSubdominioPanel(): boolean {
+  if (!PANEL_HOST) return false
+  if (!window.location.hostname.endsWith('.barber.pe')) return false // no aplica fuera de producción
+  if (getSubdominio() === null) return false // ya estamos en el host canónico
+  if (!esRutaDePanel()) return false // ruta pública → no redirigir
+
+  const destino = `https://${PANEL_HOST}${window.location.pathname}${window.location.search}${window.location.hash}`
+  window.location.replace(destino)
+  return true
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENTE: PanelGuard
+// Se monta UNA sola vez en la raíz del árbol y maneja la redirección global
+// ANTES de que ninguna ruta de panel intente renderizar.
+// ─────────────────────────────────────────────────────────────────────────────
+function PanelGuard({ children }: { children: React.ReactNode }) {
+  if (redirigirSiEsSubdominioPanel()) {
+    // Spinner mínimo mientras el browser ejecuta el replace
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff' }}>
+        <div style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#2855F6', borderRadius: '50%', animation: 'appspin .8s linear infinite' }} />
+      </div>
+    )
+  }
+  return <>{children}</>
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENTE: ProtectedRoute (sin lógica de redirección — ya la maneja PanelGuard)
+// ─────────────────────────────────────────────────────────────────────────────
+function ProtectedRoute({ children, requiredRole, skipTenant }: any) {
   const { user } = useAuthStore()
   if (!user) return <Navigate to="/login" />
 
@@ -69,9 +135,6 @@ function ProtectedRoute({ children, requiredRole, skipTenant }: any) {
     }
   }
 
-  // ← NUEVO: el Admin opera sobre una sede concreta (multi-sede).
-  // TenantGate fija/valida el tenant y muestra el selector de sede.
-  // skipTenant: pantallas que NO requieren sede (ej. completar perfil del primer login).
   if (user.rol === 'Admin' && !skipTenant) {
     return <TenantGate>{children}</TenantGate>
   }
@@ -79,30 +142,9 @@ function ProtectedRoute({ children, requiredRole, skipTenant }: any) {
   return <>{children}</>
 }
 
-// ← NUEVO: hosts del dominio raíz / panel donde se muestra la LANDING (no un microsite).
-const ROOT_HOSTS = ['localhost', '127.0.0.1', 'barber.pe', 'www.barber.pe', 'app.barber.pe', 'admin.barber.pe']
-// Etiquetas de subdominio reservadas para el panel (no son sedes).
-const SUBS_RESERVADOS = ['www', 'app', 'admin', 'api', 'panel']
-// Host canónico del panel admin (opcional). Si se define (ej. "app.barber.pe"
-// o "barber.pe"), el panel se confina a ese host y deja de abrirse en el
-// subdominio público de cada sede. Ver ProtectedRoute.
-const PANEL_HOST = (import.meta.env.VITE_PANEL_HOST as string | undefined)?.trim() || ''
-
-function getSubdominio(): string | null {
-  const host = window.location.hostname
-  if (ROOT_HOSTS.includes(host)) return null
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) return null // IP (LAN/dev) → sin subdominio
-  const parts = host.split('.')
-  if (parts.length >= 3) {
-    const sub = parts[0]
-    return SUBS_RESERVADOS.includes(sub.toLowerCase()) ? null : sub // elpatron.barber.pe → "elpatron"
-  }
-  return null
-}
-
-// Slug del tenant: prioriza ?s= (el "Ver sitio" del panel lo pasa explícito),
-// y si no, el subdominio del host. Así, al abrir /?s=<sede> en el dominio raíz
-// o IP, igual se muestra el microsite de la sede elegida (no la landing genérica).
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS DE TENANT / SLUG (para el micrositio público)
+// ─────────────────────────────────────────────────────────────────────────────
 function getTenantSlug(): string | null {
   try {
     const fromQuery = new URLSearchParams(window.location.search).get('s')
@@ -111,38 +153,43 @@ function getTenantSlug(): string | null {
   return getSubdominio()
 }
 
-// En el dominio raíz (sin sede) muestra la landing; con sede (?s= o subdominio),
-// el microsite de la sede.
 function HomeRoute() {
   return getTenantSlug() ? <PublicSedeDetailPage /> : <LandingPage />
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FALLBACK DE RUTA
+// ─────────────────────────────────────────────────────────────────────────────
+function RouteFallback() {
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0b1220' }}>
+      <div style={{ width: 36, height: 36, border: '3px solid rgba(255,255,255,0.15)', borderTopColor: '#2092B4', borderRadius: '50%', animation: 'appspin .8s linear infinite' }} />
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// APP
+// ─────────────────────────────────────────────────────────────────────────────
 export function App() {
   const { setUser, setToken } = useAuthStore()
   const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
-    // NO bloqueamos el render esperando a la red. Si hay sesión local la
-    // restauramos al instante; si no, mostramos la app ya (anónimo) y dejamos
-    // que el SSO por cookie .barber.pe resuelva en segundo plano. Cuando
-    // restaura, el estado se actualiza y la app re-renderiza sola.
     let cancelado = false
 
     const token = authService.getStoredToken()
     const user = authService.getStoredUser()
 
     if (token && user) {
-      // Sesión local en este origin: restaurar tal cual (comportamiento de siempre).
       setToken(token)
       setUser(user)
       setIsInitialized(true)
       return
     }
 
-    // Sin sesión local: NO esperamos. La app se muestra de inmediato.
     setIsInitialized(true)
 
-    // SSO en segundo plano (no bloquea nada).
     authService.bootstrapSession()
       .then((restaurada) => {
         if (restaurada && !cancelado) {
@@ -150,7 +197,7 @@ export function App() {
           setUser(restaurada.user as any)
         }
       })
-      .catch(() => { /* anónimo: no rompe nada */ })
+      .catch(() => { /* anónimo */ })
 
     return () => { cancelado = true }
   }, [setUser, setToken])
@@ -168,152 +215,106 @@ export function App() {
 
   return (
     <BrowserRouter>
-      <Suspense fallback={<RouteFallback />}>            {/* ← envuelve las rutas */}
-      <Routes>
-        {/* LOGIN */}
-        <Route path="/login" element={<LoginPage />} />
+      {/*
+        PanelGuard envuelve TODO el árbol de rutas.
+        Si detecta que estamos en un subdominio de sede (kisha.barber.pe)
+        Y la ruta es de panel (/login, /dashboard, /admin/*, etc.)
+        redirige inmediatamente a barber.pe/<misma-ruta>.
+        Aplica a TODOS los admins y trabajadores, sin importar qué sede sea.
+      */}
+      <PanelGuard>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            {/* LOGIN — ruta de panel, redirigida por PanelGuard si viene de subdominio */}
+            <Route path="/login" element={<LoginPage />} />
 
-        {/* Registro unificado: vive en /acceso (AccesoPage). El antiguo /registro
-            (SignupPage) se eliminó por no usarse. */}
-        {/* HOME: landing en el dominio raíz, microsite en subdominio ← CAMBIO */}
-        <Route path="/" element={<HomeRoute />} />
+            {/* HOME: landing en dominio raíz, micrositio en subdominio */}
+            <Route path="/" element={<HomeRoute />} />
 
-        {/* LANDING PÚBLICA - SEDE POR ID (legacy) */}
-        <Route path="/sede/:idSede" element={<PublicSedeDetailPage />} />
+            {/* LANDING PÚBLICA - SEDE POR ID (legacy) */}
+            <Route path="/sede/:idSede" element={<PublicSedeDetailPage />} />
 
-        {/* NOVEDADES PÚBLICAS (flyer + comentarios) */}
-        <Route path="/novedades" element={<NovedadesSedePage />} />
+            {/* NOVEDADES PÚBLICAS */}
+            <Route path="/novedades" element={<NovedadesSedePage />} />
 
-        {/* PÁGINAS LEGALES */}
-        <Route path="/terminos" element={<TerminosPage />} />
-        <Route path="/privacidad" element={<PrivacidadPage />} />
-        <Route path="/libro-reclamaciones" element={<LibroReclamacionesPage />} />
+            {/* PÁGINAS LEGALES */}
+            <Route path="/terminos" element={<TerminosPage />} />
+            <Route path="/privacidad" element={<PrivacidadPage />} />
+            <Route path="/libro-reclamaciones" element={<LibroReclamacionesPage />} />
 
-        {/* RESERVAR PÚBLICA */}
-        <Route path="/reservar/:idSede" element={<ReservaClientePage />} />
-        <Route path="/acceso" element={<AccesoPage />} />
-        <Route path="/reservar-publica" element={<ReservaClientePage />} />
+            {/* RESERVAR PÚBLICA */}
+            <Route path="/reservar/:idSede" element={<ReservaClientePage />} />
+            <Route path="/acceso" element={<AccesoPage />} />
+            <Route path="/reservar-publica" element={<ReservaClientePage />} />
 
-        {/* SUPER ADMIN */}
-        <Route
-          path="/super-admin"
-          element={
-            <ProtectedRoute requiredRole="SuperAdmin">
-              <SuperAdminDashboard />
-            </ProtectedRoute>
-          }
-        />
+            {/* SUPER ADMIN */}
+            <Route path="/super-admin" element={
+              <ProtectedRoute requiredRole="SuperAdmin">
+                <SuperAdminDashboard />
+              </ProtectedRoute>
+            } />
 
-        {/* ADMIN */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute requiredRole="Admin">
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-        />
+            {/* ADMIN */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute requiredRole="Admin">
+                <DashboardPage />
+              </ProtectedRoute>
+            } />
 
-        {/* ADMIN — completar / editar perfil (sin TenantGate: puede no tener sede aún) */}
-        <Route
-          path="/completar-perfil"
-          element={
-            <ProtectedRoute requiredRole="Admin" skipTenant>
-              <CompletarPerfilAdmin />
-            </ProtectedRoute>
-          }
-        />
+            <Route path="/completar-perfil" element={
+              <ProtectedRoute requiredRole="Admin" skipTenant>
+                <CompletarPerfilAdmin />
+              </ProtectedRoute>
+            } />
 
-        <Route
-          path="/admin/clientes"
-          element={
-            <ProtectedRoute requiredRole="Admin">
-              <ClientesPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/servicios"
-          element={
-            <ProtectedRoute requiredRole="Admin">
-              <ServiciosPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/trabajadores"
-          element={
-            <ProtectedRoute requiredRole="Admin">
-              <TrabajadoresPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/pagos"
-          element={
-            <ProtectedRoute requiredRole="Admin">
-              <PagosPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/ventas"
-          element={
-            <ProtectedRoute requiredRole="Admin">
-              <VentasPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/caja"
-          element={
-            <ProtectedRoute requiredRole="Admin">
-              <CierreCajaPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/configuracion"
-          element={
-            <ProtectedRoute requiredRole="Admin">
-              <ConfiguracionPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/reservas"
-          element={
-            <ProtectedRoute requiredRole="Admin">
-              <ReservasPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/agenda"
-          element={
-            <ProtectedRoute requiredRole="Admin">
-              <AgendaPage />
-            </ProtectedRoute>
-          }
-        />
+            <Route path="/admin/clientes" element={
+              <ProtectedRoute requiredRole="Admin"><ClientesPage /></ProtectedRoute>
+            } />
+            <Route path="/admin/servicios" element={
+              <ProtectedRoute requiredRole="Admin"><ServiciosPage /></ProtectedRoute>
+            } />
+            <Route path="/admin/trabajadores" element={
+              <ProtectedRoute requiredRole="Admin"><TrabajadoresPage /></ProtectedRoute>
+            } />
+            <Route path="/admin/pagos" element={
+              <ProtectedRoute requiredRole="Admin"><PagosPage /></ProtectedRoute>
+            } />
+            <Route path="/admin/ventas" element={
+              <ProtectedRoute requiredRole="Admin"><VentasPage /></ProtectedRoute>
+            } />
+            <Route path="/admin/caja" element={
+              <ProtectedRoute requiredRole="Admin"><CierreCajaPage /></ProtectedRoute>
+            } />
+            <Route path="/admin/configuracion" element={
+              <ProtectedRoute requiredRole="Admin"><ConfiguracionPage /></ProtectedRoute>
+            } />
+            <Route path="/admin/reservas" element={
+              <ProtectedRoute requiredRole="Admin"><ReservasPage /></ProtectedRoute>
+            } />
+            <Route path="/admin/agenda" element={
+              <ProtectedRoute requiredRole="Admin"><AgendaPage /></ProtectedRoute>
+            } />
 
-        {/* TRABAJADOR */}
-        <Route path="/mi-agenda" element={
-          <ProtectedRoute requiredRole="Trabajador"><SedeActivaGate><TrabajadorMiAgenda /></SedeActivaGate></ProtectedRoute>
-        } />
+            {/* TRABAJADOR */}
+            <Route path="/mi-agenda" element={
+              <ProtectedRoute requiredRole="Trabajador">
+                <SedeActivaGate><TrabajadorMiAgenda /></SedeActivaGate>
+              </ProtectedRoute>
+            } />
 
-        {/* RUTAS PÚBLICAS - ACCIONES DE RESERVA */}
-        <Route path="/reserva/:token" element={<ReservaAcciones />} />
-        <Route path="/confirmar/:token" element={<ReservaAcciones />} />
-        <Route path="/cancelar/:token" element={<ReservaAcciones />} />
-        <Route path="/reprogramar/:token" element={<ReservaAcciones />} />
-        <Route path="/calificar/:token" element={<ReservaAcciones />} />
-        <Route path="/resena/:token" element={<ReservaAcciones />} />
+            {/* RUTAS PÚBLICAS - ACCIONES DE RESERVA */}
+            <Route path="/reserva/:token" element={<ReservaAcciones />} />
+            <Route path="/confirmar/:token" element={<ReservaAcciones />} />
+            <Route path="/cancelar/:token" element={<ReservaAcciones />} />
+            <Route path="/reprogramar/:token" element={<ReservaAcciones />} />
+            <Route path="/calificar/:token" element={<ReservaAcciones />} />
+            <Route path="/resena/:token" element={<ReservaAcciones />} />
 
-        {/* 404 */}
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-      </Suspense>                                         {/* ← cierra Suspense */}
+            {/* 404 */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
+      </PanelGuard>
       <ConfirmHost />
     </BrowserRouter>
   )

@@ -179,7 +179,16 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !esAuth) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      window.location.href = '/login'
+      // Redirigir al login en el host canónico del panel (si está definido) para
+      // evitar que el 401 mande al login del subdominio de sede equivocado.
+      const panelHost = (import.meta as any).env?.VITE_PANEL_HOST?.trim() || ''
+      const esSede = window.location.hostname.endsWith('.barber.pe') &&
+        !['barber.pe', 'www.barber.pe', 'app.barber.pe', 'admin.barber.pe'].includes(window.location.hostname)
+      if (panelHost && esSede) {
+        window.location.replace(`https://${panelHost}/login`)
+      } else {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }

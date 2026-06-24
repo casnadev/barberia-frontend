@@ -52,9 +52,23 @@ export function LoginPage() {
         if (sedes[0]?.subdominio) setTenant(sedes[0].subdominio)
       } catch { /* sin sede aun */ }
     }
-    // TODOS los roles entran a la landing (barber.pe) ya logueados. Desde el
-    // AccountMenu ("Mi panel") cada quien salta a su panel según su rol.
-    navigate('/')
+    // Tras login exitoso, redirigir siempre al host canónico del panel.
+    // Si el usuario inició sesión desde kisha.barber.pe/login (lo que ya no
+    // debería pasar gracias a PanelGuard, pero por seguridad lo cubrimos aquí
+    // también), lo mandamos a barber.pe/<ruta-de-panel> y no al micrositio.
+    const panelHost = (import.meta.env.VITE_PANEL_HOST as string | undefined)?.trim() || ''
+    const esSede = window.location.hostname.endsWith('.barber.pe') &&
+      !['barber.pe', 'www.barber.pe', 'app.barber.pe', 'admin.barber.pe'].includes(window.location.hostname)
+    const rutaPanel =
+      user.rol === 'SuperAdmin' ? '/super-admin'
+      : user.rol === 'Trabajador' ? '/mi-agenda'
+      : user.rol === 'Admin' ? '/dashboard'
+      : '/'
+    if (panelHost && esSede && rutaPanel !== '/') {
+      window.location.replace(`https://${panelHost}${rutaPanel}`)
+    } else {
+      navigate(rutaPanel)
+    }
   }
 
   // ----------------------------------------------------------- deep-link del correo
