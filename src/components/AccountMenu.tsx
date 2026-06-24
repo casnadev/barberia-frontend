@@ -27,6 +27,19 @@ const PanelIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
+
+// Devuelve la URL canónica del panel para rutas como /login, /acceso.
+// Si VITE_PANEL_HOST está definido y estamos en un subdominio de sede,
+// usa https://barber.pe/<ruta>. En dev o en el host canónico, usa navigate() normal.
+function panelUrl(path: string): string | null {
+  const panelHost = (import.meta.env.VITE_PANEL_HOST as string | undefined)?.trim() || ''
+  if (!panelHost) return null
+  const canonical = ['barber.pe', 'www.barber.pe', 'app.barber.pe', 'admin.barber.pe', 'localhost', '127.0.0.1']
+  if (canonical.includes(window.location.hostname)) return null
+  if (!window.location.hostname.endsWith('.barber.pe')) return null
+  return `https://${panelHost}${path}`
+}
+
 export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil, onAcceso, navLinks }: { variant?: 'floating' | 'plain'; siteLink?: boolean; onMiPerfil?: () => void; onAcceso?: () => void; navLinks?: { label: string; onClick: () => void }[] }) {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
@@ -75,7 +88,14 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
     await authService.logout()
     // 2) Limpia el estado local (store + localStorage + tenant + sessionStorage).
     logout()
-    navigate('/')
+    // 3) Si estamos en un subdominio de sede, volver al host canónico del panel
+    //    para que el login de Google y el SSO funcionen correctamente.
+    const logoutUrl = panelUrl('/login')
+    if (logoutUrl) {
+      window.location.replace(logoutUrl)
+    } else {
+      navigate('/')
+    }
   }
 
   // ← NUEVO: "Mi perfil" robusto. Si el padre pasó onMiPerfil (dashboard), se usa
@@ -194,10 +214,10 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
               ) : (
                 <>
                   <p className={s.guestHint}>Inicia sesión para gestionar tus citas y tu cuenta.</p>
-                  <button className={s.item} onClick={() => go('/login')}>
+                  <button className={s.item} onClick={() => { setOpen(false); const u = panelUrl('/login'); u ? window.location.assign(u) : navigate('/login') }}>
                     <LogIn className={s.itemIcon} width={18} height={18} /> Iniciar sesión
                   </button>
-                  <button className={`${s.item} ${s.primary}`} onClick={() => go('/login')}>
+                  <button className={`${s.item} ${s.primary}`} onClick={() => { setOpen(false); const u = panelUrl('/acceso'); u ? window.location.assign(u) : navigate('/acceso') }}>
                     <UserPlus className={s.itemIcon} width={18} height={18} /> Crear cuenta
                   </button>
                 </>
