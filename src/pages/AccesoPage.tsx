@@ -21,8 +21,8 @@ export function AccesoPage() {
   const navigate = useNavigate()
   const { setUser, setToken } = useAuthStore()
 
-  const [view, setView] = useState<View>('choose')
-  const [tipo, setTipo] = useState<Tipo>('Cliente')
+  const [view, setView] = useState<View>('login')
+  const [tipo] = useState<Tipo>('Profesional')   // /acceso es alta de NEGOCIO (Admin)
   const [loading, setLoading] = useState(false)
 
   const [identificador, setIdentificador] = useState('')
@@ -202,41 +202,13 @@ export function AccesoPage() {
         <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl shadow-black/10 border border-gray-100 p-8 lg:max-w-sm lg:border-0 lg:shadow-none lg:rounded-none lg:p-0">
           <AnimatePresence mode="wait">
 
-          {/* ===================================================== SELECTOR */}
-          {view === 'choose' && (
-            <motion.div key="choose" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <button onClick={() => navigate('/')} className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 mb-5">
-                <ArrowLeft className="w-4 h-4" /> Inicio
-              </button>
-              <img src={LOGO} alt="Barber.PE" className="h-9 mx-auto mb-7" />
-
-              <button onClick={() => { setTipo('Cliente'); setView('login') }}
-                className="w-full flex items-center justify-between text-left border-2 border-gray-100 rounded-2xl p-5 mb-4 hover:border-blue-500 hover:shadow-md transition group">
-                <div>
-                  <div className="font-semibold text-gray-900">Soy cliente</div>
-                  <div className="text-sm text-gray-500">Reserva 24/7 a cualquier hora</div>
-                </div>
-                <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-blue-600 transition" />
-              </button>
-
-              <button onClick={() => { setTipo('Profesional'); setView('login') }}
-                className="w-full flex items-center justify-between text-left border-2 border-gray-100 rounded-2xl p-5 hover:border-blue-500 hover:shadow-md transition group">
-                <div>
-                  <div className="font-semibold text-gray-900">Tengo un negocio</div>
-                  <div className="text-sm text-gray-500">Gestiona tu barbería y hazla crecer</div>
-                </div>
-                <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-blue-600 transition" />
-              </button>
-            </motion.div>
-          )}
-
           {/* ===================================================== LOGIN */}
           {view === 'login' && (
             <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <Back onClick={() => setView('choose')} />
+              <Back onClick={() => navigate('/')} />
               <img src={LOGO} alt="Barber.PE" className="h-8 mx-auto mb-2" />
               <p className="text-sm text-center text-gray-400 mb-7 font-medium">
-                {dark ? 'para profesionales' : 'para clientes'}
+                para profesionales
               </p>
 
               <label className="block text-sm font-bold text-blue-700 mb-2">Correo o Teléfono</label>
@@ -272,10 +244,6 @@ export function AccesoPage() {
                   <div ref={googleBtnRef} className="flex justify-center" />
                 </>
               )}
-
-              <button onClick={() => setTipo(dark ? 'Cliente' : 'Profesional')} className="w-full text-sm py-4 text-gray-400 hover:text-blue-700 transition">
-                {dark ? '¿Eres cliente? Ir a clientes' : '¿Tienes un negocio? Ir a profesionales'}
-              </button>
             </motion.div>
           )}
 

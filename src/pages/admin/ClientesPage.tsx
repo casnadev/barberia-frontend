@@ -3,7 +3,7 @@ import { clientesService, Cliente } from '@/services/clientesService'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
 import { mensajeError } from '@/utils/apiError'
-import { Eye, Unlock, Search, Phone, Mail, Calendar, MessageSquare, Users, Info, X, Gift, Plus, Trash2, ImagePlus, ShieldCheck, Pencil, EyeOff } from 'lucide-react'
+import { Eye, Unlock, Search, Phone, Mail, Calendar, Users, Info, X, Gift, Plus, Trash2, ImagePlus, ShieldCheck, Pencil, EyeOff } from 'lucide-react'
 import { AdminLayout } from '@/components/AdminLayout'
 import { novedadesService, type Novedad } from '@/services/novedadesService'
 import { buildImageUrl } from '@/services/apiClient'
@@ -84,13 +84,6 @@ export function ClientesPage() {
     }
   }
 
-  // Las "promociones" son novedades in-app para TODOS los clientes de la sede.
-  // (Se conserva la firma para no tocar los botones que ya la llaman.)
-  const handleEnviarMensaje = (_cliente?: Cliente) => {
-    setShowDetailModal(false)
-    setNovedadOpen(true)
-  }
-
   // Estadísticas
   const totalClientes = clientes.length
   const clientesActivos = clientes.filter((c) => !c.bloqueadoWeb).length
@@ -140,7 +133,7 @@ export function ClientesPage() {
           <ShieldCheck width={16} height={16} /> Moderación
         </button>
         <button onClick={() => setNovedadOpen(true)} className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2 text-sm font-semibold transition">
-          <Gift width={16} height={16} /> Nueva novedad
+          <Gift width={16} height={16} /> Nueva promoción
         </button>
       </div>
 
@@ -203,7 +196,6 @@ export function ClientesPage() {
                       <td>
                         <div className={s.rowActions}>
                           <button className={`${s.actBtn} ${s.actView}`} onClick={() => handleViewDetails(cliente)} title="Ver detalles" aria-label="Ver detalles"><Eye width={16} height={16} /></button>
-                          <button className={`${s.actBtn} ${s.actMsg}`} onClick={() => handleEnviarMensaje(cliente)} title="Enviar mensaje" aria-label="Enviar mensaje"><MessageSquare width={16} height={16} /></button>
                           {cliente.bloqueadoWeb && (
                             <button className={`${s.actBtn} ${s.actUnlock}`} onClick={() => handleDesbloquear(cliente.idCliente!)} title="Desbloquear" aria-label="Desbloquear"><Unlock width={16} height={16} /></button>
                           )}
@@ -235,7 +227,6 @@ export function ClientesPage() {
                   </div>
                   <div className={s.rowActions}>
                     <button className={`${s.actBtn} ${s.actView}`} onClick={() => handleViewDetails(cliente)} aria-label="Ver detalles"><Eye width={16} height={16} /></button>
-                    <button className={`${s.actBtn} ${s.actMsg}`} onClick={() => handleEnviarMensaje(cliente)} aria-label="Enviar mensaje"><MessageSquare width={16} height={16} /></button>
                     {cliente.bloqueadoWeb && (
                       <button className={`${s.actBtn} ${s.actUnlock}`} onClick={() => handleDesbloquear(cliente.idCliente!)} aria-label="Desbloquear"><Unlock width={16} height={16} /></button>
                     )}
@@ -342,7 +333,6 @@ export function ClientesPage() {
             </div>
 
             <div className={s.modalActions}>
-              <button className={s.btnMsg} onClick={() => handleEnviarMensaje(selectedCliente)}><MessageSquare width={16} height={16} /> Enviar promoción</button>
               {selectedCliente.bloqueadoWeb && (
                 <button className={s.btnUnlock} onClick={() => { handleDesbloquear(selectedCliente.idCliente!); setShowDetailModal(false) }}><Unlock width={16} height={16} /> Desbloquear cliente</button>
               )}
@@ -546,7 +536,7 @@ function NovedadModal({ onClose }: { onClose: () => void }) {
           <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2"><Gift width={18} height={18} className="text-blue-600" /> {editandoId ? 'Editar novedad' : 'Nueva novedad'}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Cerrar"><X width={18} height={18} /></button>
         </div>
-        <p className="text-xs text-gray-500 mb-4">La verán <strong>todos los clientes</strong> de tu sede en su muro de Novedades.</p>
+        <p className="text-xs text-gray-500 mb-4">La verán <strong>todos los clientes</strong> de tu sede en su muro de Promociones.</p>
 
         <div className="space-y-3">
           {/* Tipo + destacado */}
@@ -648,7 +638,7 @@ function NovedadModal({ onClose }: { onClose: () => void }) {
 
         {lista.length > 0 && (
           <div className="mt-5 border-t border-gray-100 pt-4">
-            <p className="text-xs font-semibold text-gray-500 mb-2">Novedades publicadas</p>
+            <p className="text-xs font-semibold text-gray-500 mb-2">Promociones publicadas</p>
             <div className="space-y-2">
               {lista.map(n => (
                 <div key={n.idNovedad} className={`flex items-center gap-3 rounded-xl p-2.5 ${editandoId === n.idNovedad ? 'bg-blue-50 ring-1 ring-blue-200' : 'bg-gray-50'} ${!n.activo ? 'opacity-60' : ''}`}>

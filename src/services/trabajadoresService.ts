@@ -13,6 +13,8 @@ export interface Trabajador {
   idEmpresa?: number
   comisionPorcentaje?: number
   fechaIngreso?: string
+  /** Solo viene en la respuesta de CREAR: contraseña temporal para el primer ingreso. */
+  passwordTemporal?: string
 }
 
 export interface Disponibilidad {

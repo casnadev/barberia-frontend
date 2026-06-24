@@ -167,6 +167,15 @@ export function DashboardAdminReservas() {
     }
   }
 
+  const getEstadoLabel = (estado: string) => {
+    switch (estado) {
+      case 'NoShow':
+        return 'No Asistió'
+      default:
+        return estado
+    }
+  }
+
   const reservasFiltradas = filtroEstado === 'todos' 
     ? reservas 
     : reservas.filter(r => r.estado === filtroEstado)
@@ -260,7 +269,7 @@ export function DashboardAdminReservas() {
                     <td>
                       <span className={`${styles.estado} ${getEstadoColor(reserva.estado)}`}>
                         {getEstadoIcon(reserva.estado)}
-                        {reserva.estado}
+                        {getEstadoLabel(reserva.estado)}
                       </span>
                     </td>
                     <td className={styles.acciones}>
@@ -293,7 +302,7 @@ export function DashboardAdminReservas() {
                     {reserva.hora}
                   </div>
                   <span className={`${styles.estado} ${getEstadoColor(reserva.estado)}`}>
-                    {reserva.estado}
+                    {getEstadoLabel(reserva.estado)}
                   </span>
                 </div>
 
@@ -366,7 +375,7 @@ export function DashboardAdminReservas() {
               <div className={styles.detalleItem}>
                 <label>Estado</label>
                 <span className={`${styles.estadoGrande} ${getEstadoColor(detalleReserva.estado)}`}>
-                  {detalleReserva.estado}
+                  {getEstadoLabel(detalleReserva.estado)}
                 </span>
               </div>
             </div>
@@ -397,7 +406,7 @@ export function DashboardAdminReservas() {
                     disabled={submitting}
                     className={styles.btnNoShow}
                   >
-                    {submitting ? '⏳...' : '✕ No-Show'}
+                    {submitting ? '⏳...' : '✕ No Asistió'}
                   </button>
                 </>
               )}

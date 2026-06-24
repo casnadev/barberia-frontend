@@ -1,18 +1,17 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, KeyRound, Lock, Check } from 'lucide-react'
+import { X, Lock, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { perfilService } from '@/services/perfilService'
 import { authService } from '@/services/authService'
-import { pinAuthService } from '@/services/pinAuthService'
 
 /**
  * Modal "Acceso": muestra cómo entra el usuario y le deja gestionar sus métodos.
- *  - PIN: siempre activo (todos lo tienen). Botón "Cambiar PIN" (OTP -> nuevo PIN).
- *  - Ingreso tradicional (solo correo): activar/cambiar/desactivar.
+ *  - Ingreso tradicional (correo + contraseña): activar/cambiar/desactivar.
  *    Activar es HÍBRIDO: si el correo ya está confirmado y no cambia -> inline;
  *    si es nuevo o sin confirmar -> pide un OTP al correo para confirmarlo.
  *    Desactivar conserva correo y contraseña; reactivar es un toque.
+ *    Cambiar/crear contraseña se confirma con un código (OTP).
  *
  * Pensado mobile-first: bottom-sheet en móvil, corto y sin scroll de relleno.
  */
@@ -25,14 +24,6 @@ export function AccesoModal({ open, onClose }: { open: boolean; onClose: () => v
   const [telefono, setTelefono] = useState('')
   const [tienePassword, setTienePassword] = useState(false)
   const [activo, setActivo] = useState(false)
-
-  // PIN
-  const [pinAbierto, setPinAbierto] = useState(false)
-  const [pinOtpEnviado, setPinOtpEnviado] = useState(false)
-  const [pinCodigo, setPinCodigo] = useState('')
-  const [pinNuevo, setPinNuevo] = useState('')
-  const [pinRepite, setPinRepite] = useState('')
-  const [pinBusy, setPinBusy] = useState(false)
 
   // Ingreso tradicional
   const [correo, setCorreo] = useState('')
@@ -70,31 +61,8 @@ export function AccesoModal({ open, onClose }: { open: boolean; onClose: () => v
   }, [open])
 
   function resetTransitorios() {
-    setPinAbierto(false); setPinOtpEnviado(false); setPinCodigo(''); setPinNuevo(''); setPinRepite('')
     setPass(''); setPassRep(''); setOtpEnviado(false); setCodigo('')
     setCambiarAbierto(false); setCambiarOtpEnviado(false); setCodigoCambiar(''); setPassNueva(''); setPassNuevaRep('')
-  }
-
-  const identificadorPin = (correoRegistrado || telefono).trim()
-
-  // ---- PIN ----
-  const enviarOtpPin = async () => {
-    if (!identificadorPin) return toast.error('No hay correo ni teléfono para enviar el código')
-    setPinBusy(true)
-    const r = await pinAuthService.enrolarSolicitar(identificadorPin)
-    setPinBusy(false)
-    if (r.ok) { setPinOtpEnviado(true); toast.success('Código enviado') }
-    else toast.error(r.mensaje || 'No se pudo enviar el código')
-  }
-  const guardarPin = async () => {
-    if (!/^\d{6}$/.test(pinNuevo)) return toast.error('El PIN debe tener exactamente 6 dígitos')
-    if (pinNuevo !== pinRepite) return toast.error('Los PIN no coinciden')
-    if (!pinCodigo.trim()) return toast.error('Ingresa el código que te enviamos')
-    setPinBusy(true)
-    const r = await pinAuthService.enrolarConfirmar(identificadorPin, pinCodigo.trim(), pinNuevo)
-    setPinBusy(false)
-    if (r.ok) { toast.success('PIN actualizado'); setPinAbierto(false); setPinOtpEnviado(false); setPinCodigo(''); setPinNuevo(''); setPinRepite('') }
-    else toast.error(r.mensaje || 'No se pudo cambiar el PIN')
   }
 
   // ---- Ingreso tradicional: activar (híbrido) ----
@@ -178,44 +146,6 @@ export function AccesoModal({ open, onClose }: { open: boolean; onClose: () => v
           <p className="text-sm text-gray-400 py-8 text-center">Cargando…</p>
         ) : (
           <div className="space-y-4">
-
-            {/* PIN */}
-            <div className="border border-gray-100 rounded-xl p-3">
-              <div className="flex items-center gap-3">
-                <span className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0"><KeyRound className="w-4 h-4" /></span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-900">PIN de acceso</span>
-                    <span className="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full inline-flex items-center gap-1"><Check className="w-3 h-3" /> Activo</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-0.5">Tu acceso rápido, siempre disponible.</p>
-                </div>
-                {!pinAbierto && (
-                  <button onClick={() => setPinAbierto(true)} className="text-sm text-blue-600 font-medium px-2 py-1 hover:underline">Cambiar PIN</button>
-                )}
-              </div>
-
-              {pinAbierto && (
-                <div className="mt-3 space-y-2">
-                  {!pinOtpEnviado ? (
-                    <>
-                      <p className="text-xs text-gray-500">Te enviaremos un código a {correoRegistrado || telefono || 'tu contacto'} para confirmar.</p>
-                      <div className="flex gap-2">
-                        <button onClick={enviarOtpPin} disabled={pinBusy} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2 text-sm font-semibold disabled:opacity-50">{pinBusy ? 'Enviando…' : 'Enviar código'}</button>
-                        <button onClick={() => setPinAbierto(false)} className="px-3 text-sm text-gray-500">Cancelar</button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <input className={field} value={pinCodigo} onChange={e => setPinCodigo(e.target.value)} placeholder="Código del correo" inputMode="numeric" maxLength={6} />
-                      <input className={field} type="password" value={pinNuevo} onChange={e => setPinNuevo(e.target.value.replace(/\D/g, ''))} placeholder="Nuevo PIN (6 dígitos)" inputMode="numeric" maxLength={6} />
-                      <input className={field} type="password" value={pinRepite} onChange={e => setPinRepite(e.target.value.replace(/\D/g, ''))} placeholder="Repite el PIN" inputMode="numeric" maxLength={6} />
-                      <button onClick={guardarPin} disabled={pinBusy} className="w-full bg-gray-900 hover:bg-black text-white rounded-xl py-2 text-sm font-semibold disabled:opacity-50">{pinBusy ? 'Guardando…' : 'Guardar PIN'}</button>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
 
             {/* INGRESO TRADICIONAL */}
             <div className="border border-gray-100 rounded-xl p-3">

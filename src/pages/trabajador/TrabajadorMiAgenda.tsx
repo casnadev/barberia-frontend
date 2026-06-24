@@ -29,6 +29,16 @@ const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', '
 const METODOS = ['Efectivo', 'Yape', 'Plin', 'Tarjeta', 'Transferencia', 'Otro']
 const TIPOS_DESCANSO = ['Vacaciones', 'Permiso', 'Médico', 'Personal', 'Otro']
 const hoyISO = () => new Date().toISOString().slice(0, 10)
+const franjaDeHora = (h?: string): 'manana' | 'tarde' | 'noche' => {
+  const n = parseInt((h || '').slice(0, 2), 10) || 0
+  return n < 12 ? 'manana' : n < 18 ? 'tarde' : 'noche'   // <12 mañana · 12-18 tarde · ≥18 noche
+}
+const FRANJAS_T = [
+  { key: 'todo', label: 'Todo' },
+  { key: 'manana', label: 'Mañana' },
+  { key: 'tarde', label: 'Tarde' },
+  { key: 'noche', label: 'Noche' },
+]
 const soles = (n?: number) => `S/ ${Number(n || 0).toFixed(2)}`
 const rid = (r: any) => r.idReserva ?? r.id
 const fmtDia = (iso?: string) => iso
@@ -336,9 +346,12 @@ function InicioTab({ nombre, hoyCount, atendidasHoy, comisiones, reservas, perfi
   onAtender: (r: any) => void
 }) {
   const hoy = hoyISO()
-  const citasHoy = reservas
+  const [franjaT, setFranjaT] = useState('todo')
+  const citasHoyBase = reservas
     .filter(r => (r.fechaReserva || '').slice(0, 10) === hoy && (r.estado || '') !== 'Cancelada')
     .sort((a, b) => (a.horaInicio || '').localeCompare(b.horaInicio || ''))
+  const citasHoy = franjaT === 'todo' ? citasHoyBase : citasHoyBase.filter(r => franjaDeHora(r.horaInicio) === franjaT)
+  const countFranjaT = (f: string) => f === 'todo' ? citasHoyBase.length : citasHoyBase.filter(r => franjaDeHora(r.horaInicio) === f).length
 
   const fechaLarga = new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })
   const primerNombre = (nombre || '').trim().split(/\s+/)[0]
@@ -389,8 +402,17 @@ function InicioTab({ nombre, hoyCount, atendidasHoy, comisiones, reservas, perfi
       {/* Citas de hoy */}
       <div className="bg-white border border-gray-200 rounded-2xl p-5">
         <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Clock className="w-4 h-4 text-gray-400" /> Citas de hoy</h3>
+        {/* Filtro por franja: Todo / Mañana / Tarde / Noche */}
+        <div className="inline-flex items-center gap-1 bg-gray-100 rounded-xl p-1 mb-3">
+          {FRANJAS_T.map(f => (
+            <button key={f.key} onClick={() => setFranjaT(f.key)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition ${franjaT === f.key ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:bg-gray-200'}`}>
+              {f.label} <span className="opacity-60">{countFranjaT(f.key)}</span>
+            </button>
+          ))}
+        </div>
         {citasHoy.length === 0 ? (
-          <p className="text-sm text-gray-400 border border-dashed border-gray-300 rounded-xl p-6 text-center">No tienes citas para hoy.</p>
+          <p className="text-sm text-gray-400 border border-dashed border-gray-300 rounded-xl p-6 text-center">{citasHoyBase.length === 0 ? 'No tienes citas para hoy.' : 'No tienes citas en esta franja.'}</p>
         ) : (
           <div className="divide-y divide-gray-100">
             {citasHoy.map(r => (

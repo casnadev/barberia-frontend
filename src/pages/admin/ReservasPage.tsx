@@ -3,11 +3,10 @@ import { reservasService, Reserva } from '@/services/reservasService'
 import { toast } from 'sonner'
 import {
   Check, CheckCheck, X, Clock, User, Phone, Mail, Calendar, Scissors,
-  Search, CalendarDays, DollarSign,
+  Search, CalendarDays, DollarSign, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AdminLayout } from '@/components/AdminLayout'
-import { confirmDialog } from '@/components/ConfirmDialog'
 import { mensajeError } from '@/utils/apiError'
 import s from '@/styles/Reservas.module.css'
 import d from '@/styles/Dashboard.module.css'
@@ -78,18 +77,48 @@ const pagoMeta = (estadoPago?: string): { label: string; cls: string } | null =>
   }
 }
 
+// ── Día y franja horaria (vista "solo del día") ──────────────────────
+const isoDia = (d?: any): string => {
+  if (!d) return ''
+  const dt = new Date(d)
+  if (isNaN(dt.getTime())) return ''
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+}
+const horaNum = (h?: string): number => parseInt((h || '').slice(0, 2), 10) || 0
+const franjaDe = (h?: string): 'manana' | 'tarde' | 'noche' => {
+  const n = horaNum(h)
+  return n < 12 ? 'manana' : n < 18 ? 'tarde' : 'noche'   // <12 mañana · 12-18 tarde · ≥18 noche
+}
+const FRANJAS = [
+  { key: 'todo', label: 'Todo' },
+  { key: 'manana', label: 'Mañana' },
+  { key: 'tarde', label: 'Tarde' },
+  { key: 'noche', label: 'Noche' },
+]
+const sumarDias = (iso: string, n: number) => {
+  const dt = new Date(iso + 'T00:00:00'); dt.setDate(dt.getDate() + n); return isoDia(dt)
+}
+const fmtDiaLargo = (iso: string) =>
+  new Date(iso + 'T00:00:00').toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+
 export function ReservasPage() {
   const [reservas, setReservas] = useState<Reserva[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterEstado, setFilterEstado] = useState('todos')
+  const [fecha, setFecha] = useState(isoDia(new Date()))   // por defecto: HOY
+  const [franja, setFranja] = useState('todo')
   const [visible, setVisible] = useState(16)          // "Ver más"
   const [selected, setSelected] = useState<Reserva | null>(null)  // modal de detalle
+  // Modal de cancelación con motivo (el motivo solo se incluye en el correo al cliente)
+  const [cancelTarget, setCancelTarget] = useState<number | null>(null)
+  const [cancelMotivo, setCancelMotivo] = useState('')
+  const [cancelando, setCancelando] = useState(false)
 
   useEffect(() => { loadReservas() }, [])
 
   // Reset del "Ver más" cuando cambian datos/filtro/búsqueda.
-  useEffect(() => { setVisible(16) }, [reservas, filterEstado, searchTerm])
+  useEffect(() => { setVisible(16) }, [reservas, filterEstado, searchTerm, fecha, franja])
 
   const loadReservas = async () => {
     try {
@@ -114,21 +143,25 @@ export function ReservasPage() {
     } catch (e) { toast.error(mensajeError(e, 'No se pudo confirmar la reserva')) }
   }
 
-  const doCancelar = async (id: number) => {
-    const ok = await confirmDialog({
-      title: 'Cancelar reserva',
-      message: '¿Seguro que deseas cancelar esta reserva? Esta acción no se puede deshacer.',
-      confirmText: 'Sí, cancelar',
-      cancelText: 'Volver',
-      tone: 'danger',
-    })
-    if (!ok) return
+  const doCancelar = (id: number) => {
+    setCancelMotivo('')
+    setCancelTarget(id)
+  }
+
+  const confirmCancelar = async () => {
+    if (cancelTarget == null) return
     try {
-      await reservasService.cancelarReserva(id)
+      setCancelando(true)
+      await reservasService.cancelarReserva(cancelTarget, cancelMotivo.trim() || undefined)
       toast.success('Reserva cancelada')
+      setCancelTarget(null)
       setSelected(null)
       loadReservas()
-    } catch (e) { toast.error(mensajeError(e, 'No se pudo cancelar la reserva')) }
+    } catch (e) {
+      toast.error(mensajeError(e, 'No se pudo cancelar la reserva'))
+    } finally {
+      setCancelando(false)
+    }
   }
 
   const doAtender = async (id: number) => {
@@ -141,14 +174,19 @@ export function ReservasPage() {
   }
 
   // Conteos (completada agrupa con atendida)
-  const count = (e: string) => reservas.filter((r) => {
+  // Reservas del día seleccionado (la vista es "solo del día").
+  const delDia = reservas.filter((r) => isoDia((r as any).fechaReserva) === fecha)
+  const count = (e: string) => delDia.filter((r) => {
     const est = (r.estado || '').toLowerCase()
     return e === 'completada' ? (est === 'completada' || est === 'atendida') : est === e
   }).length
+  const countFranja = (f: string) =>
+    f === 'todo' ? delDia.length : delDia.filter((r) => franjaDe((r as any).horaInicio) === f).length
 
-  // Filtrado (estado + búsqueda)
-  const filtradas = reservas.filter((r) => {
+  // Filtrado (día → franja → estado → búsqueda)
+  const filtradas = delDia.filter((r) => {
     const est = (r.estado || '').toLowerCase()
+    if (franja !== 'todo' && franjaDe((r as any).horaInicio) !== franja) return false
     if (filterEstado !== 'todos') {
       const match = filterEstado === 'completada' ? (est === 'completada' || est === 'atendida') : est === filterEstado
       if (!match) return false
@@ -195,6 +233,25 @@ export function ReservasPage() {
         ))}
       </div>
 
+      {/* Día (solo del día) + franja Mañana/Tarde/Noche */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <div className="inline-flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1">
+          <button onClick={() => setFecha(sumarDias(fecha, -1))} className="px-2 py-1.5 rounded-lg hover:bg-gray-100 text-gray-600" aria-label="Día anterior"><ChevronLeft width={16} height={16} /></button>
+          <button onClick={() => setFecha(isoDia(new Date()))}
+            className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${fecha === isoDia(new Date()) ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}>Hoy</button>
+          <button onClick={() => setFecha(sumarDias(fecha, 1))} className="px-2 py-1.5 rounded-lg hover:bg-gray-100 text-gray-600" aria-label="Día siguiente"><ChevronRight width={16} height={16} /></button>
+        </div>
+        <span className="text-sm font-semibold text-gray-700 capitalize inline-flex items-center gap-1"><CalendarDays width={15} height={15} /> {fmtDiaLargo(fecha)}</span>
+        <div className="inline-flex items-center gap-1 bg-gray-100 rounded-xl p-1 ml-auto">
+          {FRANJAS.map((f) => (
+            <button key={f.key} onClick={() => setFranja(f.key)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition ${franja === f.key ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:bg-gray-200'}`}>
+              {f.label} <span className="opacity-60">{countFranja(f.key)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Buscador + filtros */}
       <div className={s.toolbar}>
         <div className={s.searchWrap}>
@@ -236,7 +293,7 @@ export function ReservasPage() {
         <div className={s.tableCard}>
           <div className={s.empty}>
             <CalendarDays width={56} height={56} />
-            <p>{reservas.length === 0 ? 'Aún no hay reservas.' : 'No hay reservas con ese filtro.'}</p>
+            <p>{delDia.length === 0 ? 'No hay reservas para este día.' : 'No hay reservas con ese filtro.'}</p>
           </div>
         </div>
       ) : (
@@ -356,6 +413,32 @@ export function ReservasPage() {
           )
         })()}
       </AnimatePresence>
+
+      {/* Modal: cancelar con motivo (el motivo solo se incluye en el correo al cliente) */}
+      {cancelTarget != null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !cancelando && setCancelTarget(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2"><X className="w-5 h-5 text-rose-600" /> Cancelar reserva</h3>
+            <p className="text-sm text-gray-500 mt-1">Esta acción no se puede deshacer. El cliente recibirá la notificación por su canal.</p>
+            <label className="block text-sm font-medium text-gray-700 mt-4 mb-1.5">Motivo (opcional)</label>
+            <textarea
+              value={cancelMotivo}
+              onChange={(e) => setCancelMotivo(e.target.value)}
+              rows={3}
+              maxLength={300}
+              placeholder="Ej. El barbero no estará disponible ese día"
+              className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">El motivo solo se incluye en el correo. Si el cliente eligió WhatsApp, recibirá el aviso sin el motivo.</p>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setCancelTarget(null)} disabled={cancelando} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Volver</button>
+              <button onClick={confirmCancelar} disabled={cancelando} className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60">
+                {cancelando ? 'Cancelando...' : 'Sí, cancelar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   )
 }

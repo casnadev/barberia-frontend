@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   MapPin, Phone, Clock, Star, ChevronRight, ChevronLeft, Scissors,
-  Heart, Share2, X, ChevronDown, Instagram, Facebook, Globe,
+  Heart, Forward, X, ChevronDown, Instagram, Facebook, Globe,
   Gift,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -27,6 +27,17 @@ const DIAS: Record<number, string> = {
   5: 'Viernes', 6: 'Sábado', 7: 'Domingo', 0: 'Domingo',
 }
 const hhmm = (t?: string) => (t || '').slice(0, 5)
+// Formato 12 horas con am/pm para mostrar al cliente (ej. "8:00 pm").
+const h12 = (t?: string) => {
+  const s = hhmm(t)
+  if (!s || !s.includes(':')) return ''
+  const [hStr, m] = s.split(':')
+  let h = parseInt(hStr, 10)
+  if (Number.isNaN(h)) return ''
+  const ap = h >= 12 ? 'pm' : 'am'
+  h = h % 12; if (h === 0) h = 12
+  return `${h}:${m} ${ap}`
+}
 
 // TikTok no existe en lucide-react: ícono inline
 const TikTokIcon = ({ className }: { className?: string }) => (
@@ -323,6 +334,9 @@ export function PublicSedeDetailPage() {
     if (!sede) return
     toggleFav({ idSede: sede.idSede, nombre: sede.nombre, subdominio: sede.subdominio, logoUrl: (sede as any).urlLogo, direccion: sede.direccion })
   }
+  // El corazón de favoritos se habilita SOLO cuando la sede ya tiene al menos una
+  // reseña (el Admin no lo nota, pero así evitamos favoritos de negocios sin historial).
+  const puedeFavorito = (resenas?.total ?? 0) >= 1
   const scrollTo = (ref: React.RefObject<HTMLElement>) => ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
   // ── Loading skeleton ──
@@ -409,6 +423,8 @@ export function PublicSedeDetailPage() {
   const estadoTxt = horarios.length === 0 ? 'Horario no disponible' : (abiertoAhora ? 'Atendiendo' : 'Cerrado')
   // Hora de cierre de hoy (último horaFin de los rangos activos de hoy).
   const cierreHoy = rangosHoy.length ? hhmm([...rangosHoy.map((r) => r.horaFin)].sort().slice(-1)[0]) : ''
+  // Hora de apertura de hoy (primer horaInicio).
+  const aperturaHoy = rangosHoy.length ? hhmm([...rangosHoy.map((r) => r.horaInicio)].sort()[0]) : ''
 
   // Próxima apertura (para "Cerrado · abre …").
   const horariosDia = (d: number) => horarios.filter((h) => h.estaActivo && (h.diaSemana === d || (d === 7 && h.diaSemana === 0)))
@@ -417,14 +433,14 @@ export function PublicSedeDetailPage() {
     // ¿Abre más tarde HOY?
     const hoyFuturo = rangosHoy.map((r) => hhmm(r.horaInicio)).filter((h) => h > ahora).sort()
     if (hoyFuturo.length) {
-      proximaApertura = `hoy ${hoyFuturo[0]}`
+      proximaApertura = `hoy ${h12(hoyFuturo[0])}`
     } else {
       for (let i = 1; i <= 7; i++) {
         let d = diaHoy + i; if (d > 7) d -= 7
         const r = horariosDia(d)
         if (r.length) {
           const h = [...r.map((x) => hhmm(x.horaInicio))].sort()[0]
-          proximaApertura = `${i === 1 ? 'mañana' : DIAS[d]} ${h}`
+          proximaApertura = `${i === 1 ? 'mañana' : DIAS[d]} ${h12(h)}`
           break
         }
       }
@@ -437,7 +453,7 @@ export function PublicSedeDetailPage() {
   const estadoSub = horarios.length === 0
     ? ''
     : (abiertoAhora
-        ? (cierreHoy ? `hasta las ${cierreHoy}` : '')
+        ? (aperturaHoy && cierreHoy ? `${h12(aperturaHoy)} – ${h12(cierreHoy)}` : (cierreHoy ? `hasta las ${h12(cierreHoy)}` : ''))
         : (proximaApertura ? `· abre ${proximaApertura}` : ''))
 
 
@@ -473,10 +489,12 @@ export function PublicSedeDetailPage() {
             <div className={styles.mHeaderBar}>
               <span className={styles.mHeaderTitle}>{sede.nombre}</span>
               <div className={styles.mHeaderIcons}>
-                <button className={styles.plainBtn} onClick={toggleFavorite} aria-label="Favorito">
-                  <Heart width={20} height={20} color={isFavorite ? '#ef4444' : undefined} fill={isFavorite ? '#ef4444' : 'none'} />
-                </button>
-                <button className={styles.plainBtn} onClick={handleShare} aria-label="Compartir"><Share2 width={20} height={20} /></button>
+                {puedeFavorito && (
+                  <button className={styles.plainBtn} onClick={toggleFavorite} aria-label="Favorito">
+                    <Heart width={20} height={20} color={isFavorite ? '#ef4444' : undefined} fill={isFavorite ? '#ef4444' : 'none'} />
+                  </button>
+                )}
+                <button className={styles.plainBtn} onClick={handleShare} aria-label="Compartir"><Forward width={20} height={20} /></button>
                 <AccountMenu variant="plain" />
               </div>
             </div>
@@ -529,10 +547,12 @@ export function PublicSedeDetailPage() {
         <div className={styles.heroControls}>
           <span aria-hidden />
           <div className={styles.heroRight}>
-            <button className={styles.heroFloatBtn} onClick={toggleFavorite} aria-label="Favorito">
-              <Heart width={20} height={20} color={isFavorite ? '#ef4444' : undefined} fill={isFavorite ? '#ef4444' : 'none'} />
-            </button>
-            <button className={styles.heroFloatBtn} onClick={handleShare} aria-label="Compartir"><Share2 width={20} height={20} /></button>
+            {puedeFavorito && (
+              <button className={styles.heroFloatBtn} onClick={toggleFavorite} aria-label="Favorito">
+                <Heart width={20} height={20} color={isFavorite ? '#ef4444' : undefined} fill={isFavorite ? '#ef4444' : 'none'} />
+              </button>
+            )}
+            <button className={styles.heroFloatBtn} onClick={handleShare} aria-label="Compartir"><Forward width={20} height={20} /></button>
             <AccountMenu variant="floating" />
           </div>
         </div>
@@ -579,13 +599,15 @@ export function PublicSedeDetailPage() {
           <div className={styles.headActions}>
             {novedades.length > 0 && (
               <button className={styles.novedadesBtn} style={{ background: brand }} onClick={handleNovedades}>
-                <Gift width={16} height={16} /> Novedades
+                <Gift width={16} height={16} /> Promociones
               </button>
             )}
-            <button className={styles.iconBtn} onClick={toggleFavorite} aria-label="Favorito">
-              <Heart width={18} height={18} color={isFavorite ? '#ef4444' : undefined} fill={isFavorite ? '#ef4444' : 'none'} />
-            </button>
-            <button className={styles.iconBtn} onClick={handleShare} aria-label="Compartir"><Share2 width={18} height={18} /></button>
+            {puedeFavorito && (
+              <button className={styles.iconBtn} onClick={toggleFavorite} aria-label="Favorito">
+                <Heart width={18} height={18} color={isFavorite ? '#ef4444' : undefined} fill={isFavorite ? '#ef4444' : 'none'} />
+              </button>
+            )}
+            <button className={styles.iconBtn} onClick={handleShare} aria-label="Compartir"><Forward width={18} height={18} /></button>
             <AccountMenu variant="plain" />
           </div>
         </div>
@@ -628,7 +650,7 @@ export function PublicSedeDetailPage() {
                 <h2 className={styles.h2}>Servicios</h2>
                 {novedades.length > 0 && (
                   <button className={styles.novedadesBtnMobile} style={{ background: brand }} onClick={handleNovedades}>
-                    <Gift width={15} height={15} /> Novedades
+                    <Gift width={15} height={15} /> Promociones
                   </button>
                 )}
               </div>
@@ -662,7 +684,7 @@ export function PublicSedeDetailPage() {
                           </div>
                         </div>
                       </div>
-                      <button className={styles.reservarBtn} style={{ borderColor: brand, color: brand }} onClick={() => navigate(`/reservar-publica?servicio=${s.idServicio || s.id}`)}>Reservar</button>
+                      <button className={styles.reservarBtn} onClick={() => navigate(`/reservar-publica?servicio=${s.idServicio || s.id}`)}>Reservar</button>
                     </motion.div>
                   ))}
                 </div>
@@ -759,7 +781,7 @@ export function PublicSedeDetailPage() {
                           {DIAS[d]}
                         </span>
                         <span className={styles.horHoras}>
-                          {abierto ? rangos.map((r) => `${hhmm(r.horaInicio)} - ${hhmm(r.horaFin)}`).join(', ') : 'Cerrado'}
+                          {abierto ? rangos.map((r) => `${h12(r.horaInicio)} - ${h12(r.horaFin)}`).join(', ') : 'Cerrado'}
                         </span>
                       </div>
                     )
@@ -839,7 +861,7 @@ export function PublicSedeDetailPage() {
                         <Clock width={16} height={16} />
                         <span className={styles.horaTxt}>
                           <span className={abiertoAhora ? styles.openTxt : styles.closedTxt}>{abiertoAhora ? 'Abierto' : 'Cerrado'}</span>
-                          {abiertoAhora && cierreHoy ? ` hasta las ${cierreHoy}` : ''}
+                          {abiertoAhora && cierreHoy ? ` hasta las ${h12(cierreHoy)}` : ''}
                         </span>
                         <ChevronDown width={16} height={16} className={`${styles.horaChevron} ${expandirHorarios ? styles.horaChevronOpen : ''}`} />
                       </button>
@@ -853,7 +875,7 @@ export function PublicSedeDetailPage() {
                                   <div key={d} className={`${styles.horaRow} ${d === diaHoy ? styles.horaRowHoy : ''}`}>
                                     <span>{DIAS[d]}</span>
                                     <span className={rangos.length ? '' : styles.horaCerrado}>
-                                      {rangos.length ? rangos.map((r) => `${hhmm(r.horaInicio)} - ${hhmm(r.horaFin)}`).join(', ') : 'Cerrado'}
+                                      {rangos.length ? rangos.map((r) => `${h12(r.horaInicio)} - ${h12(r.horaFin)}`).join(', ') : 'Cerrado'}
                                     </span>
                                   </div>
                                 )

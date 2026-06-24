@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Search, Copy, Check, Loader2, X, ChevronLeft, ChevronRight,
   Shield, Briefcase, Users, RefreshCw, Mail, Phone, Trash2, AlertTriangle,
+  Plus, Building2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   directorioService,
   type DirectorioContacto,
   type DirectorioSede,
+  type AltaRapidaResponse,
 } from '@/services/directorioService'
 
 type Tab = 'admins' | 'trabajadores' | 'clientes'
@@ -253,6 +255,41 @@ export function DirectorioPanel() {
   const [cargando, setCargando] = useState(false)
   const tamano = 20
 
+  // ---- Alta rápida de negocio (SuperAdmin) ----
+  const [altaOpen, setAltaOpen] = useState(false)
+  const [altaForm, setAltaForm] = useState({ nombreNegocio: '', correo: '', telefono: '', nombreContacto: '' })
+  const [altaLoading, setAltaLoading] = useState(false)
+  const [altaResultado, setAltaResultado] = useState<AltaRapidaResponse | null>(null)
+
+  const abrirAlta = () => {
+    setAltaForm({ nombreNegocio: '', correo: '', telefono: '', nombreContacto: '' })
+    setAltaResultado(null)
+    setAltaOpen(true)
+  }
+
+  const enviarAlta = async () => {
+    if (!altaForm.nombreNegocio.trim()) { toast.error('Ingresa el nombre del negocio.'); return }
+    if (!altaForm.correo.trim() && !altaForm.telefono.trim()) {
+      toast.error('Indica al menos un correo o un teléfono.'); return
+    }
+    setAltaLoading(true)
+    try {
+      const res = await directorioService.altaRapida({
+        nombreNegocio: altaForm.nombreNegocio.trim(),
+        correo: altaForm.correo.trim() || undefined,
+        telefono: altaForm.telefono.trim() || undefined,
+        nombreContacto: altaForm.nombreContacto.trim() || undefined,
+      })
+      setAltaResultado(res)
+      toast.success('Negocio dado de alta.')
+      setRecarga((n) => n + 1)
+    } catch (e: any) {
+      toast.error(e?.response?.data?.detail || e?.response?.data?.mensaje || e?.message || 'No se pudo dar de alta.')
+    } finally {
+      setAltaLoading(false)
+    }
+  }
+
   // ---- Dar de baja: lógica (el estado se declara arriba, junto al buscador) ----
   const confirmarBaja = async (campo: CampoBaja) => {
     if (!aEliminar) return
@@ -309,6 +346,9 @@ export function DirectorioPanel() {
 
   return (
     <div className="space-y-6">
+      {/* El alta de negocios se hace desde la pestaña "Barberías" (botón "Nueva barbería"),
+          que ahora usa el mismo flujo atómico. Aquí solo se busca/consulta el directorio. */}
+
       {/* ===================== BUSCADOR UNIFICADO (hero) ===================== */}
       <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
         <h2 className="text-lg font-bold text-gray-900 mb-1">¿Dónde está este contacto?</h2>
@@ -433,6 +473,69 @@ export function DirectorioPanel() {
           onCancelar={() => { if (!eliminando) setAEliminar(null) }}
           onConfirmar={confirmarBaja}
         />
+      )}
+
+      {/* Modal de ALTA RÁPIDA */}
+      {altaOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !altaLoading && setAltaOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            {!altaResultado ? (
+              <>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2"><Building2 className="w-5 h-5 text-blue-600" /> Nueva alta de negocio</h3>
+                  <button onClick={() => setAltaOpen(false)} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+                </div>
+                <p className="text-sm text-gray-500 mb-4">El Admin recibirá un código para crear su contraseña.</p>
+
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Nombre del negocio *</label>
+                <input value={altaForm.nombreNegocio} onChange={(e) => setAltaForm(f => ({ ...f, nombreNegocio: e.target.value }))}
+                  placeholder="Barbería El Corte" className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 mb-3 focus:outline-none focus:border-blue-500" />
+
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Correo del Admin</label>
+                <input value={altaForm.correo} onChange={(e) => setAltaForm(f => ({ ...f, correo: e.target.value }))}
+                  placeholder="dueño@correo.com" autoCapitalize="none" className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 mb-3 focus:outline-none focus:border-blue-500" />
+
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Teléfono del Admin</label>
+                <input value={altaForm.telefono} onChange={(e) => setAltaForm(f => ({ ...f, telefono: e.target.value }))}
+                  placeholder="9XXXXXXXX" className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 mb-1 focus:outline-none focus:border-blue-500" />
+                <p className="text-xs text-gray-400 mb-3">Indica al menos un correo o un teléfono.</p>
+
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Nombre del responsable (opcional)</label>
+                <input value={altaForm.nombreContacto} onChange={(e) => setAltaForm(f => ({ ...f, nombreContacto: e.target.value }))}
+                  placeholder="Si va vacío, se usa el del negocio" className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 mb-5 focus:outline-none focus:border-blue-500" />
+
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setAltaOpen(false)} className="px-4 py-2.5 rounded-xl text-gray-600 hover:bg-gray-100 font-semibold">Cancelar</button>
+                  <button onClick={enviarAlta} disabled={altaLoading}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50">
+                    {altaLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />} Dar de alta
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center"><Check className="w-5 h-5 text-green-600" /></div>
+                  <h3 className="text-lg font-bold text-gray-900">¡Negocio dado de alta!</h3>
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm space-y-1.5 mb-4">
+                  <div><span className="text-gray-500">Negocio:</span> <b>{altaResultado.nombreNegocio}</b></div>
+                  {altaResultado.correo && <div><span className="text-gray-500">Correo:</span> {altaResultado.correo}</div>}
+                  {altaResultado.telefono && <div><span className="text-gray-500">Teléfono:</span> {altaResultado.telefono}</div>}
+                  {altaResultado.subdominio && <div><span className="text-gray-500">Subdominio:</span> {altaResultado.subdominio}</div>}
+                  <div className="pt-1">
+                    {altaResultado.otpEnviado
+                      ? <span className="text-green-700">Se envió un código al contacto para crear la contraseña.</span>
+                      : <span className="text-amber-700">No se pudo enviar el código; el Admin puede crear su contraseña desde el login.</span>}
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={() => setAltaOpen(false)} className="px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700">Entendido</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )

@@ -10,6 +10,8 @@ import {
 import { useAuthStore } from '@/store/authStore'
 import { AccountMenu } from '@/components/AccountMenu'
 import { DirectorioPanel } from '@/components/DirectorioPanel'
+import { LandingPanel } from '@/components/LandingPanel'
+import { directorioService } from '@/services/directorioService'
 import {
   empresasService, type Empresa, type Admin, type Plan,
   type SedeAdmin, type CanalAcceso,
@@ -43,7 +45,7 @@ export function SuperAdminDashboard() {
   const { user } = useAuthStore()
 
   const [empresas, setEmpresas] = useState<Empresa[]>([])
-  const [seccion, setSeccion] = useState<'barberias' | 'directorio'>('barberias')
+  const [seccion, setSeccion] = useState<'barberias' | 'directorio' | 'landing'>('barberias')
   const [owners, setOwners] = useState<Record<number, Admin | null>>({})
   const [planes, setPlanes] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
@@ -95,76 +97,19 @@ export function SuperAdminDashboard() {
   const crearTodo = async () => {
     if (!valido) return
     setSaving(true)
-    let empresaIdNueva: number | null = null
-    let adminCreado = false
     try {
       const nombre = form.nombre.trim()
-
-      // 1) Empresa con datos mínimos (el dueño completa el resto desde su perfil)
-      const empresa = await empresasService.createEmpresa({
-        razonSocial: nombre,
-        nombreComercial: nombre,
-        ruc: '',
-        correoContacto: '',
-        telefonoContacto: '',
-      })
-      empresaIdNueva = empresa.id
-
-      // 2) Admin (dueño): correo O teléfono real, sin contraseña → entra por PIN/OTP
-      await empresasService.createAdminEmpresa(empresa.id, {
-        nombreCompleto: form.ownerNombre.trim() || undefined,
+      // Alta ATÓMICA (un solo endpoint): Empresa + Admin + sede inicial + plan Prueba + OTP.
+      const res = await directorioService.altaRapida({
+        nombreNegocio: nombre,
         correo: form.canal === 'Email' ? form.ownerCorreo.trim() : undefined,
         telefono: form.canal === 'WhatsApp' ? form.ownerTelefono.trim() : undefined,
+        nombreContacto: form.ownerNombre.trim() || undefined,
       })
-      adminCreado = true
-
-      // 3) Sede inicial por defecto (el admin no puede crear sedes solo)
-      const base = slugify(nombre)
-      const esEmail = form.canal === 'Email'
-      const telOwner = (form.ownerTelefono || '').replace(/\D/g, '')
-      const sedeBase = {
-        idEmpresa: empresa.id,
-        nombre,                                                  // ← nombre del negocio (no "Sede principal")
-        direccion: '', departamento: '', provincia: '', distrito: '',
-        latitud: 0, longitud: 0,
-        telefono: esEmail ? '' : telOwner,                       // pre-carga teléfono si el alta fue por WhatsApp
-        whatsappContacto: esEmail ? '' : telOwner,
-        correoContacto: esEmail ? form.ownerCorreo.trim() : '',  // pre-carga correo si el alta fue por Email
-        zonaHoraria: 'America/Lima', moneda: 'PEN',
-        crearTrabajadorDueno: true,   // el dueño nace también como barbero (1 sede = 1 dueño-trabajador)
-      }
-      try {
-        await empresasService.createSede({ ...sedeBase, subdominio: base, slug: base })
-      } catch {
-        // subdominio en uso → reintenta con sufijo único de la empresa
-        const alt = `${base}-${empresa.id}`
-        try { await empresasService.createSede({ ...sedeBase, subdominio: alt, slug: alt }) }
-        catch { toast.message('Barbería creada, pero la sede inicial no se pudo crear. Créala manualmente en "Sedes".') }
-      }
-
-      // 4) Plan Prueba (gratis 14 días) automático
-      const prueba = planes.find((p) => p.precioMensualPEN === 0) ?? planes[0]
-      if (prueba) {
-        let fechaFin: string | null = null
-        if (prueba.precioMensualPEN === 0) {
-          const d = new Date(); d.setDate(d.getDate() + 14); fechaFin = d.toISOString().slice(0, 10)
-        }
-        await empresasService.asignarSuscripcion(empresa.id, prueba.idPlan, fechaFin)
-      }
-
-      toast.success(`"${nombre}" creada${prueba ? ` · plan ${prueba.nombre}` : ''}.`)
+      toast.success(`"${nombre}" creada.${res.otpEnviado ? ' Le enviamos un código de acceso.' : ''}`)
       setCrearOpen(false)
-
-      // El Admin nace con acceso habilitado (Estado activo). Entra solo desde el
-      // login (OTP / contraseña / PIN); ya no enviamos ningún código al crearlo.
-
       await loadAll()
     } catch (err: any) {
-      // Rollback: si la empresa se creó pero el admin no, quedó huérfana → la limpiamos.
-      // deleteEmpresa solo purga empresas vacías, así que esto no puede borrar datos reales.
-      if (empresaIdNueva && !adminCreado) {
-        try { await empresasService.deleteEmpresa(empresaIdNueva) } catch { /* limpieza best-effort */ }
-      }
       toast.error(err?.response?.data?.message || 'No se pudo crear la barbería.')
     } finally { setSaving(false) }
   }
@@ -262,9 +207,16 @@ export function SuperAdminDashboard() {
               seccion === 'directorio' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
             Directorio
           </button>
+          <button onClick={() => setSeccion('landing')}
+            className={`text-sm font-semibold px-4 py-2 rounded-lg transition ${
+              seccion === 'landing' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+            Landing
+          </button>
         </div>
 
         {seccion === 'directorio' && <DirectorioPanel />}
+
+        {seccion === 'landing' && <LandingPanel />}
 
         {seccion === 'barberias' && (<>
         {/* Stats + acción */}

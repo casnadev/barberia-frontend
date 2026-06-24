@@ -19,7 +19,6 @@ const PANEL_POR_ROL: Record<string, string> = {
   SuperAdmin: '/super-admin',
   Admin: '/dashboard',
   Trabajador: '/mi-agenda',
-  Cliente: '/mi-perfil',
 }
 
 const PanelIcon = ({ className }: { className?: string }) => (
@@ -172,17 +171,12 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
                       <Settings className={s.itemIcon} width={18} height={18} /> Configuración
                     </button>
                   )}
-                  {user.rol === 'Cliente' && (
-                    <button className={s.item} onClick={() => go('/mi-perfil?config=1')}>
-                      <Settings className={s.itemIcon} width={18} height={18} /> Configuración
-                    </button>
-                  )}
                   {user.rol === 'Trabajador' && (
                     <button className={s.item} onClick={() => go('/mi-agenda?config=1')}>
                       <Settings className={s.itemIcon} width={18} height={18} /> Configuración
                     </button>
                   )}
-                  {!['Trabajador', 'Cliente'].includes(user.rol) && (
+                  {user.rol === 'Admin' && (
                     <button className={s.item} onClick={abrirSoporte}>
                       <LifeBuoy className={s.itemIcon} width={18} height={18} /> Ayuda y soporte
                     </button>

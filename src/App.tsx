@@ -29,7 +29,6 @@ const VentasPage = lazy(() => import('@/pages/admin/VentasPage').then(m => ({ de
 const CierreCajaPage = lazy(() => import('@/pages/admin/CierreCaja').then(m => ({ default: m.CierreCajaPage })))
 const ConfiguracionPage = lazy(() => import('@/pages/admin/ConfiguracionPage').then(m => ({ default: m.ConfiguracionPage })))
 const TrabajadorMiAgenda = lazy(() => import('@/pages/trabajador/TrabajadorMiAgenda').then(m => ({ default: m.TrabajadorMiAgenda })))
-const MiPerfilCliente = lazy(() => import('@/pages/cliente/MiPerfilCliente').then(m => ({ default: m.MiPerfilCliente })))
 const CompletarPerfilAdmin = lazy(() => import('@/pages/CompletarPerfilAdmin').then(m => ({ default: m.CompletarPerfilAdmin })))
 const LandingPage = lazy(() => import('@/pages/LandingPage')) // ← NUEVO (export default)
 
@@ -302,21 +301,6 @@ export function App() {
         <Route path="/mi-agenda" element={
           <ProtectedRoute requiredRole="Trabajador"><SedeActivaGate><TrabajadorMiAgenda /></SedeActivaGate></ProtectedRoute>
         } />
-
-        {/* CLIENTE - PERFIL */}
-        <Route path="/mi-perfil" element={
-          <ProtectedRoute requiredRole="Cliente"><SedeActivaGate><MiPerfilCliente /></SedeActivaGate></ProtectedRoute>
-        } />
-
-        {/* CLIENTE LOGUEADO */}
-        <Route
-          path="/reservar"
-          element={
-            <ProtectedRoute requiredRole="Cliente">
-              <ReservaClientePage />
-            </ProtectedRoute>
-          }
-        />
 
         {/* RUTAS PÚBLICAS - ACCIONES DE RESERVA */}
         <Route path="/reserva/:token" element={<ReservaAcciones />} />

@@ -1,63 +1,43 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import {
-  ArrowLeft, ArrowRight, Delete, ShieldCheck, KeyRound, Send, Loader2, LogIn,
+  ArrowLeft, ShieldCheck, KeyRound, Send, Loader2, LogIn,
   Eye, EyeOff, MailCheck, MessageCircle,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
-import { pinAuthService } from '@/services/pinAuthService'
 import { authService } from '@/services/authService'
 import { setTenant, clearTenant } from '@/services/apiClient'
 import { sedeTenantService } from '@/services/sedeTenantService'
 
-type View = 'pin' | 'password' | 'tradicional' | 'login-otp' | 'enroll-id' | 'enroll-code' | 'recover-id' | 'recover-code' | 'sent' | 'recover-pass-id' | 'set-password'
-function nombreDispositivoCorto(): string {
-  const ua = navigator.userAgent
-  const has = (s: string) => ua.includes(s)
-  const navegador =
-    has('Edg') ? 'Edge' :
-      has('OPR') || has('Opera') ? 'Opera' :
-        has('Chrome') ? 'Chrome' :
-          has('Firefox') ? 'Firefox' :
-            has('Safari') ? 'Safari' : 'Navegador'
-  const so =
-    has('Windows') ? 'Windows' :
-      has('Android') ? 'Android' :
-        has('iPhone') ? 'iPhone' :
-          has('iPad') ? 'iPad' :
-            has('Mac') ? 'Mac' :
-              has('Linux') ? 'Linux' : 'dispositivo'
-  return `${navegador} en ${so}`.slice(0, 120)
-}
+// Vistas del login. Tras retirar PIN y login-OTP, el ingreso es:
+//   - 'tradicional'    → correo/teléfono + contraseña  (+ botón Google)
+//   - 'recover-pass-id'→ "Olvidé mi contraseña": pide el correo/teléfono
+//   - 'sent'           → "revisa tu correo/WhatsApp" (el enlace lleva el código)
+//   - 'set-password'   → ingresar código + nueva contraseña
+type View = 'tradicional' | 'recover-pass-id' | 'set-password' | 'sent'
+
 export function LoginPage() {
   const navigate = useNavigate()
   const { setUser, setToken } = useAuthStore()
 
   const [view, setView] = useState<View>('tradicional')
   const [loading, setLoading] = useState(false)
-  const [flujo, setFlujo] = useState<'enroll' | 'recover' | 'password'>('recover')
-
-  const [pin, setPin] = useState('')
-  const [pinError, setPinError] = useState('')
-  const [showPin, setShowPin] = useState(false)
 
   const [identificador, setIdentificador] = useState('')
   const [codigo, setCodigo] = useState('')
-  const [nuevoPin, setNuevoPin] = useState('')
-  const [repitePin, setRepitePin] = useState('')
 
   const [correo, setCorreo] = useState('')
   const [password, setPassword] = useState('')
+
+  const [nuevaPass, setNuevaPass] = useState('')
+  const [repitePass, setRepitePass] = useState('')
 
   // Google Sign-In. Si no hay VITE_GOOGLE_CLIENT_ID en el .env, el botón no
   // aparece (no rompe nada).
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
   const googleBtnRef = useRef<HTMLDivElement>(null)
-
-  const [nuevaPass, setNuevaPass] = useState('')
-  const [repitePass, setRepitePass] = useState('')
 
   // ----------------------------------------------------------- routing
   const entrar = async (token: string, user: any, subdominio?: string) => {
@@ -77,100 +57,35 @@ export function LoginPage() {
     navigate('/')
   }
 
-  // ----------------------------------------------------------- PIN diario
-  const submitPin = async (value: string) => {
-    setLoading(true); setPinError('')
-    const r = await pinAuthService.pinLogin(value)
-    setLoading(false)
-    if (r.ok && r.token && r.user) await entrar(r.token, r.user, r.subdominio)
-    else if (r.codigo === 'DISPOSITIVO_NO_CONFIABLE') {
-      setPin(''); setView('enroll-id')
-      toast('Este dispositivo es nuevo. Verifiquemos que eres tú.')
-    } else { setPin(''); setPinError(r.mensaje || 'PIN incorrecto.') }
-  }
-
   // ----------------------------------------------------------- deep-link del correo
-  // El botón del correo abre /login?acceso=enrolar|recuperar&id=<correo/tel>&code=<otp>
-  // → caemos directo en "Crea tu PIN" (o "Cambiar PIN") con el contacto y el código
-  // ya precargados. El usuario solo elige su PIN.
+  // El botón del correo abre /login?acceso=password&id=<correo/tel>&code=<otp>
+  // → caemos directo en "Tu contraseña" con el contacto y el código precargados.
   const [searchParams] = useSearchParams()
   useEffect(() => {
     const acceso = searchParams.get('acceso')
-    if (!acceso) return
+    if (acceso !== 'password') return
     const id = searchParams.get('id')
     const code = searchParams.get('code')
     if (id) setIdentificador(id)
     if (code) setCodigo(code)
-    if (acceso === 'recuperar') setView('recover-code')
-    else if (acceso === 'enrolar') setView('enroll-code')
-    else if (acceso === 'password') { setFlujo('password'); setView('set-password') }
+    setView('set-password')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  useEffect(() => {
-    if (view === 'pin' && pin.length === 6 && !loading) submitPin(pin)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pin])
-
-  const pressDigit = (d: string) => {
-    if (loading || pin.length >= 6) return
-    setPinError(''); setPin((p) => (p.length >= 6 ? p : p + d))
-  }
-  const backspace = () => setPin((p) => p.slice(0, -1))
-
-  // ----------------------------------------------------------- enrolar
-  const enviarCodigoEnrolar = async () => {
-    if (!identificador.trim()) { toast.error('Ingresa tu correo o teléfono.'); return }
-    setLoading(true)
-    await pinAuthService.enrolarSolicitar(identificador.trim())
-    setLoading(false)
-    toast.success('Listo, revisa tu mensaje.')
-    setFlujo('enroll'); setView('sent')
-  }
-
-  const crearPin = async () => {
-    if (!identificador.trim()) { toast.error('Ingresa tu correo o teléfono.'); return }
-    if (codigo.length !== 6) { toast.error('El código debe tener 6 dígitos.'); return }
-    if (nuevoPin.length !== 6) { toast.error('El PIN debe tener 6 dígitos.'); return }
-    if (nuevoPin !== repitePin) { toast.error('Los PIN no coinciden.'); return }
-    setLoading(true)
-    const r = await pinAuthService.enrolarConfirmar(identificador.trim(), codigo, nuevoPin, nombreDispositivoCorto())
-    setLoading(false)
-    if (r.ok && r.token && r.user) { toast.success('¡Listo, PIN creado!'); await entrar(r.token, r.user, r.subdominio) }
-    else toast.error(r.mensaje || 'No se pudo crear el PIN. Revisa el código.')
-  }
-
-  // ----------------------------------------------------------- recuperar
-  const enviarCodigoRecuperar = async () => {
-    if (!identificador.trim()) { toast.error('Ingresa tu correo o teléfono.'); return }
-    setLoading(true)
-    await pinAuthService.recuperarSolicitar(identificador.trim())
-    setLoading(false)
-    toast.success('Listo, revisa tu mensaje.')
-    setFlujo('recover'); setView('sent')
-  }
-
-  const cambiarPin = async () => {
-    if (!identificador.trim()) { toast.error('Ingresa tu correo o teléfono.'); return }
-    if (codigo.length !== 6) { toast.error('El código debe tener 6 dígitos.'); return }
-    if (nuevoPin.length !== 6) { toast.error('El PIN debe tener 6 dígitos.'); return }
-    if (nuevoPin !== repitePin) { toast.error('Los PIN no coinciden.'); return }
-    setLoading(true)
-    const r = await pinAuthService.recuperarConfirmar(identificador.trim(), codigo, nuevoPin)
-    setLoading(false)
-    if (r.ok) { toast.success('PIN actualizado. Ahora ingrésalo.'); limpiar(); setView('pin') }
-    else toast.error(r.mensaje || 'No se pudo cambiar el PIN. Revisa el código.')
-  }
 
   // ----------------------------------------------------------- crear/recuperar contraseña
   const enviarCodigoPassword = async () => {
     if (!identificador.trim()) { toast.error('Ingresa tu correo o teléfono.'); return }
     setLoading(true)
-    await authService.solicitarPassword(identificador.trim())
+    const r = await authService.solicitarPassword(identificador.trim())
     setLoading(false)
-    // Respuesta uniforme: siempre confirmamos el envío (no revelamos si la cuenta existe).
-    toast.success('Listo, revisa tu mensaje.')
-    setFlujo('password'); setView('sent')
+    if (!r.ok) {
+      // No registrado / inválido: se avisa y NO se avanza (no se envió ningún código).
+      toast.error(r.mensaje || 'Parece que el número o correo no está registrado. Regístrate.')
+      return
+    }
+    // Registrado: se envió el CÓDIGO (no un enlace). Vamos directo a ingresarlo.
+    toast.success('Te enviamos un código de 6 dígitos. Ingrésalo aquí.')
+    setView('set-password')
   }
 
   const establecerPassword = async () => {
@@ -182,49 +97,41 @@ export function LoginPage() {
     const r = await authService.establecerPassword(identificador.trim(), codigo, nuevaPass)
     setLoading(false)
     if (r.ok) {
-      toast.success('¡Contraseña lista! Ahora ingresa con ella.')
-      setCorreo(identificador.trim())
-      limpiar(); setView('password')
+      // Auto-login: ya se verificó por OTP y acaba de crear su clave → entra directo.
+      if (r.token && r.user) {
+        toast.success('¡Listo! Tu contraseña quedó guardada.')
+        await entrar(r.token, r.user, (r.user as any).subdominio)
+      } else {
+        // Respaldo por si no vino el token: lo mandamos al login normal.
+        toast.success('¡Contraseña lista! Ahora ingresa con ella.')
+        setCorreo(identificador.trim())
+        limpiar(); setView('tradicional')
+      }
     } else toast.error(r.mensaje || 'No se pudo establecer la contraseña. Revisa el código.')
   }
 
-  // ----------------------------------------------------------- tradicional
+  // ----------------------------------------------------------- tradicional (correo + contraseña)
   const loginPassword = async () => {
     if (!correo.trim() || !password) { toast.error('Completa el acceso y la contraseña.'); return }
     setLoading(true)
     try {
       const res = await authService.login(correo.trim(), password)
-      if (res?.token && res.user) await entrar(res.token, res.user as any)
-      else toast.error('Acceso o contraseña incorrectos.')
+      if (res?.token && res.user) {
+        // El trabajador con contraseña temporal debe cambiarla en su primer
+        // ingreso. El backend marca debeCambiarPassword; le enviamos el OTP y lo
+        // mandamos a fijar su nueva contraseña.  (Flujo completo del trabajador
+        // se afina en el siguiente incremento.)
+        if (res.user.debeCambiarPassword) {
+          const id = res.user.correo || correo.trim()
+          setIdentificador(id)
+          await authService.solicitarPassword(id)
+          toast('Por seguridad, crea tu nueva contraseña. Te enviamos un código.')
+          limpiar(); setView('set-password')
+          return
+        }
+        await entrar(res.token, res.user as any, (res.user as any).subdominio)
+      } else toast.error('Acceso o contraseña incorrectos.')
     } catch { toast.error('Acceso o contraseña incorrectos.') }
-    finally { setLoading(false) }
-  }
-
-  // ----------------------------------------------------------- login por OTP
-  const continuarLogin = async () => {
-    if (!identificador.trim()) { toast.error('Ingresa tu correo o teléfono.'); return }
-    setLoading(true)
-    try {
-      const r = await authService.loginOtpSolicitar(identificador.trim())
-      if (r.esNuevo) {
-        toast.error('El correo o teléfono no está registrado. ¡Crea una cuenta!')
-      } else {
-        setCodigo('')
-        setView('login-otp')
-        toast.success(`Te enviamos un código por ${r.canal === 'WhatsApp' ? 'WhatsApp' : 'correo'}.`)
-      }
-    } catch (e: any) { toast.error(e?.message || 'No pudimos continuar. Revisa el dato.') }
-    finally { setLoading(false) }
-  }
-
-  const validarLoginOtp = async () => {
-    if (codigo.length !== 6) { toast.error('Ingresa los 6 dígitos.'); return }
-    setLoading(true)
-    try {
-      const res = await authService.loginOtpValidar(identificador.trim(), codigo)
-      if (res?.token && res.user) await entrar(res.token, res.user as any, (res as any).subdominio)
-      else toast.error('Código inválido o expirado.')
-    } catch (e: any) { toast.error(e?.message || 'Código inválido o expirado.') }
     finally { setLoading(false) }
   }
 
@@ -233,8 +140,8 @@ export function LoginPage() {
     if (!resp?.credential) return
     setLoading(true)
     try {
-      // En /login NO se crea cuenta: solo entra si ya existe (cliente, admin o
-      // trabajador). Si no existe, el backend avisa y mandamos a registrarse.
+      // En /login NO se crea cuenta: solo entra si ya existe (admin o trabajador).
+      // Si no existe, el backend avisa y mandamos a registrarse.
       const res = await authService.loginGoogle(resp.credential, undefined, false)
       if (res && 'token' in res && res.token) await entrar(res.token, (res as any).user)
       else toast.error('No se pudo iniciar sesión con Google.')
@@ -250,10 +157,7 @@ export function LoginPage() {
     } finally { setLoading(false) }
   }
 
-  // Carga GSI (si falta) y dibuja el botón cuando estamos en la vista password.
-  // Espera (poll) a que window.google.accounts.id exista DE VERDAD antes de
-  // pintar; así no falla aunque el script aún no haya terminado de cargar
-  // (caso típico con React StrictMode en dev, que corre los efectos 2 veces).
+  // Carga GSI (si falta) y dibuja el botón cuando estamos en la vista tradicional.
   useEffect(() => {
     if (!googleClientId || view !== 'tradicional') return
     let cancelado = false
@@ -270,7 +174,6 @@ export function LoginPage() {
       })
     }
 
-    // Asegura el script una sola vez.
     const ID = 'google-gsi-script'
     if (!document.getElementById(ID)) {
       const s = document.createElement('script')
@@ -279,36 +182,25 @@ export function LoginPage() {
       document.head.appendChild(s)
     }
 
-    // Si ya está listo, pinta; si no, espera hasta que la librería cargue.
-    if ((window as any).google?.accounts?.id) {
-      pintarBoton()
-      return
-    }
+    if ((window as any).google?.accounts?.id) { pintarBoton(); return }
     const intervalo = setInterval(() => {
-      if ((window as any).google?.accounts?.id) {
-        clearInterval(intervalo)
-        pintarBoton()
-      }
+      if ((window as any).google?.accounts?.id) { clearInterval(intervalo); pintarBoton() }
     }, 100)
 
     return () => { cancelado = true; clearInterval(intervalo) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, googleClientId])
 
-  const limpiar = () => { setCodigo(''); setNuevoPin(''); setRepitePin(''); setNuevaPass(''); setRepitePass('') }
-  const irA = (v: View) => { setPinError(''); limpiar(); setView(v) }
+  const limpiar = () => { setCodigo(''); setNuevaPass(''); setRepitePass('') }
+  const irA = (v: View) => { limpiar(); setView(v) }
 
   // ================================================================= UI
   return (
     <div className="min-h-screen flex bg-white">
       {/* ===================== PANEL IMAGEN (desktop) ===================== */}
       <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
-        {/* foto de barbería */}
         <img src="/login-barberia.jpg" alt="Barbería profesional" className="absolute inset-0 w-full h-full object-cover" />
-        {/* degradado para legibilidad del lema */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
-
-        {/* lema */}
         <div className="absolute inset-x-0 bottom-0 p-12 text-white">
           <motion.h2 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
             className="text-4xl font-bold leading-tight tracking-tight">
@@ -323,7 +215,6 @@ export function LoginPage() {
 
       {/* ===================== PANEL DE FORMULARIO ===================== */}
       <div className="flex-1 flex items-center justify-center p-6 relative overflow-hidden">
-        {/* Fondo móvil: imagen de barbería + overlay (en desktop la imagen vive en el panel izquierdo) */}
         <img src="/login-barberia.jpg" alt="" aria-hidden="true" className="lg:hidden absolute inset-0 w-full h-full object-cover" />
         <div className="lg:hidden absolute inset-0 bg-black/60" />
 
@@ -335,245 +226,7 @@ export function LoginPage() {
           </div>
 
           <AnimatePresence mode="wait">
-            {/* ---------------- PIN DIARIO ---------------- */}
-            {view === 'pin' && (
-              <motion.div key="pin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <div className="hidden lg:block mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Ingresa tu PIN</h2>
-                  <p className="text-gray-400 text-sm mt-1">Usa tu PIN de 6 dígitos para continuar</p>
-                </div>
-                <p className="lg:hidden text-center text-gray-500 text-sm mb-5">Ingresa tu PIN</p>
-
-                <div className="flex items-center justify-center lg:justify-start gap-3 mb-1">
-                  {Array.from({ length: 6 }).map((_, i) =>
-                    showPin ? (
-                      <span key={i} className="w-3.5 h-5 flex items-center justify-center text-xl font-light leading-none text-blue-700">
-                        {pin[i] ?? ''}
-                      </span>
-                    ) : (
-                      <div key={i} className={`w-3.5 h-3.5 rounded-full transition-all duration-200 ${i < pin.length ? 'bg-blue-600 scale-110 shadow-sm shadow-blue-600/40' : 'bg-gray-200'}`} />
-                    )
-                  )}
-                  <button type="button" onClick={() => setShowPin((s) => !s)}
-                    className="ml-1 text-gray-400 hover:text-blue-600 active:scale-90 transition"
-                    aria-label={showPin ? 'Ocultar PIN' : 'Mostrar PIN'}>
-                    {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                <p className="text-center lg:text-left text-red-500 text-sm h-5 mb-3">{pinError}</p>
-
-                {/* Teclado premium */}
-                <div className="grid grid-cols-3 gap-3 max-w-[300px] mx-auto lg:mx-0">
-                  {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => (
-                    <button key={d} onClick={() => pressDigit(d)} disabled={loading}
-                      className="aspect-square rounded-2xl text-2xl font-light text-gray-700 bg-white border border-gray-100 hover:bg-blue-50 hover:text-blue-700 active:bg-blue-600 active:text-white active:border-blue-600 active:scale-90 transition-all duration-150 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-                      {d}
-                    </button>
-                  ))}
-                  <div />
-                  <button onClick={() => pressDigit('0')} disabled={loading}
-                    className="aspect-square rounded-2xl text-2xl font-light text-gray-700 bg-white border border-gray-100 hover:bg-blue-50 hover:text-blue-700 active:bg-blue-600 active:text-white active:border-blue-600 active:scale-90 transition-all duration-150 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-                    0
-                  </button>
-                  <button onClick={backspace} disabled={loading}
-                    className="aspect-square rounded-2xl flex items-center justify-center text-gray-400 hover:bg-gray-100 active:scale-90 transition-all duration-150">
-                    <Delete className="w-6 h-6" />
-                  </button>
-                </div>
-
-                <div className="h-6 mt-3 flex justify-center lg:justify-start">
-                  {loading && <Loader2 className="w-5 h-5 animate-spin text-blue-600" />}
-                </div>
-
-                <div className="mt-3 space-y-2.5 text-center lg:text-left">
-                  <button onClick={() => irA('recover-id')} className="block w-full lg:w-auto text-gray-400 text-sm hover:text-gray-600">
-                    Olvidé mi PIN
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* ---------------- ENROLAR: identificador ---------------- */}
-            {view === 'enroll-id' && (
-              <motion.div key="enroll-id" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <Back onClick={() => irA('pin')} />
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Es mi primera vez aquí</h2>
-                <p className="text-sm text-gray-500 mb-6">Te enviaremos un código, tenemos que verificar que eres tú.</p>
-
-                <Label>Correo o teléfono</Label>
-                <Input value={identificador} onChange={setIdentificador} placeholder="tucorreo@gmail.com o 987654321" />
-
-                <button onClick={enviarCodigoEnrolar} disabled={loading} className={btnPrimary + ' mt-2 mb-3'}>
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} Enviarme el código
-                </button>
-
-              </motion.div>
-            )}
-
-            {/* ---------------- ENROLAR: acceso + código + PIN ---------------- */}
-            {view === 'enroll-code' && (
-              <motion.div key="enroll-code" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <Back onClick={() => irA('enroll-id')} />
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Crea tu PIN</h2>
-                <p className="text-sm text-gray-500 mb-5">Ingresa el código que recibiste y elige tu PIN.</p>
-
-                <Label>Acceso (correo o teléfono)</Label>
-                <Input value={identificador} onChange={setIdentificador} placeholder="Correo o teléfono" />
-                <Label>Código (6 dígitos)</Label>
-                <Digits value={codigo} onChange={setCodigo} />
-                <Label>Nuevo PIN (6 dígitos)</Label>
-                <Digits value={nuevoPin} onChange={setNuevoPin} secret />
-                <Label>Repite tu PIN</Label>
-                <Digits value={repitePin} onChange={setRepitePin} secret />
-
-                <button onClick={crearPin} disabled={loading} className={btnPrimary + ' mt-2'}>
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <KeyRound className="w-5 h-5" />} Crear mi PIN
-                </button>
-                <button onClick={enviarCodigoEnrolar} className="w-full text-gray-400 text-sm py-2 hover:text-gray-600">
-                  Reenviar código
-                </button>
-              </motion.div>
-            )}
-
-            {/* ---------------- RECUPERAR: identificador ---------------- */}
-            {view === 'recover-id' && (
-              <motion.div key="recover-id" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <Back onClick={() => irA('pin')} />
-                <p className="text-sm text-gray-500 mb-6">Te enviaremos un código para restablecer tu PIN.</p>
-
-                <label className="block text-sm font-bold text-blue-700 mb-2">Correo o teléfono</label>
-                <Input value={identificador} onChange={setIdentificador} placeholder="tucorreo@gmail.com o 987654321" />
-
-                <button onClick={enviarCodigoRecuperar} disabled={loading} className={btnPrimary + ' mt-2'}>
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} Enviarme un código
-                </button>
-              </motion.div>
-            )}
-
-            {/* ---------------- RECUPERAR: código + PIN ---------------- */}
-            {view === 'recover-code' && (
-              <motion.div key="recover-code" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <Back onClick={() => irA('recover-id')} />
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Nuevo PIN</h2>
-                <p className="text-sm text-gray-500 mb-5">
-                  Código enviado a <span className="font-medium text-gray-700">{identificador}</span>
-                </p>
-
-                <Label>Código (6 dígitos)</Label>
-                <Digits value={codigo} onChange={setCodigo} />
-                <Label>Nuevo PIN (6 dígitos)</Label>
-                <Digits value={nuevoPin} onChange={setNuevoPin} secret />
-                <Label>Repite tu PIN</Label>
-                <Digits value={repitePin} onChange={setRepitePin} secret />
-
-                <button onClick={cambiarPin} disabled={loading} className={btnPrimary + ' mt-2'}>
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <KeyRound className="w-5 h-5" />} Cambiar mi PIN
-                </button>
-              </motion.div>
-            )}
-
-            {/* ---------------- ENVIADO: revisa tu correo / WhatsApp ---------------- */}
-            {view === 'sent' && (
-              <motion.div key="sent" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                {(() => {
-                  const esCorreo = identificador.includes('@')
-                  const canal = esCorreo ? 'correo' : 'WhatsApp'
-                  const reenviar = flujo === 'enroll' ? enviarCodigoEnrolar
-                    : flujo === 'password' ? enviarCodigoPassword : enviarCodigoRecuperar
-                  const vistaManual: View = flujo === 'enroll' ? 'enroll-code'
-                    : flujo === 'password' ? 'set-password' : 'recover-code'
-                  const textoBoton = flujo === 'enroll' ? 'Activar mi acceso'
-                    : flujo === 'password' ? 'Crear mi contraseña' : 'Restablecer mi PIN'
-                  const vistaAtras: View = flujo === 'enroll' ? 'enroll-id'
-                    : flujo === 'password' ? 'recover-pass-id' : 'recover-id'
-                  return (
-                    <>
-                      <Back onClick={() => irA(vistaAtras)} />
-
-                      <div className="flex justify-center lg:justify-start mb-5">
-                        <div className="relative w-16 h-16 rounded-2xl bg-blue-50 ring-1 ring-blue-100 flex items-center justify-center">
-                          {esCorreo
-                            ? <MailCheck className="w-8 h-8 text-blue-600" />
-                            : <MessageCircle className="w-8 h-8 text-blue-600" />}
-                          <span className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center ring-2 ring-white shadow-sm">
-                            <Send className="w-3 h-3 text-white" />
-                          </span>
-                        </div>
-                      </div>
-
-                      <h2 className="text-2xl font-bold text-gray-900 mb-1 text-center lg:text-left">
-                        Revisa tu {canal}
-                      </h2>
-                      <p className="text-sm text-gray-500 mb-5 text-center lg:text-left">
-                        Te enviamos un enlace a{' '}
-                        <span className="font-semibold text-gray-700">{identificador || `tu ${canal}`}</span>.
-                        Ábrelo y toca <span className="font-medium text-gray-700">“{textoBoton}”</span> para continuar.
-                      </p>
-
-                      <div className="rounded-xl bg-blue-50/60 border border-blue-100 p-4 mb-6 flex items-start gap-2.5">
-                        <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0 text-blue-600" />
-                        <p className="text-sm text-blue-900/80 leading-relaxed">
-                          El enlace ya lleva tu código incluido. No necesitas copiar ni escribir nada — solo ábrelo.
-                        </p>
-                      </div>
-
-                      <button onClick={reenviar} disabled={loading} className={btnPrimary}>
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                        Reenviar enlace
-                      </button>
-
-                      <button onClick={() => irA(vistaManual)}
-                        className="w-full text-gray-400 text-sm py-3 hover:text-gray-600 transition">
-                        ¿No te llegó? Ingresar el código manualmente
-                      </button>
-                    </>
-                  )
-                })()}
-              </motion.div>
-            )}
-
-            {/* ---------------- CONTRASEÑA: identificador ---------------- */}
-            {view === 'recover-pass-id' && (
-              <motion.div key="recover-pass-id" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <Back onClick={() => irA('tradicional')} />
-                <p className="text-sm text-gray-500 mb-6">Te enviaremos un código para restablecer tu contraseña.</p>
-
-                <label className="block text-sm font-bold text-blue-700 mb-2">Correo o teléfono</label>
-                <Input value={identificador} onChange={setIdentificador} placeholder="tucorreo@gmail.com o 987654321" />
-
-                <button onClick={enviarCodigoPassword} disabled={loading} className={btnPrimary + ' mt-2'}>
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} Enviarme el código
-                </button>
-
-              </motion.div>
-            )}
-
-            {/* ---------------- CONTRASEÑA: código + nueva contraseña ---------------- */}
-            {view === 'set-password' && (
-              <motion.div key="set-password" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <Back onClick={() => irA('recover-pass-id')} />
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Tu contraseña</h2>
-                <p className="text-sm text-gray-500 mb-5">Ingresa el código que recibiste y crea tu contraseña.</p>
-
-                <Label>Acceso (correo o teléfono)</Label>
-                <Input value={identificador} onChange={setIdentificador} placeholder="Correo o teléfono" />
-                <Label>Código (6 dígitos)</Label>
-                <Digits value={codigo} onChange={setCodigo} />
-                <Label>Nueva contraseña</Label>
-                <PassInput value={nuevaPass} onChange={setNuevaPass} placeholder="Mínimo 8 caracteres" />
-                <Label>Repite tu contraseña</Label>
-                <PassInput value={repitePass} onChange={setRepitePass} placeholder="Repite la contraseña" />
-
-                <button onClick={establecerPassword} disabled={loading} className={btnPrimary + ' mt-2'}>
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <KeyRound className="w-5 h-5" />} Guardar contraseña
-                </button>
-                <button onClick={enviarCodigoPassword} className="w-full text-gray-400 text-sm py-2 hover:text-gray-600">
-                  Reenviar código
-                </button>
-              </motion.div>
-            )}
-
-            {/* ---------------- INGRESO TRADICIONAL (principal: correo + contraseña) ---------------- */}
+            {/* ---------------- INGRESO TRADICIONAL (correo + contraseña + Google) ---------------- */}
             {view === 'tradicional' && (
               <motion.div key="tradicional" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <div className="hidden lg:block mb-6">
@@ -612,75 +265,47 @@ export function LoginPage() {
               </motion.div>
             )}
 
-            {/* ---------------- INGRESO POR CÓDIGO (OTP) — secundario ---------------- */}
-            {view === 'password' && (
-              <motion.div key="password" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            {/* ---------------- OLVIDÉ MI CONTRASEÑA: identificador ---------------- */}
+            {view === 'recover-pass-id' && (
+              <motion.div key="recover-pass-id" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <Back onClick={() => irA('tradicional')} />
-                <p className="text-sm text-gray-500 mb-5">Te enviamos un código a tu correo o teléfono. Ideal para trabajadores.</p>
+                <p className="text-sm text-gray-500 mb-6">Te enviaremos un código para restablecer tu contraseña.</p>
 
-                <label className="block text-sm font-bold text-blue-700 mb-2">Correo o Teléfono</label>
+                <label className="block text-sm font-bold text-blue-700 mb-2">Correo o teléfono</label>
                 <Input value={identificador} onChange={setIdentificador} placeholder="tucorreo@gmail.com o 987654321" />
 
-                <button onClick={continuarLogin} disabled={loading} className={btnPrimary + ' mt-1'}>
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />} Continuar
+                <button onClick={enviarCodigoPassword} disabled={loading} className={btnPrimary + ' mt-2'}>
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} Enviarme el código
                 </button>
               </motion.div>
             )}
 
-            {view === 'login-otp' && (
-              <motion.div key="login-otp" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <button onClick={() => irA('password')} className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 mb-5 transition">
-                  <ArrowLeft className="w-4 h-4" /> Volver
-                </button>
-                <h2 className="text-lg font-bold text-gray-900">Ingresa tu código</h2>
-                <p className="text-gray-500 text-sm mb-5">Te enviamos un código de 6 dígitos a <span className="font-semibold text-gray-700">{identificador}</span>.</p>
+            {/* ---------------- ENVIADO: revisa tu correo / WhatsApp ---------------- */}
+            {/* ---------------- CONTRASEÑA: código + nueva contraseña ---------------- */}
+            {view === 'set-password' && (
+              <motion.div key="set-password" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <Back onClick={() => irA('recover-pass-id')} />
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Tu contraseña</h2>
+                <p className="text-sm text-gray-500 mb-5">Ingresa el código que recibiste y crea tu contraseña.</p>
 
+                <Label>Acceso (correo o teléfono)</Label>
+                <Input value={identificador} onChange={setIdentificador} placeholder="Correo o teléfono" />
+                <Label>Código (6 dígitos)</Label>
                 <Digits value={codigo} onChange={setCodigo} />
+                <Label>Nueva contraseña</Label>
+                <PassInput value={nuevaPass} onChange={setNuevaPass} placeholder="Mínimo 8 caracteres" />
+                <Label>Repite tu contraseña</Label>
+                <PassInput value={repitePass} onChange={setRepitePass} placeholder="Repite la contraseña" />
 
-                <button onClick={validarLoginOtp} disabled={loading || codigo.length !== 6} className={btnPrimary}>
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />} Entrar
+                <button onClick={establecerPassword} disabled={loading} className={btnPrimary + ' mt-2'}>
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <KeyRound className="w-5 h-5" />} Guardar contraseña
                 </button>
-                <button onClick={continuarLogin} disabled={loading}
-                  className="w-full text-blue-600 text-sm py-2 mt-1 hover:text-blue-700 transition font-medium disabled:opacity-50">
+                <button onClick={enviarCodigoPassword} className="w-full text-gray-400 text-sm py-2 hover:text-gray-600">
                   Reenviar código
                 </button>
               </motion.div>
             )}
           </AnimatePresence>
-
-          {view === 'tradicional' && (
-            <div className="mt-7 flex items-center justify-center lg:justify-start gap-3 text-xs font-bold tracking-wide uppercase">
-              <button onClick={() => irA('pin')} className="text-blue-600 hover:text-blue-700 transition">
-                Ingresar con PIN
-              </button>
-              <span className="text-gray-300">·</span>
-              <button onClick={() => irA('password')} className="text-blue-600 hover:text-blue-700 transition">
-                Ingresar con Código
-              </button>
-            </div>
-          )}
-          {view === 'pin' && (
-            <div className="mt-7 flex items-center justify-center lg:justify-start gap-3 text-xs font-bold tracking-wide uppercase">
-              <button onClick={() => irA('tradicional')} className="text-blue-600 hover:text-blue-700 transition">
-                Ingreso tradicional
-              </button>
-              <span className="text-gray-300">·</span>
-              <button onClick={() => irA('password')} className="text-blue-600 hover:text-blue-700 transition">
-                Ingresar con Código
-              </button>
-            </div>
-          )}
-          {view === 'password' && (
-            <div className="mt-7 flex items-center justify-center lg:justify-start gap-3 text-xs font-bold tracking-wide uppercase">
-              <button onClick={() => irA('tradicional')} className="text-blue-600 hover:text-blue-700 transition">
-                Ingreso tradicional
-              </button>
-              <span className="text-gray-300">·</span>
-              <button onClick={() => irA('pin')} className="text-blue-600 hover:text-blue-700 transition">
-                Ingresar con PIN
-              </button>
-            </div>
-          )}
         </motion.div>
       </div>
     </div>
@@ -699,7 +324,7 @@ function Back({ onClick }: { onClick: () => void }) {
   )
 }
 
-function Label({ children }: { children: React.ReactNode }) {
+function Label({ children }: { children: ReactNode }) {
   return <label className="block text-xs font-semibold text-gray-500 mb-1.5">{children}</label>
 }
 
@@ -727,7 +352,7 @@ function PassInput({ value, onChange, placeholder, onEnter }: { value: string; o
   )
 }
 
-/** 6 casillas estilo OTP (mismo look que /acceso). Sin ojo; para PIN usa puntos. */
+/** 6 casillas estilo OTP (mismo look que /acceso). */
 function Digits({ value, onChange, secret }: { value: string; onChange: (v: string) => void; secret?: boolean }) {
   const refs = useRef<(HTMLInputElement | null)[]>([])
   const chars = Array.from({ length: 6 }, (_, i) => value[i] ?? '')

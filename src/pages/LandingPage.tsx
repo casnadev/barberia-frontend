@@ -19,8 +19,6 @@ import styles from './Landing.module.css'
    CONFIGURACIÓN — ajustar antes de publicar
    ════════════════════════════════════════════════════════════════════════ */
 const WHATSAPP = '51999888777' // ← número real (51 + 9 dígitos) para "Agendar reunión"
-// Respaldo si aún no hay sedes públicas en BD: la vitrina degrada con elegancia.
-const SEDES_FALLBACK = ['demo', 'barberhouse-sanisidro', 'sanisidro']
 
 /* ── helpers ───────────────────────────────────────────────────────────── */
 const waLink = (t: string) => `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(t)}`
@@ -102,7 +100,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     let alive = true
-    landingService.getSedesPublicas(SEDES_FALLBACK).then((s) => { if (alive) setSedes(s) })
+    landingService.getSedesPublicas().then((s) => { if (alive) setSedes(s) })
     planesService.getPublicos().then((p) => { if (alive) setPlanes(p) })
     resenasPublicasService.getDestacadas(12).then((r) => { if (alive) setResenas(r) })
     return () => { alive = false }

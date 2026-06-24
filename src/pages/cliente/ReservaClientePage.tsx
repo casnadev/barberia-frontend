@@ -47,12 +47,11 @@ interface FormData {
 export function ReservaClientePage() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  // A dónde volver al cerrar: cliente logueado → su dashboard; anónimo → landing.
+  // A dónde volver al cerrar: según el rol logueado; anónimo → landing.
   const volverA =
-    user?.rol === 'Cliente' ? '/mi-perfil'
-      : user?.rol === 'Trabajador' ? '/mi-agenda'
-        : (user?.rol === 'Admin' || user?.rol === 'SuperAdmin') ? '/admin/agenda'
-          : '/'
+    user?.rol === 'Trabajador' ? '/mi-agenda'
+      : (user?.rol === 'Admin' || user?.rol === 'SuperAdmin') ? '/admin/agenda'
+        : '/'
 
 
   const [step, setStep] = useState(1)
@@ -355,7 +354,7 @@ export function ReservaClientePage() {
       if (status === 403 && /bloquead/i.test(detail)) {
         // Cuenta bloqueada por inasistencias → ofrecer solicitar desbloqueo.
         setBloqueoMsg(detail)
-        setSolTel(formData.telefono.trim())
+        setSolTel((formData.tipoContacto === 'whatsapp' ? formData.telefono : formData.correo).trim())
         setSolMotivo('')
         setSolEnviada(false)
       } else {
@@ -369,7 +368,8 @@ export function ReservaClientePage() {
   const enviarSolicitudDesbloqueo = async () => {
     const tel = solTel.trim()
     const motivo = solMotivo.trim()
-    if (tel.length < 6) { toast.error('Ingresa tu número de teléfono'); return }
+    const okContacto = tel.includes('@') ? /\S+@\S+\.\S+/.test(tel) : tel.replace(/\D/g, '').length >= 6
+    if (!okContacto) { toast.error('Ingresa tu teléfono o correo'); return }
     if (motivo.length < 5) { toast.error('Cuéntanos brevemente el motivo (mínimo 5 caracteres)'); return }
     try {
       setEnviandoSol(true)
@@ -471,11 +471,6 @@ export function ReservaClientePage() {
         </div>
 
         <div style={{ marginTop: 28, width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 10, opacity: 0, animation: 'bpFade .4s .95s forwards' }}>
-          {user?.rol === 'Cliente' && (
-            <button onClick={() => navigate('/mi-perfil')} style={{ background: '#fff', color: '#111', border: 'none', borderRadius: 999, padding: '13px', fontWeight: 800, fontSize: 15, cursor: 'pointer' }}>
-              Ver mis citas
-            </button>
-          )}
           <button onClick={() => navigate(volverA)} style={{ background: 'rgba(255,255,255,.18)', color: '#fff', border: '1px solid rgba(255,255,255,.4)', borderRadius: 999, padding: '13px', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
             Volver al inicio
           </button>

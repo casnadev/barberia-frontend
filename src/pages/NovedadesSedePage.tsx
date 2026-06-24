@@ -51,7 +51,7 @@ export function NovedadesSedePage() {
         <div className={styles.npBarTitle}>
           <span className={styles.npBarIcon} style={{ background: `${brand}14`, color: brand }}><Gift width={18} height={18} /></span>
           <div>
-            <div className={styles.npBarH}>Novedades</div>
+            <div className={styles.npBarH}>Promociones</div>
             {sede?.nombre && <div className={styles.npBarSub}>{sede.nombre}</div>}
           </div>
         </div>
@@ -67,7 +67,7 @@ export function NovedadesSedePage() {
         ) : novedades.length === 0 ? (
           <div className={styles.npEmpty}>
             <span className={styles.npEmptyIcon} style={{ background: `${brand}14`, color: brand }}><Gift width={32} height={32} /></span>
-            <h2 className={styles.npEmptyH}>Aún no hay novedades</h2>
+            <h2 className={styles.npEmptyH}>Aún no hay promociones</h2>
             <p className={styles.npEmptyT}>Cuando {sede?.nombre || 'la barbería'} publique promociones o avisos, aparecerán aquí.</p>
             <button className={styles.npEmptyBtn} style={{ background: brand }} onClick={() => navigate(-1)}>Volver</button>
           </div>

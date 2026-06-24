@@ -99,7 +99,7 @@
 /* ───────────────────────── HERO MOBILE (carrusel IG) ─────────────────────── */
 .mHero { position: relative; }
 .mHeroTrack {
-  display: flex; width: 100%; aspect-ratio: 1 / 1; background: var(--bg2);
+  display: flex; width: 100%; aspect-ratio: 4 / 3; background: var(--bg2);
   overflow-x: auto; scroll-snap-type: x mandatory;
   scrollbar-width: none; -ms-overflow-style: none;
 }

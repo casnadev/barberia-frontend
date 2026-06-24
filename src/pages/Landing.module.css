@@ -71,7 +71,7 @@
 .mobileMenu { display: none; }
 
 /* ── HERO ───────────────────────────────────────────────────────────── */
-.hero { position: relative; padding: 64px 0 72px; overflow: hidden; }
+.hero { position: relative; padding: 28px 0 72px; overflow: hidden; }
 .heroBg { position: absolute; inset: 0; z-index: 0; background:
   radial-gradient(680px 320px at 12% -10%, rgba(47, 107, 255, .10), transparent 60%); }
 .heroIn { position: relative; z-index: 1; display: grid; grid-template-columns: 1.05fr .95fr; gap: 54px; align-items: center; }
@@ -297,6 +297,15 @@
   .sedeCard { flex-basis: 270px; }
   .rCard { flex-basis: 290px; }
   .footTop { flex-direction: column; gap: 28px; }
+
+  /* 9a · Botón "Iniciar sesión" del menú: centrado, ancho completo, no tan delgado. */
+  .mobileMenu { padding: 14px 20px 20px; gap: 6px; }
+  .mobileMenu a { padding: 12px 6px; text-align: center; border-radius: 10px; }
+  .mobileMenu a:active { background: var(--line); }
+  .mobileMenu .btn { width: 100%; justify-content: center; padding: 14px 16px; font-size: 15px; border-radius: 12px; margin-top: 6px; }
+
+  /* 9b · Menos espacio vacío arriba del hero en mobile. */
+  .hero { padding-top: 24px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -53,6 +53,8 @@ export function TrabajadoresPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [previewImage, setPreviewImage] = useState<string>('')
+  // Credenciales temporales del trabajador recién creado (para entregárselas).
+  const [credenciales, setCredenciales] = useState<{ correo: string; password: string } | null>(null)
 
   const [form, setForm] = useState<Trabajador>({
     nombreCompleto: '',
@@ -160,14 +162,21 @@ export function TrabajadoresPage() {
       if (editingId) {
         await apiClient.put(`/api/Trabajadores/${editingId}`, payload)
         toast.success('Trabajador actualizado')
+        setShowModal(false)
+        resetForm()
+        await loadTrabajadores()
       } else {
-        await apiClient.post('/api/Trabajadores', payload)
+        const res = await apiClient.post('/api/Trabajadores', payload)
+        const creado = res.data?.data || res.data
         toast.success('Trabajador creado')
+        setShowModal(false)
+        resetForm()
+        await loadTrabajadores()
+        // Si se generó acceso (correo + contraseña temporal), mostrarla al Admin.
+        if (creado?.passwordTemporal && creado?.correo) {
+          setCredenciales({ correo: creado.correo, password: creado.passwordTemporal })
+        }
       }
-
-      setShowModal(false)
-      resetForm()
-      await loadTrabajadores()
     } catch (err: any) {
       console.error('Error guardando:', err)
       if (err.response?.status === 404) {
@@ -469,6 +478,58 @@ export function TrabajadoresPage() {
                 <button className={s.btnDanger} disabled={submitting} onClick={() => handleDelete(deleteConfirm)}>
                   {submitting ? 'Eliminando...' : 'Eliminar'}
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Credenciales temporales del trabajador recién creado */}
+      <AnimatePresence>
+        {credenciales && (
+          <motion.div
+            className={s.overlay}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setCredenciales(null)}
+          >
+            <motion.div
+              className={s.confirm}
+              initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className={s.confirmHead}>
+                <AlertCircle width={22} height={22} color="#2563eb" />
+                <h3 className={s.confirmTitle}>Acceso del trabajador</h3>
+              </div>
+              <p className={s.confirmText}>
+                Entrégale estos datos. Al iniciar sesión por primera vez deberá cambiar
+                la contraseña (recibirá un código por correo).
+              </p>
+
+              <div style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 12, padding: 14, margin: '8px 0 16px', fontSize: 14 }}>
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ color: '#6b7280', fontSize: 12 }}>Correo</div>
+                  <div style={{ fontWeight: 600 }}>{credenciales.correo}</div>
+                </div>
+                <div>
+                  <div style={{ color: '#6b7280', fontSize: 12 }}>Contraseña temporal</div>
+                  <div style={{ fontWeight: 700, fontFamily: 'monospace', fontSize: 18, letterSpacing: 1 }}>{credenciales.password}</div>
+                </div>
+              </div>
+
+              <div className={s.confirmActions}>
+                <button
+                  className={s.btnGhost}
+                  onClick={() => {
+                    navigator.clipboard?.writeText(
+                      `Correo: ${credenciales.correo}\nContraseña temporal: ${credenciales.password}`
+                    )
+                    toast.success('Copiado')
+                  }}
+                >
+                  Copiar
+                </button>
+                <button className={s.btnPrimary} onClick={() => setCredenciales(null)}>Entendido</button>
               </div>
             </motion.div>
           </motion.div>

@@ -33,7 +33,30 @@ export interface DirectorioSede {
 
 const unwrap = <T>(res: any): T => (res.data?.data ?? res.data) as T
 
+export interface AltaRapidaRequest {
+  nombreNegocio: string
+  correo?: string
+  telefono?: string
+  nombreContacto?: string
+}
+
+export interface AltaRapidaResponse {
+  idEmpresa: number
+  idUsuario: number
+  nombreNegocio: string
+  correo?: string
+  telefono?: string
+  subdominio?: string
+  otpEnviado: boolean
+}
+
 export const directorioService = {
+  /** Alta rápida de negocio (un paso): nombre + contacto → Empresa + Admin + sede. */
+  altaRapida: async (req: AltaRapidaRequest): Promise<AltaRapidaResponse> => {
+    const res = await apiClient.post('/api/superadmin/altas', req)
+    return unwrap<AltaRapidaResponse>(res)
+  },
+
   /** Buscador unificado: dónde aparece un correo/teléfono/nombre. */
   buscar: async (q: string): Promise<BuscarContactoResponse> => {
     const res = await apiClient.get('/api/superadmin/directorio/buscar', { params: { q } })
