@@ -191,25 +191,35 @@ export function PublicSedeDetailPage() {
       setServicios(serviciosData || [])
       setTrabajadores(trabajadoresData || [])
 
-      try {
-        const hRes = await apiClient.get(`/api/Horarios/sede/${sedeData.idSede}`)
-        const hData = hRes.data?.data ?? hRes.data
-        setHorarios(Array.isArray(hData) ? hData : [])
-      } catch { setHorarios([]) }
+      // La página YA se puede mostrar con lo esencial (sede + servicios + equipo).
+      // Quitamos el skeleton aquí, sin esperar a horarios ni reseñas: así el
+      // usuario ve el contenido apenas llegan los 3 datos clave en vez de
+      // esperar 2 viajes extra al servidor (que está en Hetzner, lejos de Perú).
+      setLoading(false)
 
-      try {
-        const rRes = await apiClient.get(`/api/Resenas/sede/${sedeData.idSede}`)
-        const rData = rRes.data?.data ?? rRes.data
-        setResenas({
-          promedio: rData?.promedio ?? 0,
-          total: rData?.total ?? 0,
-          items: Array.isArray(rData?.items) ? rData.items : [],
+      // Secundarios: se cargan EN PARALELO entre sí y SIN bloquear el render.
+      // Cada uno entra solo cuando llega; ambos tienen fallback visual propio
+      // (el badge de horario y la sección de reseñas se ocultan si vienen vacíos).
+      apiClient.get(`/api/Horarios/sede/${sedeData.idSede}`)
+        .then((hRes) => {
+          const hData = hRes.data?.data ?? hRes.data
+          setHorarios(Array.isArray(hData) ? hData : [])
         })
-      } catch { setResenas({ promedio: 0, total: 0, items: [] }) }
+        .catch(() => setHorarios([]))
+
+      apiClient.get(`/api/Resenas/sede/${sedeData.idSede}`)
+        .then((rRes) => {
+          const rData = rRes.data?.data ?? rRes.data
+          setResenas({
+            promedio: rData?.promedio ?? 0,
+            total: rData?.total ?? 0,
+            items: Array.isArray(rData?.items) ? rData.items : [],
+          })
+        })
+        .catch(() => setResenas({ promedio: 0, total: 0, items: [] }))
     } catch (err: any) {
       setError(err.message || 'Error cargando información')
       toast.error(err.message)
-    } finally {
       setLoading(false)
     }
   }

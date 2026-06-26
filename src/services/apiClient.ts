@@ -177,6 +177,15 @@ apiClient.interceptors.response.use(
     const url: string = error.config?.url || ''
     const esAuth = /\/api\/auth\//i.test(url) || /\/api\/otp\//i.test(url)
     if (error.response?.status === 401 && !esAuth) {
+      // Visitante PÚBLICO sin sesión: si no hay token, un 401 suelto (p.ej. una
+      // llamada pública que devolvió 401 por error) NO debe mandarlo al login ni
+      // recargar la página. Dejamos que la llamada falle en silencio y la vista
+      // pública siga su curso con sus propios fallback (horarios/reseñas vacíos).
+      const teniaSesion = !!localStorage.getItem('token')
+      if (!teniaSesion) {
+        return Promise.reject(error)
+      }
+
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       // Redirigir al login en el host canónico del panel (si está definido) para

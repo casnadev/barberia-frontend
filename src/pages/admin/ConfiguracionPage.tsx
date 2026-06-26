@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import {
   Store, Building2, Phone, Clock, MapPin, Image as ImageIcon, Camera, Share2, Save, Loader2,
-  X, Upload, Plus, Instagram, Facebook, Globe, Music2, Youtube, Twitter, Link2, Copy, ExternalLink, Info,
+  X, Upload, Plus, Instagram, Facebook, Globe, Music2, Youtube, Twitter, Link2, Copy, ExternalLink, Info, Gift,
 } from 'lucide-react'
 import { apiClient } from '@/services/apiClient'
 import { geoService } from '@/services/geoService'
@@ -130,6 +130,7 @@ export function ConfiguracionPage() {
   const [empresa, setEmpresa] = useState({
     idEmpresa: null as number | null,
     razonSocial: '', nombreComercial: '', ruc: '', correoContacto: '', telefonoContacto: '',
+    codigoReferido: '' as string, saldoReferidoPEN: 0,
   })
   // Correo/teléfono de la cuenta del admin: sirven como valor por defecto para no retipear.
   const [cuenta, setCuenta] = useState({ correo: '', telefono: '' })
@@ -263,6 +264,8 @@ export function ConfiguracionPage() {
           // Si la empresa aún no tiene contacto, se pre-carga con el de tu cuenta (no retipear).
           correoContacto: e.correoContacto || cuentaCorreo || '',
           telefonoContacto: e.telefonoContacto || cuentaTel || '',
+          codigoReferido: e.codigoReferido ?? '',
+          saldoReferidoPEN: e.saldoReferidoPEN ?? 0,
         })
       }
     } catch (err) {
@@ -572,6 +575,40 @@ export function ConfiguracionPage() {
             onClick={() => setSheet('redes')}
           />
         </div>
+
+        {/* Tu código de referido (programa de referidos B2B) */}
+        {empresa.codigoReferido && (
+          <div className="mt-4 rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Gift className="w-[18px] h-[18px] text-blue-600" />
+              <h3 className="font-semibold text-gray-900">Tu código de referido</h3>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">
+              Compártelo con otra barbería. Cuando se dé de alta con tu código y pague su plan, ambas reciben un descuento.
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-center font-mono font-bold text-lg tracking-wide text-blue-700 bg-white border border-blue-200 rounded-xl py-2.5">
+                {empresa.codigoReferido}
+              </code>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText(empresa.codigoReferido)
+                    .then(() => toast.success('Código copiado'))
+                    .catch(() => toast.error('No se pudo copiar'))
+                }}
+                className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition shrink-0"
+              >
+                <Copy className="w-4 h-4" /> Copiar
+              </button>
+            </div>
+            {empresa.saldoReferidoPEN > 0 && (
+              <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 mt-3">
+                Tienes <b>S/ {empresa.saldoReferidoPEN.toFixed(2)}</b> de crédito por referidos, que se aplicará en tu próxima renovación.
+              </p>
+            )}
+          </div>
+        )}
 
       </div>
 

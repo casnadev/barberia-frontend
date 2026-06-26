@@ -11,6 +11,7 @@ import { useAuthStore } from '@/store/authStore'
 import { AccountMenu } from '@/components/AccountMenu'
 import { DirectorioPanel } from '@/components/DirectorioPanel'
 import { LandingPanel } from '@/components/LandingPanel'
+import { ReferidosPanel } from '@/components/ReferidosPanel'
 import { directorioService } from '@/services/directorioService'
 import {
   empresasService, type Empresa, type Admin, type Plan,
@@ -45,7 +46,7 @@ export function SuperAdminDashboard() {
   const { user } = useAuthStore()
 
   const [empresas, setEmpresas] = useState<Empresa[]>([])
-  const [seccion, setSeccion] = useState<'barberias' | 'directorio' | 'landing'>('barberias')
+  const [seccion, setSeccion] = useState<'barberias' | 'directorio' | 'landing' | 'referidos'>('barberias')
   const [owners, setOwners] = useState<Record<number, Admin | null>>({})
   const [planes, setPlanes] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
@@ -212,11 +213,18 @@ export function SuperAdminDashboard() {
               seccion === 'landing' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
             Landing
           </button>
+          <button onClick={() => setSeccion('referidos')}
+            className={`text-sm font-semibold px-4 py-2 rounded-lg transition ${
+              seccion === 'referidos' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+            Referidos
+          </button>
         </div>
 
         {seccion === 'directorio' && <DirectorioPanel />}
 
         {seccion === 'landing' && <LandingPanel />}
+
+        {seccion === 'referidos' && <ReferidosPanel />}
 
         {seccion === 'barberias' && (<>
         {/* Stats + acción */}
