@@ -1,4 +1,3 @@
-import { AdminLayout } from '@/components/AdminLayout'
 import { AgendaBoard } from '@/components/AgendaBoard'
 
 /**
@@ -8,8 +7,8 @@ import { AgendaBoard } from '@/components/AgendaBoard'
  */
 export function AgendaPage() {
   return (
-    <AdminLayout title="Agenda" subtitle="Citas del día">
+    <>
       <AgendaBoard mode="admin" />
-    </AdminLayout>
+    </>
   )
 }

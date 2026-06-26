@@ -6,7 +6,6 @@ import { ventasService, type ResumenFinanciero } from '@/services/ventasService'
 import { clientesService } from '@/services/clientesService'
 import { reservasService } from '@/services/reservasService'
 import { toast } from 'sonner'
-import { AdminLayout } from '@/components/AdminLayout'
 import { CompletaTuNegocio } from '@/components/CompletaTuNegocio'
 import { CalendarModal } from '@/pages/cliente/CalendarModal'
 import { AvisoBanner } from '@/components/AvisoBanner'
@@ -107,7 +106,7 @@ export function DashboardPage() {
   ]
 
   return (
-    <AdminLayout title="Dashboard" subtitle="Resumen de tu barbería">
+    <>
 
       <AvisoBanner />
       <CompletaTuNegocio />
@@ -190,6 +189,6 @@ export function DashboardPage() {
           </motion.div>
         ))}
       </div>
-    </AdminLayout>
+    </>
   )
 }

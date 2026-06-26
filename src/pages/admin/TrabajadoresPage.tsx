@@ -3,7 +3,6 @@ import { Plus, Edit2, Trash2, AlertCircle, X, Eye, EyeOff, Upload, Image as Imag
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { apiClient, buildImageUrl } from '@/services/apiClient'
-import { AdminLayout } from '@/components/AdminLayout'
 import s from '@/styles/Trabajadores.module.css'
 
 interface Trabajador {
@@ -308,19 +307,19 @@ export function TrabajadoresPage() {
 
   if (loading) {
     return (
-      <AdminLayout title="Trabajadores" subtitle="Tu equipo y sus horarios">
+      <>
         <div className={s.loading}>
           <div className={s.loadingInner}>
             <div className={s.spinner} />
             <p className={s.loadingText}>Cargando trabajadores...</p>
           </div>
         </div>
-      </AdminLayout>
+      </>
     )
   }
 
   return (
-    <AdminLayout title="Trabajadores" subtitle="Tu equipo y sus horarios">
+    <>
       <div className={s.toolbar}>
         <motion.button
           whileHover={{ scale: 1.04 }}
@@ -536,6 +535,6 @@ export function TrabajadoresPage() {
         )}
       </AnimatePresence>
 
-    </AdminLayout>
+    </>
   )
 }

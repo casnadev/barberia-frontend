@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { apiClient, getActiveTenant } from '@/services/apiClient'
 import { sedeTenantService } from '@/services/sedeTenantService'
-import { AdminLayout } from '@/components/AdminLayout'
 import s from '@/styles/Servicios.module.css'
 
 interface Servicio {
@@ -314,19 +313,19 @@ export function ServiciosPage() {
 
   if (loading) {
     return (
-      <AdminLayout title="Servicios" subtitle="Servicios y categorías">
+      <>
         <div className={s.loading}>
           <div className={s.loadingInner}>
             <div className={s.spinner} />
             <p className={s.loadingText}>Cargando servicios...</p>
           </div>
         </div>
-      </AdminLayout>
+      </>
     )
   }
 
   return (
-    <AdminLayout title="Servicios" subtitle="Servicios y categorías">
+    <>
       <div className={s.toolbar}>
         <motion.button
           whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
@@ -578,6 +577,6 @@ export function ServiciosPage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </AdminLayout>
+    </>
   )
 }

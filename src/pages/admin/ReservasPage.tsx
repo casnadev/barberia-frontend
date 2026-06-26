@@ -6,7 +6,6 @@ import {
   Search, CalendarDays, DollarSign, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AdminLayout } from '@/components/AdminLayout'
 import { mensajeError } from '@/utils/apiError'
 import s from '@/styles/Reservas.module.css'
 import d from '@/styles/Dashboard.module.css'
@@ -211,7 +210,7 @@ export function ReservasPage() {
   ]
 
   return (
-    <AdminLayout title="Reservas" subtitle="Gestiona las citas de tu barbería">
+    <>
       {/* Stat-cards (estilo Dashboard) */}
       <div className={d.kpiGrid}>
         {stats.map((c, i) => (
@@ -439,7 +438,7 @@ export function ReservasPage() {
           </div>
         </div>
       )}
-    </AdminLayout>
+    </>
   )
 }
 

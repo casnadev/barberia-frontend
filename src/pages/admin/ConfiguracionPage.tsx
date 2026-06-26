@@ -6,7 +6,6 @@ import {
 } from 'lucide-react'
 import { apiClient } from '@/services/apiClient'
 import { geoService } from '@/services/geoService'
-import { AdminLayout } from '@/components/AdminLayout'
 import SeccionFila from '@/components/SeccionFila'
 import SeccionSheet from '@/components/SeccionSheet'
 
@@ -461,16 +460,16 @@ export function ConfiguracionPage() {
   // ================================================================= UI
   if (loading) {
     return (
-      <AdminLayout title="Configuración" subtitle="Tu sede">
+      <>
         <div className="flex items-center justify-center h-96 text-gray-400">
           <Loader2 className="w-7 h-7 animate-spin" />
         </div>
-      </AdminLayout>
+      </>
     )
   }
 
   return (
-    <AdminLayout title="Configuración" subtitle="Tu sede">
+    <>
       <div className="pb-10">
         {/* Encabezado */}
 
@@ -863,7 +862,7 @@ export function ConfiguracionPage() {
           </div>
         )}
       </SeccionSheet>
-    </AdminLayout>
+    </>
   )
 }
 

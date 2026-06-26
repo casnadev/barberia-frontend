@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Wallet, X, User, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { AdminLayout } from '@/components/AdminLayout'
 import { pagosService, type ResumenComisiones } from '@/services/pagosService'
 
 const METODOS = ['Efectivo', 'Yape', 'Plin', 'Tarjeta', 'Transferencia', 'Otro']
@@ -25,7 +24,7 @@ export function PagosPage() {
   )
 
   return (
-    <AdminLayout title="Pagos" subtitle="Comisiones del equipo y liquidaciones">
+    <>
       {/* Total pendiente */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5 flex items-center justify-between">
         <div>
@@ -83,7 +82,7 @@ export function PagosPage() {
           onDone={async () => { setPagar(null); await cargar() }}
         />
       )}
-    </AdminLayout>
+    </>
   )
 }
 

@@ -1,17 +1,27 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/authService'
 import { TenantGate } from '@/components/TenantGate'
 import { SedeActivaGate } from '@/components/Sedeactivagate'
 import { ConfirmHost } from '@/components/ConfirmDialog'
+import { AdminShell } from '@/components/AdminShell'
+// Páginas del panel admin: lazy + prefetch centralizados (fuente única de verdad).
+import {
+  DashboardPage,
+  ClientesPage,
+  ServiciosPage,
+  TrabajadoresPage,
+  ReservasPage,
+  AgendaPage,
+  PagosPage,
+  VentasPage,
+  CierreCajaPage,
+  ConfiguracionPage,
+} from '@/router/adminPages'
 
-// --- Páginas con carga diferida (code-splitting) ---
+// --- Resto de páginas con carga diferida (code-splitting) ---
 const LoginPage = lazy(() => import('@/pages/LoginPage').then(m => ({ default: m.LoginPage })))
-const DashboardPage = lazy(() => import('@/pages/admin/DashboardPage').then(m => ({ default: m.DashboardPage })))
-const ClientesPage = lazy(() => import('@/pages/admin/ClientesPage').then(m => ({ default: m.ClientesPage })))
-const ReservasPage = lazy(() => import('@/pages/admin/ReservasPage').then(m => ({ default: m.ReservasPage })))
-const AgendaPage = lazy(() => import('@/pages/admin/AgendaPage').then(m => ({ default: m.AgendaPage })))
 const AccesoPage = lazy(() => import('@/pages/AccesoPage').then(m => ({ default: m.AccesoPage })))
 const SuperAdminDashboard = lazy(() => import('@/pages/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })))
 const ReservaClientePage = lazy(() => import('@/pages/cliente/ReservaClientePage').then(m => ({ default: m.ReservaClientePage })))
@@ -22,12 +32,6 @@ const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then(m => ({ defa
 const TerminosPage = lazy(() => import('@/pages/legal/TerminosPage'))
 const PrivacidadPage = lazy(() => import('@/pages/legal/PrivacidadPage'))
 const LibroReclamacionesPage = lazy(() => import('@/pages/legal/LibroReclamacionesPage'))
-const ServiciosPage = lazy(() => import('@/pages/admin/ServiciosPage').then(m => ({ default: m.ServiciosPage })))
-const TrabajadoresPage = lazy(() => import('@/pages/admin/TrabajadoresPage').then(m => ({ default: m.TrabajadoresPage })))
-const PagosPage = lazy(() => import('@/pages/admin/PagosPage').then(m => ({ default: m.PagosPage })))
-const VentasPage = lazy(() => import('@/pages/admin/VentasPage').then(m => ({ default: m.VentasPage })))
-const CierreCajaPage = lazy(() => import('@/pages/admin/CierreCaja').then(m => ({ default: m.CierreCajaPage })))
-const ConfiguracionPage = lazy(() => import('@/pages/admin/ConfiguracionPage').then(m => ({ default: m.ConfiguracionPage })))
 const TrabajadorMiAgenda = lazy(() => import('@/pages/trabajador/TrabajadorMiAgenda').then(m => ({ default: m.TrabajadorMiAgenda })))
 const CompletarPerfilAdmin = lazy(() => import('@/pages/CompletarPerfilAdmin').then(m => ({ default: m.CompletarPerfilAdmin })))
 const LandingPage = lazy(() => import('@/pages/LandingPage'))
@@ -122,7 +126,8 @@ function PanelGuard({ children }: { children: React.ReactNode }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// COMPONENTE: ProtectedRoute (sin lógica de redirección — ya la maneja PanelGuard)
+// COMPONENTE: ProtectedRoute (para rutas STANDALONE: super-admin, completar-perfil,
+// mi-agenda). Las rutas del panel admin usan <AdminProtected/> (ver abajo).
 // ─────────────────────────────────────────────────────────────────────────────
 function ProtectedRoute({ children, requiredRole, skipTenant }: any) {
   const { user } = useAuthStore()
@@ -143,6 +148,36 @@ function ProtectedRoute({ children, requiredRole, skipTenant }: any) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// COMPONENTE: AdminProtected (layout route para TODO el panel admin)
+//
+// Es el `element` de la ruta padre del grupo admin. Se monta UNA sola vez y
+// envuelve al <AdminShell/> + páginas mediante <Outlet/>. Por eso:
+//   • La validación de auth/rol ocurre una vez (no por página).
+//   • TenantGate se ejecuta UNA sola vez por sesión (no parpadea en cada nav).
+//   • El SedeActivaGate/shell no se reconstruyen al navegar.
+//
+// Mantiene exactamente la misma política que antes:
+//   - Sin sesión → /login
+//   - Rol distinto de Admin/SuperAdmin → /login
+//   - TenantGate solo para Admin (el SuperAdmin no tiene tenant de empresa).
+// ─────────────────────────────────────────────────────────────────────────────
+function AdminProtected() {
+  const { user } = useAuthStore()
+  if (!user) return <Navigate to="/login" replace />
+  if (user.rol !== 'Admin' && user.rol !== 'SuperAdmin') return <Navigate to="/login" replace />
+
+  // El contenido del grupo admin se renderiza vía <Outlet/>.
+  if (user.rol === 'Admin') {
+    return (
+      <TenantGate>
+        <Outlet />
+      </TenantGate>
+    )
+  }
+  return <Outlet />
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // HELPERS DE TENANT / SLUG (para el micrositio público)
 // ─────────────────────────────────────────────────────────────────────────────
 function getTenantSlug(): string | null {
@@ -158,7 +193,8 @@ function HomeRoute() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FALLBACK DE RUTA
+// FALLBACK DE RUTA (solo para rutas PÚBLICAS lazy: landing, micrositio, etc.)
+// El panel admin tiene su propio fallback de área de contenido en <AdminShell/>.
 // ─────────────────────────────────────────────────────────────────────────────
 function RouteFallback() {
   return (
@@ -247,55 +283,47 @@ export function App() {
             <Route path="/acceso" element={<AccesoPage />} />
             <Route path="/reservar-publica" element={<ReservaClientePage />} />
 
-            {/* SUPER ADMIN */}
+            {/* SUPER ADMIN (standalone, sin shell admin) */}
             <Route path="/super-admin" element={
               <ProtectedRoute requiredRole="SuperAdmin">
                 <SuperAdminDashboard />
               </ProtectedRoute>
             } />
 
-            {/* ADMIN */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute requiredRole="Admin">
-                <DashboardPage />
-              </ProtectedRoute>
-            } />
-
+            {/* COMPLETAR PERFIL (standalone, skipTenant, sin shell admin) */}
             <Route path="/completar-perfil" element={
               <ProtectedRoute requiredRole="Admin" skipTenant>
                 <CompletarPerfilAdmin />
               </ProtectedRoute>
             } />
 
-            <Route path="/admin/clientes" element={
-              <ProtectedRoute requiredRole="Admin"><ClientesPage /></ProtectedRoute>
-            } />
-            <Route path="/admin/servicios" element={
-              <ProtectedRoute requiredRole="Admin"><ServiciosPage /></ProtectedRoute>
-            } />
-            <Route path="/admin/trabajadores" element={
-              <ProtectedRoute requiredRole="Admin"><TrabajadoresPage /></ProtectedRoute>
-            } />
-            <Route path="/admin/pagos" element={
-              <ProtectedRoute requiredRole="Admin"><PagosPage /></ProtectedRoute>
-            } />
-            <Route path="/admin/ventas" element={
-              <ProtectedRoute requiredRole="Admin"><VentasPage /></ProtectedRoute>
-            } />
-            <Route path="/admin/caja" element={
-              <ProtectedRoute requiredRole="Admin"><CierreCajaPage /></ProtectedRoute>
-            } />
-            <Route path="/admin/configuracion" element={
-              <ProtectedRoute requiredRole="Admin"><ConfiguracionPage /></ProtectedRoute>
-            } />
-            <Route path="/admin/reservas" element={
-              <ProtectedRoute requiredRole="Admin"><ReservasPage /></ProtectedRoute>
-            } />
-            <Route path="/admin/agenda" element={
-              <ProtectedRoute requiredRole="Admin"><AgendaPage /></ProtectedRoute>
-            } />
+            {/* ───────────────────────────────────────────────────────────────
+                PANEL ADMIN — LAYOUT PERSISTENTE (rutas anidadas con <Outlet/>)
 
-            {/* TRABAJADOR */}
+                AdminProtected: auth + rol + TenantGate (una sola vez).
+                AdminShell:     sidebar + header + footer + FAB persistentes.
+                Las páginas solo cambian dentro del <Outlet/> → sin parpadeo.
+
+                Las rutas hijas usan paths RELATIVOS (sin "/" inicial). Como el
+                padre no tiene `path`, se resuelven contra "/", produciendo las
+                MISMAS URLs de siempre: /dashboard, /admin/clientes, etc.
+            ─────────────────────────────────────────────────────────────── */}
+            <Route element={<AdminProtected />}>
+              <Route element={<AdminShell />}>
+                <Route path="dashboard" element={<DashboardPage />} />
+                <Route path="admin/servicios" element={<ServiciosPage />} />
+                <Route path="admin/trabajadores" element={<TrabajadoresPage />} />
+                <Route path="admin/agenda" element={<AgendaPage />} />
+                <Route path="admin/clientes" element={<ClientesPage />} />
+                <Route path="admin/reservas" element={<ReservasPage />} />
+                <Route path="admin/ventas" element={<VentasPage />} />
+                <Route path="admin/pagos" element={<PagosPage />} />
+                <Route path="admin/caja" element={<CierreCajaPage />} />
+                <Route path="admin/configuracion" element={<ConfiguracionPage />} />
+              </Route>
+            </Route>
+
+            {/* TRABAJADOR (standalone) */}
             <Route path="/mi-agenda" element={
               <ProtectedRoute requiredRole="Trabajador">
                 <SedeActivaGate><TrabajadorMiAgenda /></SedeActivaGate>

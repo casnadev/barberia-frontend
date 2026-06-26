@@ -4,7 +4,6 @@ import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
 import { mensajeError } from '@/utils/apiError'
 import { Eye, Unlock, Search, Phone, Mail, Calendar, Users, Info, X, Gift, Plus, Trash2, ImagePlus, ShieldCheck, Pencil, EyeOff } from 'lucide-react'
-import { AdminLayout } from '@/components/AdminLayout'
 import { novedadesService, type Novedad } from '@/services/novedadesService'
 import { buildImageUrl } from '@/services/apiClient'
 import s from '@/styles/Clientes.module.css'
@@ -93,7 +92,7 @@ export function ClientesPage() {
     d ? new Date(d).toLocaleDateString('es-PE', largo ? { year: 'numeric', month: 'long', day: 'numeric' } : undefined) : 'N/A'
 
   return (
-    <AdminLayout title="Clientes" subtitle="Tu base de clientes">
+    <>
       <div className={s.note}>
         <Info width={16} height={16} />
         <span>Los clientes se registran automáticamente al reservar. Aquí puedes ver su detalle, historial y controlar su acceso.</span>
@@ -396,7 +395,7 @@ export function ClientesPage() {
       })()}
       {novedadOpen && <NovedadModal onClose={() => setNovedadOpen(false)} />}
       {moderacionOpen && <ModeracionNovedadesModal onClose={() => setModeracionOpen(false)} />}
-    </AdminLayout>
+    </>
   )
 }
 

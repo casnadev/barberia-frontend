@@ -5,7 +5,6 @@ import {
   CheckCheck, Ban, Store, CalendarCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { AdminLayout } from '@/components/AdminLayout'
 import { CalendarModal } from '@/pages/cliente/CalendarModal'
 import { buildImageUrl } from '@/services/apiClient'
 import { ventasService, type VentaResumen } from '@/services/ventasService'
@@ -102,7 +101,7 @@ export function VentasPage() {
   }
 
   return (
-    <AdminLayout title="Ventas" subtitle="Aprueba las ventas y verifica las evidencias de pago">
+    <>
       {/* Resumen */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <ResumenCard icon={Clock} tone="amber" label="Pendientes" value={String(counts.PendienteAprobacion)} />
@@ -185,7 +184,7 @@ export function VentasPage() {
       <AnimatePresence>
         {detail && <DetalleVenta venta={detail} onClose={() => setDetail(null)} onResuelto={async () => { setDetail(null); await cargar() }} />}
       </AnimatePresence>
-    </AdminLayout>
+    </>
   )
 }
 

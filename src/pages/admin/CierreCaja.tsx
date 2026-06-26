@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Calculator, CheckCircle2, Loader2, CalendarDays, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
-import { AdminLayout } from '@/components/AdminLayout'
 import { cierreCajaService, type PreviewCierre, type CierreCaja as CierreItem } from '@/services/cierreCajaService'
 import { CalendarModal } from '@/pages/cliente/CalendarModal'
 
@@ -83,7 +82,7 @@ export function CierreCajaPage() {
   const diffColor = (d: number) => Math.abs(d) < 0.005 ? 'text-emerald-600' : d > 0 ? 'text-amber-600' : 'text-rose-600'
 
   return (
-    <AdminLayout title="Caja" subtitle="Cierre del día: cuadra el sistema con lo que tienes en caja">
+    <>
       {/* Fecha + resumen */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5">
         <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -203,6 +202,6 @@ export function CierreCajaPage() {
           </div>
         </>
       )}
-    </AdminLayout>
+    </>
   )
 }
