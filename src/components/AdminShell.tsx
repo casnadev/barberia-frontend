@@ -1,6 +1,6 @@
 import { useState, useEffect, useTransition, useCallback, useContext, createContext, Suspense } from 'react'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
-import { Home, Scissors, Users, Calendar, User, Clock, Settings, Wallet, Calculator, BadgeCheck, DollarSign } from 'lucide-react'
+import { Home, Scissors, Users, Calendar, User, Clock, Settings, Wallet, Calculator, BadgeCheck, DollarSign, CreditCard } from 'lucide-react'
 import { AdminHeader } from '@/components/AdminHeader'
 import { CobrarVentaModal } from '@/components/CobrarVentaModal'
 import { prefetchAdminPages } from '@/router/adminPages'
@@ -42,6 +42,7 @@ const NAV: NavItem[] = [
   { to: '/admin/pagos', label: 'Pagos', icon: Wallet },
   { to: '/admin/caja', label: 'Caja', icon: Calculator },
   { to: '/admin/configuracion', label: 'Config', icon: Settings },
+  { to: '/admin/mi-plan', label: 'Mi Plan', icon: CreditCard },
 ]
 
 /* Footer (mobile): carrusel deslizable con peek. NO incluye Config (vive en el

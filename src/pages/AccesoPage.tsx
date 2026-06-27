@@ -33,6 +33,11 @@ export function AccesoPage() {
   const [nombre, setNombre] = useState('')
   const [nombreNegocio, setNombreNegocio] = useState('')
   const [correoVerificado, setCorreoVerificado] = useState('')
+  // Código de referido: función LISTA pero OCULTA por ahora. Si llega ?ref= en la URL
+  // se respeta en silencio; no mostramos campo visible (se habilitará más adelante).
+  const codigoReferido = (() => {
+    try { return new URLSearchParams(window.location.search).get('ref')?.trim() ?? '' } catch { return '' }
+  })()
 
   // Si la finalización viene de Google guardamos el credential y completamos por ahí.
   const [googleCredential, setGoogleCredential] = useState<string | null>(null)
@@ -173,6 +178,7 @@ export function AccesoPage() {
           correo: esEmail ? idValor() : undefined,
           telefono: !esEmail ? idValor() : undefined,
           password,
+          codigoReferido: codigoReferido.trim() || undefined,
         })
       }
       if (!resp) { toast.error('No pudimos crear la cuenta.'); return }
@@ -305,6 +311,8 @@ export function AccesoPage() {
 
               <Label>Crea tu contraseña</Label>
               <PassInput value={password} onChange={setPassword} placeholder="Mínimo 8 caracteres" />
+
+              <p className="mt-2 mb-1 text-xs text-gray-400">Códigos de referido: <span className="font-medium text-gray-500">próximamente</span>.</p>
 
               <button onClick={crearNegocio} disabled={loading} className={btnPrimary + ' mt-1'}>
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5" />} Aceptar y crear cuenta

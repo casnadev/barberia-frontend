@@ -18,6 +18,7 @@ import {
   VentasPage,
   CierreCajaPage,
   ConfiguracionPage,
+  MiPlanPage,
 } from '@/router/adminPages'
 
 // --- Resto de páginas con carga diferida (code-splitting) ---
@@ -320,6 +321,7 @@ export function App() {
                 <Route path="admin/pagos" element={<PagosPage />} />
                 <Route path="admin/caja" element={<CierreCajaPage />} />
                 <Route path="admin/configuracion" element={<ConfiguracionPage />} />
+                <Route path="admin/mi-plan" element={<MiPlanPage />} />
               </Route>
             </Route>
 

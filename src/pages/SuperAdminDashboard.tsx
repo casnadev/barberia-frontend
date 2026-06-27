@@ -12,6 +12,8 @@ import { AccountMenu } from '@/components/AccountMenu'
 import { DirectorioPanel } from '@/components/DirectorioPanel'
 import { LandingPanel } from '@/components/LandingPanel'
 import { ReferidosPanel } from '@/components/ReferidosPanel'
+import { SuperAdminBillingPanel } from '@/components/SuperAdminBillingPanel'
+import { SuperAdminPlanesPanel } from '@/components/SuperAdminPlanesPanel'
 import { directorioService } from '@/services/directorioService'
 import {
   empresasService, type Empresa, type Admin, type Plan,
@@ -46,7 +48,7 @@ export function SuperAdminDashboard() {
   const { user } = useAuthStore()
 
   const [empresas, setEmpresas] = useState<Empresa[]>([])
-  const [seccion, setSeccion] = useState<'barberias' | 'directorio' | 'landing' | 'referidos'>('barberias')
+  const [seccion, setSeccion] = useState<'barberias' | 'directorio' | 'landing' | 'referidos' | 'billing' | 'planes'>('barberias')
   const [owners, setOwners] = useState<Record<number, Admin | null>>({})
   const [planes, setPlanes] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
@@ -197,26 +199,36 @@ export function SuperAdminDashboard() {
 
       <main className="max-w-[1380px] mx-auto px-4 py-7">
         {/* Selector de sección: Barberías | Directorio */}
-        <div className="inline-flex items-center gap-1 p-1 mb-6 bg-white border border-gray-200 rounded-xl">
+        <div className="flex flex-wrap items-center gap-1 p-1 mb-6 bg-white border border-gray-200 rounded-xl">
           <button onClick={() => setSeccion('barberias')}
-            className={`text-sm font-semibold px-4 py-2 rounded-lg transition ${
+            className={`text-sm font-semibold px-4 py-2 rounded-lg transition whitespace-nowrap ${
               seccion === 'barberias' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
             Barberías
           </button>
           <button onClick={() => setSeccion('directorio')}
-            className={`text-sm font-semibold px-4 py-2 rounded-lg transition ${
+            className={`text-sm font-semibold px-4 py-2 rounded-lg transition whitespace-nowrap ${
               seccion === 'directorio' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
             Directorio
           </button>
           <button onClick={() => setSeccion('landing')}
-            className={`text-sm font-semibold px-4 py-2 rounded-lg transition ${
+            className={`text-sm font-semibold px-4 py-2 rounded-lg transition whitespace-nowrap ${
               seccion === 'landing' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
             Landing
           </button>
           <button onClick={() => setSeccion('referidos')}
-            className={`text-sm font-semibold px-4 py-2 rounded-lg transition ${
+            className={`text-sm font-semibold px-4 py-2 rounded-lg transition whitespace-nowrap ${
               seccion === 'referidos' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
             Referidos
+          </button>
+          <button onClick={() => setSeccion('billing')}
+            className={`text-sm font-semibold px-4 py-2 rounded-lg transition whitespace-nowrap ${
+              seccion === 'billing' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+            Facturación
+          </button>
+          <button onClick={() => setSeccion('planes')}
+            className={`text-sm font-semibold px-4 py-2 rounded-lg transition whitespace-nowrap ${
+              seccion === 'planes' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+            Planes
           </button>
         </div>
 
@@ -225,6 +237,10 @@ export function SuperAdminDashboard() {
         {seccion === 'landing' && <LandingPanel />}
 
         {seccion === 'referidos' && <ReferidosPanel />}
+
+        {seccion === 'billing' && <SuperAdminBillingPanel />}
+
+        {seccion === 'planes' && <SuperAdminPlanesPanel />}
 
         {seccion === 'barberias' && (<>
         {/* Stats + acción */}

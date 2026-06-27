@@ -64,3 +64,22 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 }))
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SINCRONIZACIÓN DE SESIÓN ENTRE PESTAÑAS
+// El evento `storage` SOLO se dispara en las OTRAS pestañas del mismo origen
+// (no en la que hizo el cambio). Si en una pestaña se cierra sesión (se borra el
+// token), aquí lo reflejamos: limpiamos el estado en memoria y mandamos a /login.
+// ─────────────────────────────────────────────────────────────────────────────
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    // Otra pestaña cerró sesión (token eliminado).
+    if (e.key === 'token' && e.newValue === null) {
+      useAuthStore.setState({ user: null, token: null })
+      try { clearTenant(); sessionStorage.clear() } catch { /* ignore */ }
+      const ruta = window.location.pathname
+      const esPublica = ruta.startsWith('/login') || ruta.startsWith('/acceso') || ruta === '/'
+      if (!esPublica) window.location.href = '/login'
+    }
+  })
+}

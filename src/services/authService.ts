@@ -160,12 +160,14 @@ export const authService = {
   signupCompletar: async (payload: {
     tipo: string; identificador: string; codigo: string; nombre?: string
     apellido?: string; correo?: string; telefono?: string; nombreNegocio?: string; password?: string
+    codigoReferido?: string
   }): Promise<LoginResponse | null> => {
     try {
       const response = await apiClient.post('/api/Auth/signup/completar', {
         Tipo: payload.tipo, Identificador: payload.identificador, Codigo: payload.codigo,
         Nombre: payload.nombre, Apellido: payload.apellido, Correo: payload.correo,
         Telefono: payload.telefono, NombreNegocio: payload.nombreNegocio, Password: payload.password,
+        CodigoReferido: payload.codigoReferido,
       })
       const responseData = response.data.data || response.data
       return mapLoginResponse(responseData)

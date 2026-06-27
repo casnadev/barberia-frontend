@@ -19,6 +19,7 @@ const importers = {
   Pagos: () => import('@/pages/admin/PagosPage'),
   Caja: () => import('@/pages/admin/CierreCaja'),
   Configuracion: () => import('@/pages/admin/ConfiguracionPage'),
+  MiPlan: () => import('@/pages/admin/MiPlanPage'),
 } as const
 
 // --- Componentes lazy (se consumen en App.tsx) ---
@@ -32,6 +33,7 @@ export const VentasPage = lazy(() => importers.Ventas().then((m) => ({ default: 
 export const PagosPage = lazy(() => importers.Pagos().then((m) => ({ default: m.PagosPage })))
 export const CierreCajaPage = lazy(() => importers.Caja().then((m) => ({ default: m.CierreCajaPage })))
 export const ConfiguracionPage = lazy(() => importers.Configuracion().then((m) => ({ default: m.ConfiguracionPage })))
+export const MiPlanPage = lazy(() => importers.MiPlan().then((m) => ({ default: m.MiPlanPage })))
 
 /**
  * Pre-descarga TODOS los chunks del panel admin cuando el navegador está ocioso.
