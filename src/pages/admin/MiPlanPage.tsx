@@ -58,6 +58,7 @@ function Barra({ titulo, icon: Icon, c }: { titulo: string; icon: typeof Users; 
 export function MiPlanPage() {
   const [accion, setAccion] = useState<'checkout' | 'portal' | null>(null)
   const [verMensajes, setVerMensajes] = useState(false)
+  const [intervalo, setIntervalo] = useState<'mensual' | 'anual'>('mensual')
 
   const { data: mp, isLoading, isError, refetch } = useQuery<MiPlan>({
     queryKey: ['mi-plan'],
@@ -77,10 +78,10 @@ export function MiPlanPage() {
     queryFn: () => mensajeriaService.listarMes(inicioMesISO, 50),
   })
 
-  const irACheckout = async (idPlan: number) => {
+  const irACheckout = async (idPlan: number, intervaloCobro: 'month' | 'year' = 'month') => {
     try {
       setAccion('checkout')
-      const url = await billingService.iniciarCheckout(idPlan)
+      const url = await billingService.iniciarCheckout(idPlan, intervaloCobro)
       if (url) window.location.href = url
       else toast.error('No se pudo iniciar el checkout.')
     } catch (e: any) {
@@ -223,16 +224,40 @@ export function MiPlanPage() {
         <div className="rounded-2xl border border-zinc-200 bg-white p-5">
           <h2 className="text-lg font-semibold text-zinc-900">Planes</h2>
           <p className="text-sm text-zinc-500">Contrata o mejora tu plan en segundos.</p>
+
+          {/* Toggle Mensual / Anual (solo si hay algún plan con precio anual) */}
+          {planes.some((p) => p.precioAnualPEN > 0) && (
+            <div className="mt-4 inline-flex gap-1 p-1 rounded-full bg-zinc-100">
+              <button
+                onClick={() => setIntervalo('mensual')}
+                className={`px-4 py-1.5 rounded-full text-sm font-bold transition ${intervalo === 'mensual' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500'}`}>
+                Mensual
+              </button>
+              <button
+                onClick={() => setIntervalo('anual')}
+                className={`px-4 py-1.5 rounded-full text-sm font-bold transition inline-flex items-center gap-2 ${intervalo === 'anual' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500'}`}>
+                Anual <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">2 meses gratis</span>
+              </button>
+            </div>
+          )}
+
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
             {planes.map((p) => {
               const esActual = p.idPlan === mp.idPlan
+              const tieneAnual = p.precioAnualPEN > 0
+              const verAnual = intervalo === 'anual' && tieneAnual
+              const ahorro = tieneAnual ? Math.max(0, p.precioMensualPEN * 12 - p.precioAnualPEN) : 0
               return (
                 <div key={p.idPlan} className={`rounded-2xl border p-4 ${p.popular ? 'border-blue-600' : 'border-zinc-200'}`}>
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-zinc-900">{p.nombre}</span>
                     {p.popular && <span className="text-[10px] font-bold uppercase tracking-wide bg-blue-600 text-white px-2 py-0.5 rounded-full">Popular</span>}
                   </div>
-                  <div className="mt-2 text-2xl font-bold text-zinc-900">{p.esGratis ? 'Gratis' : soles(p.precioMensualPEN)}</div>
+                  <div className="mt-2 text-2xl font-bold text-zinc-900">
+                    {p.esGratis ? 'Gratis' : verAnual ? <>{soles(p.precioAnualPEN)}<span className="text-sm font-medium text-zinc-400"> /año</span></> : <>{soles(p.precioMensualPEN)}<span className="text-sm font-medium text-zinc-400"> /mes</span></>}
+                  </div>
+                  {verAnual && ahorro > 0 && <div className="text-xs font-bold text-emerald-600 mt-0.5">Ahorras {soles(ahorro)} al año</div>}
+                  {!verAnual && tieneAnual && !p.esGratis && <div className="text-xs text-zinc-400 mt-0.5">o {soles(p.precioAnualPEN)}/año</div>}
                   <ul className="mt-3 space-y-1.5">
                     {p.caracteristicas.slice(0, 4).map((c, i) => (
                       <li key={i} className="flex items-start gap-1.5 text-xs text-zinc-600"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{c}</li>
@@ -240,10 +265,10 @@ export function MiPlanPage() {
                   </ul>
                   <button
                     disabled={esActual || p.esGratis || accion === 'checkout'}
-                    onClick={() => irACheckout(p.idPlan)}
+                    onClick={() => irACheckout(p.idPlan, verAnual ? 'year' : 'month')}
                     className="mt-4 w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700">
                     {accion === 'checkout' ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                    {esActual ? 'Plan actual' : p.esGratis ? 'Incluido' : 'Contratar'}
+                    {esActual ? 'Plan actual' : p.esGratis ? 'Incluido' : verAnual ? 'Contratar anual' : 'Contratar'}
                   </button>
                 </div>
               )

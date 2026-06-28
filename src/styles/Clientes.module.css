@@ -92,3 +92,39 @@
 .btnUnlock:hover { filter: brightness(.95); }
 .btnClose { width: 100%; padding: 11px; border: 1px solid var(--color-border, #e5e7eb); cursor: pointer; border-radius: var(--radius-pill, 9999px); background: #fff; color: var(--color-text-dark, #111827); font-size: 0.9rem; font-weight: 600; transition: background .15s ease; }
 .btnClose:hover { background: var(--color-bg-soft, #f9fafb); }
+/* ===== Filtros de clientes (chips estilo Fresha) ===== */
+.filtros { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.filtroRow {
+  display: flex; gap: 8px; overflow-x: auto; flex-wrap: nowrap;
+  scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+.filtroRow::-webkit-scrollbar { display: none; }
+.fChip {
+  flex: 0 0 auto; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 9999px; border: 1px solid #e5e7eb; background: #fff;
+  color: #4b5563; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: border-color .15s ease, color .15s ease, background .15s ease;
+}
+.fChip:hover { border-color: var(--brand, #2855F6); color: var(--brand, #2855F6); }
+.fChipActive { background: var(--brand, #2855F6); border-color: var(--brand, #2855F6); color: #fff; }
+.fChipActive:hover { color: #fff; }
+.fChipCount {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px;
+  padding: 0 5px; border-radius: 9999px; font-size: 11px; font-weight: 800;
+  background: rgba(0,0,0,.08); color: inherit;
+}
+.fChipActive .fChipCount { background: rgba(255,255,255,.25); }
+/* Variantes de color por segmento (solo el punto/acento) */
+.segNuevo.fChipActive    { background: #16a34a; border-color: #16a34a; }
+.segFrecuente.fChipActive{ background: #2855F6; border-color: #2855F6; }
+.segInactivo.fChipActive { background: #64748b; border-color: #64748b; }
+.segRiesgo.fChipActive   { background: #dc2626; border-color: #dc2626; }
+.fLabel { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #9ca3af; margin: 2px 0 -2px; }
+
+/* Badge de segmento en filas/cards de cliente */
+.segBadge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 9999px; font-size: 0.68rem; font-weight: 800; letter-spacing: .02em; }
+.segBadgeNuevo    { background: rgba(22,163,74,.12);  color: #15803d; }
+.segBadgeFrecuente{ background: rgba(40,85,246,.12);  color: #1d4ed8; }
+.segBadgeInactivo { background: rgba(100,116,139,.14); color: #475569; }
+.segBadgeRiesgo   { background: rgba(220,38,38,.12);  color: #b91c1c; }

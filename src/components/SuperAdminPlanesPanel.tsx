@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { superAdminPlanesService, type PlanAdmin, type PlanAdminUpsert } from '@/services/superAdminPlanesService'
 
 const vacio: PlanAdminUpsert = {
   nombre: '', descripcion: '', codigoPlan: '', activo: true, esPopular: false, orden: 0,
   trialDuracionDias: 14, precioMensual: 0, moneda: 'PEN', stripePriceId: '', stripeProductId: '',
-  maxWhatsAppMes: 50, maxTrabajadores: 3, maxSedes: 1,
+  precioAnual: 0,
+  maxWhatsAppMes: 50, maxTrabajadores: 3, maxSedes: 1, maxEmailMes: 500,
 }
 
 const soles = (n: number, m: string) => `${m} ${Number(n || 0).toFixed(2)}`
@@ -35,7 +36,8 @@ export function SuperAdminPlanesPanel() {
       activo: p.activo, esPopular: p.esPopular, orden: p.orden, trialDuracionDias: p.trialDuracionDias,
       precioMensual: p.precioMensual, moneda: p.moneda, stripePriceId: p.stripePriceId ?? '',
       stripeProductId: p.stripeProductId ?? '', maxWhatsAppMes: p.maxWhatsAppMes,
-      maxTrabajadores: p.maxTrabajadores, maxSedes: p.maxSedes,
+      precioAnual: p.precioAnual ?? 0,
+      maxTrabajadores: p.maxTrabajadores, maxSedes: p.maxSedes, maxEmailMes: p.maxEmailMes ?? 500,
     })
   }
 
@@ -83,14 +85,16 @@ export function SuperAdminPlanesPanel() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <Campo label="Nombre"><input className={inp} value={form.nombre} onChange={e => set({ nombre: e.target.value })} /></Campo>
             <Campo label="Código (opcional)"><input className={inp} value={form.codigoPlan ?? ''} onChange={e => set({ codigoPlan: e.target.value })} placeholder="pro / multisede" /></Campo>
-            <Campo label="Orden"><input type="number" className={inp} value={form.orden} onChange={e => set({ orden: +e.target.value })} /></Campo>
+            <Campo label="Orden"><NumInput value={form.orden} onChange={n => set({ orden: n })} /></Campo>
             <Campo label="Descripción"><input className={inp} value={form.descripcion ?? ''} onChange={e => set({ descripcion: e.target.value })} /></Campo>
-            <Campo label="Precio mensual"><input type="number" step="0.01" className={inp} value={form.precioMensual} onChange={e => set({ precioMensual: +e.target.value })} /></Campo>
+            <Campo label="Precio mensual"><NumInput value={form.precioMensual} onChange={n => set({ precioMensual: n })} step="0.01" /></Campo>
+            <Campo label="Precio anual (0 = sin anual)"><NumInput value={form.precioAnual} onChange={n => set({ precioAnual: n })} step="0.01" /></Campo>
             <Campo label="Moneda"><input className={inp} value={form.moneda} onChange={e => set({ moneda: e.target.value.toUpperCase() })} /></Campo>
-            <Campo label="Días de prueba"><input type="number" className={inp} value={form.trialDuracionDias} onChange={e => set({ trialDuracionDias: +e.target.value })} /></Campo>
-            <Campo label="Máx. WhatsApp/mes (-1 = ∞)"><input type="number" className={inp} value={form.maxWhatsAppMes} onChange={e => set({ maxWhatsAppMes: +e.target.value })} /></Campo>
-            <Campo label="Máx. trabajadores (-1 = ∞)"><input type="number" className={inp} value={form.maxTrabajadores} onChange={e => set({ maxTrabajadores: +e.target.value })} /></Campo>
-            <Campo label="Máx. sedes (-1 = ∞)"><input type="number" className={inp} value={form.maxSedes} onChange={e => set({ maxSedes: +e.target.value })} /></Campo>
+            <Campo label="Días de prueba"><NumInput value={form.trialDuracionDias} onChange={n => set({ trialDuracionDias: n })} /></Campo>
+            <Campo label="Máx. WhatsApp/mes (-1 = ∞)"><NumInput value={form.maxWhatsAppMes} onChange={n => set({ maxWhatsAppMes: n })} /></Campo>
+            <Campo label="Máx. correos campaña/mes (-1 = ∞)"><NumInput value={form.maxEmailMes} onChange={n => set({ maxEmailMes: n })} /></Campo>
+            <Campo label="Máx. trabajadores (-1 = ∞)"><NumInput value={form.maxTrabajadores} onChange={n => set({ maxTrabajadores: n })} /></Campo>
+            <Campo label="Máx. sedes (-1 = ∞)"><NumInput value={form.maxSedes} onChange={n => set({ maxSedes: n })} /></Campo>
             <Campo label="Stripe Price ID (automático)"><input className={inp + ' bg-gray-100 text-gray-500'} value={form.stripePriceId || '— se genera al guardar —'} readOnly /></Campo>
             <Campo label="Stripe Product ID (automático)"><input className={inp + ' bg-gray-100 text-gray-500'} value={form.stripeProductId || '— se genera al guardar —'} readOnly /></Campo>
           </div>
@@ -106,15 +110,17 @@ export function SuperAdminPlanesPanel() {
         </div>
       )}
 
-      {/* Tabla */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+      {/* Tabla (desktop) */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto hidden sm:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-gray-500 border-b border-gray-200 bg-gray-50">
               <th className="py-2.5 px-3 font-medium">Plan</th>
               <th className="py-2.5 px-3 font-medium">Precio</th>
+              <th className="py-2.5 px-3 font-medium">Anual</th>
               <th className="py-2.5 px-3 font-medium">Trial</th>
               <th className="py-2.5 px-3 font-medium">WhatsApp</th>
+              <th className="py-2.5 px-3 font-medium">Correos</th>
               <th className="py-2.5 px-3 font-medium">Trab.</th>
               <th className="py-2.5 px-3 font-medium">Sedes</th>
               <th className="py-2.5 px-3 font-medium">Stripe</th>
@@ -127,8 +133,10 @@ export function SuperAdminPlanesPanel() {
               <tr key={p.idPlan} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="py-2 px-3 font-medium text-gray-800">{p.nombre}{p.esPopular && <span className="ml-1 text-[10px] bg-gray-900 text-white px-1.5 py-0.5 rounded-full">Popular</span>}</td>
                 <td className="py-2 px-3 text-gray-700">{soles(p.precioMensual, p.moneda)}</td>
+                <td className="py-2 px-3 text-gray-700">{p.precioAnual > 0 ? soles(p.precioAnual, p.moneda) : <span className="text-gray-400">—</span>}</td>
                 <td className="py-2 px-3 text-gray-600">{p.trialDuracionDias} d</td>
                 <td className="py-2 px-3 text-gray-700">{lim(p.maxWhatsAppMes)}</td>
+                <td className="py-2 px-3 text-gray-700">{lim(p.maxEmailMes)}</td>
                 <td className="py-2 px-3 text-gray-700">{lim(p.maxTrabajadores)}</td>
                 <td className="py-2 px-3 text-gray-700">{lim(p.maxSedes)}</td>
                 <td className="py-2 px-3">{p.stripePriceId ? <span className="text-emerald-600">✅</span> : <span className="text-gray-400">—</span>}</td>
@@ -145,12 +153,70 @@ export function SuperAdminPlanesPanel() {
           </tbody>
         </table>
       </div>
+
+      {/* Cards (móvil) */}
+      <div className="grid grid-cols-1 gap-3 sm:hidden">
+        {planes.map(p => (
+          <div key={p.idPlan} className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-semibold text-gray-900">
+                {p.nombre}
+                {p.esPopular && <span className="ml-1.5 text-[10px] bg-gray-900 text-white px-1.5 py-0.5 rounded-full">Popular</span>}
+              </div>
+              <button onClick={() => toggle(p)} className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600'}`}>
+                {p.activo ? 'Activo' : 'Inactivo'}
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-y-1.5 gap-x-3 text-sm">
+              <div className="text-gray-500">Mensual</div><div className="text-gray-800 text-right font-medium">{soles(p.precioMensual, p.moneda)}</div>
+              <div className="text-gray-500">Anual</div><div className="text-gray-800 text-right font-medium">{p.precioAnual > 0 ? soles(p.precioAnual, p.moneda) : '—'}</div>
+              <div className="text-gray-500">Trial</div><div className="text-gray-800 text-right">{p.trialDuracionDias} d</div>
+              <div className="text-gray-500">WhatsApp</div><div className="text-gray-800 text-right">{lim(p.maxWhatsAppMes)}</div>
+              <div className="text-gray-500">Correos</div><div className="text-gray-800 text-right">{lim(p.maxEmailMes)}</div>
+              <div className="text-gray-500">Trab. / Sedes</div><div className="text-gray-800 text-right">{lim(p.maxTrabajadores)} / {lim(p.maxSedes)}</div>
+              <div className="text-gray-500">Stripe</div><div className="text-right">{p.stripePriceId ? <span className="text-emerald-600">✅</span> : <span className="text-gray-400">—</span>}</div>
+            </div>
+            <button onClick={() => abrirEditar(p)} className="mt-3 w-full py-2 rounded-lg bg-blue-50 text-blue-600 text-sm font-semibold hover:bg-blue-100">Editar</button>
+          </div>
+        ))}
+      </div>
+
       <p className="text-xs text-gray-400">Tip: usa <b>-1</b> en un límite para “ilimitado”. El plan gratis/trial no necesita Stripe Price ID.</p>
     </div>
   )
 }
 
 const inp = 'w-full px-3 py-2 rounded-lg border border-gray-300 text-sm'
-function Campo({ label, children }: { label: string; children: React.ReactNode }) {
+function Campo({ label, children }: { label: string; children: ReactNode }) {
   return <label className="block"><span className="block text-xs text-gray-500 mb-1">{label}</span>{children}</label>
+}
+
+/**
+ * Input numérico que SÍ deja borrar el campo mientras escribes (sin que reaparezca
+ * el 0). Mantiene un texto local; al perder foco o quedar vacío, normaliza a un
+ * número válido y avisa al padre. step="any" permite decimales si se pide.
+ */
+function NumInput({ value, onChange, step }: { value: number; onChange: (n: number) => void; step?: string }) {
+  const [txt, setTxt] = useState<string>(String(value ?? 0))
+  useEffect(() => { setTxt(String(value ?? 0)) }, [value])
+
+  return (
+    <input
+      type="number"
+      step={step}
+      className={inp}
+      value={txt}
+      onChange={(e) => {
+        const v = e.target.value
+        setTxt(v)                       // deja el campo como lo escribe (incluso vacío)
+        if (v === '' || v === '-') return // vacío temporal: no fuerza número todavía
+        const n = Number(v)
+        if (!Number.isNaN(n)) onChange(n)
+      }}
+      onBlur={() => {
+        // Al salir, si quedó vacío o inválido, normaliza a 0 y refleja.
+        if (txt === '' || txt === '-' || Number.isNaN(Number(txt))) { setTxt('0'); onChange(0) }
+      }}
+    />
+  )
 }

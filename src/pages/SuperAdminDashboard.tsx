@@ -185,11 +185,8 @@ export function SuperAdminDashboard() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
         <div className="max-w-[1380px] mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-md shadow-blue-500/30">
-              <Scissors className="w-5 h-5 text-white" />
-            </div>
             <div>
-              <img src="/barber-logo-black.png" alt="Barber.PE" className="h-5" />
+              <img src="/barber-logo-black.png" alt="Barber.PE" className="h-6" />
               <p className="text-xs text-gray-500 -mt-0.5">Panel maestro</p>
             </div>
           </div>
@@ -245,16 +242,16 @@ export function SuperAdminDashboard() {
         {seccion === 'barberias' && (<>
         {/* Stats + acción */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
-          <div className="grid grid-cols-3 gap-3 flex-1 max-w-md">
+          <div className="grid grid-cols-3 gap-2.5 flex-1 max-w-md">
             {[
               { label: 'Barberías', value: stats.total, icon: Building2 },
               { label: 'Activas', value: stats.activas, icon: Power },
               { label: 'Sin dueño', value: stats.sinAcceso, icon: KeyRound },
             ].map((s) => (
-              <div key={s.label} className="bg-white border border-gray-200 rounded-xl p-3">
-                <s.icon className="w-4 h-4 text-blue-600 mb-1" />
-                <p className="text-2xl font-bold text-gray-900 leading-none">{s.value}</p>
-                <p className="text-xs text-gray-500 mt-1">{s.label}</p>
+              <div key={s.label} className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 flex flex-col items-center sm:items-start text-center sm:text-left">
+                <s.icon className="w-4 h-4 text-blue-600 mb-1.5" />
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 leading-none">{s.value}</p>
+                <p className="text-[11px] sm:text-xs text-gray-500 mt-1 leading-tight">{s.label}</p>
               </div>
             ))}
           </div>

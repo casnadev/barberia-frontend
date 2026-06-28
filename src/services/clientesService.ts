@@ -23,6 +23,7 @@ export interface Cliente {
   ultimaVisita?: string
   ultimoLogin?: string
   fechaCreacion?: string
+  segmento?: string   // "nuevo" | "frecuente" | "inactivo" | "riesgo" | "" (regular)
 }
 
 export interface ClientesPaginado {
@@ -40,32 +41,28 @@ export const clientesService = {
    * 1. Hacen una reserva (pre-registro)
    * 2. Se logean por OTP
    */
-  getClientes: async (pagina: number = 1, tamanoPagina: number = 20, buscar?: string): Promise<Cliente[]> => {
+  getClientes: async (pagina: number = 1, tamanoPagina: number = 20, buscar?: string, idSede?: number | null, segmento?: string): Promise<Cliente[]> => {
     try {
-      console.log('📥 Obteniendo lista de clientes...', { pagina, tamanoPagina, buscar })
-      
       const params = new URLSearchParams()
       params.append('pagina', pagina.toString())
       params.append('tamanoPagina', tamanoPagina.toString())
       if (buscar) params.append('buscar', buscar)
+      if (idSede && idSede > 0) params.append('idSede', idSede.toString())
+      if (segmento) params.append('segmento', segmento)
 
       const res = await apiClient.get(`/api/Clientes?${params.toString()}`)
-      
-      console.log('📊 Respuesta del backend:', res.data)
 
       // El backend devuelve: { ok, data: { items, total, pagina, tamanoPagina, totalPaginas } }
       const data = res.data.data || res.data
-      
-      // Extraer items del objeto paginado
+
       if (data?.items && Array.isArray(data.items)) {
-        console.log(`✅ Clientes obtenidos: ${data.items.length} de ${data.total} total`)
         return data.items
       }
-      
+
       // Fallback si viene como array directo (compatibilidad)
       return Array.isArray(data) ? data : []
     } catch (error) {
-      console.error('❌ Error getting clientes:', error)
+      console.error('Error getting clientes:', error)
       return []
     }
   },

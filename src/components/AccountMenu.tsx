@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { User, LogOut, LogIn, UserPlus, Settings, ExternalLink, LifeBuoy, KeyRound } from 'lucide-react'
+import { User, LogOut, LogIn, UserPlus, Settings, ExternalLink, LifeBuoy, KeyRound, CreditCard } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/authService'
 import { getActiveTenant, buildImageUrl } from '@/services/apiClient'
@@ -186,6 +186,11 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
                   <button className={s.item} onClick={abrirAcceso}>
                     <KeyRound className={s.itemIcon} width={18} height={18} /> Acceso
                   </button>
+                  {user.rol === 'Admin' && (
+                    <button className={s.item} onClick={() => go('/admin/mi-plan')}>
+                      <CreditCard className={s.itemIcon} width={18} height={18} /> Mi Plan
+                    </button>
+                  )}
                   {user.rol === 'Admin' && (
                     <button className={s.item} onClick={() => go('/admin/configuracion')}>
                       <Settings className={s.itemIcon} width={18} height={18} /> Configuración

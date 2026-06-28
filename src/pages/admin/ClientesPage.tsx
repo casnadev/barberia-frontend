@@ -3,9 +3,11 @@ import { clientesService, Cliente } from '@/services/clientesService'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
 import { mensajeError } from '@/utils/apiError'
-import { Eye, Unlock, Search, Phone, Mail, Calendar, Users, Info, X, Gift, Plus, Trash2, ImagePlus, ShieldCheck, Pencil, EyeOff } from 'lucide-react'
+import { Eye, Unlock, Search, Phone, Mail, Calendar, Users, Info, X, Gift, Plus, Trash2, ImagePlus, ShieldCheck, Pencil, EyeOff, Download, FileSpreadsheet, FileText, Loader2, Send } from 'lucide-react'
 import { novedadesService, type Novedad } from '@/services/novedadesService'
-import { buildImageUrl } from '@/services/apiClient'
+import { campanasService, type CoberturaCampana } from '@/services/campanasService'
+import { buildImageUrl, getActiveTenant } from '@/services/apiClient'
+import { sedeTenantService } from '@/services/sedeTenantService'
 import s from '@/styles/Clientes.module.css'
 import { serviciosService } from '@/services/serviciosService'
 import { ModeracionNovedadesModal } from '@/components/ModeracionNovedadesModal'
@@ -14,6 +16,10 @@ export function ClientesPage() {
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  // Filtros estilo Fresha: sede (por defecto la activa) + segmento.
+  const [sedes, setSedes] = useState<{ idSede: number; nombre: string; subdominio: string }[]>([])
+  const [sedeFiltro, setSedeFiltro] = useState<number | null>(null)   // null = aún no resuelta; 0 = todas
+  const [segmento, setSegmento] = useState<string>('')                // '' = todos
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [visibleMobile, setVisibleMobile] = useState(8)   // "Ver más" solo en móvil
@@ -28,14 +34,28 @@ export function ClientesPage() {
   // Al recargar la lista (búsqueda/refresh) reseteamos el "Ver más" de móvil.
   useEffect(() => { setVisibleMobile(8) }, [clientes])
 
+  // Al montar: resolver la sede activa (decisión 3A: por defecto la sede activa).
   useEffect(() => {
-    loadClientes()
+    (async () => {
+      try {
+        const mis = await sedeTenantService.getMisSedes()
+        setSedes(mis)
+        const activa = mis.find((x) => x.subdominio === getActiveTenant()) ?? mis[0]
+        setSedeFiltro(activa?.idSede ?? 0)
+      } catch {
+        setSedeFiltro(0) // si falla, mostrar todas
+      }
+    })()
   }, [])
 
   const loadClientes = async () => {
     try {
       setLoading(true)
-      const data = await clientesService.getClientes(1, 20, searchTerm || undefined)
+      const data = await clientesService.getClientes(
+        1, 50, searchTerm || undefined,
+        sedeFiltro && sedeFiltro > 0 ? sedeFiltro : undefined,
+        segmento || undefined,
+      )
       setClientes(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error cargando clientes:', error)
@@ -45,6 +65,13 @@ export function ClientesPage() {
       setLoading(false)
     }
   }
+
+  // Carga inicial y recarga cuando cambian sede o segmento (sede null = aún resolviendo).
+  useEffect(() => {
+    if (sedeFiltro === null) return
+    loadClientes()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sedeFiltro, segmento])
 
   // Recargar cuando cambia el término de búsqueda (debounce)
   useEffect(() => {
@@ -91,6 +118,76 @@ export function ClientesPage() {
   const fecha = (d?: string, largo = false) =>
     d ? new Date(d).toLocaleDateString('es-PE', largo ? { year: 'numeric', month: 'long', day: 'numeric' } : undefined) : 'N/A'
 
+  // Badge visual de segmento del cliente (Nuevo / Frecuente / Inactivo / En riesgo).
+  const SEG_META: Record<string, { label: string; cls: string }> = {
+    nuevo: { label: 'Nuevo', cls: s.segBadgeNuevo },
+    frecuente: { label: 'Frecuente', cls: s.segBadgeFrecuente },
+    inactivo: { label: 'Inactivo', cls: s.segBadgeInactivo },
+    riesgo: { label: 'En riesgo', cls: s.segBadgeRiesgo },
+  }
+  const renderSegmento = (seg?: string) => {
+    const meta = seg ? SEG_META[seg] : undefined
+    if (!meta) return null
+    return <span className={`${s.segBadge} ${meta.cls}`}>{meta.label}</span>
+  }
+
+  // ─── Exportar base de clientes (portabilidad de datos) ───
+  const [exportMenu, setExportMenu] = useState(false)
+  const [exportando, setExportando] = useState(false)
+
+  const exportarClientes = async (tipo: 'excel' | 'pdf') => {
+    setExportMenu(false)
+    setExportando(true)
+    try {
+      const { exportarClientesExcel, exportarClientesPDF } = await import('@/utils/exportReportes')
+      // Para portabilidad real, traemos la lista COMPLETA del filtro actual
+      // (hasta 1000), no solo los que están visibles en pantalla.
+      const fullList = await clientesService.getClientes(
+        1, 1000, searchTerm || undefined,
+        sedeFiltro && sedeFiltro > 0 ? sedeFiltro : undefined,
+        segmento || undefined,
+      )
+      const data = Array.isArray(fullList) && fullList.length > 0 ? fullList : clientes
+      if (data.length === 0) { toast.error('No hay clientes para exportar'); setExportando(false); return }
+
+      let negocio = 'Mi negocio'
+      let sedesLabel: string | undefined
+      const activa = sedes.find((x) => x.idSede === sedeFiltro)
+      if (activa) {
+        // Una sede específica.
+        negocio = activa.nombre
+        sedesLabel = `Sede: ${activa.nombre}`
+      } else {
+        // "Todas las sedes": no usar el nombre de una sola sede.
+        negocio = 'Todas las sedes'
+        const nombres = sedes.map((sd) => sd.nombre).filter(Boolean)
+        if (nombres.length === 1) { negocio = nombres[0]; sedesLabel = `Sede: ${nombres[0]}` }
+        else if (nombres.length > 1) sedesLabel = `Datos de todas las sedes (${nombres.join(', ')})`
+      }
+
+      const filas = data.map((c) => ({
+        nombre: c.nombreCompleto || 'Sin nombre',
+        telefono: c.telefono || '',
+        correo: c.correo || '',
+        genero: c.genero || '',
+        segmento: c.segmento || '',
+        totalReservas: c.totalReservas ?? 0,
+        reservasAtendidas: c.reservasAtendidas ?? 0,
+        ultimaVisita: c.ultimaVisita ? new Date(c.ultimaVisita).toLocaleDateString('es-PE') : '',
+        registrado: c.fechaCreacion ? new Date(c.fechaCreacion).toLocaleDateString('es-PE') : '',
+      }))
+      const meta = { negocio, periodoLabel: new Date().toLocaleDateString('es-PE'), sedesLabel }
+      if (tipo === 'excel') await exportarClientesExcel(filas, meta)
+      else await exportarClientesPDF(filas, meta)
+      toast.success(`${filas.length} cliente(s) exportado(s) a ${tipo === 'excel' ? 'Excel' : 'PDF'}`)
+    } catch (e) {
+      console.error(e)
+      toast.error('No se pudo exportar')
+    } finally {
+      setExportando(false)
+    }
+  }
+
   return (
     <>
       <div className={s.note}>
@@ -126,14 +223,73 @@ export function ClientesPage() {
         </div>
       </div>
 
-      {/* Acciones: moderar + publicar novedad */}
+      {/* Acciones: exportar + moderar + publicar novedad */}
       <div className="flex justify-end gap-2 mb-3">
+        <div style={{ position: 'relative' }}>
+          <button onClick={() => setExportMenu((v) => !v)} disabled={exportando}
+            className="inline-flex items-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:opacity-60">
+            <Download width={16} height={16} /> {exportando ? 'Generando…' : 'Exportar'}
+          </button>
+          {exportMenu && (
+            <>
+              <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setExportMenu(false)} />
+              <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 50, background: '#fff', border: '1px solid #e9ebef', borderRadius: 12, padding: 6, boxShadow: '0 12px 28px rgba(16,24,40,.16)', minWidth: 190 }}>
+                <button onClick={() => exportarClientes('excel')} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-semibold text-gray-800 hover:bg-gray-50 text-left">
+                  <FileSpreadsheet width={16} height={16} color="#16a34a" /> Excel (.xlsx)
+                </button>
+                <button onClick={() => exportarClientes('pdf')} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-semibold text-gray-800 hover:bg-gray-50 text-left">
+                  <FileText width={16} height={16} color="#dc2626" /> PDF
+                </button>
+              </div>
+            </>
+          )}
+        </div>
         <button onClick={() => setModeracionOpen(true)} className="inline-flex items-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl px-4 py-2 text-sm font-semibold transition">
           <ShieldCheck width={16} height={16} /> Moderación
         </button>
         <button onClick={() => setNovedadOpen(true)} className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2 text-sm font-semibold transition">
           <Gift width={16} height={16} /> Nueva promoción
         </button>
+      </div>
+
+      {/* Filtros estilo Fresha: sede + segmentos */}
+      <div className={s.filtros}>
+        {sedes.length > 1 && (
+          <div className={s.filtroRow}>
+            <button
+              className={`${s.fChip} ${sedeFiltro === 0 ? s.fChipActive : ''}`}
+              onClick={() => setSedeFiltro(0)}
+            >
+              Todas las sedes
+            </button>
+            {sedes.map((sd) => (
+              <button
+                key={sd.idSede}
+                className={`${s.fChip} ${sedeFiltro === sd.idSede ? s.fChipActive : ''}`}
+                onClick={() => setSedeFiltro(sd.idSede)}
+              >
+                {sd.nombre}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className={s.filtroRow}>
+          {[
+            { key: '', label: 'Todos', cls: '' },
+            { key: 'nuevo', label: 'Nuevos', cls: s.segNuevo },
+            { key: 'frecuente', label: 'Frecuentes', cls: s.segFrecuente },
+            { key: 'inactivo', label: 'Inactivos', cls: s.segInactivo },
+            { key: 'riesgo', label: 'En riesgo', cls: s.segRiesgo },
+          ].map((seg) => (
+            <button
+              key={seg.key || 'todos'}
+              className={`${s.fChip} ${seg.cls} ${segmento === seg.key ? s.fChipActive : ''}`}
+              onClick={() => setSegmento(seg.key)}
+            >
+              {seg.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Buscador */}
@@ -179,7 +335,12 @@ export function ClientesPage() {
                 <tbody>
                   {clientes.map((cliente) => (
                     <tr key={cliente.idCliente}>
-                      <td className={s.cellName}>{cliente.nombreCompleto}</td>
+                      <td className={s.cellName}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          {cliente.nombreCompleto}
+                          {renderSegmento(cliente.segmento)}
+                        </span>
+                      </td>
                       <td><span className={s.cellIcon}><Phone width={14} height={14} /> {cliente.telefono}</span></td>
                       <td><span className={s.cellIcon}><Mail width={14} height={14} /> {cliente.correo || 'Sin email'}</span></td>
                       <td><span className={s.countPill}>{cliente.totalReservas || 0}</span></td>
@@ -211,7 +372,10 @@ export function ClientesPage() {
               {clientes.slice(0, visibleMobile).map((cliente) => (
                 <div key={cliente.idCliente} className="p-4 flex items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-gray-900 truncate">{cliente.nombreCompleto || 'Sin nombre'}</p>
+                    <p className="font-semibold text-gray-900 truncate flex items-center gap-2">
+                      <span className="truncate">{cliente.nombreCompleto || 'Sin nombre'}</span>
+                      {renderSegmento(cliente.segmento)}
+                    </p>
                     <p className="text-sm text-gray-500 flex items-center gap-1 mt-0.5"><Phone width={13} height={13} /> {cliente.telefono}</p>
                     <p className="text-sm text-gray-500 flex items-center gap-1 truncate"><Mail width={13} height={13} /> {cliente.correo || 'Sin email'}</p>
                     <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -421,6 +585,7 @@ function NovedadModal({ onClose }: { onClose: () => void }) {
   const [serviciosSede, setServiciosSede] = useState<any[]>([])
   const [idServicios, setIdServicios] = useState<number[]>([])
   const [editandoId, setEditandoId] = useState<number | null>(null) // null = crear; id = editando
+  const [campanaTarget, setCampanaTarget] = useState<Novedad | null>(null) // promo a enviar por correo
 
   const cargar = () => novedadesService.listar().then(setLista).catch(() => setLista([]))
   useEffect(() => { cargar() }, [])
@@ -656,6 +821,9 @@ function NovedadModal({ onClose }: { onClose: () => void }) {
                       {n.tipoAccion === 'Reservar' && ` · 🗓 ${n.reservasAtribuidas ?? 0}`}
                     </p>
                   </div>
+                  <button onClick={() => setCampanaTarget(n)} className="shrink-0 text-gray-400 hover:text-emerald-600 p-1" aria-label="Enviar por correo" title="Enviar por correo a clientes">
+                    <Mail width={16} height={16} />
+                  </button>
                   <button onClick={() => cambiar(n)} className="shrink-0 text-gray-400 hover:text-gray-700 p-1" aria-label={n.activo ? 'Pausar' : 'Activar'} title={n.activo ? 'Pausar' : 'Activar'}>
                     {n.activo ? <EyeOff width={16} height={16} /> : <Eye width={16} height={16} />}
                   </button>
@@ -666,6 +834,112 @@ function NovedadModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
         )}
+      </div>
+      {campanaTarget && <CampanaModal novedad={campanaTarget} onClose={() => setCampanaTarget(null)} />}
+    </div>
+  )
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Modal: enviar una promoción por CORREO a un segmento de clientes.
+// La promo ya está publicada en el micrositio; esto la empuja por correo.
+// ───────────────────────────────────────────────────────────────────────────
+const SEGMENTOS_CAMPANA: { key: string; label: string }[] = [
+  { key: '', label: 'Todos' },
+  { key: 'nuevo', label: 'Nuevos' },
+  { key: 'frecuente', label: 'Frecuentes' },
+  { key: 'inactivo', label: 'Inactivos' },
+  { key: 'riesgo', label: 'En riesgo' },
+]
+
+function CampanaModal({ novedad, onClose }: { novedad: Novedad; onClose: () => void }) {
+  const [segmento, setSegmento] = useState('')
+  const [cobertura, setCobertura] = useState<CoberturaCampana | null>(null)
+  const [cargandoCob, setCargandoCob] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+
+  // Carga la cobertura cada vez que cambia el segmento.
+  useEffect(() => {
+    let vivo = true
+    setCargandoCob(true)
+    setCobertura(null)
+    campanasService.cobertura(novedad.idNovedad, segmento || undefined)
+      .then((c) => { if (vivo) setCobertura(c) })
+      .catch(() => { if (vivo) setCobertura(null) })
+      .finally(() => { if (vivo) setCargandoCob(false) })
+    return () => { vivo = false }
+  }, [segmento, novedad.idNovedad])
+
+  const enviar = async () => {
+    if (!cobertura || cobertura.seEnviaran <= 0) return
+    setEnviando(true)
+    try {
+      const res = await campanasService.enviar(novedad.idNovedad, segmento || undefined)
+      toast.success(res.mensaje || `Enviados ${res.enviados} correo(s)`)
+      onClose()
+    } catch (e: any) {
+      toast.error(e?.response?.data?.mensaje ?? 'No se pudo enviar la campaña')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <div className="flex items-center gap-2 text-gray-900">
+            <span className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center"><Mail width={18} height={18} /></span>
+            <div>
+              <h3 className="font-bold leading-tight">Enviar por correo</h3>
+              <p className="text-xs text-gray-500 truncate max-w-[230px]">{novedad.titulo}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1"><X width={18} height={18} /></button>
+        </div>
+
+        <p className="text-sm text-gray-600 mt-2 mb-3">Elige a qué clientes enviar esta promoción. Solo llega a quienes tienen correo.</p>
+
+        {/* Segmentos */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {SEGMENTOS_CAMPANA.map((seg) => (
+            <button
+              key={seg.key || 'todos'}
+              onClick={() => setSegmento(seg.key)}
+              className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition ${segmento === seg.key ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-emerald-400'}`}>
+              {seg.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Cobertura */}
+        <div className="rounded-xl bg-gray-50 border border-gray-100 p-3 mb-4 text-sm">
+          {cargandoCob ? (
+            <div className="flex items-center gap-2 text-gray-500"><Loader2 className="w-4 h-4 animate-spin" /> Calculando cobertura…</div>
+          ) : cobertura ? (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between"><span className="text-gray-600">Clientes en el segmento</span><b className="text-gray-900">{cobertura.totalSegmento}</b></div>
+              <div className="flex items-center justify-between"><span className="text-gray-600">Con correo (les llega)</span><b className="text-emerald-600">{cobertura.conCorreo}</b></div>
+              {cobertura.sinCorreo > 0 && <div className="flex items-center justify-between"><span className="text-gray-600">Sin correo (no se envía)</span><b className="text-amber-600">{cobertura.sinCorreo}</b></div>}
+              {cobertura.cuotaRestante !== null && <div className="flex items-center justify-between"><span className="text-gray-600">Cuota de correos este mes</span><b className="text-gray-900">{cobertura.cuotaRestante}</b></div>}
+              <div className="flex items-center justify-between pt-1.5 border-t border-gray-200"><span className="font-semibold text-gray-700">Se enviarán</span><b className="text-emerald-700 text-base">{cobertura.seEnviaran}</b></div>
+              {cobertura.cuotaInsuficiente && <p className="text-xs text-amber-600 mt-1">Tu plan no alcanza para todos este mes. Se enviarán los primeros {cobertura.seEnviaran}.</p>}
+            </div>
+          ) : (
+            <div className="text-gray-400">No se pudo calcular la cobertura.</div>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancelar</button>
+          <button
+            onClick={enviar}
+            disabled={enviando || !cobertura || cobertura.seEnviaran <= 0}
+            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50">
+            {enviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send width={15} height={15} />}
+            {enviando ? 'Enviando…' : cobertura ? `Enviar a ${cobertura.seEnviaran}` : 'Enviar'}
+          </button>
+        </div>
       </div>
     </div>
   )

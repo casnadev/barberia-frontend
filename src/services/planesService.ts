@@ -9,6 +9,7 @@ export interface PlanPublico {
   nombre: string
   descripcion?: string | null
   precioMensualPEN: number
+  precioAnualPEN: number   // 0 = no ofrece plan anual
   esGratis: boolean
   limiteSedes: number
   limiteTrabajadores: number
@@ -27,6 +28,7 @@ const normalizar = (raw: any): PlanPublico | null => {
     nombre: p.nombre ?? p.Nombre ?? 'Plan',
     descripcion: p.descripcion ?? p.Descripcion ?? null,
     precioMensualPEN: Number(p.precioMensualPEN ?? p.PrecioMensualPEN ?? 0),
+    precioAnualPEN: Number(p.precioAnualPEN ?? p.PrecioAnualPEN ?? 0),
     esGratis: Boolean(p.esGratis ?? p.EsGratis ?? false),
     limiteSedes: Number(p.limiteSedes ?? p.LimiteSedes ?? 1),
     limiteTrabajadores: Number(p.limiteTrabajadores ?? p.LimiteTrabajadores ?? 1),

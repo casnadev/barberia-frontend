@@ -13,9 +13,12 @@ export interface PlanAdmin {
   moneda: string
   stripePriceId?: string | null
   stripeProductId?: string | null
+  precioAnual: number
+  stripePriceIdAnual?: string | null
   maxWhatsAppMes: number
   maxTrabajadores: number
   maxSedes: number
+  maxEmailMes: number
   suscripcionesActivas: number
 }
 
@@ -25,18 +28,18 @@ const data = (r: any) => r?.data?.data ?? r?.data
 
 export const superAdminPlanesService = {
   listar: async (): Promise<PlanAdmin[]> => {
-    const r = await apiClient.get('/api/superadmin/planes')
+    const r = await apiClient.get('/api/superadmin/catalogo-planes')
     return (data(r) ?? []) as PlanAdmin[]
   },
   crear: async (dto: PlanAdminUpsert): Promise<PlanAdmin> => {
-    const r = await apiClient.post('/api/superadmin/planes', dto)
+    const r = await apiClient.post('/api/superadmin/catalogo-planes', dto)
     return data(r) as PlanAdmin
   },
   actualizar: async (id: number, dto: PlanAdminUpsert): Promise<PlanAdmin> => {
-    const r = await apiClient.put(`/api/superadmin/planes/${id}`, dto)
+    const r = await apiClient.put(`/api/superadmin/catalogo-planes/${id}`, dto)
     return data(r) as PlanAdmin
   },
   cambiarEstado: async (id: number, activo: boolean): Promise<void> => {
-    await apiClient.put(`/api/superadmin/planes/${id}/estado`, { activo })
+    await apiClient.put(`/api/superadmin/catalogo-planes/${id}/estado`, { activo })
   },
 }
