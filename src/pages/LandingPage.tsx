@@ -150,10 +150,7 @@ export default function LandingPage() {
   }
 
   /* ── datos derivados ──────────────────────────────────────────────── */
-  // Planes de pago para las tarjetas; el plan gratis (si existe) define el CTA.
-  const planGratis = planes.find((p) => p.esGratis)
   const tarjetas = planes
-  const ctaPrueba = planGratis ? 'Probar gratis' : 'Empezar gratis'
   const avatars = sedes.slice(0, 5)
 
   const navLinks: [string, string][] = [['Características', 'ventajas'], ['Planes/Precios', 'precios'], ['Contacto', 'contacto']]
@@ -382,26 +379,32 @@ export default function LandingPage() {
             <Reveal delay={0.05}>
               <h2 className={styles.h2}>Precio justo. <span className={styles.muted}>Sin sorpresas.</span></h2>
             </Reveal>
-            <div className={styles.priceHeadRight}><span className={styles.country}>🇵🇪 Perú</span>{tarjetas.length > 3 && (<div className={styles.railNav}><button aria-label="Anterior" onClick={() => scrollRail(planesRail, -1)}><ArrowLeft size={18} /></button><button aria-label="Siguiente" onClick={() => scrollRail(planesRail, 1)}><ArrowRight size={18} /></button></div>)}</div>
+            <div className={styles.priceHeadRight}><span className={styles.country}>🇵🇪 Perú</span></div>
           </div>
 
           {/* Toggle Mensual / Anual (solo si hay algún plan con precio anual) */}
           {tarjetas.some((p) => p.precioAnualPEN > 0) && (
             <Reveal delay={0.08}>
               <div style={{ textAlign: 'center' }}>
-                <div className={styles.intervalToggle}>
-                  <button
-                    className={`${styles.intervalBtn} ${intervalo === 'mensual' ? styles.intervalActive : ''}`}
-                    onClick={() => setIntervalo('mensual')}
-                  >
-                    Mensual
-                  </button>
-                  <button
-                    className={`${styles.intervalBtn} ${intervalo === 'anual' ? styles.intervalActive : ''}`}
-                    onClick={() => setIntervalo('anual')}
-                  >
-                    Anual <span className={styles.saveTag}>2 meses gratis</span>
-                  </button>
+                <div style={{ display: 'inline-flex', gap: 4, padding: 5, background: '#141416', border: '1px solid #27272c', borderRadius: 999, boxShadow: 'inset 0 1px 3px rgba(0,0,0,.45)' }}>
+                  {(['mensual', 'anual'] as const).map((modo) => {
+                    const activo = intervalo === modo
+                    return (
+                      <button
+                        key={modo}
+                        onClick={() => setIntervalo(modo)}
+                        style={{
+                          padding: '10px 28px', border: 'none', borderRadius: 999, cursor: 'pointer',
+                          fontWeight: 650, fontSize: '.92rem', letterSpacing: '.01em', transition: 'all .2s ease',
+                          ...(activo
+                            ? { background: 'linear-gradient(135deg,#6f9bff 0%,#2f6bff 52%,#1f57e6 100%)', color: '#fff', boxShadow: '0 8px 22px -8px rgba(47,107,255,.7), inset 0 1px 0 rgba(255,255,255,.28)' }
+                            : { background: 'transparent', color: '#b2b5bc' }),
+                        }}
+                      >
+                        {modo === 'mensual' ? 'Mensual' : 'Anual'}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             </Reveal>
@@ -411,7 +414,12 @@ export default function LandingPage() {
             {tarjetas.map((p) => {
               const tieneAnual = p.precioAnualPEN > 0
               const verAnual = intervalo === 'anual' && tieneAnual
-              const ahorro = tieneAnual ? Math.max(0, p.precioMensualPEN * 12 - p.precioAnualPEN) : 0
+              // Mensual equivalente del plan anual (annual ÷ 12) y % de ahorro al
+              // mes. NO mostramos el total al año para no asustar al cliente.
+              const mensualEquivAnual = tieneAnual ? p.precioAnualPEN / 12 : p.precioMensualPEN
+              const pctAhorro = tieneAnual && p.precioMensualPEN > 0
+                ? Math.round((1 - p.precioAnualPEN / (p.precioMensualPEN * 12)) * 100)
+                : 0
               return (
               <Reveal key={p.idPlan} className={`${styles.plan} ${p.popular ? styles.planPop : ''}`}>
                 {p.esGratis ? <span className={styles.freeBadge}><Star size={13} /> 14 días gratis</span> : (p.popular && <span className={styles.popBadge}><Star size={13} /> Más popular</span>)}
@@ -420,15 +428,20 @@ export default function LandingPage() {
                   {p.esGratis ? (
                     <span className={styles.amount}>Gratis</span>
                   ) : verAnual ? (
-                    <><span className={styles.amount}>{soles(p.precioAnualPEN)}</span><span className={styles.per}>/año</span></>
+                    <><span className={styles.amount}>{soles(mensualEquivAnual)}</span><span className={styles.per}>/mes</span></>
                   ) : (
                     <><span className={styles.amount}>{soles(p.precioMensualPEN)}</span><span className={styles.per}>/mes</span></>
                   )}
                 </div>
-                {verAnual && ahorro > 0 && <p className={styles.planSave}>Ahorras {soles(ahorro)} al año</p>}
-                {!verAnual && tieneAnual && !p.esGratis && <p className={styles.planSaveHint}>o {soles(p.precioAnualPEN)}/año (2 meses gratis)</p>}
+                {verAnual && pctAhorro > 0 ? (
+                  <p style={{ margin: '6px 0 0', fontSize: '.85rem', fontWeight: 700, color: '#34d399' }}>Ahorras {pctAhorro}% al mes</p>
+                ) : !verAnual && pctAhorro > 0 && !p.esGratis ? (
+                  <p style={{ margin: '6px 0 0', fontSize: '.82rem', color: '#71747d' }}>Ahorra {pctAhorro}% con el plan anual</p>
+                ) : (
+                  <p style={{ margin: '6px 0 0', fontSize: '.85rem', visibility: 'hidden' }} aria-hidden="true">·</p>
+                )}
                 {p.descripcion && <p className={styles.planTag}>{p.descripcion.split('·')[0].trim()}</p>}
-                <button className={`${styles.btn} ${p.popular || p.esGratis ? styles.btnPrimary : styles.btnGhost} ${styles.btnBlock}`} onClick={abrirDemo}>{p.esGratis ? 'Empezar gratis' : ctaPrueba}</button>
+                <button className={`${styles.btn} ${p.popular || p.esGratis ? styles.btnPrimary : styles.btnGhost} ${styles.btnBlock}`} onClick={abrirDemo}>{p.esGratis ? 'Empezar gratis' : 'Comenzar'}</button>
                 <ul className={styles.planList}>
                   {p.caracteristicas.map((c, i) => (
                     <li key={i}><i className={styles.ck}><Check size={12} /></i>{c}</li>

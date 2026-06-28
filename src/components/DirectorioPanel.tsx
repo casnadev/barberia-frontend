@@ -323,7 +323,8 @@ export function DirectorioPanel() {
         if (tab === 'admins') r = await directorioService.admins(filtro, pagina, tamano)
         else if (tab === 'trabajadores') r = await directorioService.trabajadores(filtro, idSede, pagina, tamano)
         else {
-          if (!idSede) { if (activo) { setData([]); setTotal(0) } return }
+          // idSede opcional: sin sede, el SuperAdmin ve TODOS los clientes que
+          // han reservado en cualquier sede (vista global).
           r = await directorioService.clientes(idSede, filtro, pagina, tamano)
         }
         if (activo) { setData(r.items); setTotal(r.total) }
@@ -416,7 +417,7 @@ export function DirectorioPanel() {
           {(tab === 'trabajadores' || tab === 'clientes') && (
             <select value={idSede ?? ''} onChange={(e) => setIdSede(e.target.value ? Number(e.target.value) : null)}
               className="px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 bg-white sm:w-64">
-              <option value="">{tab === 'clientes' ? '— Elige una sede —' : 'Todas las sedes'}</option>
+              <option value="">Todas las sedes</option>
               {sedes.map((s) => (
                 <option key={s.idSede} value={s.idSede}>{s.nombre} · {s.empresa}</option>
               ))}
@@ -432,11 +433,7 @@ export function DirectorioPanel() {
         </div>
 
         {/* Lista */}
-        {tab === 'clientes' && !idSede ? (
-          <div className="text-center py-12 text-gray-400 text-sm">
-            Elige una sede para ver sus clientes (los que han reservado ahí).
-          </div>
-        ) : cargando ? (
+        {cargando ? (
           <div className="flex items-center justify-center py-12 text-gray-400">
             <Loader2 className="w-5 h-5 animate-spin" />
           </div>

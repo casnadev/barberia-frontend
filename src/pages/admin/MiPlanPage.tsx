@@ -228,16 +228,16 @@ export function MiPlanPage() {
 
           {/* Toggle Mensual / Anual (solo si hay algún plan con precio anual) */}
           {planes.some((p) => p.precioAnualPEN > 0) && (
-            <div className="mt-4 inline-flex gap-1 p-1 rounded-full bg-zinc-100">
+            <div className="mt-4 inline-flex gap-1 p-1 rounded-full bg-zinc-100 ring-1 ring-zinc-200/70 shadow-inner">
               <button
                 onClick={() => setIntervalo('mensual')}
-                className={`px-4 py-1.5 rounded-full text-sm font-bold transition ${intervalo === 'mensual' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500'}`}>
+                className={`px-6 py-2 rounded-full text-sm font-bold transition-all duration-200 ${intervalo === 'mensual' ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_6px_18px_-6px_rgba(40,85,246,.6)]' : 'text-zinc-500 hover:text-zinc-800'}`}>
                 Mensual
               </button>
               <button
                 onClick={() => setIntervalo('anual')}
-                className={`px-4 py-1.5 rounded-full text-sm font-bold transition inline-flex items-center gap-2 ${intervalo === 'anual' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500'}`}>
-                Anual <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">2 meses gratis</span>
+                className={`px-6 py-2 rounded-full text-sm font-bold transition-all duration-200 ${intervalo === 'anual' ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_6px_18px_-6px_rgba(40,85,246,.6)]' : 'text-zinc-500 hover:text-zinc-800'}`}>
+                Anual
               </button>
             </div>
           )}
@@ -247,7 +247,10 @@ export function MiPlanPage() {
               const esActual = p.idPlan === mp.idPlan
               const tieneAnual = p.precioAnualPEN > 0
               const verAnual = intervalo === 'anual' && tieneAnual
-              const ahorro = tieneAnual ? Math.max(0, p.precioMensualPEN * 12 - p.precioAnualPEN) : 0
+              const mensualEquivAnual = tieneAnual ? p.precioAnualPEN / 12 : p.precioMensualPEN
+              const pctAhorro = tieneAnual && p.precioMensualPEN > 0
+                ? Math.round((1 - p.precioAnualPEN / (p.precioMensualPEN * 12)) * 100)
+                : 0
               return (
                 <div key={p.idPlan} className={`rounded-2xl border p-3.5 flex flex-col ${p.popular ? 'border-blue-600 shadow-[0_8px_24px_-12px_rgba(40,85,246,.4)]' : 'border-gray-200'}`}>
                   <div className="flex items-center justify-between gap-1">
@@ -255,10 +258,10 @@ export function MiPlanPage() {
                     {p.popular && <span className="text-[9px] font-bold uppercase tracking-wide bg-blue-600 text-white px-1.5 py-0.5 rounded-full shrink-0">Popular</span>}
                   </div>
                   <div className="mt-2 text-xl font-bold text-gray-900 leading-tight">
-                    {p.esGratis ? 'Gratis' : verAnual ? <>{soles(p.precioAnualPEN)}<span className="text-xs font-medium text-gray-400"> /año</span></> : <>{soles(p.precioMensualPEN)}<span className="text-xs font-medium text-gray-400"> /mes</span></>}
+                    {p.esGratis ? 'Gratis' : verAnual ? <>{soles(mensualEquivAnual)}<span className="text-xs font-medium text-gray-400"> /mes</span></> : <>{soles(p.precioMensualPEN)}<span className="text-xs font-medium text-gray-400"> /mes</span></>}
                   </div>
-                  {verAnual && ahorro > 0 && <div className="text-[11px] font-bold text-emerald-600 mt-0.5">Ahorras {soles(ahorro)}</div>}
-                  {!verAnual && tieneAnual && !p.esGratis && <div className="text-[11px] text-gray-400 mt-0.5">o {soles(p.precioAnualPEN)}/año</div>}
+                  {verAnual && pctAhorro > 0 && <div className="text-[11px] font-bold text-emerald-600 mt-0.5">Ahorras {pctAhorro}% al mes</div>}
+                  {!verAnual && pctAhorro > 0 && !p.esGratis && <div className="text-[11px] text-gray-400 mt-0.5">Ahorra {pctAhorro}% con el plan anual</div>}
                   <ul className="mt-2.5 space-y-1 flex-1">
                     {p.caracteristicas.slice(0, 6).map((c, i) => (
                       <li key={i} className="flex items-start gap-1 text-[11px] text-gray-600"><CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" />{c}</li>

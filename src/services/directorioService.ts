@@ -77,10 +77,10 @@ export const directorioService = {
     return unwrap<DirectorioPagina>(res)
   },
 
-  /** Clientes de una sede (los que han reservado ahí). idSede es obligatorio. */
-  clientes: async (idSede: number, buscar: string, pagina = 1, tamano = 20): Promise<DirectorioPagina> => {
+  /** Clientes que han reservado: en una sede (idSede) o en todas (idSede null). */
+  clientes: async (idSede: number | null, buscar: string, pagina = 1, tamano = 20): Promise<DirectorioPagina> => {
     const res = await apiClient.get('/api/superadmin/directorio/clientes', {
-      params: { idSede, buscar: buscar || undefined, pagina, tamano },
+      params: { idSede: idSede || undefined, buscar: buscar || undefined, pagina, tamano },
     })
     return unwrap<DirectorioPagina>(res)
   },
