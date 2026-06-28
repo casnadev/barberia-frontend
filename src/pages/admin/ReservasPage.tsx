@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { reservasService, Reserva } from '@/services/reservasService'
 import { toast } from 'sonner'
 import {
@@ -101,8 +102,6 @@ const fmtDiaLargo = (iso: string) =>
   new Date(iso + 'T00:00:00').toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 
 export function ReservasPage() {
-  const [reservas, setReservas] = useState<Reserva[]>([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterEstado, setFilterEstado] = useState('todos')
   const [fecha, setFecha] = useState(isoDia(new Date()))   // por defecto: HOY
@@ -114,24 +113,25 @@ export function ReservasPage() {
   const [cancelMotivo, setCancelMotivo] = useState('')
   const [cancelando, setCancelando] = useState(false)
 
-  useEffect(() => { loadReservas() }, [])
+  // Carga de reservas cacheada con React Query (navegación instantánea al revisitar).
+  const {
+    data: reservas = [],
+    isLoading: loading,
+    isError,
+    refetch,
+  } = useQuery<Reserva[]>({
+    queryKey: ['reservas', 'admin'],
+    queryFn: async () => {
+      const data = await reservasService.getReservas()
+      return Array.isArray(data) ? data : []
+    },
+  })
+  const loadReservas = () => refetch()
+
+  useEffect(() => { if (isError) toast.error('Error al cargar reservas') }, [isError])
 
   // Reset del "Ver más" cuando cambian datos/filtro/búsqueda.
   useEffect(() => { setVisible(16) }, [reservas, filterEstado, searchTerm, fecha, franja])
-
-  const loadReservas = async () => {
-    try {
-      setLoading(true)
-      const data = await reservasService.getReservas()
-      setReservas(Array.isArray(data) ? data : [])
-    } catch (error) {
-      console.error('Error cargando reservas:', error)
-      toast.error('Error al cargar reservas')
-      setReservas([])
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const doConfirmar = async (id: number) => {
     try {

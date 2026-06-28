@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Plus, Edit2, Trash2, X, Eye, EyeOff, Upload, Image as ImageIcon, Tag, AlertCircle, ChevronDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
@@ -30,9 +31,7 @@ interface Categoria {
 }
 
 export function ServiciosPage() {
-  const [servicios, setServicios] = useState<Servicio[]>([])
   const [categorias, setCategorias] = useState<Categoria[]>([])
-  const [loading, setLoading] = useState(true)
   const [idSede, setIdSede] = useState<number>(0)
 
   // Servicio (modal)
@@ -58,19 +57,25 @@ export function ServiciosPage() {
   const [catConfirmDelete, setCatConfirmDelete] = useState<number | null>(null)
 
   // ========== CARGA ==========
-  const loadServicios = async () => {
-    try {
-      setLoading(true)
+  // Lista de servicios cacheada con React Query (navegación instantánea al revisitar).
+  const {
+    data: servicios = [],
+    isLoading: loading,
+    isError,
+    refetch,
+  } = useQuery<Servicio[]>({
+    queryKey: ['servicios', 'admin-todos'],
+    queryFn: async () => {
       const res = await apiClient.get('/api/Servicios/admin/todos')
       const data = res.data.data || res.data
-      setServicios(Array.isArray(data) ? data : [])
-    } catch (err: any) {
-      console.error('Error cargando servicios:', err.message)
-      toast.error(err.response?.data?.message || 'Error cargando servicios')
-    } finally {
-      setLoading(false)
-    }
-  }
+      return Array.isArray(data) ? data : []
+    },
+  })
+  const loadServicios = () => refetch()
+
+  useEffect(() => {
+    if (isError) toast.error('Error cargando servicios')
+  }, [isError])
 
   const loadCategorias = async (sedeId: number) => {
     try {
@@ -85,7 +90,6 @@ export function ServiciosPage() {
   }
 
   useEffect(() => {
-    loadServicios()
     ;(async () => {
       let id = 0
       try {

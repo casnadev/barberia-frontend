@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { clientesService, Cliente } from '@/services/clientesService'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
@@ -13,8 +14,7 @@ import { serviciosService } from '@/services/serviciosService'
 import { ModeracionNovedadesModal } from '@/components/ModeracionNovedadesModal'
 
 export function ClientesPage() {
-  const [clientesRaw, setClientesRaw] = useState<Cliente[]>([])  // todos los de la sede (del servidor)
-  const [loading, setLoading] = useState(true)
+  // clientesRaw y loading vienen ahora de useQuery (más abajo).
   const [searchTerm, setSearchTerm] = useState('')
   // Filtros estilo Fresha: sede (por defecto la activa) + segmento.
   const [sedes, setSedes] = useState<{ idSede: number; nombre: string; subdominio: string }[]>([])
@@ -26,6 +26,38 @@ export function ClientesPage() {
   const [novedadOpen, setNovedadOpen] = useState(false)   // modal "Nueva novedad"
   const [moderacionOpen, setModeracionOpen] = useState(false) // modal "Moderación"
   const [importOpen, setImportOpen] = useState(false)     // modal "Importar clientes"
+
+  // Búsqueda con debounce (500ms) que alimenta la query-key.
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  // Lista de clientes cacheada con React Query. La key incluye sede y término
+  // debounced: revisitar con los mismos filtros muestra los datos al instante y
+  // revalida en segundo plano. Solo corre cuando la sede ya está resuelta.
+  const {
+    data: clientesRaw = [],
+    isLoading: clientesLoading,
+    isError,
+    refetch,
+  } = useQuery<Cliente[]>({
+    queryKey: ['clientes', 'admin', sedeFiltro ?? -1, debouncedSearch],
+    enabled: sedeFiltro !== null,
+    queryFn: async () => {
+      const data = await clientesService.getClientes(
+        1, 200, debouncedSearch || undefined,
+        sedeFiltro && sedeFiltro > 0 ? sedeFiltro : undefined,
+        undefined,
+      )
+      return Array.isArray(data) ? data : []
+    },
+  })
+  const loading = clientesLoading || sedeFiltro === null
+  const loadClientes = () => refetch()
+
+  useEffect(() => { if (isError) toast.error('Error al cargar clientes') }, [isError])
 
   // El segmento se filtra EN MEMORIA (instantáneo, sin ir al servidor). Solo la
   // sede y la búsqueda recargan del servidor. Esto hace que cambiar de segmento
@@ -56,39 +88,7 @@ export function ClientesPage() {
     })()
   }, [])
 
-  const loadClientes = async () => {
-    try {
-      setLoading(true)
-      // Traemos TODOS los de la sede (sin filtrar segmento en el servidor); el
-      // segmento se filtra en memoria para que el cambio sea instantáneo.
-      const data = await clientesService.getClientes(
-        1, 200, searchTerm || undefined,
-        sedeFiltro && sedeFiltro > 0 ? sedeFiltro : undefined,
-        undefined,
-      )
-      setClientesRaw(Array.isArray(data) ? data : [])
-    } catch (error) {
-      console.error('Error cargando clientes:', error)
-      toast.error('Error al cargar clientes')
-      setClientesRaw([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Carga inicial y recarga cuando cambia la SEDE (no el segmento: ese es en memoria).
-  useEffect(() => {
-    if (sedeFiltro === null) return
-    loadClientes()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sedeFiltro])
-
-  // Recargar cuando cambia el término de búsqueda (debounce)
-  useEffect(() => {
-    const timer = setTimeout(() => { loadClientes() }, 500)
-    return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm])
+  // (La carga de clientes ahora la maneja useQuery arriba; refetch al mutar.)
 
   const handleViewDetails = (cliente: Cliente) => {
     setSelectedCliente(cliente)

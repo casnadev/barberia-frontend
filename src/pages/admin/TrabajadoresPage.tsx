@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Edit2, Trash2, AlertCircle, X, Eye, EyeOff, Upload, Image as ImageIcon, KeyRound } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
@@ -44,8 +45,6 @@ function getApiError(err: any, fallback: string): string {
 }
 
 export function TrabajadoresPage() {
-  const [trabajadores, setTrabajadores] = useState<Trabajador[]>([])
-  const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -68,25 +67,35 @@ export function TrabajadoresPage() {
     estado: true,
   })
 
-  // ========== CARGA (SIEMPRE admin/todos para ver activos + inactivos) ==========
-  const loadTrabajadores = async () => {
-    try {
-      setLoading(true)
+  // ========== CARGA (admin/todos = activos + inactivos), cacheada con React Query ==========
+  // Revisitar la pestaña dentro del staleTime (5 min) muestra los datos al instante,
+  // sin spinner ni round-trip; revalida en segundo plano. loadTrabajadores() se conserva
+  // como envoltura de refetch() para no tocar las mutaciones que ya lo llaman.
+  const {
+    data: trabajadores = [],
+    isLoading: loading,
+    isError,
+    error,
+    refetch,
+  } = useQuery<Trabajador[]>({
+    queryKey: ['trabajadores', 'admin-todos'],
+    queryFn: async () => {
       const res = await apiClient.get('/api/Trabajadores/admin/todos')
       const data = res.data.data ?? res.data
-      const lista = Array.isArray(data) ? data : []
-      setTrabajadores(lista)
-    } catch (err: any) {
-      console.error('Error cargando trabajadores:', err.message)
-      toast.error(getApiError(err, 'Error cargando trabajadores'))
-    } finally {
-      setLoading(false)
-    }
-  }
+      return Array.isArray(data) ? data : []
+    },
+  })
+  const loadTrabajadores = () => refetch()
+  const qc = useQueryClient()
+
+  // Helper: actualiza un trabajador dentro de la caché de React Query (optimista).
+  const parchearTrabajador = (id: number, cambios: Partial<Trabajador>) =>
+    qc.setQueryData<Trabajador[]>(['trabajadores', 'admin-todos'], (prev = []) =>
+      prev.map((x) => (x.idTrabajador === id ? { ...x, ...cambios } : x)))
 
   useEffect(() => {
-    loadTrabajadores()
-  }, [])
+    if (isError) toast.error(getApiError(error, 'Error cargando trabajadores'))
+  }, [isError, error])
 
   // ========== UPLOAD IMAGEN ==========
   const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -194,15 +203,13 @@ export function TrabajadoresPage() {
   const toggleAcceso = async (t: Trabajador) => {
     if (!t.idTrabajador) return
     const nuevo = !t.accesoHabilitado
-    // Optimista: pinto el cambio y revierto si falla.
-    setTrabajadores(prev => prev.map(x =>
-      x.idTrabajador === t.idTrabajador ? { ...x, accesoHabilitado: nuevo } : x))
+    // Optimista: pinto el cambio en la caché y revierto si falla.
+    parchearTrabajador(t.idTrabajador, { accesoHabilitado: nuevo })
     try {
       await apiClient.put(`/api/Trabajadores/${t.idTrabajador}/acceso`, { habilitado: nuevo })
       toast.success(nuevo ? 'Acceso habilitado.' : 'Acceso deshabilitado.')
     } catch (err: any) {
-      setTrabajadores(prev => prev.map(x =>
-        x.idTrabajador === t.idTrabajador ? { ...x, accesoHabilitado: !nuevo } : x))
+      parchearTrabajador(t.idTrabajador, { accesoHabilitado: !nuevo })
       toast.error(getApiError(err, 'No se pudo cambiar el acceso.'))
     }
   }

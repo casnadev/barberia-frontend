@@ -107,10 +107,6 @@ export const clearTenant = (): void => {
   }
 }
 
-console.log('🔌 API Base URL:', API_BASE_URL)
-console.log('🏢 Tenant inicial:', getActiveTenant())
-console.log('🌐 Hostname:', window.location.hostname)
-
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
@@ -136,7 +132,6 @@ apiClient.interceptors.request.use((config: any) => {
   const tenant = getActiveTenant()
   config.headers['X-Tenant-Subdomain'] = tenant
 
-  console.log('📤', config.method?.toUpperCase(), config.url, '| Tenant:', tenant)
   return config
 })
 
