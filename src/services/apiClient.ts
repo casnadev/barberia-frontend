@@ -113,7 +113,7 @@ console.log('🌐 Hostname:', window.location.hostname)
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',

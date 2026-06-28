@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Calendar, Activity, Clock, User, TrendingDown, Wallet, CalendarDays, ShoppingBag, Download, FileSpreadsheet, FileText } from 'lucide-react'
@@ -103,6 +103,10 @@ export function DashboardPage() {
   const [reservasHoy, setReservasHoy] = useState(0)
   const [reservasConfirmadas, setReservasConfirmadas] = useState(0)
   const [serie, setSerie] = useState<{ label: string; valor: number }[]>([])
+  // Race guard: id de la última petición. Solo la última aplica su resultado,
+  // evitando que una respuesta lenta (rango anterior) pise los datos actuales
+  // o deje el spinner colgado al cambiar de sección/rango.
+  const reqId = useRef(0)
 
   // Rango efectivo (desde/hasta) según la opción elegida.
   const { d, h } = useMemo(() => {
@@ -125,35 +129,40 @@ export function DashboardPage() {
   useEffect(() => { cargarHoy() }, [])
 
   const cargarResumen = async () => {
+    const myReq = ++reqId.current   // marca esta como la petición vigente
     setLoading(true)
     try {
-      setResumen(await ventasService.getResumenFinanciero(d, h))
-      await cargarSerie()
+      // Paraleliza resumen + ventas (antes era en serie = el doble de espera).
+      const [resumenRes, ventas] = await Promise.all([
+        ventasService.getResumenFinanciero(d, h),
+        ventasService.listarVentas({ desde: d, hasta: h, tamanoPagina: 1000 }),
+      ])
+      // Si mientras tanto se disparó otra carga (cambio de rango), descarta esta.
+      if (myReq !== reqId.current) return
+      setResumen(resumenRes)
+      setSerie(construirSerie(ventas))
     }
-    catch { toast.error('No se pudo cargar el resumen') }
-    finally { setLoading(false) }
+    catch {
+      if (myReq === reqId.current) toast.error('No se pudo cargar el resumen')
+    }
+    finally {
+      // Solo la última petición apaga el spinner (evita que una vieja lo apague antes).
+      if (myReq === reqId.current) setLoading(false)
+    }
   }
 
-  // Serie de ventas agrupada por día del rango (alimenta la gráfica).
-  // Se calcula en el front a partir de listarVentas (sin endpoint nuevo).
-  const cargarSerie = async () => {
-    try {
-      const ventas = await ventasService.listarVentas({ desde: d, hasta: h, tamanoPagina: 1000 })
-      // Construye el set de días del rango (de d a h).
-      const dias: string[] = []
-      const di = new Date(`${d}T00:00:00`), hi = new Date(`${h}T00:00:00`)
-      for (let cur = new Date(di); cur <= hi; cur.setDate(cur.getDate() + 1)) dias.push(isoLocal(new Date(cur)))
-      // Suma por día.
-      const porDia: Record<string, number> = {}
-      dias.forEach((x) => { porDia[x] = 0 })
-      ;(ventas || []).forEach((v: any) => {
-        const f = v.fechaVenta ? isoLocal(new Date(v.fechaVenta)) : null
-        if (f && f in porDia) porDia[f] += Number(v.total || 0)
-      })
-      // Si el rango es muy largo (mes), agrupamos cada N días para no saturar.
-      const entradas = dias.map((x) => ({ iso: x, valor: porDia[x] }))
-      setSerie(entradas.map((e) => ({ label: fmtDia(e.iso), valor: e.valor })))
-    } catch { setSerie([]) }
+  // Agrupa las ventas por día del rango (alimenta la gráfica).
+  const construirSerie = (ventas: any[]): { label: string; valor: number }[] => {
+    const dias: string[] = []
+    const di = new Date(`${d}T00:00:00`), hi = new Date(`${h}T00:00:00`)
+    for (let cur = new Date(di); cur <= hi; cur.setDate(cur.getDate() + 1)) dias.push(isoLocal(new Date(cur)))
+    const porDia: Record<string, number> = {}
+    dias.forEach((x) => { porDia[x] = 0 })
+    ;(ventas || []).forEach((v: any) => {
+      const f = v.fechaVenta ? isoLocal(new Date(v.fechaVenta)) : null
+      if (f && f in porDia) porDia[f] += Number(v.total || 0)
+    })
+    return dias.map((x) => ({ label: fmtDia(x), valor: porDia[x] }))
   }
 
   // "Hoy" (agenda) y clientes: independientes del rango financiero.

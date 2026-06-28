@@ -47,8 +47,13 @@ export function LoginPage() {
     else if (user.rol === 'Admin' || user.rol === 'Trabajador') {
       // Pre-resuelve el tenant para que "Mi panel" abra sin fricción. Si aún no
       // tiene sede (admin recién creado), no pasa nada: queda sin tenant.
+      // Con timeout corto: en móvil lento NO debe colgar el login. Si tarda,
+      // redirige igual y la sede se resuelve dentro del panel.
       try {
-        const sedes = await sedeTenantService.getMisSedes()
+        const sedes = await Promise.race([
+          sedeTenantService.getMisSedes(),
+          new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 4000)),
+        ])
         if (sedes[0]?.subdominio) setTenant(sedes[0].subdominio)
       } catch { /* sin sede aun */ }
     }
