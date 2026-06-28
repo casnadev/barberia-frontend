@@ -15,6 +15,8 @@ export interface PlanPublico {
   limiteTrabajadores: number
   permiteWhatsApp: boolean
   permiteReportes: boolean
+  maxWhatsAppMes?: number | null   // -1 = ilimitado, null = no configurado
+  maxEmailMes?: number | null      // correos de campaña/mes
   popular: boolean
   caracteristicas: string[]
 }
@@ -34,6 +36,8 @@ const normalizar = (raw: any): PlanPublico | null => {
     limiteTrabajadores: Number(p.limiteTrabajadores ?? p.LimiteTrabajadores ?? 1),
     permiteWhatsApp: Boolean(p.permiteWhatsApp ?? p.PermiteWhatsApp ?? false),
     permiteReportes: Boolean(p.permiteReportes ?? p.PermiteReportes ?? false),
+    maxWhatsAppMes: p.maxWhatsAppMes ?? p.MaxWhatsAppMes ?? null,
+    maxEmailMes: p.maxEmailMes ?? p.MaxEmailMes ?? null,
     popular: Boolean(p.popular ?? p.Popular ?? false),
     caracteristicas: (p.caracteristicas ?? p.Caracteristicas ?? []).map((c: any) => String(c)),
   }

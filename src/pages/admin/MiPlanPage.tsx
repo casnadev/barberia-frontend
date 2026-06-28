@@ -34,22 +34,22 @@ function Barra({ titulo, icon: Icon, c }: { titulo: string; icon: typeof Users; 
   const pct = c.ilimitado || !c.limite ? 0 : Math.min(100, Math.round((c.usado / c.limite) * 100))
   const cerca = !c.ilimitado && c.limite ? c.usado / c.limite >= 0.8 : false
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-      <div className="flex items-center gap-2 text-zinc-700">
+    <div className="rounded-2xl border border-gray-200 bg-white p-3.5">
+      <div className="flex items-center gap-1.5 text-blue-600">
         <Icon className="w-4 h-4" />
-        <span className="text-sm font-medium">{titulo}</span>
+        <span className="text-xs font-semibold text-gray-700">{titulo}</span>
       </div>
-      <div className="mt-2 flex items-baseline gap-1">
-        <span className="text-2xl font-bold text-zinc-900">{c.usado}</span>
-        <span className="text-sm text-zinc-500">/ {c.ilimitado ? '∞' : c.limite}</span>
+      <div className="mt-1.5 flex items-baseline gap-1">
+        <span className="text-xl font-bold text-gray-900">{c.usado}</span>
+        <span className="text-xs text-gray-400">/ {c.ilimitado ? '∞' : c.limite}</span>
       </div>
       {!c.ilimitado && (
-        <div className="mt-2 h-2 rounded-full bg-zinc-100 overflow-hidden">
-          <div className={`h-full rounded-full ${cerca ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${pct}%` }} />
+        <div className="mt-1.5 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+          <div className={`h-full rounded-full ${cerca ? 'bg-amber-500' : 'bg-blue-600'}`} style={{ width: `${pct}%` }} />
         </div>
       )}
-      <p className="mt-1.5 text-xs text-zinc-500">
-        {c.ilimitado ? 'Ilimitado en tu plan' : `${c.restante ?? 0} disponibles`}
+      <p className="mt-1 text-[11px] text-gray-400">
+        {c.ilimitado ? 'Ilimitado' : `${c.restante ?? 0} disponibles`}
       </p>
     </div>
   )
@@ -139,21 +139,22 @@ export function MiPlanPage() {
 
   return (
     <div className="w-full px-4 py-6 space-y-6">
-      {/* Encabezado plan */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      {/* Encabezado plan — con el azul de marca */}
+      <div className="rounded-2xl p-5 sm:p-6 text-white relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #2855F6 0%, #1e3fb8 55%, #16308f 100%)', boxShadow: '0 14px 30px -10px rgba(40,85,246,.5)' }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(120% 80% at 100% 0%, rgba(255,255,255,.16), transparent 60%)' }} />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-zinc-500 text-sm"><CreditCard className="w-4 h-4" /> Mi plan</div>
-            <h1 className="mt-1 text-2xl font-bold text-zinc-900">{mp.nombrePlan}</h1>
+            <div className="flex items-center gap-2 text-white/80 text-sm"><CreditCard className="w-4 h-4" /> Mi plan</div>
+            <h1 className="mt-1 text-2xl font-bold">{mp.nombrePlan}</h1>
             <div className="mt-2 flex items-center gap-3">
               <EstadoBadge estado={mp.estado} />
-              <span className="text-sm text-zinc-500">{soles(mp.precioMensualPEN)} / mes</span>
+              <span className="text-sm text-white/85">{soles(mp.precioMensualPEN)} / mes</span>
             </div>
           </div>
           <div className="flex gap-2">
             {mp.tieneMetodoPago && (
               <button onClick={abrirPortal} disabled={accion === 'portal'}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-zinc-300 text-sm font-semibold text-zinc-800 hover:bg-zinc-50 disabled:opacity-60">
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/15 hover:bg-white/25 border border-white/25 text-sm font-semibold text-white disabled:opacity-60 transition">
                 {accion === 'portal' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />} Administrar pagos
               </button>
             )}
@@ -161,23 +162,23 @@ export function MiPlanPage() {
         </div>
 
         {/* Datos clave */}
-        <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Dato titulo="Días restantes" valor={mp.diasRestantes != null ? `${mp.diasRestantes}` : '—'} />
-          <Dato titulo="Inicio" valor={fecha(mp.fechaInicio)} />
-          <Dato titulo={mp.esTrial ? 'Fin de prueba' : 'Próximo cobro'} valor={fecha(mp.trialEnd ?? mp.proximoCobro)} />
-          <Dato titulo="Método de pago" valor={mp.tieneMetodoPago ? (mp.proveedorPago ?? 'Configurado') : 'No configurado'} />
+        <div className="relative mt-5 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 pt-4 border-t border-white/15">
+          <DatoHero titulo="Días restantes" valor={mp.diasRestantes != null ? `${mp.diasRestantes}` : '—'} />
+          <DatoHero titulo="Inicio" valor={fecha(mp.fechaInicio)} />
+          <DatoHero titulo={mp.esTrial ? 'Fin de prueba' : 'Próximo cobro'} valor={fecha(mp.trialEnd ?? mp.proximoCobro)} />
+          <DatoHero titulo="Método de pago" valor={mp.tieneMetodoPago ? (mp.proveedorPago ?? 'Configurado') : 'No configurado'} />
         </div>
 
         {mp.cancelAtPeriodEnd && (
-          <div className="mt-4 flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          <div className="relative mt-4 flex items-center gap-2 text-sm text-white bg-amber-500/30 border border-amber-300/40 rounded-lg px-3 py-2">
             <AlertTriangle className="w-4 h-4" /> Tu suscripción se cancelará al final del período actual.
           </div>
         )}
       </div>
 
-      {/* Consumo */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Barra titulo="WhatsApp este mes" icon={MessageCircle} c={mp.whatsApp} />
+      {/* Consumo — 2 columnas en móvil (más compacto), 3 en desktop */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <Barra titulo="WhatsApp" icon={MessageCircle} c={mp.whatsApp} />
         <Barra titulo="Trabajadores" icon={Users} c={mp.trabajadores} />
         <Barra titulo="Sedes" icon={Building2} c={mp.sedes} />
       </div>
@@ -241,34 +242,34 @@ export function MiPlanPage() {
             </div>
           )}
 
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {planes.map((p) => {
               const esActual = p.idPlan === mp.idPlan
               const tieneAnual = p.precioAnualPEN > 0
               const verAnual = intervalo === 'anual' && tieneAnual
               const ahorro = tieneAnual ? Math.max(0, p.precioMensualPEN * 12 - p.precioAnualPEN) : 0
               return (
-                <div key={p.idPlan} className={`rounded-2xl border p-4 ${p.popular ? 'border-blue-600' : 'border-zinc-200'}`}>
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-zinc-900">{p.nombre}</span>
-                    {p.popular && <span className="text-[10px] font-bold uppercase tracking-wide bg-blue-600 text-white px-2 py-0.5 rounded-full">Popular</span>}
+                <div key={p.idPlan} className={`rounded-2xl border p-3.5 flex flex-col ${p.popular ? 'border-blue-600 shadow-[0_8px_24px_-12px_rgba(40,85,246,.4)]' : 'border-gray-200'}`}>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-semibold text-gray-900 text-sm">{p.nombre}</span>
+                    {p.popular && <span className="text-[9px] font-bold uppercase tracking-wide bg-blue-600 text-white px-1.5 py-0.5 rounded-full shrink-0">Popular</span>}
                   </div>
-                  <div className="mt-2 text-2xl font-bold text-zinc-900">
-                    {p.esGratis ? 'Gratis' : verAnual ? <>{soles(p.precioAnualPEN)}<span className="text-sm font-medium text-zinc-400"> /año</span></> : <>{soles(p.precioMensualPEN)}<span className="text-sm font-medium text-zinc-400"> /mes</span></>}
+                  <div className="mt-2 text-xl font-bold text-gray-900 leading-tight">
+                    {p.esGratis ? 'Gratis' : verAnual ? <>{soles(p.precioAnualPEN)}<span className="text-xs font-medium text-gray-400"> /año</span></> : <>{soles(p.precioMensualPEN)}<span className="text-xs font-medium text-gray-400"> /mes</span></>}
                   </div>
-                  {verAnual && ahorro > 0 && <div className="text-xs font-bold text-emerald-600 mt-0.5">Ahorras {soles(ahorro)} al año</div>}
-                  {!verAnual && tieneAnual && !p.esGratis && <div className="text-xs text-zinc-400 mt-0.5">o {soles(p.precioAnualPEN)}/año</div>}
-                  <ul className="mt-3 space-y-1.5">
-                    {p.caracteristicas.slice(0, 4).map((c, i) => (
-                      <li key={i} className="flex items-start gap-1.5 text-xs text-zinc-600"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{c}</li>
+                  {verAnual && ahorro > 0 && <div className="text-[11px] font-bold text-emerald-600 mt-0.5">Ahorras {soles(ahorro)}</div>}
+                  {!verAnual && tieneAnual && !p.esGratis && <div className="text-[11px] text-gray-400 mt-0.5">o {soles(p.precioAnualPEN)}/año</div>}
+                  <ul className="mt-2.5 space-y-1 flex-1">
+                    {p.caracteristicas.slice(0, 6).map((c, i) => (
+                      <li key={i} className="flex items-start gap-1 text-[11px] text-gray-600"><CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" />{c}</li>
                     ))}
                   </ul>
                   <button
                     disabled={esActual || p.esGratis || accion === 'checkout'}
                     onClick={() => irACheckout(p.idPlan, verAnual ? 'year' : 'month')}
-                    className="mt-4 w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700">
+                    className="mt-3 w-full inline-flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-semibold disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700">
                     {accion === 'checkout' ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                    {esActual ? 'Plan actual' : p.esGratis ? 'Incluido' : verAnual ? 'Contratar anual' : 'Contratar'}
+                    {esActual ? 'Plan actual' : p.esGratis ? 'Incluido' : verAnual ? 'Contratar' : 'Contratar'}
                   </button>
                 </div>
               )
@@ -383,6 +384,16 @@ function Dato({ titulo, valor }: { titulo: string; valor: string }) {
     <div>
       <p className="text-xs text-zinc-500">{titulo}</p>
       <p className="mt-0.5 font-semibold text-zinc-900">{valor}</p>
+    </div>
+  )
+}
+
+// Versión para el encabezado azul (texto claro sobre fondo de marca).
+function DatoHero({ titulo, valor }: { titulo: string; valor: string }) {
+  return (
+    <div>
+      <p className="text-[11px] text-white/70">{titulo}</p>
+      <p className="mt-0.5 font-semibold text-white text-sm">{valor}</p>
     </div>
   )
 }

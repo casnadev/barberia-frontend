@@ -232,23 +232,30 @@ export function ReservasPage() {
         ))}
       </div>
 
-      {/* Día (solo del día) + franja Mañana/Tarde/Noche */}
-      <div className="flex flex-wrap items-center gap-2 mb-3">
+      {/* Navegación de día + franjas — IDÉNTICO al modelo de Agenda */}
+      <div className="flex items-center gap-2.5 flex-wrap mb-3">
         <div className="inline-flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1">
-          <button onClick={() => setFecha(sumarDias(fecha, -1))} className="px-2 py-1.5 rounded-lg hover:bg-gray-100 text-gray-600" aria-label="Día anterior"><ChevronLeft width={16} height={16} /></button>
-          <button onClick={() => setFecha(isoDia(new Date()))}
-            className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${fecha === isoDia(new Date()) ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}>Hoy</button>
-          <button onClick={() => setFecha(sumarDias(fecha, 1))} className="px-2 py-1.5 rounded-lg hover:bg-gray-100 text-gray-600" aria-label="Día siguiente"><ChevronRight width={16} height={16} /></button>
+          <button onClick={() => setFecha(sumarDias(fecha, -1))} className="inline-flex items-center justify-center w-[34px] h-[34px] rounded-[9px] text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition" aria-label="Día anterior"><ChevronLeft width={18} height={18} /></button>
+          <button onClick={() => setFecha(isoDia(new Date()))} className="h-[34px] px-3.5 rounded-[9px] font-semibold text-sm text-gray-700 hover:bg-gray-100 transition">Hoy</button>
+          <button onClick={() => setFecha(sumarDias(fecha, 1))} className="inline-flex items-center justify-center w-[34px] h-[34px] rounded-[9px] text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition" aria-label="Día siguiente"><ChevronRight width={18} height={18} /></button>
         </div>
-        <span className="text-sm font-semibold text-gray-700 capitalize inline-flex items-center gap-1"><CalendarDays width={15} height={15} /> {fmtDiaLargo(fecha)}</span>
-        <div className="inline-flex items-center gap-1 bg-gray-100 rounded-xl p-1 ml-auto">
-          {FRANJAS.map((f) => (
+        <span className="inline-flex items-center gap-2 h-[42px] px-3.5 border border-gray-200 bg-white rounded-xl font-semibold text-sm text-gray-900 capitalize">
+          <CalendarDays width={16} height={16} className="text-blue-600" /> {fmtDiaLargo(fecha)}
+        </span>
+      </div>
+
+      {/* Franjas TODO / Mañana / Tarde / Noche — estilo Agenda */}
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {FRANJAS.map((f) => {
+          const active = franja === f.key
+          return (
             <button key={f.key} onClick={() => setFranja(f.key)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition ${franja === f.key ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:bg-gray-200'}`}>
-              {f.label} <span className="opacity-60">{countFranja(f.key)}</span>
+              className={`flex-1 min-w-[84px] inline-flex items-center justify-center gap-1.5 h-10 px-3.5 rounded-xl border text-sm font-semibold whitespace-nowrap transition ${active ? 'bg-blue-600 border-blue-600 text-white shadow-[0_6px_16px_rgba(37,99,235,.22)]' : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-700'}`}>
+              {f.label}
+              <span className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-extrabold ${active ? 'bg-white/25' : 'bg-black/[.08]'}`}>{countFranja(f.key)}</span>
             </button>
-          ))}
-        </div>
+          )
+        })}
       </div>
 
       {/* Buscador + filtros */}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, X, Eye, EyeOff, Upload, Image as ImageIcon, Tag, AlertCircle } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, Eye, EyeOff, Upload, Image as ImageIcon, Tag, AlertCircle, ChevronDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { apiClient, getActiveTenant } from '@/services/apiClient'
@@ -336,20 +336,22 @@ export function ServiciosPage() {
         </motion.button>
       </div>
 
-      {/* Barra de categorías */}
-      <div className={s.catBar}>
-        <button className={`${s.catPill} ${filterCat == null ? s.catPillActive : ''}`} onClick={() => setFilterCat(null)}>
-          Todos
-        </button>
-        {categorias.map((cat) => (
-          <button
-            key={cat.idCategoria}
-            className={`${s.catPill} ${filterCat === cat.idCategoria ? s.catPillActive : ''}`}
-            onClick={() => setFilterCat(cat.idCategoria)}
+      {/* Barra de categorías: desplegable (limpio) + gestionar */}
+      <div className="flex items-center gap-2 mb-6 flex-wrap">
+        <div className="relative inline-flex items-center flex-1 min-w-[180px] sm:flex-initial sm:min-w-[220px]">
+          <Tag width={15} height={15} className="absolute left-3 text-blue-600 pointer-events-none" />
+          <select
+            value={filterCat ?? ''}
+            onChange={(e) => setFilterCat(e.target.value === '' ? null : Number(e.target.value))}
+            className="w-full appearance-none bg-white border border-gray-200 rounded-xl pl-9 pr-9 py-2.5 text-sm font-semibold text-gray-800 cursor-pointer hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition"
           >
-            {cat.nombre}
-          </button>
-        ))}
+            <option value="">Todas las categorías</option>
+            {categorias.map((cat) => (
+              <option key={cat.idCategoria} value={cat.idCategoria}>{cat.nombre}</option>
+            ))}
+          </select>
+          <ChevronDown width={16} height={16} className="absolute right-3 text-gray-400 pointer-events-none" />
+        </div>
         <button className={s.manageCatsBtn} onClick={() => { resetCatForm(); setCatModalOpen(true) }}>
           <Tag width={15} height={15} /> Gestionar categorías
         </button>

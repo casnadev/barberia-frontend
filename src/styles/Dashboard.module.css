@@ -191,3 +191,9 @@
   .chartSvgLine { display: block; }
   .chartSvgBars { display: none; }
 }
+
+/* ===== Título + EN VIVO + fecha DENTRO de la card azul (v5) ===== */
+.heroHead { display: flex; align-items: center; justify-content: space-between; position: relative; }
+.heroLive { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 800; letter-spacing: .04em; color: #d1fae5; background: rgba(16,185,129,.22); padding: 3px 9px; border-radius: 999px; }
+.heroLiveDot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; animation: livePulse 1.8s ease-out infinite; }
+.heroDate { font-size: 11.5px; opacity: .82; margin-top: 6px; position: relative; text-transform: capitalize; }

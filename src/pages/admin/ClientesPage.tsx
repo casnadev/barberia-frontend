@@ -3,7 +3,7 @@ import { clientesService, Cliente } from '@/services/clientesService'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
 import { mensajeError } from '@/utils/apiError'
-import { Eye, Unlock, Search, Phone, Mail, Calendar, Users, Info, X, Gift, Plus, Trash2, ImagePlus, ShieldCheck, Pencil, EyeOff, Download, FileSpreadsheet, FileText, Loader2, Send } from 'lucide-react'
+import { Eye, Unlock, Search, Phone, Mail, Calendar, Users, Info, X, Gift, Plus, Trash2, ImagePlus, ShieldCheck, Pencil, EyeOff, Download, FileSpreadsheet, FileText, Loader2, Send, Upload, UserPlus, CheckCircle2, AlertCircle, MapPin, ChevronDown } from 'lucide-react'
 import { novedadesService, type Novedad } from '@/services/novedadesService'
 import { campanasService, type CoberturaCampana } from '@/services/campanasService'
 import { buildImageUrl, getActiveTenant } from '@/services/apiClient'
@@ -13,7 +13,7 @@ import { serviciosService } from '@/services/serviciosService'
 import { ModeracionNovedadesModal } from '@/components/ModeracionNovedadesModal'
 
 export function ClientesPage() {
-  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [clientesRaw, setClientesRaw] = useState<Cliente[]>([])  // todos los de la sede (del servidor)
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   // Filtros estilo Fresha: sede (por defecto la activa) + segmento.
@@ -25,6 +25,14 @@ export function ClientesPage() {
   const [visibleMobile, setVisibleMobile] = useState(8)   // "Ver más" solo en móvil
   const [novedadOpen, setNovedadOpen] = useState(false)   // modal "Nueva novedad"
   const [moderacionOpen, setModeracionOpen] = useState(false) // modal "Moderación"
+  const [importOpen, setImportOpen] = useState(false)     // modal "Importar clientes"
+
+  // El segmento se filtra EN MEMORIA (instantáneo, sin ir al servidor). Solo la
+  // sede y la búsqueda recargan del servidor. Esto hace que cambiar de segmento
+  // (Nuevos/Frecuentes/Inactivos) sea inmediato, sin spinner.
+  const clientes = segmento
+    ? clientesRaw.filter((c) => (c.segmento || '').toLowerCase() === segmento.toLowerCase())
+    : clientesRaw
 
   // Modal de desbloqueo (pide motivo al admin)
   const [desbloqueoTarget, setDesbloqueoTarget] = useState<number | null>(null)
@@ -51,27 +59,29 @@ export function ClientesPage() {
   const loadClientes = async () => {
     try {
       setLoading(true)
+      // Traemos TODOS los de la sede (sin filtrar segmento en el servidor); el
+      // segmento se filtra en memoria para que el cambio sea instantáneo.
       const data = await clientesService.getClientes(
-        1, 50, searchTerm || undefined,
+        1, 200, searchTerm || undefined,
         sedeFiltro && sedeFiltro > 0 ? sedeFiltro : undefined,
-        segmento || undefined,
+        undefined,
       )
-      setClientes(Array.isArray(data) ? data : [])
+      setClientesRaw(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error cargando clientes:', error)
       toast.error('Error al cargar clientes')
-      setClientes([])
+      setClientesRaw([])
     } finally {
       setLoading(false)
     }
   }
 
-  // Carga inicial y recarga cuando cambian sede o segmento (sede null = aún resolviendo).
+  // Carga inicial y recarga cuando cambia la SEDE (no el segmento: ese es en memoria).
   useEffect(() => {
     if (sedeFiltro === null) return
     loadClientes()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sedeFiltro, segmento])
+  }, [sedeFiltro])
 
   // Recargar cuando cambia el término de búsqueda (debounce)
   useEffect(() => {
@@ -223,54 +233,59 @@ export function ClientesPage() {
         </div>
       </div>
 
-      {/* Acciones: exportar + moderar + publicar novedad */}
-      <div className="flex justify-end gap-2 mb-3">
-        <div style={{ position: 'relative' }}>
-          <button onClick={() => setExportMenu((v) => !v)} disabled={exportando}
-            className="inline-flex items-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:opacity-60">
-            <Download width={16} height={16} /> {exportando ? 'Generando…' : 'Exportar'}
+      {/* Acciones: en móvil 3 parejos (Exportar/Importar/Moderación) + promoción ancho completo */}
+      <div className="mb-3">
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+          <div style={{ position: 'relative' }} className="sm:order-1">
+            <button onClick={() => setExportMenu((v) => !v)} disabled={exportando}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl px-3 py-2 text-sm font-semibold transition disabled:opacity-60">
+              <Download width={16} height={16} /> <span className="truncate">{exportando ? '…' : 'Exportar'}</span>
+            </button>
+            {exportMenu && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setExportMenu(false)} />
+                <div className="export-menu-pop" style={{ position: 'absolute', left: 0, top: 'calc(100% + 6px)', zIndex: 50, background: '#fff', border: '1px solid #e9ebef', borderRadius: 12, padding: 6, boxShadow: '0 12px 28px rgba(16,24,40,.16)', minWidth: 190, maxWidth: 'calc(100vw - 32px)' }}>
+                  <button onClick={() => exportarClientes('excel')} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-semibold text-gray-800 hover:bg-gray-50 text-left">
+                    <FileSpreadsheet width={16} height={16} color="#16a34a" /> Excel (.xlsx)
+                  </button>
+                  <button onClick={() => exportarClientes('pdf')} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-semibold text-gray-800 hover:bg-gray-50 text-left">
+                    <FileText width={16} height={16} color="#dc2626" /> PDF
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+          <button onClick={() => setImportOpen(true)} className="sm:order-2 w-full sm:w-auto inline-flex items-center justify-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl px-3 py-2 text-sm font-semibold transition">
+            <Upload width={16} height={16} /> <span className="truncate">Importar</span>
           </button>
-          {exportMenu && (
-            <>
-              <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setExportMenu(false)} />
-              <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 50, background: '#fff', border: '1px solid #e9ebef', borderRadius: 12, padding: 6, boxShadow: '0 12px 28px rgba(16,24,40,.16)', minWidth: 190 }}>
-                <button onClick={() => exportarClientes('excel')} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-semibold text-gray-800 hover:bg-gray-50 text-left">
-                  <FileSpreadsheet width={16} height={16} color="#16a34a" /> Excel (.xlsx)
-                </button>
-                <button onClick={() => exportarClientes('pdf')} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-semibold text-gray-800 hover:bg-gray-50 text-left">
-                  <FileText width={16} height={16} color="#dc2626" /> PDF
-                </button>
-              </div>
-            </>
-          )}
+          <button onClick={() => setModeracionOpen(true)} className="sm:order-3 w-full sm:w-auto inline-flex items-center justify-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl px-3 py-2 text-sm font-semibold transition">
+            <ShieldCheck width={16} height={16} /> <span className="truncate">Moderación</span>
+          </button>
+          {/* Nueva promoción: en móvil ocupa todo el ancho debajo; en desktop va en la fila */}
+          <button onClick={() => setNovedadOpen(true)} className="sm:order-4 col-span-3 sm:col-span-1 w-full sm:w-auto inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2 text-sm font-semibold transition">
+            <Gift width={16} height={16} /> Nueva promoción
+          </button>
         </div>
-        <button onClick={() => setModeracionOpen(true)} className="inline-flex items-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl px-4 py-2 text-sm font-semibold transition">
-          <ShieldCheck width={16} height={16} /> Moderación
-        </button>
-        <button onClick={() => setNovedadOpen(true)} className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2 text-sm font-semibold transition">
-          <Gift width={16} height={16} /> Nueva promoción
-        </button>
       </div>
 
-      {/* Filtros estilo Fresha: sede + segmentos */}
+      {/* Filtros estilo Fresha: sede (desplegable) + segmentos (chips) */}
       <div className={s.filtros}>
         {sedes.length > 1 && (
-          <div className={s.filtroRow}>
-            <button
-              className={`${s.fChip} ${sedeFiltro === 0 ? s.fChipActive : ''}`}
-              onClick={() => setSedeFiltro(0)}
-            >
-              Todas las sedes
-            </button>
-            {sedes.map((sd) => (
-              <button
-                key={sd.idSede}
-                className={`${s.fChip} ${sedeFiltro === sd.idSede ? s.fChipActive : ''}`}
-                onClick={() => setSedeFiltro(sd.idSede)}
+          <div className="mb-2.5">
+            <div className="relative inline-flex items-center w-full sm:w-auto">
+              <MapPin width={16} height={16} className="absolute left-3 text-blue-600 pointer-events-none" />
+              <select
+                value={sedeFiltro ?? 0}
+                onChange={(e) => setSedeFiltro(Number(e.target.value))}
+                className="w-full sm:w-auto appearance-none bg-white border border-gray-200 rounded-xl pl-9 pr-9 py-2.5 text-sm font-semibold text-gray-800 cursor-pointer hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition"
               >
-                {sd.nombre}
-              </button>
-            ))}
+                <option value={0}>Todas las sedes</option>
+                {sedes.map((sd) => (
+                  <option key={sd.idSede} value={sd.idSede}>{sd.nombre}</option>
+                ))}
+              </select>
+              <ChevronDown width={16} height={16} className="absolute right-3 text-gray-400 pointer-events-none" />
+            </div>
           </div>
         )}
         <div className={s.filtroRow}>
@@ -559,6 +574,14 @@ export function ClientesPage() {
       })()}
       {novedadOpen && <NovedadModal onClose={() => setNovedadOpen(false)} />}
       {moderacionOpen && <ModeracionNovedadesModal onClose={() => setModeracionOpen(false)} />}
+      {importOpen && (
+        <ImportarClientesModal
+          sedeActual={sedeFiltro && sedeFiltro > 0 ? sedeFiltro : (sedes[0]?.idSede ?? 0)}
+          sedeNombre={sedes.find((x) => x.idSede === sedeFiltro)?.nombre || sedes[0]?.nombre || 'tu sede'}
+          onClose={() => setImportOpen(false)}
+          onDone={() => { setImportOpen(false); loadClientes() }}
+        />
+      )}
     </>
   )
 }
@@ -940,6 +963,261 @@ function CampanaModal({ novedad, onClose }: { novedad: Novedad; onClose: () => v
             {enviando ? 'Enviando…' : cobertura ? `Enviar a ${cobertura.seEnviaran}` : 'Enviar'}
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────── IMPORTAR CLIENTES ───────────────────────────
+// Modal estilo Fresha: sube CSV o Excel (nombre, teléfono, correo), previsualiza
+// con validación (duplicados, filas inválidas) y confirma la importación.
+type FilaImport = {
+  nombre: string
+  telefono: string
+  correo: string
+  _estado: 'ok' | 'dup' | 'invalido'
+  _motivo?: string
+}
+
+function ImportarClientesModal({
+  sedeActual, sedeNombre, onClose, onDone,
+}: {
+  sedeActual: number
+  sedeNombre: string
+  onClose: () => void
+  onDone: () => void
+}) {
+  const [paso, setPaso] = useState<'subir' | 'preview' | 'hecho'>('subir')
+  const [filas, setFilas] = useState<FilaImport[]>([])
+  const [nombreArchivo, setNombreArchivo] = useState('')
+  const [procesando, setProcesando] = useState(false)
+  const [resultado, setResultado] = useState<{ creados: number; omitidos: number } | null>(null)
+
+  const validas = filas.filter((f) => f._estado === 'ok')
+  const duplicadas = filas.filter((f) => f._estado === 'dup')
+  const invalidas = filas.filter((f) => f._estado === 'invalido')
+
+  // Normalizadores básicos.
+  const normTel = (t: string) => (t || '').replace(/[^\d+]/g, '').trim()
+  const normMail = (c: string) => (c || '').trim().toLowerCase()
+  const mailValido = (c: string) => !c || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c)
+
+  // Detecta a qué columna corresponde cada encabezado (flexible con los nombres).
+  const mapearColumnas = (headers: string[]) => {
+    const idx = { nombre: -1, telefono: -1, correo: -1 }
+    headers.forEach((h, i) => {
+      const k = (h || '').toString().trim().toLowerCase()
+      if (idx.nombre < 0 && /(nombre|name|cliente|completo)/.test(k)) idx.nombre = i
+      else if (idx.telefono < 0 && /(tel|phone|celular|móvil|movil|whatsapp|número|numero)/.test(k)) idx.telefono = i
+      else if (idx.correo < 0 && /(correo|email|mail|e-mail)/.test(k)) idx.correo = i
+    })
+    return idx
+  }
+
+  // Convierte filas crudas (array de arrays) en FilaImport validadas.
+  const construirFilas = (matriz: any[][]) => {
+    if (!matriz.length) { toast.error('El archivo está vacío'); return }
+    // ¿La primera fila es encabezado? Si contiene palabras clave, sí.
+    const head = matriz[0].map((x) => (x ?? '').toString())
+    const idx = mapearColumnas(head)
+    const tieneHeader = idx.nombre >= 0 || idx.telefono >= 0 || idx.correo >= 0
+    // Si no hay encabezado reconocible, asumimos orden: nombre, teléfono, correo.
+    const map = tieneHeader ? idx : { nombre: 0, telefono: 1, correo: 2 }
+    const cuerpo = tieneHeader ? matriz.slice(1) : matriz
+
+    const vistos = new Set<string>()
+    const out: FilaImport[] = []
+    for (const row of cuerpo) {
+      const nombre = (row[map.nombre] ?? '').toString().trim()
+      const telefono = normTel((row[map.telefono] ?? '').toString())
+      const correo = normMail((row[map.correo] ?? '').toString())
+      if (!nombre && !telefono && !correo) continue // fila totalmente vacía: ignorar
+
+      let estado: FilaImport['_estado'] = 'ok'
+      let motivo: string | undefined
+      if (!telefono && !correo) { estado = 'invalido'; motivo = 'Sin teléfono ni correo' }
+      else if (!mailValido(correo)) { estado = 'invalido'; motivo = 'Correo inválido' }
+      else {
+        const clave = telefono || correo
+        if (vistos.has(clave)) { estado = 'dup'; motivo = 'Repetido en el archivo' }
+        else vistos.add(clave)
+      }
+      out.push({ nombre: nombre || '(sin nombre)', telefono, correo, _estado: estado, _motivo: motivo })
+    }
+    setFilas(out)
+    setPaso('preview')
+  }
+
+  // Lee el archivo según su tipo (CSV o Excel).
+  const onArchivo = async (file: File) => {
+    setNombreArchivo(file.name)
+    try {
+      const esCsv = /\.csv$/i.test(file.name)
+      if (esCsv) {
+        const texto = await file.text()
+        // Parse CSV simple (separador coma o punto y coma), respeta comillas básicas.
+        const sep = texto.includes(';') && !texto.includes(',') ? ';' : ','
+        const matriz = texto.split(/\r?\n/).filter((l) => l.trim().length).map((linea) => {
+          const celdas: string[] = []
+          let cur = '', dentro = false
+          for (const ch of linea) {
+            if (ch === '"') dentro = !dentro
+            else if (ch === sep && !dentro) { celdas.push(cur); cur = '' }
+            else cur += ch
+          }
+          celdas.push(cur)
+          return celdas.map((c) => c.trim())
+        })
+        construirFilas(matriz)
+      } else {
+        // Excel: usa SheetJS (xlsx ya está en el proyecto).
+        const XLSX = await import('xlsx')
+        const buf = await file.arrayBuffer()
+        const wb = XLSX.read(buf, { type: 'array' })
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        const matriz = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1, blankrows: false })
+        construirFilas(matriz)
+      }
+    } catch (e) {
+      console.error(e)
+      toast.error('No se pudo leer el archivo. Revisa el formato.')
+    }
+  }
+
+  const confirmar = async () => {
+    if (validas.length === 0) { toast.error('No hay clientes válidos para importar'); return }
+    setProcesando(true)
+    try {
+      const res = await clientesService.importarClientes(
+        sedeActual,
+        validas.map((f) => ({ nombre: f.nombre, telefono: f.telefono, correo: f.correo })),
+      )
+      setResultado({ creados: res?.creados ?? validas.length, omitidos: res?.omitidos ?? 0 })
+      setPaso('hecho')
+    } catch (e: any) {
+      console.error(e)
+      toast.error(e?.response?.data?.mensaje || 'No se pudo importar. Intenta de nuevo.')
+    } finally {
+      setProcesando(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-5 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+            <UserPlus width={18} height={18} className="text-blue-600" /> Importar clientes
+          </h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Cerrar"><X width={18} height={18} /></button>
+        </div>
+        <p className="text-xs text-gray-500 mb-4">
+          Trae tu base de clientes desde otro sistema (Fresha, Excel, etc.) a <strong>{sedeNombre}</strong>.
+          Acepta archivos <strong>CSV</strong> o <strong>Excel</strong> con columnas: nombre, teléfono y correo.
+        </p>
+
+        {/* PASO 1: subir */}
+        {paso === 'subir' && (
+          <div>
+            <label className="block border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/40 transition">
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) onArchivo(f) }}
+              />
+              <Upload width={28} height={28} className="mx-auto text-blue-500 mb-2" />
+              <p className="text-sm font-semibold text-gray-700">Haz clic para elegir un archivo</p>
+              <p className="text-xs text-gray-400 mt-1">CSV, XLSX o XLS · primera fila puede ser el encabezado</p>
+            </label>
+            <div className="mt-4 bg-gray-50 rounded-xl p-3 text-xs text-gray-500">
+              <p className="font-semibold text-gray-600 mb-1">Formato esperado (ejemplo):</p>
+              <code className="block bg-white rounded-lg p-2 border border-gray-200 text-gray-700">
+                nombre, telefono, correo<br />
+                Juan Pérez, 999888777, juan@correo.com<br />
+                Ana Torres, 988777666, ana@correo.com
+              </code>
+            </div>
+          </div>
+        )}
+
+        {/* PASO 2: preview */}
+        {paso === 'preview' && (
+          <div>
+            <div className="flex items-center gap-2 mb-3 text-xs">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold">
+                <CheckCircle2 width={13} height={13} /> {validas.length} válidos
+              </span>
+              {duplicadas.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 font-semibold">
+                  {duplicadas.length} repetidos
+                </span>
+              )}
+              {invalidas.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 text-red-600 font-semibold">
+                  <AlertCircle width={13} height={13} /> {invalidas.length} con error
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-400 mb-2 truncate">Archivo: {nombreArchivo}</p>
+
+            <div className="border border-gray-200 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr className="text-left text-gray-500">
+                    <th className="py-2 px-2.5 font-medium">Nombre</th>
+                    <th className="py-2 px-2.5 font-medium">Teléfono</th>
+                    <th className="py-2 px-2.5 font-medium">Correo</th>
+                    <th className="py-2 px-2.5 font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filas.slice(0, 100).map((f, i) => (
+                    <tr key={i} className={`border-t border-gray-100 ${f._estado === 'invalido' ? 'bg-red-50/50' : f._estado === 'dup' ? 'bg-amber-50/40' : ''}`}>
+                      <td className="py-1.5 px-2.5 text-gray-800">{f.nombre}</td>
+                      <td className="py-1.5 px-2.5 text-gray-600">{f.telefono || '—'}</td>
+                      <td className="py-1.5 px-2.5 text-gray-600 truncate max-w-[140px]">{f.correo || '—'}</td>
+                      <td className="py-1.5 px-2.5">
+                        {f._estado === 'ok' && <CheckCircle2 width={14} height={14} className="text-emerald-500" />}
+                        {f._estado !== 'ok' && <span className="text-[10px] text-gray-400" title={f._motivo}>{f._motivo}</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {filas.length > 100 && <p className="text-[11px] text-gray-400 mt-1">Mostrando 100 de {filas.length} filas. Se importarán todas las válidas.</p>}
+
+            <div className="flex gap-2 mt-4">
+              <button onClick={() => { setPaso('subir'); setFilas([]) }} className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">Atrás</button>
+              <button
+                onClick={confirmar}
+                disabled={procesando || validas.length === 0}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
+                {procesando ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus width={15} height={15} />}
+                {procesando ? 'Importando…' : `Importar ${validas.length}`}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* PASO 3: hecho */}
+        {paso === 'hecho' && resultado && (
+          <div className="text-center py-6">
+            <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3">
+              <CheckCircle2 width={30} height={30} className="text-emerald-600" />
+            </div>
+            <h4 className="text-lg font-bold text-gray-900">¡Importación completa!</h4>
+            <p className="text-sm text-gray-500 mt-1">
+              Se agregaron <strong>{resultado.creados}</strong> cliente(s) a {sedeNombre}.
+              {resultado.omitidos > 0 && <> {resultado.omitidos} ya existían y se omitieron.</>}
+            </p>
+            <button onClick={onDone} className="mt-5 w-full px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">
+              Ver mis clientes
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

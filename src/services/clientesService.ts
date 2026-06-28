@@ -136,9 +136,17 @@ export const clientesService = {
   },
 
   /**
-   * Nota: No hay endpoint para crear clientes manualmente
-   * Los clientes se crean automáticamente cuando:
-   * - Hacen una reserva (pre-registro por teléfono)
-   * - Se logean por OTP
+   * Importa una lista de clientes (estilo Fresha) a una sede del negocio.
+   * Envía nombre, teléfono y correo. El backend crea los clientes y los vincula
+   * a la sede, omitiendo los que ya existen (por teléfono o correo).
+   * Devuelve { creados, omitidos }.
    */
+  importarClientes: async (
+    idSede: number,
+    clientes: { nombre: string; telefono: string; correo: string }[],
+  ): Promise<{ creados: number; omitidos: number }> => {
+    const res = await apiClient.post('/api/Clientes/importar', { idSede, clientes })
+    const data = res.data?.data ?? res.data ?? {}
+    return { creados: data.creados ?? 0, omitidos: data.omitidos ?? 0 }
+  },
 }

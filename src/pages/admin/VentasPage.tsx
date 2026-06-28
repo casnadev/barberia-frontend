@@ -16,6 +16,10 @@ const isoLocal = (d: Date) => {
   const z = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
   return z.toISOString().slice(0, 10)
 }
+const fmtCorta = (iso: string) => {
+  try { return new Date(`${iso}T00:00:00`).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }) }
+  catch { return iso }
+}
 const fmtFechaHora = (iso?: string) => {
   if (!iso) return ''
   try { return new Date(iso).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) }
@@ -110,22 +114,24 @@ export function VentasPage() {
         <ResumenCard icon={DollarSign} tone="emerald" label="Monto aceptado" value={soles(totalAceptado)} />
       </div>
 
-      {/* Filtros de fecha */}
-      <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {RANGOS.map(r => (
-          <button key={r.key} onClick={() => setRango(r.key)}
-            className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-full text-sm font-semibold border transition ${rango === r.key ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-            {r.label}
-          </button>
-        ))}
+      {/* Filtros de fecha — mismo estilo que Inicio (segmented + fecha debajo) */}
+      <div className="mb-3">
+        <div className="inline-flex gap-1.5 p-1 bg-gray-100 rounded-xl overflow-x-auto max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {RANGOS.map(r => (
+            <button key={r.key} onClick={() => setRango(r.key)}
+              className={`shrink-0 whitespace-nowrap px-4 py-1.5 rounded-lg text-sm font-semibold transition ${rango === r.key ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-800'}`}>
+              {r.label}
+            </button>
+          ))}
+        </div>
         {rango === 'custom' && (
-          <span className="inline-flex items-center gap-2 shrink-0">
-            <button onClick={() => setCalRango('desde')} className="inline-flex items-center gap-1.5 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-900 bg-white whitespace-nowrap"><CalendarDays className="w-3.5 h-3.5 text-blue-600" /> {desde}</button>
+          <div className="flex items-center gap-2 mt-2.5">
+            <button onClick={() => setCalRango('desde')} className="inline-flex items-center gap-1.5 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-900 bg-white whitespace-nowrap"><CalendarDays className="w-3.5 h-3.5 text-blue-600" /> {fmtCorta(desde)}</button>
             <span className="text-gray-400">→</span>
-            <button onClick={() => setCalRango('hasta')} className="inline-flex items-center gap-1.5 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-900 bg-white whitespace-nowrap"><CalendarDays className="w-3.5 h-3.5 text-blue-600" /> {hasta}</button>
+            <button onClick={() => setCalRango('hasta')} className="inline-flex items-center gap-1.5 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-900 bg-white whitespace-nowrap"><CalendarDays className="w-3.5 h-3.5 text-blue-600" /> {fmtCorta(hasta)}</button>
             <CalendarModal isOpen={calRango === 'desde'} selectedDate={desde} allowPast onSelectDate={(x) => { if (x <= hasta) setDesde(x) }} onClose={() => setCalRango(null)} />
             <CalendarModal isOpen={calRango === 'hasta'} selectedDate={hasta} allowPast onSelectDate={(x) => { if (x >= desde && x <= hoyISO) setHasta(x) }} onClose={() => setCalRango(null)} />
-          </span>
+          </div>
         )}
       </div>
 

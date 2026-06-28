@@ -240,31 +240,21 @@ export function DashboardPage() {
       <AvisoBanner />
       <CompletaTuNegocio />
 
-      {/* Encabezado */}
-      <div className={s.head}>
-        <div className={s.headLeft}>
-          <h1 className={s.headTitle}>
-            {tituloRango}
-            {rango === 'hoy' && <span className={s.live}><span className={s.liveDot} />EN VIVO</span>}
-          </h1>
-          <p className={s.headSub}>
-            Mostrando: <strong>{d === h ? fmtCorta(d) : `${fmtCorta(d)} – ${fmtCorta(h)}`}</strong>
-            {loading && ' · actualizando…'}
-          </p>
-        </div>
-      </div>
-
       {/* LAYOUT: card azul (hero) + panel de rango/contenido al lado */}
       <div className={s.topGrid}>
 
-        {/* HERO con las 4 métricas dentro (absorbe las cards blancas) */}
+        {/* HERO con título + EN VIVO + fecha + 4 métricas dentro */}
         <motion.div className={s.hero} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .35 }}>
           <div className={s.heroGlow} />
-          <span className={s.heroLabel}><Activity width={13} height={13} /> Utilidad neta</span>
+          <div className={s.heroHead}>
+            <span className={s.heroLabel}><Activity width={13} height={13} /> Utilidad neta</span>
+            {rango === 'hoy' && <span className={s.heroLive} title="En vivo"><span className={s.heroLiveDot} /></span>}
+          </div>
           <div className={s.heroValue}>
             {loading ? <span className={s.sk} style={{ width: 180, height: 38 }} />
               : <>{!utilidadPos && '−'}<span className={s.heroCur}>S/</span>{Math.abs(utilidad).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>}
           </div>
+          <div className={s.heroDate}>{tituloRango} · {d === h ? fmtCorta(d) : `${fmtCorta(d)} – ${fmtCorta(h)}`}{loading && ' · actualizando…'}</div>
           <div className={s.heroFoot}>
             <div className={s.heroStat}>
               <span className={s.heroStatLabel}><ShoppingBag width={12} height={12} /> Ventas</span>
@@ -332,9 +322,8 @@ export function DashboardPage() {
             </div>
           )}
 
-          {/* Mini panel: clientes / atajo rápido contextual */}
+          {/* Atajos contextuales */}
           <div className={s.sideCard}>
-            <div className={s.sideCardTitle}>Resumen rápido</div>
             <div className={s.sideMini}>
               <Link to="/admin/clientes" className={s.sideMiniRow}><span><User width={14} height={14} /> Clientes</span><strong>{clientes}</strong></Link>
               <Link to="/admin/reservas" className={s.sideMiniRow}><span><Clock width={14} height={14} /> Reservas hoy</span><strong>{reservasHoy}</strong></Link>
