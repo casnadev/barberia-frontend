@@ -80,6 +80,14 @@ const pagoMeta = (estadoPago?: string): { label: string; cls: string } | null =>
 // ── Día y franja horaria (vista "solo del día") ──────────────────────
 const isoDia = (d?: any): string => {
   if (!d) return ''
+  // Si ya viene como 'YYYY-MM-DD...' (date-only o ISO), tomamos la parte de fecha
+  // TAL CUAL, sin pasar por new Date(): new Date('2026-06-28') se parsea como
+  // medianoche UTC y, en zonas UTC-negativas (Perú = UTC-5), getDate() local
+  // devuelve el día anterior → la reserva de hoy se filtraba en "ayer".
+  if (typeof d === 'string') {
+    const m = d.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`
+  }
   const dt = new Date(d)
   if (isNaN(dt.getTime())) return ''
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Clock, Check, X, DollarSign, CalendarDays, Scissors, User, Image as ImageIcon,
@@ -60,8 +61,6 @@ export function VentasPage() {
   const [hasta, setHasta] = useState(hoyISO)
   const [calRango, setCalRango] = useState<'desde' | 'hasta' | null>(null)
   const [filtro, setFiltro] = useState<FiltroKey>('PendienteAprobacion')
-  const [ventas, setVentas] = useState<VentaResumen[]>([])
-  const [loading, setLoading] = useState(true)
   const [detail, setDetail] = useState<VentaResumen | null>(null)
 
   const { d, h } = useMemo(() => {
@@ -72,14 +71,20 @@ export function VentasPage() {
     return { d: desde, h: hasta }
   }, [rango, desde, hasta])
 
-  const cargar = async () => {
-    setLoading(true)
-    try {
+  // Ventas del rango, cacheadas por [desde, hasta]. Cambiar de rango refetchea;
+  // revisitar un rango ya visto sale al instante.
+  const {
+    data: ventas = [],
+    isLoading: loading,
+    refetch,
+  } = useQuery<VentaResumen[]>({
+    queryKey: ['ventas', d, h],
+    queryFn: async () => {
       const data = await ventasService.listarVentas({ desde: d, hasta: h, tamanoPagina: 200 })
-      setVentas(Array.isArray(data) ? data : [])
-    } catch { toast.error('No se pudieron cargar las ventas') } finally { setLoading(false) }
-  }
-  useEffect(() => { cargar(); /* eslint-disable-next-line */ }, [d, h])
+      return Array.isArray(data) ? data : []
+    },
+  })
+  const cargar = () => refetch()
 
   const counts = useMemo(() => ({
     PendienteAprobacion: ventas.filter(v => v.estado === 'PendienteAprobacion').length,

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { sedesService } from '@/services/sedesService'
 import { reservasService, Reserva } from '@/services/reservasService'
@@ -95,7 +96,6 @@ export function AgendaBoard({ mode = 'admin', trabajadorPropio, onAtenderTrabaja
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([])
   const [servicios, setServicios] = useState<any[]>([])
   const [reservas, setReservas] = useState<Reserva[]>([])
-  const [loading, setLoading] = useState(true)
   const [turno, setTurno] = useState('todo')
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [mobileBarber, setMobileBarber] = useState<number | null>(null)
@@ -114,40 +114,65 @@ export function AgendaBoard({ mode = 'admin', trabajadorPropio, onAtenderTrabaja
     return () => window.removeEventListener('resize', onR)
   }, [])
 
-  useEffect(() => { loadData() }, [currentDate])
-
   const fechaStr = iso(currentDate)
 
-  const loadData = async () => {
-    try {
-      setLoading(true)
+  // ── Datos cacheados con React Query ───────────────────────────────────────
+  // Base (sede + trabajadores + servicios): NO depende de la fecha, así que no
+  // se recarga al cambiar de día. Reservas: cacheadas por día. Revisitar la
+  // Agenda (o un día ya visto) sale al instante, sin recargar una y otra vez.
+  // Volcamos a los estados existentes para no tocar el markup ni el drag-drop.
+  const baseQuery = useQuery({
+    queryKey: ['agenda', 'base', esTrabajador, trabajadorPropio?.idTrabajador ?? 0],
+    queryFn: async () => {
       const sedeData = await sedesService.getSedeActual().catch(() => null)
-      setSede(sedeData)
-
-      let trabs: Trabajador[]
       if (esTrabajador) {
-        // Trabajador: una sola columna (su ficha). No se llaman endpoints admin-only.
-        trabs = trabajadorPropio ? [trabajadorPropio as unknown as Trabajador] : []
-        setServicios([])
-      } else {
-        const [trabsData, servData] = await Promise.all([
-          trabajadoresService.getTrabajadores().catch(() => []),
-          apiClient.get('/api/Servicios/admin/todos').then((r) => r.data.data || r.data).catch(() => []),
-        ])
-        trabs = Array.isArray(trabsData) ? trabsData : []
-        setServicios(Array.isArray(servData) ? servData : [])
+        return {
+          sede: sedeData,
+          trabajadores: (trabajadorPropio ? [trabajadorPropio as unknown as Trabajador] : []),
+          servicios: [] as any[],
+        }
       }
-      setTrabajadores(trabs)
-      if (mobileBarber == null && trabs.length) setMobileBarber(trabs[0].idTrabajador!)
+      const [trabsData, servData] = await Promise.all([
+        trabajadoresService.getTrabajadores().catch(() => []),
+        apiClient.get('/api/Servicios/admin/todos').then((r) => r.data.data || r.data).catch(() => []),
+      ])
+      return {
+        sede: sedeData,
+        trabajadores: Array.isArray(trabsData) ? trabsData : [],
+        servicios: Array.isArray(servData) ? servData : [],
+      }
+    },
+  })
 
-      const reservasData = await reservasService.getReservas(fechaStr, fechaStr)
-      setReservas(Array.isArray(reservasData) ? reservasData : [])
-    } catch (err: any) {
-      toast.error(err.message || 'Error cargando agenda')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const reservasQuery = useQuery({
+    queryKey: ['agenda', 'reservas', fechaStr],
+    queryFn: async () => {
+      const data = await reservasService.getReservas(fechaStr, fechaStr)
+      return Array.isArray(data) ? data : []
+    },
+  })
+
+  const loading = baseQuery.isLoading || reservasQuery.isLoading
+  const loadData = () => { baseQuery.refetch(); reservasQuery.refetch() }
+
+  // Volcado de datos cacheados → estados que usa el markup (sin cambiar el render).
+  useEffect(() => {
+    if (!baseQuery.data) return
+    setSede(baseQuery.data.sede)
+    setTrabajadores(baseQuery.data.trabajadores)
+    setServicios(baseQuery.data.servicios)
+    if (mobileBarber == null && baseQuery.data.trabajadores.length)
+      setMobileBarber(baseQuery.data.trabajadores[0].idTrabajador!)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseQuery.data])
+
+  useEffect(() => {
+    if (reservasQuery.data) setReservas(reservasQuery.data)
+  }, [reservasQuery.data])
+
+  useEffect(() => {
+    if (baseQuery.isError || reservasQuery.isError) toast.error('Error cargando agenda')
+  }, [baseQuery.isError, reservasQuery.isError])
 
   // ===== Horario de la sede =====
   let openMin = toMin(sede?.horarioApertura) ?? 8 * 60

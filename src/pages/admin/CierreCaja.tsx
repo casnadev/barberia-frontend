@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Calculator, CheckCircle2, Loader2, CalendarDays, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -26,29 +27,37 @@ export function CierreCajaPage() {
   const hoy = isoLocal(new Date())
   const [fecha, setFecha] = useState(hoy)
   const [calOpen, setCalOpen] = useState(false)
-  const [preview, setPreview] = useState<PreviewCierre | null>(null)
   const [reales, setReales] = useState<Reales>({ Efectivo: '', Yape: '', Plin: '', Otros: '' })
   const [obs, setObs] = useState('')
-  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [hist, setHist] = useState<CierreItem[]>([])
 
-  const cargar = async () => {
-    setLoading(true)
-    try {
-      const p = await cierreCajaService.getPreview(fecha)
-      setPreview(p)
-      // Por defecto, el monto real = lo que dice el sistema (diferencia 0).
-      if (p) setReales({
-        Efectivo: p.montoSistemaEfectivo.toFixed(2),
-        Yape: p.montoSistemaYape.toFixed(2),
-        Plin: p.montoSistemaPlin.toFixed(2),
-        Otros: p.montoSistemaOtros.toFixed(2),
+  // Preview del cierre cacheado por [fecha]. Revisitar el mismo día sale al
+  // instante. React Query mantiene la misma referencia de datos en revisitas,
+  // así que el efecto de abajo NO pisa lo que el usuario haya editado.
+  const {
+    data: preview = null,
+    isLoading: loading,
+    refetch,
+  } = useQuery<PreviewCierre | null>({
+    queryKey: ['caja', 'preview', fecha],
+    queryFn: () => cierreCajaService.getPreview(fecha),
+  })
+  const cargar = () => refetch()
+
+  // Al cambiar de día (nuevo preview), el monto real = lo que dice el sistema.
+  useEffect(() => {
+    if (preview) {
+      setReales({
+        Efectivo: preview.montoSistemaEfectivo.toFixed(2),
+        Yape: preview.montoSistemaYape.toFixed(2),
+        Plin: preview.montoSistemaPlin.toFixed(2),
+        Otros: preview.montoSistemaOtros.toFixed(2),
       })
       setObs('')
-    } finally { setLoading(false) }
-  }
-  useEffect(() => { cargar(); /* eslint-disable-next-line */ }, [fecha])
+    }
+  }, [preview])
+
   useEffect(() => { cierreCajaService.listar().then(setHist) }, [])
 
   const totalReal = useMemo(

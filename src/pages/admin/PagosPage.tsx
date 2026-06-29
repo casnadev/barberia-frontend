@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Wallet, X, User, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { pagosService, type ResumenComisiones } from '@/services/pagosService'
@@ -7,16 +8,18 @@ const METODOS = ['Efectivo', 'Yape', 'Plin', 'Tarjeta', 'Transferencia', 'Otro']
 const money = (n?: number) => `S/ ${Number(n || 0).toFixed(2)}`
 
 export function PagosPage() {
-  const [lista, setLista] = useState<ResumenComisiones[]>([])
-  const [loading, setLoading] = useState(true)
   const [pagar, setPagar] = useState<ResumenComisiones | null>(null)
 
-  const cargar = async () => {
-    setLoading(true)
-    try { setLista(await pagosService.getResumenComisiones()) }
-    finally { setLoading(false) }
-  }
-  useEffect(() => { cargar() }, [])
+  // Resumen de comisiones cacheado (navegación instantánea al revisitar).
+  const {
+    data: lista = [],
+    isLoading: loading,
+    refetch,
+  } = useQuery<ResumenComisiones[]>({
+    queryKey: ['pagos', 'resumen-comisiones'],
+    queryFn: () => pagosService.getResumenComisiones(),
+  })
+  const cargar = () => refetch()
 
   const totalPendiente = useMemo(
     () => lista.reduce((s, t) => s + (t.comisionesTotalPendiente || 0), 0),
