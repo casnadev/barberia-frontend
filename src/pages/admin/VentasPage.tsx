@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { CalendarModal } from '@/pages/cliente/CalendarModal'
 import { buildImageUrl } from '@/services/apiClient'
 import { ventasService, type VentaResumen } from '@/services/ventasService'
+import { SkeletonRows } from '@/components/Skeleton'
 import { mensajeError } from '@/utils/apiError'
 import { montoFmt } from '@/utils/kpiMonto'
 
@@ -155,7 +156,7 @@ export function VentasPage() {
 
       {/* Lista */}
       {loading ? (
-        <div className="text-center py-16 text-gray-400"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3" /> Cargando ventas…</div>
+        <div className="bg-white border border-gray-200 rounded-2xl p-4"><SkeletonRows rows={6} cols={4} /></div>
       ) : visibles.length === 0 ? (
         <div className="bg-white border border-dashed border-gray-300 rounded-2xl p-10 text-center text-gray-500">
           <span className="inline-flex w-12 h-12 rounded-2xl bg-gray-100 items-center justify-center mb-3"><DollarSign className="w-6 h-6 text-gray-400" /></span>

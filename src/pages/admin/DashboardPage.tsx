@@ -1,17 +1,18 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Calendar, Activity, Clock, User, TrendingDown, Wallet, CalendarDays, ShoppingBag, Download, FileSpreadsheet, FileText } from 'lucide-react'
 import { ventasService, type ResumenFinanciero } from '@/services/ventasService'
-import { clientesService } from '@/services/clientesService'
-import { reservasService } from '@/services/reservasService'
 import { sedeTenantService } from '@/services/sedeTenantService'
 import { getActiveTenant } from '@/services/apiClient'
+import { qk, fetchDashboardResumen, fetchDashboardHoy } from '@/lib/prefetch'
 import { exportarExcel, exportarPDF, type FilaVenta } from '@/utils/exportReportes'
 import { toast } from 'sonner'
 import { CompletaTuNegocio } from '@/components/CompletaTuNegocio'
 import { CalendarModal } from '@/pages/cliente/CalendarModal'
 import { AvisoBanner } from '@/components/AvisoBanner'
+import { Skeleton } from '@/components/Skeleton'
 import s from '@/styles/Dashboard.module.css'
 
 type RangoKey = 'hoy' | 'semana' | 'mes' | 'custom'
@@ -91,22 +92,11 @@ function VentasChart({ serie }: { serie: { label: string; valor: number }[] }) {
 }
 
 export function DashboardPage() {
-  const [loading, setLoading] = useState(true)
   const [rango, setRango] = useState<RangoKey>('hoy')
   const hoyISO = isoLocal(new Date())
   const [desde, setDesde] = useState(hoyISO)
   const [hasta, setHasta] = useState(hoyISO)
   const [calRango, setCalRango] = useState<'desde' | 'hasta' | null>(null)
-
-  const [resumen, setResumen] = useState<ResumenFinanciero | null>(null)
-  const [clientes, setClientes] = useState(0)
-  const [reservasHoy, setReservasHoy] = useState(0)
-  const [reservasConfirmadas, setReservasConfirmadas] = useState(0)
-  const [serie, setSerie] = useState<{ label: string; valor: number }[]>([])
-  // Race guard: id de la última petición. Solo la última aplica su resultado,
-  // evitando que una respuesta lenta (rango anterior) pise los datos actuales
-  // o deje el spinner colgado al cambiar de sección/rango.
-  const reqId = useRef(0)
 
   // Rango efectivo (desde/hasta) según la opción elegida.
   const { d, h } = useMemo(() => {
@@ -125,59 +115,36 @@ export function DashboardPage() {
     return { d: desde, h: hasta }
   }, [rango, desde, hasta])
 
-  useEffect(() => { cargarResumen() /* eslint-disable-next-line */ }, [d, h])
-  useEffect(() => { cargarHoy() }, [])
+  const tenant = getActiveTenant()
 
-  const cargarResumen = async () => {
-    const myReq = ++reqId.current   // marca esta como la petición vigente
-    setLoading(true)
-    try {
-      // Paraleliza resumen + ventas (antes era en serie = el doble de espera).
-      const [resumenRes, ventas] = await Promise.all([
-        ventasService.getResumenFinanciero(d, h),
-        ventasService.listarVentas({ desde: d, hasta: h, tamanoPagina: 1000 }),
-      ])
-      // Si mientras tanto se disparó otra carga (cambio de rango), descarta esta.
-      if (myReq !== reqId.current) return
-      setResumen(resumenRes)
-      setSerie(construirSerie(ventas))
-    }
-    catch {
-      if (myReq === reqId.current) toast.error('No se pudo cargar el resumen')
-    }
-    finally {
-      // Solo la última petición apaga el spinner (evita que una vieja lo apague antes).
-      if (myReq === reqId.current) setLoading(false)
-    }
-  }
+  // Resumen financiero + serie de la gráfica. Cacheado con React Query: revisitar
+  // el dashboard lo muestra al instante. Gracias a `placeholderData` global,
+  // cambiar de rango CONSERVA los datos anteriores mientras llegan los nuevos
+  // (sin blanquear ni spinner). El race-guard manual ya no hace falta: React
+  // Query garantiza que solo el resultado de la última key vigente se aplica.
+  const resumenQuery = useQuery({
+    queryKey: qk.dashboardResumen(tenant, d, h),
+    queryFn: () => fetchDashboardResumen(d, h),
+  })
+  const resumen = resumenQuery.data?.resumen ?? null
+  const serie = resumenQuery.data?.serie ?? []
+  // Skeleton solo en la PRIMERA carga (aún sin datos). Las recargas por cambio
+  // de rango no blanquean; se anuncian con el sutil "· actualizando…".
+  const loading = resumenQuery.isLoading
+  const actualizando = resumenQuery.isFetching && !resumenQuery.isLoading
 
-  // Agrupa las ventas por día del rango (alimenta la gráfica).
-  const construirSerie = (ventas: any[]): { label: string; valor: number }[] => {
-    const dias: string[] = []
-    const di = new Date(`${d}T00:00:00`), hi = new Date(`${h}T00:00:00`)
-    for (let cur = new Date(di); cur <= hi; cur.setDate(cur.getDate() + 1)) dias.push(isoLocal(new Date(cur)))
-    const porDia: Record<string, number> = {}
-    dias.forEach((x) => { porDia[x] = 0 })
-    ;(ventas || []).forEach((v: any) => {
-      const f = v.fechaVenta ? isoLocal(new Date(v.fechaVenta)) : null
-      if (f && f in porDia) porDia[f] += Number(v.total || 0)
-    })
-    return dias.map((x) => ({ label: fmtDia(x), valor: porDia[x] }))
-  }
+  useEffect(() => {
+    if (resumenQuery.isError) toast.error('No se pudo cargar el resumen')
+  }, [resumenQuery.isError])
 
-  // "Hoy" (agenda) y clientes: independientes del rango financiero.
-  const cargarHoy = async () => {
-    try {
-      const [clientesRes, reservas] = await Promise.all([
-        clientesService.getClientes(),
-        reservasService.getReservas(),
-      ])
-      setClientes(Array.isArray(clientesRes) ? clientesRes.length : 0)
-      const rHoy = Array.isArray(reservas) ? reservas.filter((r: any) => r.fechaReserva === hoyISO) : []
-      setReservasHoy(rHoy.length)
-      setReservasConfirmadas(rHoy.filter((r: any) => r.estado === 'Confirmada').length)
-    } catch { /* no bloquea el dashboard */ }
-  }
+  // Métricas de "hoy" (clientes + reservas de hoy), independientes del rango.
+  const hoyQuery = useQuery({
+    queryKey: qk.dashboardHoy(tenant),
+    queryFn: fetchDashboardHoy,
+  })
+  const clientes = hoyQuery.data?.clientes ?? 0
+  const reservasHoy = hoyQuery.data?.reservasHoy ?? 0
+  const reservasConfirmadas = hoyQuery.data?.reservasConfirmadas ?? 0
 
   // ─── Exportación (Excel / PDF) ───
   const [exportMenu, setExportMenu] = useState(false)
@@ -254,7 +221,7 @@ export function DashboardPage() {
             {loading ? <span className={s.sk} style={{ width: 180, height: 38 }} />
               : <>{!utilidadPos && '−'}<span className={s.heroCur}>S/</span>{Math.abs(utilidad).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>}
           </div>
-          <div className={s.heroDate}>{tituloRango} · {d === h ? fmtCorta(d) : `${fmtCorta(d)} – ${fmtCorta(h)}`}{loading && ' · actualizando…'}</div>
+          <div className={s.heroDate}>{tituloRango} · {d === h ? fmtCorta(d) : `${fmtCorta(d)} – ${fmtCorta(h)}`}{(loading || actualizando) && ' · actualizando…'}</div>
           <div className={s.heroFoot}>
             <div className={s.heroStat}>
               <span className={s.heroStatLabel}><ShoppingBag width={12} height={12} /> Ventas</span>
@@ -342,7 +309,7 @@ export function DashboardPage() {
         <div className={s.chartHead}>
           <div className={s.chartTitle}>Ventas <span className={s.chartRango}>· {tituloRango.replace('Resumen de ', '').replace('Resumen del ', '').replace('Resumen de la ', '')}</span></div>
         </div>
-        {loading ? <div className={s.chartEmpty}>Cargando…</div> : <VentasChart serie={serie} />}
+        {loading ? <Skeleton h={150} r={10} style={{ marginTop: 4 }} /> : <VentasChart serie={serie} />}
       </div>
     </>
   )

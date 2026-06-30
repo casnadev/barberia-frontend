@@ -308,10 +308,11 @@ export function AgendaBoard({ mode = 'admin', trabajadorPropio, onAtenderTrabaja
     try {
       await apiClient.put(RESCHEDULE(id), payload)
       toast.success('Reserva reprogramada')
-      loadData()
+      // Éxito: el estado local ya refleja el cambio (update optimista en onDragUp).
+      // NO recargamos toda la agenda: evitamos el parpadeo/spinner innecesario.
     } catch (err: any) {
       toast.error(err.response?.data?.detail || err.response?.data?.message || 'No se pudo reprogramar')
-      loadData()
+      loadData() // Error: recargamos para REVERTIR la posición optimista.
     }
   }
 

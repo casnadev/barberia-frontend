@@ -1,9 +1,11 @@
-import { useState, useEffect, useTransition, useCallback, useContext, createContext, Suspense } from 'react'
+import { useState, useEffect, useTransition, useCallback, useContext, createContext, useRef, Suspense } from 'react'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { Home, Scissors, Users, Calendar, User, Clock, Settings, Wallet, Calculator, BadgeCheck, DollarSign, CreditCard } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { AdminHeader } from '@/components/AdminHeader'
 import { CobrarVentaModal } from '@/components/CobrarVentaModal'
 import { prefetchAdminPages } from '@/router/adminPages'
+import { prefetchRouteData } from '@/lib/prefetch'
 import s from '@/styles/AdminLayout.module.css'
 
 /**
@@ -60,6 +62,10 @@ const footerItems = FOOTER_TOS
 // ─────────────────────────────────────────────────────────────────────────────
 const NavCtx = createContext<(to: string) => void>(() => {})
 
+// Contexto de PREFETCH de datos: AdminShell provee la fn; los enlaces la disparan
+// al hover/touch/focus para calentar la caché de la sección de destino.
+const PrefetchCtx = createContext<(to: string) => void>(() => {})
+
 type TNavLinkProps = {
   to: string
   end?: boolean
@@ -76,6 +82,8 @@ type TNavLinkProps = {
 function TNavLink({ to, end, className, children }: TNavLinkProps) {
   const location = useLocation()
   const navTo = useContext(NavCtx)
+  const prefetch = useContext(PrefetchCtx)
+  const warmed = useRef(false)
   const active = end
     ? location.pathname === to
     : location.pathname === to || location.pathname.startsWith(to + '/')
@@ -86,8 +94,24 @@ function TNavLink({ to, end, className, children }: TNavLinkProps) {
     navTo(to)
   }
 
+  // Al primer hover/touch/focus calentamos los datos de la sección destino.
+  // Solo una vez por enlace (prefetchQuery además respeta staleTime: barato).
+  const onIntent = () => {
+    if (warmed.current) return
+    warmed.current = true
+    prefetch(to)
+  }
+
   return (
-    <a href={to} onClick={onClick} className={className(active)} aria-current={active ? 'page' : undefined}>
+    <a
+      href={to}
+      onClick={onClick}
+      onPointerEnter={onIntent}
+      onTouchStart={onIntent}
+      onFocus={onIntent}
+      className={className(active)}
+      aria-current={active ? 'page' : undefined}
+    >
       {children}
     </a>
   )
@@ -127,6 +151,7 @@ export function AdminShell() {
   const [cobrar, setCobrar] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
+  const qc = useQueryClient()
   const [isPending, startTransition] = useTransition()
 
   // Navegación no bloqueante: mantiene el contenido anterior hasta que el nuevo
@@ -139,6 +164,9 @@ export function AdminShell() {
     [navigate, location.pathname],
   )
 
+  // Prefetch de datos de la sección destino (lo disparan los enlaces al hover/touch).
+  const prefetch = useCallback((to: string) => prefetchRouteData(qc, to), [qc])
+
   // Calienta los chunks de todas las páginas admin en cuanto el shell monta.
   useEffect(() => {
     prefetchAdminPages()
@@ -146,6 +174,7 @@ export function AdminShell() {
 
   return (
     <NavCtx.Provider value={navTo}>
+      <PrefetchCtx.Provider value={prefetch}>
       {/* Keyframe local de la barra de progreso (evita tocar el CSS global). */}
       <style>{`@keyframes adminNavProg{0%{transform:translateX(-120%)}50%{transform:translateX(60%)}100%{transform:translateX(260%)}}`}</style>
 
@@ -210,6 +239,7 @@ export function AdminShell() {
 
         {cobrar && <CobrarVentaModal mode="admin" onClose={() => setCobrar(false)} onDone={() => setCobrar(false)} />}
       </div>
+      </PrefetchCtx.Provider>
     </NavCtx.Provider>
   )
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { reservasService, Reserva } from '@/services/reservasService'
+import { SkeletonRows } from '@/components/Skeleton'
 import { toast } from 'sonner'
 import {
   Check, CheckCheck, X, Clock, User, Phone, Mail, Calendar, Scissors,
@@ -297,11 +298,8 @@ export function ReservasPage() {
 
       {/* Contenido */}
       {loading ? (
-        <div className={s.tableCard}>
-          <div className={s.loading}>
-            <div className={s.spinner} />
-            <p className={s.loadingText}>Cargando reservas...</p>
-          </div>
+        <div className={s.tableCard} style={{ padding: 16 }}>
+          <SkeletonRows rows={8} cols={4} />
         </div>
       ) : filtradas.length === 0 ? (
         <div className={s.tableCard}>

@@ -8,6 +8,7 @@ import { apiClient } from '@/services/apiClient'
 import { geoService } from '@/services/geoService'
 import SeccionFila from '@/components/SeccionFila'
 import SeccionSheet from '@/components/SeccionSheet'
+import { Skeleton, SkeletonRows } from '@/components/Skeleton'
 
 interface Sede {
   idSede?: number
@@ -463,11 +464,14 @@ export function ConfiguracionPage() {
   // ================================================================= UI
   if (loading) {
     return (
-      <>
-        <div className="flex items-center justify-center h-96 text-gray-400">
-          <Loader2 className="w-7 h-7 animate-spin" />
-        </div>
-      </>
+      <div className="pb-10" style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 760, margin: '0 auto', paddingTop: 8 }}>
+        {/* Silueta de la página de configuración (en vez de un círculo en vacío). */}
+        <Skeleton h={120} r={14} />
+        <Skeleton h={20} w="40%" />
+        <SkeletonRows rows={6} cols={2} />
+        <Skeleton h={20} w="35%" style={{ marginTop: 8 }} />
+        <SkeletonRows rows={4} cols={2} />
+      </div>
     )
   }
 

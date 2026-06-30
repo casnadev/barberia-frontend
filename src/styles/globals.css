@@ -62,3 +62,47 @@ html, body, #root {
 /* Oculta la barra de scroll en carruseles/tabs (usado en la landing pública) */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+/* ============================================================================
+   SKELETONS GLOBALES (shimmer)
+   Utilidad app-wide para placeholders de carga. La usa <Skeleton/> y se puede
+   aplicar suelta con class="sk". Antes solo existía en Dashboard.module.css.
+   ========================================================================== */
+.sk {
+  position: relative;
+  overflow: hidden;
+  background: #eef1f4;
+  border-radius: 8px;
+  color: transparent !important;
+}
+.sk::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  animation: skShimmer 1.2s infinite;
+}
+@keyframes skShimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* Accesibilidad: texto solo para lectores de pantalla. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Respeta a quien pide menos movimiento: sin shimmer ni spinners animados. */
+@media (prefers-reduced-motion: reduce) {
+  .sk::after { animation: none; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
