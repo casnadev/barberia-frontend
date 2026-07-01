@@ -84,7 +84,7 @@ export function SuperAdminPlanesPanel() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <Campo label="Nombre"><input className={inp} value={form.nombre} onChange={e => set({ nombre: e.target.value })} /></Campo>
-            <Campo label="Código (opcional)"><input className={inp} value={form.codigoPlan ?? ''} onChange={e => set({ codigoPlan: e.target.value })} placeholder="pro / multisede" /></Campo>
+            <Campo label="Código (opcional)"><input className={inp} value={form.codigoPlan ?? ''} onChange={e => set({ codigoPlan: e.target.value })} /></Campo>
             <Campo label="Orden"><NumInput value={form.orden} onChange={n => set({ orden: n })} /></Campo>
             <Campo label="Descripción"><input className={inp} value={form.descripcion ?? ''} onChange={e => set({ descripcion: e.target.value })} /></Campo>
             <Campo label="Precio mensual"><NumInput value={form.precioMensual} onChange={n => set({ precioMensual: n })} step="0.01" /></Campo>

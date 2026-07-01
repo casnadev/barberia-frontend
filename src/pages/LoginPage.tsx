@@ -255,9 +255,9 @@ export function LoginPage() {
                 <p className="lg:hidden text-center text-gray-500 text-sm mb-5">Reserva y gestiona fácil, rápido!</p>
 
                 <Label>Correo o teléfono</Label>
-                <Input value={correo} onChange={setCorreo} placeholder="tucorreo@gmail.com o 987654321" />
+                <Input value={correo} onChange={setCorreo} />
                 <Label>Contraseña</Label>
-                <PassInput value={password} onChange={setPassword} onEnter={loginPassword} placeholder="Tu contraseña" />
+                <PassInput value={password} onChange={setPassword} onEnter={loginPassword} />
 
                 <button onClick={loginPassword} disabled={loading} className={btnPrimary + ' mt-2'}>
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />} Entrar
@@ -291,7 +291,7 @@ export function LoginPage() {
                 <p className="text-sm text-gray-500 mb-6">Te enviaremos un código para restablecer tu contraseña.</p>
 
                 <label className="block text-sm font-bold text-blue-700 mb-2">Correo o teléfono</label>
-                <Input value={identificador} onChange={setIdentificador} placeholder="tucorreo@gmail.com o 987654321" />
+                <Input value={identificador} onChange={setIdentificador} />
 
                 <button onClick={enviarCodigoPassword} disabled={loading} className={btnPrimary + ' mt-2'}>
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} Enviarme el código
@@ -308,13 +308,13 @@ export function LoginPage() {
                 <p className="text-sm text-gray-500 mb-5">Ingresa el código que recibiste y crea tu contraseña.</p>
 
                 <Label>Acceso (correo o teléfono)</Label>
-                <Input value={identificador} onChange={setIdentificador} placeholder="Correo o teléfono" />
+                <Input value={identificador} onChange={setIdentificador} />
                 <Label>Código (6 dígitos)</Label>
                 <Digits value={codigo} onChange={setCodigo} />
                 <Label>Nueva contraseña</Label>
-                <PassInput value={nuevaPass} onChange={setNuevaPass} placeholder="Mínimo 8 caracteres" />
+                <PassInput value={nuevaPass} onChange={setNuevaPass} />
                 <Label>Repite tu contraseña</Label>
-                <PassInput value={repitePass} onChange={setRepitePass} placeholder="Repite la contraseña" />
+                <PassInput value={repitePass} onChange={setRepitePass} />
 
                 <button onClick={establecerPassword} disabled={loading} className={btnPrimary + ' mt-2'}>
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <KeyRound className="w-5 h-5" />} Guardar contraseña

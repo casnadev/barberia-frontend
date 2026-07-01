@@ -138,7 +138,7 @@ function PagoModal({ trabajador, onClose, onDone }: { trabajador: ResumenComisio
           </div>
           <div>
             <label className="text-xs text-gray-500">Observación (opcional)</label>
-            <input className={field} value={obs} onChange={e => setObs(e.target.value)} placeholder="Ej: liquidación semana 1" />
+            <input className={field} value={obs} onChange={e => setObs(e.target.value)} />
           </div>
           <button
             onClick={guardar}

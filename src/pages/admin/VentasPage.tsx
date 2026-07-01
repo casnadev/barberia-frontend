@@ -290,7 +290,7 @@ function DetalleVenta({ venta, onClose, onResuelto }: { venta: VentaResumen; onC
         {esPendiente && modo === 'rechazar' && (
           <div className="space-y-2">
             <label className="text-xs text-gray-500">Motivo del rechazo (lo verá el trabajador)</label>
-            <textarea value={motivo} onChange={e => setMotivo(e.target.value)} rows={2} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400 outline-none" placeholder="Ej: la captura no coincide con el monto cobrado." />
+            <textarea value={motivo} onChange={e => setMotivo(e.target.value)} rows={2} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400 outline-none" />
             <div className="flex gap-2">
               <button onClick={() => setModo('ver')} disabled={busy} className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2.5 font-semibold disabled:opacity-50">Volver</button>
               <button onClick={rechazar} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl py-2.5 font-semibold disabled:opacity-50"><Ban className="w-4 h-4" /> {busy ? 'Rechazando…' : 'Confirmar rechazo'}</button>

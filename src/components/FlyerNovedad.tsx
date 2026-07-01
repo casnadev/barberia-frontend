@@ -415,7 +415,6 @@ export function FlyerNovedad({ novedad, brand = '#2855F6', idSede }: any) {
                       className={styles.cmtInput}
                       value={texto}
                       onChange={(e) => setTexto(e.target.value)}
-                      placeholder="Escribe un comentario..."
                       maxLength={500}
                       rows={2}
                     />

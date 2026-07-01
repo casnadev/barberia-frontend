@@ -314,7 +314,7 @@ export function ReservaAcciones() {
                   <button key={n} className={`${styles.star} ${calificacion >= n ? styles.starOn : ''}`} onClick={() => setCalificacion(n)} aria-label={`${n} estrellas`}><Star size={28} /></button>
                 ))}
               </div>
-              <textarea className={styles.textarea} placeholder="Cuéntanos tu experiencia (opcional)…" value={resena} onChange={(e) => setResena(e.target.value)} rows={4} />
+              <textarea className={styles.textarea} value={resena} onChange={(e) => setResena(e.target.value)} rows={4} />
               <button className={styles.btnPrimary} onClick={handleCalificar} disabled={isSubmitting || calificacion === 0}>{isSubmitting ? 'Guardando…' : 'Enviar reseña'}</button>
             </div>
           </div>

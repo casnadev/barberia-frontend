@@ -114,7 +114,6 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
                   value={idTrabajador ?? ''}
                   onChange={(v) => setIdTrabajador(v === '' ? null : Number(v))}
                   opciones={trabajadores.map(t => ({ valor: t.idTrabajador, etiqueta: t.nombreCompleto }))}
-                  placeholder={trabajadores.length ? 'Busca un profesional…' : 'Sin trabajadores'}
                   disabled={trabajadores.length === 0}
                   inputClassName={field}
                 />
@@ -154,7 +153,7 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
               </div>
             </div>
 
-            <div><label className="text-xs text-gray-500">Cliente (opcional)</label><input className={field} placeholder="Nombre del cliente a pie" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} /></div>
+            <div><label className="text-xs text-gray-500">Cliente (opcional)</label><input className={field} value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} /></div>
 
             <div><label className="text-xs text-gray-500">Método de pago</label>
               <select className={field} value={metodo} onChange={e => setMetodo(e.target.value)}>{METODOS.map(m => <option key={m} value={m}>{m}</option>)}</select>

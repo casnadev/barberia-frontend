@@ -313,7 +313,6 @@ export function ClientesPage() {
         <input
           className={s.searchInput}
           type="text"
-          placeholder="Buscar por nombre, teléfono o correo..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -545,7 +544,6 @@ export function ClientesPage() {
               <textarea
                 value={desbloqueoMotivo}
                 onChange={(e) => setDesbloqueoMotivo(e.target.value)}
-                placeholder="Ej: Habló con la barbería y se comprometió a asistir."
                 rows={3}
                 maxLength={300}
                 autoFocus
@@ -741,8 +739,8 @@ function NovedadModal({ onClose }: { onClose: () => void }) {
             </label>
           </div>
 
-          <div><label className="text-xs text-gray-500">Título</label><input className={field} value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ej.: 2x1 en cortes este finde" maxLength={120} /></div>
-          <div><label className="text-xs text-gray-500">Mensaje</label><textarea className={field} rows={3} value={cuerpo} onChange={e => setCuerpo(e.target.value)} placeholder="Describe la promoción, evento o novedad…" maxLength={1000} /></div>
+          <div><label className="text-xs text-gray-500">Título</label><input className={field} value={titulo} onChange={e => setTitulo(e.target.value)} maxLength={120} /></div>
+          <div><label className="text-xs text-gray-500">Mensaje</label><textarea className={field} rows={3} value={cuerpo} onChange={e => setCuerpo(e.target.value)} maxLength={1000} /></div>
 
           {/* Vigencia */}
           <div className="flex gap-2">
@@ -778,18 +776,18 @@ function NovedadModal({ onClose }: { onClose: () => void }) {
           </div>
 
           {tipoAccion !== 'Ninguna' && (
-            <div><label className="text-xs text-gray-500">Texto del botón</label><input className={field} value={textoBoton} onChange={e => setTextoBoton(e.target.value)} placeholder="Lo quiero" maxLength={40} /></div>
+            <div><label className="text-xs text-gray-500">Texto del botón</label><input className={field} value={textoBoton} onChange={e => setTextoBoton(e.target.value)} maxLength={40} /></div>
           )}
 
           {tipoAccion === 'Enlace' && (
-            <div><label className="text-xs text-gray-500">URL del enlace</label><input className={field} value={urlAccion} onChange={e => setUrlAccion(e.target.value)} placeholder="https://wa.me/51999999999" maxLength={300} /></div>
+            <div><label className="text-xs text-gray-500">URL del enlace</label><input className={field} value={urlAccion} onChange={e => setUrlAccion(e.target.value)} maxLength={300} /></div>
           )}
 
           {tipoAccion === 'Reservar' && (
             <>
               <div className="flex gap-2">
-                <div className="flex-1"><label className="text-xs text-gray-500">Precio promo S/ (opcional)</label><input type="number" min={0} step="0.5" className={field} value={precioPromo} onChange={e => setPrecioPromo(e.target.value)} placeholder="50" /></div>
-                <div className="flex-1"><label className="text-xs text-gray-500">% descuento (opcional)</label><input type="number" min={0} max={100} className={field} value={descuento} onChange={e => setDescuento(e.target.value)} placeholder="20" /></div>
+                <div className="flex-1"><label className="text-xs text-gray-500">Precio promo S/ (opcional)</label><input type="number" min={0} step="0.5" className={field} value={precioPromo} onChange={e => setPrecioPromo(e.target.value)} /></div>
+                <div className="flex-1"><label className="text-xs text-gray-500">% descuento (opcional)</label><input type="number" min={0} max={100} className={field} value={descuento} onChange={e => setDescuento(e.target.value)} /></div>
               </div>
               <div>
                 <label className="text-xs text-gray-500">Servicios de la promo</label>

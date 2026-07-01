@@ -274,7 +274,6 @@ export function ReservasPage() {
           <input
             className={s.searchInput}
             type="text"
-            placeholder="Buscar por cliente, teléfono, correo o barbero..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -438,7 +437,6 @@ export function ReservasPage() {
               onChange={(e) => setCancelMotivo(e.target.value)}
               rows={3}
               maxLength={300}
-              placeholder="Ej. El barbero no estará disponible ese día"
               className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <p className="text-xs text-gray-400 mt-1">El motivo solo se incluye en el correo. Si el cliente eligió WhatsApp, recibirá el aviso sin el motivo.</p>

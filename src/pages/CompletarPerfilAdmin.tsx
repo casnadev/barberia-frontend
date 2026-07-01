@@ -101,22 +101,18 @@ export function CompletarPerfilAdmin() {
 
         {/* Cuenta */}
         <Section icon={User} title="Tu cuenta">
-          <Ghost label="Nombre" value={nombre} onChange={setNombre} placeholder="Tu nombre y apellido" />
+          <Ghost label="Nombre" value={nombre} onChange={setNombre} />
           <div className="grid grid-cols-2 gap-3">
-            <Ghost label="Correo" value={correo} onChange={setCorreo} placeholder="tucorreo@gmail.com" />
-            <Ghost label="Teléfono" value={telefono} onChange={setTelefono} placeholder="987654321" />
+            <Ghost label="Correo" value={correo} onChange={setCorreo} />
+            <Ghost label="Teléfono" value={telefono} onChange={setTelefono} />
           </div>
         </Section>
 
         {/* Negocio */}
         <Section icon={Building2} title="Tu barbería">
-          <Ghost label="Nombre del negocio" value={nombreComercial} onChange={setNombreComercial} placeholder="Barbería Nader" />
-          <Ghost label="Razón social" value={razonSocial} onChange={setRazonSocial} placeholder="Igual al nombre si no tienes" />
-          <div className="grid grid-cols-2 gap-3">
-            <Ghost label="RUC" value={ruc} onChange={setRuc} placeholder="20•••••••••" />
-            <Ghost label="Teléfono del negocio" value={empTelefono} onChange={setEmpTelefono} placeholder="987654321" />
-          </div>
-          <Ghost label="Correo del negocio" value={empCorreo} onChange={setEmpCorreo} placeholder="hola@negocio.com" />
+          <Ghost label="Nombre del negocio" value={nombreComercial} onChange={setNombreComercial} />
+          <Ghost label="Teléfono del negocio" value={empTelefono} onChange={setEmpTelefono} />
+          <Ghost label="Correo del negocio" value={empCorreo} onChange={setEmpCorreo} />
         </Section>
 
         <div className="flex items-center gap-3 mt-6">

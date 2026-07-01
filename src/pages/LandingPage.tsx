@@ -552,11 +552,11 @@ export default function LandingPage() {
                 <form onSubmit={enviarLead}>
                   <div className={styles.field}>
                     <label htmlFor="m-negocio">Nombre del negocio</label>
-                    <input id="m-negocio" required placeholder="Ej. Barbería El Patrón" value={lead.negocio} onChange={(e) => setLead({ ...lead, negocio: e.target.value })} />
+                    <input id="m-negocio" required value={lead.negocio} onChange={(e) => setLead({ ...lead, negocio: e.target.value })} />
                   </div>
                   <div className={styles.field}>
                     <label htmlFor="m-duenio">Nombre del dueño <span className={styles.opt}>(opcional)</span></label>
-                    <input id="m-duenio" placeholder="Tu nombre" value={lead.duenio} onChange={(e) => setLead({ ...lead, duenio: e.target.value })} />
+                    <input id="m-duenio" value={lead.duenio} onChange={(e) => setLead({ ...lead, duenio: e.target.value })} />
                   </div>
                   <div className={styles.field}>
                     <label>¿Cómo te contactamos?</label>
@@ -567,8 +567,8 @@ export default function LandingPage() {
                   </div>
                   <div className={styles.field}>
                     {lead.tipoContacto === 'correo'
-                      ? <input type="email" required placeholder="tucorreo@ejemplo.com" value={lead.contacto} onChange={(e) => setLead({ ...lead, contacto: e.target.value })} />
-                      : <input inputMode="tel" required placeholder="9XX XXX XXX" value={lead.contacto} onChange={(e) => setLead({ ...lead, contacto: e.target.value })} />}
+                      ? <input type="email" required value={lead.contacto} onChange={(e) => setLead({ ...lead, contacto: e.target.value })} />
+                      : <input inputMode="tel" required value={lead.contacto} onChange={(e) => setLead({ ...lead, contacto: e.target.value })} />}
                   </div>
                   <button type="submit" disabled={enviando} className={`${styles.btn} ${styles.btnPrimary} ${styles.btnBlock} ${styles.btnLg}`}>{enviando ? 'Enviando…' : 'Solicitar acceso'}</button>
                   {err && <p className={styles.modalErr}>{err}</p>}

@@ -110,7 +110,7 @@ export function SoporteModal() {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">¿Qué necesitas?</label>
           <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} rows={5}
-            className={inputCls + ' resize-none'} placeholder="Describe tu problema o pregunta con el mayor detalle posible..." />
+            className={inputCls + ' resize-none'} />
         </div>
       </div>
     </SeccionSheet>

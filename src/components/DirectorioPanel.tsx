@@ -362,7 +362,6 @@ export function DirectorioPanel() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="correo@ejemplo.com  ·  987654321  ·  nombre…"
             className="w-full pl-11 pr-10 py-3.5 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-gray-900"
           />
           {q && (
@@ -412,7 +411,6 @@ export function DirectorioPanel() {
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input value={filtro} onChange={(e) => setFiltro(e.target.value)}
-              placeholder="Filtrar por nombre, correo o teléfono…"
               className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 focus:border-blue-400 outline-none text-sm" />
           </div>
           {(tab === 'trabajadores' || tab === 'clientes') && (
@@ -421,7 +419,6 @@ export function DirectorioPanel() {
                 value={idSede ?? ''}
                 onChange={(v) => setIdSede(v === '' ? null : Number(v))}
                 opciones={sedes.map((s) => ({ valor: s.idSede, etiqueta: `${s.nombre} · ${s.empresa}` }))}
-                placeholder="Todas las sedes"
                 inputClassName="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 bg-white"
               />
             </div>
@@ -488,21 +485,17 @@ export function DirectorioPanel() {
                 <p className="text-sm text-gray-500 mb-4">El Admin recibirá un código para crear su contraseña.</p>
 
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Nombre del negocio *</label>
-                <input value={altaForm.nombreNegocio} onChange={(e) => setAltaForm(f => ({ ...f, nombreNegocio: e.target.value }))}
-                  placeholder="Barbería El Corte" className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 mb-3 focus:outline-none focus:border-blue-500" />
+                <input value={altaForm.nombreNegocio} onChange={(e) => setAltaForm(f => ({ ...f, nombreNegocio: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 mb-3 focus:outline-none focus:border-blue-500" />
 
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Correo del Admin</label>
-                <input value={altaForm.correo} onChange={(e) => setAltaForm(f => ({ ...f, correo: e.target.value }))}
-                  placeholder="dueño@correo.com" autoCapitalize="none" className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 mb-3 focus:outline-none focus:border-blue-500" />
+                <input value={altaForm.correo} onChange={(e) => setAltaForm(f => ({ ...f, correo: e.target.value }))} autoCapitalize="none" className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 mb-3 focus:outline-none focus:border-blue-500" />
 
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Teléfono del Admin</label>
-                <input value={altaForm.telefono} onChange={(e) => setAltaForm(f => ({ ...f, telefono: e.target.value }))}
-                  placeholder="9XXXXXXXX" className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 mb-1 focus:outline-none focus:border-blue-500" />
+                <input value={altaForm.telefono} onChange={(e) => setAltaForm(f => ({ ...f, telefono: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 mb-1 focus:outline-none focus:border-blue-500" />
                 <p className="text-xs text-gray-400 mb-3">Indica al menos un correo o un teléfono.</p>
 
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Nombre del responsable (opcional)</label>
-                <input value={altaForm.nombreContacto} onChange={(e) => setAltaForm(f => ({ ...f, nombreContacto: e.target.value }))}
-                  placeholder="Si va vacío, se usa el del negocio" className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 mb-5 focus:outline-none focus:border-blue-500" />
+                <input value={altaForm.nombreContacto} onChange={(e) => setAltaForm(f => ({ ...f, nombreContacto: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 mb-5 focus:outline-none focus:border-blue-500" />
 
                 <div className="flex gap-2 justify-end">
                   <button onClick={() => setAltaOpen(false)} className="px-4 py-2.5 rounded-xl text-gray-600 hover:bg-gray-100 font-semibold">Cancelar</button>

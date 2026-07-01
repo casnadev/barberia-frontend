@@ -400,13 +400,13 @@ export function TrabajadoresPage() {
 
                 <div className={s.field}>
                   <label className={s.label}>Correo (acceso por email)</label>
-                  <input className={s.input} type="email" value={form.correo || ''} onChange={e => setForm({ ...form, correo: e.target.value })} placeholder="trabajador@correo.com" />
+                  <input className={s.input} type="email" value={form.correo || ''} onChange={e => setForm({ ...form, correo: e.target.value })} />
                 </div>
 
                 <div className={s.row2}>
                   <div className={s.field}>
                     <label className={s.label}>Teléfono</label>
-                    <input className={s.input} type="text" value={form.telefono || ''} onChange={e => setForm({ ...form, telefono: e.target.value })} placeholder="9XXXXXXXX" />
+                    <input className={s.input} type="text" value={form.telefono || ''} onChange={e => setForm({ ...form, telefono: e.target.value })} />
                   </div>
                   <div className={s.field}>
                     <label className={s.label}>% Comisión</label>

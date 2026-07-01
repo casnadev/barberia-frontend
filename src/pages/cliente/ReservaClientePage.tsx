@@ -498,7 +498,7 @@ export function ReservaClientePage() {
       {/* CONTENIDO PRINCIPAL */}
       <div className={styles.mainContainer}>
         <div className={styles.header}>
-          <h1 className={styles.title}>Reservar Cita</h1>
+          <h1 className={styles.title}>Reservar cita</h1>
           <div className={styles.progressBar}>
             {[1, 2, 3, 4].map((s) => (
               <div
@@ -518,7 +518,7 @@ export function ReservaClientePage() {
               {/* STEP 1 - PREMIUM SERVICE CARD COMPONENT */}
               {step === 1 && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={styles.stepContent}>
-                  <h2 className={styles.sectionTitle}>Selecciona un Servicio</h2>
+                  <h2 className={styles.sectionTitle}>Selecciona un servicio</h2>
                   <div className="space-y-3">
                     {servicios.map((servicio) => (
                       <ServiceCard
@@ -711,12 +711,11 @@ export function ReservaClientePage() {
 
                   <div className={styles.contactSection}>
                     <div className={styles.contactInputGroup}>
-                      <label className={styles.contactLabel}>Ingresa tu nombre</label>
+                      <label className={styles.contactLabel}>Tu nombre</label>
                       <input
                         type="text"
                         value={formData.nombre}
                         onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                        placeholder="Ej: Juan Pérez"
                         className={styles.contactInput}
                       />
                     </div>
@@ -762,7 +761,7 @@ export function ReservaClientePage() {
 
                     <div className={styles.contactInputGroup}>
                       <label className={styles.contactLabel}>
-                        {formData.tipoContacto === 'whatsapp' ? 'Número WhatsApp' : 'Correo Electrónico'}
+                        {formData.tipoContacto === 'whatsapp' ? 'Número de WhatsApp' : 'Correo electrónico'}
                       </label>
                       <input
                         type={formData.tipoContacto === 'whatsapp' ? 'tel' : 'email'}
@@ -771,7 +770,6 @@ export function ReservaClientePage() {
                           ...formData,
                           [formData.tipoContacto === 'whatsapp' ? 'telefono' : 'correo']: e.target.value,
                         })}
-                        placeholder={formData.tipoContacto === 'whatsapp' ? 'Ej: 960935527' : 'tu@email.com'}
                         className={styles.contactInput}
                       />
                     </div>
@@ -901,7 +899,6 @@ export function ReservaClientePage() {
                 <input
                   value={solTel}
                   onChange={(e) => setSolTel(e.target.value)}
-                  placeholder="Ej: 999888777"
                   inputMode="tel"
                   style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 12px', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 12 }}
                 />
@@ -910,7 +907,6 @@ export function ReservaClientePage() {
                 <textarea
                   value={solMotivo}
                   onChange={(e) => setSolMotivo(e.target.value)}
-                  placeholder="Cuéntale a la barbería por qué deberían reactivar tu cuenta."
                   rows={3}
                   maxLength={300}
                   style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 12px', fontSize: 14, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}

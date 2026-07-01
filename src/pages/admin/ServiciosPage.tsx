@@ -439,7 +439,6 @@ export function ServiciosPage() {
                     value={form.idCategoria || ''}
                     onChange={(v) => setForm({ ...form, idCategoria: v === '' ? 0 : Number(v) })}
                     opciones={categorias.map((cat) => ({ valor: cat.idCategoria, etiqueta: cat.nombre }))}
-                    placeholder="Busca una categoría…"
                     inputClassName={s.select}
                   />
                   {categorias.length === 0 && (
@@ -511,11 +510,11 @@ export function ServiciosPage() {
                     <p className={s.catFormTitle}>Nueva categoría</p>
                     <div className={s.field}>
                       <label className={s.label}>Nombre *</label>
-                      <input className={s.input} autoFocus value={catForm.nombre} onChange={(e) => setCatForm({ ...catForm, nombre: e.target.value })} placeholder="Ej: Cortes" />
+                      <input className={s.input} autoFocus value={catForm.nombre} onChange={(e) => setCatForm({ ...catForm, nombre: e.target.value })} />
                     </div>
                     <div className={s.field}>
                       <label className={s.label}>Descripción</label>
-                      <input className={s.input} value={catForm.descripcion} onChange={(e) => setCatForm({ ...catForm, descripcion: e.target.value })} placeholder="Opcional" />
+                      <input className={s.input} value={catForm.descripcion} onChange={(e) => setCatForm({ ...catForm, descripcion: e.target.value })} />
                     </div>
                     <div className={s.actions}>
                       <button type="button" className={s.btnGhost} onClick={resetCatForm}>Cancelar</button>
@@ -539,11 +538,11 @@ export function ServiciosPage() {
                       <div key={cat.idCategoria} className={s.catRowEdit}>
                         <div className={s.field}>
                           <label className={s.label}>Nombre *</label>
-                          <input className={s.input} autoFocus value={catForm.nombre} onChange={(e) => setCatForm({ ...catForm, nombre: e.target.value })} placeholder="Ej: Cortes" />
+                          <input className={s.input} autoFocus value={catForm.nombre} onChange={(e) => setCatForm({ ...catForm, nombre: e.target.value })} />
                         </div>
                         <div className={s.field}>
                           <label className={s.label}>Descripción</label>
-                          <input className={s.input} value={catForm.descripcion} onChange={(e) => setCatForm({ ...catForm, descripcion: e.target.value })} placeholder="Opcional" />
+                          <input className={s.input} value={catForm.descripcion} onChange={(e) => setCatForm({ ...catForm, descripcion: e.target.value })} />
                         </div>
                         <div className={s.actions}>
                           <button type="button" className={s.btnGhost} onClick={resetCatForm}>Cancelar</button>

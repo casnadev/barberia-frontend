@@ -74,7 +74,6 @@ export function SuperAdminBillingPanel() {
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Buscar empresa…"
         className="w-full md:w-72 px-3 py-2 rounded-lg border border-gray-300 text-sm"
       />
 

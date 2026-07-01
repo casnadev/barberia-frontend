@@ -238,7 +238,6 @@ export function CalificacionesClientePage() {
           <textarea
             value={comentario}
             onChange={(e) => setComentario(e.target.value)}
-            placeholder="Ej: Excelente servicio, muy profesional..."
             className={styles.textarea}
             rows={4}
           />

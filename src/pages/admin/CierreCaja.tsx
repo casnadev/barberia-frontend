@@ -174,7 +174,6 @@ export function CierreCajaPage() {
             </label>
             <textarea
               value={obs} onChange={e => setObs(e.target.value)} rows={2}
-              placeholder={requiereObs ? 'Explica la diferencia (ej: faltante en efectivo, vuelto, etc.)' : 'Opcional'}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
             />
           </div>

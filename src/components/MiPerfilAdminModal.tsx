@@ -146,7 +146,7 @@ export function MiPerfilAdminModal({ open, onClose }: { open: boolean; onClose: 
 
             <div><label className="text-xs text-gray-500">Nombre completo</label><input className={field} value={nombre} onChange={e => setNombre(e.target.value)} /></div>
             <div><label className="text-xs text-gray-500">Correo</label><input className={field} value={correo} onChange={e => setCorreo(e.target.value)} type="email" /></div>
-            <div><label className="text-xs text-gray-500">Teléfono</label><input className={field} value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="9XXXXXXXX" inputMode="numeric" /></div>
+            <div><label className="text-xs text-gray-500">Teléfono</label><input className={field} value={telefono} onChange={e => setTelefono(e.target.value)} inputMode="numeric" /></div>
 
             <button onClick={guardar} disabled={saving || subiendo} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2.5 font-semibold disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar cambios'}</button>
           </div>

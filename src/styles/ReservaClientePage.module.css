@@ -184,25 +184,25 @@
 }
 
 .header {
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 @media (min-width: 768px) {
   .header {
-    margin-bottom: 2.5rem;
+    margin-bottom: 1.5rem;
   }
 }
 
 .title {
-  font-size: 1.875rem;
+  font-size: 1.375rem;
   font-weight: 800;
   color: #111827;
-  margin-bottom: 1rem;
+  margin-bottom: 0.6rem;
 }
 
 @media (min-width: 768px) {
   .title {
-    font-size: 2.25rem;
+    font-size: 1.75rem;
   }
 }
 
@@ -259,8 +259,8 @@
   background: #ffffff;
   border: 1px solid var(--color-border);
   border-radius: 0.875rem;
-  padding: 1.75rem;
-  min-height: 400px;
+  padding: 1.25rem;
+  min-height: 300px;
   overflow-x: hidden;
   min-width: 0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -284,10 +284,10 @@
 }
 
 .sectionTitle {
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--color-text-light);
-  margin-bottom: 1.75rem;
+  margin-bottom: 1rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -296,14 +296,14 @@
 .sectionTitle::before {
   content: '';
   width: 4px;
-  height: 1.75rem;
+  height: 1.1rem;
   background-color: var(--color-primary);
   border-radius: 9999px;
 }
 
 @media (min-width: 768px) {
   .sectionTitle {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
   }
 }
 
@@ -531,11 +531,7 @@
 /* ========== STEP 4 - CONTACTO ========== */
 
 .contactSection {
-  background: #ffffff;
-  border: 1px solid var(--color-border);
-  border-radius: 0.875rem;
-  padding: 1.75rem;
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.25rem;
 }
 
 /* Encabezado sutil sobre los botones de contacto */
@@ -551,8 +547,8 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: stretch;
-  gap: 0.85rem;
-  margin-bottom: 1.75rem;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
 }
 
 .contactTypeButton {
@@ -560,16 +556,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.6rem;
-  min-height: 62px;
+  gap: 0.5rem;
+  min-height: 46px;
   min-width: 0; /* clave: deja que las columnas del grid encojan y no desborden en móvil */
-  padding: 0.75rem 0.9rem;
-  border-radius: 0.9rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.75rem;
   border: 1.5px solid var(--color-border);
   background: #ffffff;
   color: var(--color-text-secondary);
-  font-weight: 700;
-  font-size: 0.95rem;
+  font-weight: 600;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: all 160ms ease;
 }
@@ -595,8 +591,8 @@
 
 /* Chip blanco: el ícono de marca se ve nítido en ambos estados */
 .contactIconChip {
-  width: 38px;
-  height: 38px;
+  width: 28px;
+  height: 28px;
   border-radius: 0.6rem;
   background: #ffffff;
   display: flex;
@@ -607,8 +603,8 @@
 }
 
 .contactIconChip svg {
-  width: 24px;
-  height: 24px;
+  width: 17px;
+  height: 17px;
   display: block;
 }
 
@@ -629,22 +625,20 @@
 }
 
 .contactInputGroup {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .contactLabel {
   display: block;
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: var(--color-text-light);
-  margin-bottom: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.4rem;
 }
 
 @media (min-width: 768px) {
   .contactLabel {
-    font-size: 1rem;
+    font-size: 0.85rem;
   }
 }
 

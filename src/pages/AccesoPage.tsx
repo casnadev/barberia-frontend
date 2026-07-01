@@ -222,7 +222,6 @@ export function AccesoPage() {
                 value={identificador}
                 onChange={(e) => { setIdentificador(e.target.value); if (aviso) setAviso(null) }}
                 onKeyDown={(e) => e.key === 'Enter' && continuar()}
-                placeholder="tucorreo@gmail.com o 9XXXXXXXX"
                 autoCapitalize="none" autoComplete="username"
                 className="w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition"
               />
@@ -260,7 +259,7 @@ export function AccesoPage() {
               <img src={LOGO} alt="Barber.PE" className="h-8 mx-auto mb-5" />
               <h1 className="text-xl font-bold text-center text-gray-900 mb-1">Ingresa tu contraseña</h1>
               <p className="text-sm text-center text-gray-500 mb-5">{displayId}</p>
-              <PassInput value={password} onChange={setPassword} onEnter={entrarConPassword} placeholder="Tu contraseña" />
+              <PassInput value={password} onChange={setPassword} onEnter={entrarConPassword} />
               <button onClick={entrarConPassword} disabled={loading} className={btnPrimary + ' mt-1'}>
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />} Entrar
               </button>
@@ -301,16 +300,16 @@ export function AccesoPage() {
               <p className="text-sm text-center text-gray-500 mb-5">Necesitamos algunos datos más.</p>
 
               <Label>Nombre del negocio</Label>
-              <Input value={nombreNegocio} onChange={setNombreNegocio} placeholder="Mi Barbería" />
+              <Input value={nombreNegocio} onChange={setNombreNegocio} />
 
               <Label>Tu nombre</Label>
-              <Input value={nombre} onChange={setNombre} placeholder="Nombre y apellido" />
+              <Input value={nombre} onChange={setNombre} />
 
               <Label>Correo verificado</Label>
               <Input value={correoVerificado || (esEmail ? idValor() : displayId)} onChange={() => {}} readOnly />
 
               <Label>Crea tu contraseña</Label>
-              <PassInput value={password} onChange={setPassword} placeholder="Mínimo 8 caracteres" />
+              <PassInput value={password} onChange={setPassword} />
 
               <p className="mt-2 mb-1 text-xs text-gray-400">Códigos de referido: <span className="font-medium text-gray-500">próximamente</span>.</p>
 

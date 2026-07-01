@@ -607,7 +607,7 @@ export function ConfiguracionPage() {
         footer={<BotonGuardar onClick={guardarYcerrar} cargando={submitting} />}>
         <div className="space-y-4">
           <Field label="Nombre de la barbería *">
-            <input className={inputCls} value={sede.nombre || ''} onChange={(e) => handleChange('nombre', e.target.value)} placeholder="Ej: Barbería Central" />
+            <input className={inputCls} value={sede.nombre || ''} onChange={(e) => handleChange('nombre', e.target.value)} />
           </Field>
           {sede.subdominio && (
             <p className="text-xs text-gray-400 flex items-start gap-1.5">
@@ -616,7 +616,7 @@ export function ConfiguracionPage() {
             </p>
           )}
           <Field label="Descripción">
-            <textarea className={inputCls + ' resize-none'} rows={4} value={sede.descripcion || ''} onChange={(e) => handleChange('descripcion', e.target.value)} placeholder="Cuéntale a tus clientes qué hace especial a tu barbería..." />
+            <textarea className={inputCls + ' resize-none'} rows={4} value={sede.descripcion || ''} onChange={(e) => handleChange('descripcion', e.target.value)} />
           </Field>
         </div>
       </SeccionSheet>
@@ -645,7 +645,7 @@ export function ConfiguracionPage() {
               <input className={inputCls + ' w-36 font-mono uppercase'}
                 value={sede.colorPrimarioHex || ''}
                 onChange={(e) => handleChange('colorPrimarioHex', e.target.value)}
-                placeholder={DEFAULT_BRAND} maxLength={9} />
+                maxLength={9} />
             </div>
             <div className="flex flex-wrap gap-2 mt-3">
               {COLOR_PRESETS.map((c) => {
@@ -679,10 +679,10 @@ export function ConfiguracionPage() {
             Usar datos del negocio
           </button>
           <Field label="Teléfono *">
-            <input type="tel" className={inputCls} value={sede.telefono || ''} onChange={(e) => handleChange('telefono', e.target.value)} placeholder="987654321" />
+            <input type="tel" className={inputCls} value={sede.telefono || ''} onChange={(e) => handleChange('telefono', e.target.value)} />
           </Field>
           <Field label="Email">
-            <input type="email" className={inputCls} value={sede.correo || ''} onChange={(e) => handleChange('correo', e.target.value)} placeholder="info@barberia.pe" />
+            <input type="email" className={inputCls} value={sede.correo || ''} onChange={(e) => handleChange('correo', e.target.value)} />
           </Field>
         </div>
       </SeccionSheet>
@@ -702,7 +702,6 @@ export function ConfiguracionPage() {
                 onChange={(e) => setUbicTexto(e.target.value)}
                 onPaste={(e) => { e.preventDefault(); const txt = (e.clipboardData.getData('text') || '').trim(); setUbicTexto(txt); aplicarUbicacion(txt) }}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); aplicarUbicacion(ubicTexto) } }}
-                placeholder="Pega aquí el enlace de Google Maps"
               />
               <button
                 type="button"
@@ -732,7 +731,7 @@ export function ConfiguracionPage() {
           </div>
 
           <Field label="Dirección">
-            <input className={inputCls} value={sede.direccion || ''} onChange={(e) => handleChange('direccion', e.target.value)} placeholder="Av. Principal 123, Lima" />
+            <input className={inputCls} value={sede.direccion || ''} onChange={(e) => handleChange('direccion', e.target.value)} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Departamento">
@@ -740,7 +739,6 @@ export function ConfiguracionPage() {
                 value={sede.departamento || ''}
                 onChange={(v) => handleDepartamento(String(v))}
                 opciones={DEPARTAMENTOS}
-                placeholder="Departamento…"
                 inputClassName={inputCls}
               />
             </Field>
@@ -750,7 +748,6 @@ export function ConfiguracionPage() {
                 onChange={(v) => handleChange('distrito', String(v))}
                 opciones={distritosDe(sede.departamento)}
                 disabled={!sede.departamento}
-                placeholder="Distrito…"
                 textoDeshabilitado="Elige departamento"
                 inputClassName={inputCls}
               />
@@ -820,23 +817,17 @@ export function ConfiguracionPage() {
 
       {/* Datos del negocio */}
       <SeccionSheet open={sheet === 'negocio'} onClose={cerrar} titulo="Datos del negocio"
-        subtitulo="RUC, razón social y contacto de tu empresa"
+        subtitulo="Nombre y contacto de tu empresa"
         footer={<BotonGuardar onClick={guardarYcerrar} cargando={submitting} />}>
         <div className="space-y-4">
-          <Field label="Nombre comercial *">
-            <input className={inputCls} value={empresa.nombreComercial} onChange={(e) => handleChangeEmpresa('nombreComercial', e.target.value)} placeholder="Ej: Barbería Central" />
-          </Field>
-          <Field label="Razón social">
-            <input className={inputCls} value={empresa.razonSocial} onChange={(e) => handleChangeEmpresa('razonSocial', e.target.value)} placeholder="Igual al nombre si no tienes" />
-          </Field>
-          <Field label="RUC">
-            <input className={inputCls} value={empresa.ruc} onChange={(e) => handleChangeEmpresa('ruc', e.target.value)} placeholder="20•••••••••" maxLength={11} />
+          <Field label="Nombre del negocio *">
+            <input className={inputCls} value={empresa.nombreComercial} onChange={(e) => handleChangeEmpresa('nombreComercial', e.target.value)} />
           </Field>
           <Field label="Correo del negocio">
-            <input type="email" className={inputCls} value={empresa.correoContacto} onChange={(e) => handleChangeEmpresa('correoContacto', e.target.value)} placeholder="hola@negocio.com" />
+            <input type="email" className={inputCls} value={empresa.correoContacto} onChange={(e) => handleChangeEmpresa('correoContacto', e.target.value)} />
           </Field>
           <Field label="Teléfono del negocio">
-            <input type="tel" className={inputCls} value={empresa.telefonoContacto} onChange={(e) => handleChangeEmpresa('telefonoContacto', e.target.value)} placeholder="987654321" />
+            <input type="tel" className={inputCls} value={empresa.telefonoContacto} onChange={(e) => handleChangeEmpresa('telefonoContacto', e.target.value)} />
           </Field>
           <p className="text-xs text-gray-400">El correo y teléfono se pre-cargan con los de tu cuenta. Solo cámbialos si tu negocio usa otros.</p>
         </div>
@@ -877,7 +868,6 @@ export function ConfiguracionPage() {
             {RED_OPCIONES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
           <input type="url" value={nuevaRedUrl} onChange={(e) => setNuevaRedUrl(e.target.value)}
-            placeholder="https://instagram.com/tubarberia"
             className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white" />
           <button type="button" onClick={agregarRed}
             className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition">

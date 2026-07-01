@@ -180,9 +180,9 @@ export function AccesoModal({ open, onClose }: { open: boolean; onClose: () => v
                     </>
                   ) : (
                     <>
-                      <input className={field} value={codigoCambiar} onChange={e => setCodigoCambiar(e.target.value)} placeholder="Código del correo" inputMode="numeric" maxLength={6} />
-                      <input className={field} type="password" value={passNueva} onChange={e => setPassNueva(e.target.value)} placeholder="Nueva contraseña (mín. 8)" />
-                      <input className={field} type="password" value={passNuevaRep} onChange={e => setPassNuevaRep(e.target.value)} placeholder="Repite la contraseña" />
+                      <input className={field} value={codigoCambiar} onChange={e => setCodigoCambiar(e.target.value)} inputMode="numeric" maxLength={6} />
+                      <input className={field} type="password" value={passNueva} onChange={e => setPassNueva(e.target.value)} />
+                      <input className={field} type="password" value={passNuevaRep} onChange={e => setPassNuevaRep(e.target.value)} />
                       <button onClick={guardarCambiarPass} disabled={busy} className="w-full bg-gray-900 hover:bg-black text-white rounded-xl py-2 text-sm font-semibold disabled:opacity-50">{busy ? 'Guardando…' : (tienePassword ? 'Guardar contraseña' : 'Crear contraseña')}</button>
                     </>
                   )}

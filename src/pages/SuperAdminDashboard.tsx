@@ -374,8 +374,7 @@ export function SuperAdminDashboard() {
             <div className="space-y-4">
               <Field label="Nombre del negocio *">
                 <input className={inputCls} value={form.nombre} autoFocus
-                  onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                  placeholder="Barbería Nader" />
+                  onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
                 <p className="text-xs text-gray-400 mt-1">
                   Su página será <span className="font-medium text-gray-600">{subPreview}.barber.pe</span>
                 </p>
@@ -398,14 +397,14 @@ export function SuperAdminDashboard() {
               {form.canal === 'Email' ? (
                 <Field label="Correo del dueño *">
                   <input className={inputCls} value={form.ownerCorreo} autoCapitalize="none" inputMode="email"
-                    onChange={(e) => setForm({ ...form, ownerCorreo: e.target.value })} placeholder="dueño@gmail.com" />
+                    onChange={(e) => setForm({ ...form, ownerCorreo: e.target.value })} />
                   {form.ownerCorreo.trim() && !emailOk &&
                     <p className="text-xs text-red-500 mt-1">Correo inválido.</p>}
                 </Field>
               ) : (
                 <Field label="WhatsApp del dueño *">
                   <input className={inputCls} value={form.ownerTelefono} inputMode="numeric"
-                    onChange={(e) => setForm({ ...form, ownerTelefono: e.target.value })} placeholder="987654321" />
+                    onChange={(e) => setForm({ ...form, ownerTelefono: e.target.value })} />
                   {form.ownerTelefono.trim() && !telOk &&
                     <p className="text-xs text-red-500 mt-1">Debe ser un celular peruano: 9 dígitos que empiezan en 9.</p>}
                 </Field>
@@ -634,7 +633,7 @@ function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: () => voi
 
               {editId === s.idSede && (
                 <div className="mt-3 pl-6 space-y-2">
-                  <input className={inputCls} value={editSlug} placeholder="nuevo-slug"
+                  <input className={inputCls} value={editSlug}
                     onChange={(e) => setEditSlug(e.target.value)} />
                   <button type="button" onClick={() => setEditSlug(slugify(s.nombre))}
                     className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-700">
@@ -660,7 +659,7 @@ function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: () => voi
 
       <div className="border-t border-gray-100 pt-4 space-y-3">
         <p className="text-sm font-medium text-gray-700">Agregar sede</p>
-        <input className={inputCls} placeholder="Nombre de la sede" value={form.nombre}
+        <input className={inputCls} value={form.nombre}
           onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
         <button onClick={crear} disabled={saving}
           className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl transition disabled:opacity-50">

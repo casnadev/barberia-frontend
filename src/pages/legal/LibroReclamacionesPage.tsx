@@ -83,7 +83,7 @@ export default function LibroReclamacionesPage() {
               <div className={s.field}><label>Tipo</label>
                 <select value={bien} onChange={(e) => setBien(e.target.value as any)}><option value="servicio">Servicio</option><option value="producto">Producto</option></select>
               </div>
-              <div className={s.field}><label>Monto reclamado (S/)</label><input value={f.monto} onChange={set('monto')} placeholder="Opcional" /></div>
+              <div className={s.field}><label>Monto reclamado (S/)</label><input value={f.monto} onChange={set('monto')} /></div>
             </div>
             <div className={s.field}><label>Descripción del bien o servicio</label><input value={f.descripcion} onChange={set('descripcion')} /></div>
 
