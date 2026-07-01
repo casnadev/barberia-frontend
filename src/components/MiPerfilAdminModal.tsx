@@ -116,11 +116,11 @@ export function MiPerfilAdminModal({ open, onClose }: { open: boolean; onClose: 
     // ← CAMBIO (responsive): en móvil el modal es una "hoja inferior" (bottom-sheet)
     //   que ocupa el ancho completo y NO se desborda; en desktop (sm+) vuelve a ser
     //   la tarjeta centrada de siempre.
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       {/* ← CAMBIO clave: max-h + overflow-y-auto → el contenido alto (datos +
           contraseña) hace scroll DENTRO del modal en vez de tapar toda la pantalla. */}
-      <div className="relative bg-white w-full sm:max-w-md p-5 shadow-xl rounded-t-2xl sm:rounded-2xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto">
+      <div className="relative bg-white w-full sm:max-w-md p-5 shadow-xl rounded-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-base font-semibold text-gray-900">Mi perfil</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Cerrar"><X className="w-5 h-5" /></button>

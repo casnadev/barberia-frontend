@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import {
   Store, Building2, Phone, Clock, MapPin, Image as ImageIcon, Camera, Share2, Save, Loader2,
-  X, Upload, Plus, Instagram, Facebook, Globe, Music2, Youtube, Twitter, Link2, Copy, ExternalLink, Info, Gift,
+  X, ChevronDown, Upload, Plus, Instagram, Facebook, Globe, Music2, Youtube, Twitter, Link2, Copy, ExternalLink, Info, Gift,
 } from 'lucide-react'
 import { apiClient } from '@/services/apiClient'
 import { geoService } from '@/services/geoService'
+import { DEPARTAMENTOS, distritosDe, distritoValido } from '@/data/ubigeo'
+import { ComboBox } from '@/components/ComboBox'
 import SeccionFila from '@/components/SeccionFila'
 import SeccionSheet from '@/components/SeccionSheet'
 import { Skeleton, SkeletonRows } from '@/components/Skeleton'
@@ -119,6 +121,7 @@ export function ConfiguracionPage() {
   const [sheet, setSheet] = useState<SheetId>(null)
   const [ubicTexto, setUbicTexto] = useState('')
   const [resolviendoUbic, setResolviendoUbic] = useState(false)
+  const [comoAbierto, setComoAbierto] = useState(false)
   const cerrar = () => setSheet(null)
 
   const [sede, setSede] = useState<Sede>({
@@ -280,6 +283,14 @@ export function ConfiguracionPage() {
   const handleChange = (field: keyof Sede, value: string | number) =>
     setSede((prev) => ({ ...prev, [field]: value }))
 
+  // Departamento -> resetea Distrito si ya no corresponde (selects dependientes).
+  const handleDepartamento = (dep: string) =>
+    setSede((prev) => ({
+      ...prev,
+      departamento: dep,
+      distrito: distritoValido(dep, prev.distrito) ? prev.distrito : '',
+    }))
+
   // Pega coords o un enlace de Maps → rellena latitud/longitud solo.
   const aplicarUbicacion = async (raw: string) => {
     let t = (raw || '').trim()
@@ -366,13 +377,19 @@ export function ConfiguracionPage() {
   }
 
   const subirImagenGaleria = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return
+    const files = Array.from(e.target.files ?? []); e.target.value = ''
+    if (!files.length) return
+    setSubiendoGaleria(true)
+    let subidas = 0
     try {
-      setSubiendoGaleria(true)
-      const url = await subirImagen(file)
-      if (url) { await apiClient.post('/api/SedeMedia/imagenes', { urlImagen: url, orden: imagenes.length + 1 }); toast.success('Imagen agregada a la galería'); cargarMedia() }
-    } catch (err: any) { toast.error(err.response?.data?.message || err.message || 'Error subiendo la imagen') }
-    finally { setSubiendoGaleria(false); e.target.value = '' }
+      let orden = imagenes.length
+      for (const file of files) {
+        const url = await subirImagen(file)
+        if (url) { orden += 1; await apiClient.post('/api/SedeMedia/imagenes', { urlImagen: url, orden }); subidas += 1 }
+      }
+      if (subidas > 0) { toast.success(subidas === 1 ? 'Imagen agregada a la galería' : `${subidas} imágenes agregadas`); await cargarMedia() }
+    } catch (err: any) { toast.error(err.response?.data?.message || err.message || 'Error subiendo la imagen'); await cargarMedia() }
+    finally { setSubiendoGaleria(false) }
   }
 
   const eliminarImagen = async (id: number) => {
@@ -676,10 +693,8 @@ export function ConfiguracionPage() {
         footer={<BotonGuardar onClick={guardarYcerrar} cargando={submitting} />}>
         <div className="space-y-4">
           <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3 space-y-2">
-            <p className="text-sm font-semibold text-gray-800">Pega tu ubicación de Google Maps</p>
-            <p className="text-xs text-gray-500 leading-relaxed">
-              En Google Maps mantén pulsado el punto de tu local y copia las <b>coordenadas</b>, o usa <b>Compartir</b> y pega el enlace. Llenamos latitud y longitud por ti.
-            </p>
+            <p className="text-sm font-semibold text-gray-800">Ubica tu local en el mapa</p>
+            <p className="text-xs text-gray-500 leading-relaxed">Pega el enlace de tu local en Google Maps y lo ponemos por ti.</p>
             <div className="flex gap-2">
               <input
                 className={inputCls}
@@ -687,7 +702,7 @@ export function ConfiguracionPage() {
                 onChange={(e) => setUbicTexto(e.target.value)}
                 onPaste={(e) => { e.preventDefault(); const txt = (e.clipboardData.getData('text') || '').trim(); setUbicTexto(txt); aplicarUbicacion(txt) }}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); aplicarUbicacion(ubicTexto) } }}
-                placeholder="-11.83, -77.10  ó  https://maps.app.goo.gl/..."
+                placeholder="Pega aquí el enlace de Google Maps"
               />
               <button
                 type="button"
@@ -698,26 +713,50 @@ export function ConfiguracionPage() {
                 {resolviendoUbic ? '…' : 'Usar'}
               </button>
             </div>
-            <a href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1">
-              Abrir Google Maps <ExternalLink width={12} height={12} />
-            </a>
+            <div className="flex items-center justify-between gap-2">
+              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([sede.direccion, sede.distrito, sede.departamento].filter(Boolean).join(', ') || 'mi negocio')}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1">
+                Abrir Google Maps <ExternalLink width={12} height={12} />
+              </a>
+              <button type="button" onClick={() => setComoAbierto((v) => !v)} className="text-xs text-gray-500 hover:text-gray-700 inline-flex items-center gap-1">
+                ¿Cómo consigo el enlace? <ChevronDown width={13} height={13} className={comoAbierto ? 'rotate-180' : ''} />
+              </button>
+            </div>
+            {comoAbierto && (
+              <div className="pt-1 space-y-1.5">
+                <div className="flex items-center gap-2.5"><span className="shrink-0 w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[11px] font-semibold flex items-center justify-center">1</span><span className="text-xs text-gray-600">Abre Google Maps y busca tu local.</span></div>
+                <div className="flex items-center gap-2.5"><span className="shrink-0 w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[11px] font-semibold flex items-center justify-center">2</span><span className="text-xs text-gray-600 inline-flex items-center gap-1">Toca <Share2 width={13} height={13} className="text-gray-700" /> <b className="font-medium text-gray-700">Compartir</b>.</span></div>
+                <div className="flex items-center gap-2.5"><span className="shrink-0 w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[11px] font-semibold flex items-center justify-center">3</span><span className="text-xs text-gray-600">Elige <b className="font-medium text-gray-700">Copiar enlace</b> y pégalo arriba.</span></div>
+              </div>
+            )}
+            <p className="text-[11px] text-gray-400 leading-snug">¿Ya tienes las coordenadas? Pégalas igual, ej. -11.83, -77.10</p>
           </div>
 
           <Field label="Dirección">
             <input className={inputCls} value={sede.direccion || ''} onChange={(e) => handleChange('direccion', e.target.value)} placeholder="Av. Principal 123, Lima" />
           </Field>
-          <Field label="Distrito">
-            <input className={inputCls} value={sede.distrito || ''} onChange={(e) => handleChange('distrito', e.target.value)} placeholder="Miraflores" />
-          </Field>
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Latitud">
-              <input type="number" step="0.0001" className={inputCls} value={sede.latitud ?? ''} onChange={(e) => handleChange('latitud', parseFloat(e.target.value) || 0)} placeholder="-12.0450" />
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Departamento">
+              <ComboBox
+                value={sede.departamento || ''}
+                onChange={(v) => handleDepartamento(String(v))}
+                opciones={DEPARTAMENTOS}
+                placeholder="Departamento…"
+                inputClassName={inputCls}
+              />
             </Field>
-            <Field label="Longitud">
-              <input type="number" step="0.0001" className={inputCls} value={sede.longitud ?? ''} onChange={(e) => handleChange('longitud', parseFloat(e.target.value) || 0)} placeholder="-77.0342" />
+            <Field label="Distrito">
+              <ComboBox
+                value={sede.distrito || ''}
+                onChange={(v) => handleChange('distrito', String(v))}
+                opciones={distritosDe(sede.departamento)}
+                disabled={!sede.departamento}
+                placeholder="Distrito…"
+                textoDeshabilitado="Elige departamento"
+                inputClassName={inputCls}
+              />
             </Field>
           </div>
-          <p className="text-xs text-gray-400 -mt-2">Se llenan solos al pegar arriba. Puedes ajustarlos a mano si quieres.</p>
+          {/* Latitud y longitud se guardan solas desde el enlace/coordenadas de arriba; no se muestran para ahorrar espacio. */}
 
           {esCoordValida(Number(sede.latitud), Number(sede.longitud)) && (
             <div className="space-y-1.5">
@@ -727,7 +766,7 @@ export function ConfiguracionPage() {
                   title="Ubicación en el mapa"
                   src={osmEmbedSrc(Number(sede.latitud), Number(sede.longitud))}
                   className="w-full block"
-                  style={{ height: 190, border: 0 }}
+                  style={{ height: 150, border: 0 }}
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
                 />
@@ -822,10 +861,10 @@ export function ConfiguracionPage() {
             subiendoGaleria ? 'border-blue-300 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/40'}`}>
             {subiendoGaleria ? <Loader2 className="w-5 h-5 animate-spin text-blue-500" /> : <Plus className="w-6 h-6 text-gray-300" />}
             <span className="text-[11px] text-gray-400 mt-1 px-1">Agregar</span>
-            <input type="file" accept="image/*" onChange={subirImagenGaleria} disabled={subiendoGaleria} className="hidden" />
+            <input type="file" accept="image/*" multiple onChange={subirImagenGaleria} disabled={subiendoGaleria} className="hidden" />
           </label>
         </div>
-        <p className="text-xs text-gray-400 mt-3">Se agregan al instante. PNG/JPG/HEIC.</p>
+        <p className="text-xs text-gray-400 mt-3">Puedes elegir varias. Se agregan al instante. PNG/JPG/HEIC.</p>
       </SeccionSheet>
 
       {/* Redes sociales */}
@@ -888,7 +927,7 @@ function BotonGuardar({ onClick, cargando, label = 'Guardar cambios' }:
 function BotonListo({ onClick }: { onClick: () => void }) {
   return (
     <button type="button" onClick={onClick}
-      className="w-full px-5 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition">
+      className="w-full px-5 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition">
       Listo
     </button>
   )

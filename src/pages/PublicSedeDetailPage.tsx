@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  MapPin, Phone, Clock, Star, ChevronRight, ChevronLeft, Scissors,
+  MapPin, Navigation, Phone, Clock, Star, ChevronRight, ChevronLeft, Scissors,
   Heart, Forward, X, ChevronDown, Instagram, Facebook, Globe,
   Gift,
 } from 'lucide-react'
@@ -47,34 +47,62 @@ const TikTokIcon = ({ className }: { className?: string }) => (
 )
 
 // ─────────────────────────── Modal de trabajador ───────────────────────────
+function ModalShell({ onClose, children }: any) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className={styles.modalOverlay} onClick={onClose}>
+      <motion.div initial={{ scale: 0.94, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.94, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+        className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+        {children}
+      </motion.div>
+    </motion.div>
+  )
+}
+
 function TrabajadorModal({ trabajador, brand, onReservar, onClose }: any) {
   if (!trabajador) return null
   return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className={styles.modalOverlay} onClick={onClose}
-    >
-      <motion.div
-        initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }}
-        className={styles.modal} onClick={(e) => e.stopPropagation()}
-      >
-        <div className={styles.modalCloseRow}>
-          <button className={styles.plainBtn} onClick={onClose} aria-label="Cerrar"><X width={20} height={20} /></button>
-        </div>
-        <div className={styles.modalHead}>
-          <div className={styles.modalPhoto}>
-            {trabajador.urlFotoPerfil
-              ? <img src={img(trabajador.urlFotoPerfil)} alt={trabajador.nombreCompleto} />
-              : <Monograma fill texto={trabajador.nombreCompleto} style={{ fontSize: 34 }} />}
-          </div>
-          <h2 className={styles.modalName}>{trabajador.nombreCompleto}</h2>
-          <p className={styles.modalSpec}>{trabajador.especialidad || 'Barbero'}</p>
-        </div>
-        {trabajador.experiencia && <p className={styles.modalDesc} style={{ fontWeight: 600, marginBottom: 6 }}>Experiencia: {trabajador.experiencia}</p>}
+    <ModalShell onClose={onClose}>
+      <div className={styles.modalCover}>
+        {trabajador.urlFotoPerfil
+          ? <img className={styles.modalCoverImg} src={img(trabajador.urlFotoPerfil)} alt={trabajador.nombreCompleto} />
+          : <div className={styles.modalCoverFb}><Monograma fill texto={trabajador.nombreCompleto} style={{ fontSize: 44 }} /></div>}
+        {trabajador.esDestacado && <span className={styles.modalBadge} style={{ background: brand }}>Destacado</span>}
+        <button className={styles.modalClose} onClick={onClose} aria-label="Cerrar"><X width={18} height={18} /></button>
+      </div>
+      <div className={styles.modalBody}>
+        <h2 className={styles.modalTitle}>{trabajador.nombreCompleto}</h2>
+        <p className={styles.modalSpec} style={{ color: brand }}>{trabajador.especialidad || 'Barbero'}</p>
+        {trabajador.experiencia && <span className={styles.modalChip}>{trabajador.experiencia}</span>}
         {trabajador.descripcion && <p className={styles.modalDesc}>{trabajador.descripcion}</p>}
         <button className={styles.modalCta} style={{ background: brand }} onClick={onReservar}>Reservar ahora</button>
-      </motion.div>
-    </motion.div>
+      </div>
+    </ModalShell>
+  )
+}
+
+function ServicioModal({ servicio, brand, onReservar, onClose }: any) {
+  if (!servicio) return null
+  return (
+    <ModalShell onClose={onClose}>
+      <div className={styles.modalCover}>
+        {img(servicio.urlImagen)
+          ? <img className={styles.modalCoverImg} src={img(servicio.urlImagen)} alt={servicio.nombre} />
+          : <div className={styles.modalCoverFb} style={{ background: brand, color: '#fff' }}><Scissors width={40} height={40} /></div>}
+        {servicio.esDestacado && <span className={styles.modalBadge} style={{ background: brand }}>Destacado</span>}
+        <button className={styles.modalClose} onClick={onClose} aria-label="Cerrar"><X width={18} height={18} /></button>
+      </div>
+      <div className={styles.modalBody}>
+        <h2 className={styles.modalTitle}>{servicio.nombre}</h2>
+        <div className={styles.modalMeta}>
+          <span className={styles.modalMetaItem}><Clock width={15} height={15} /> {servicio.duracionMinutos || 30} min</span>
+          <span className={styles.modalPrice} style={{ color: brand }}>S/ {(servicio.precioBase || 0).toFixed(2)}</span>
+        </div>
+        {servicio.descripcionCorta && <p className={styles.modalDesc}>{servicio.descripcionCorta}</p>}
+        <button className={styles.modalCta} style={{ background: brand }} onClick={onReservar}>Reservar ahora</button>
+      </div>
+    </ModalShell>
   )
 }
 
@@ -88,6 +116,7 @@ export function PublicSedeDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todos')
   const [trabajadorSel, setTrabajadorSel] = useState<any>(null)
+  const [servicioSel, setServicioSel] = useState<any>(null)
   const [expandirHorarios, setExpandirHorarios] = useState(false)
   const [verTodosServicios, setVerTodosServicios] = useState(false)
   const [verTodasFotos, setVerTodasFotos] = useState(false)
@@ -468,6 +497,7 @@ export function PublicSedeDetailPage() {
 
 
   const mapsHref = `https://maps.google.com/?q=${tieneCoords ? `${sede.latitud},${sede.longitud}` : encodeURIComponent(sede.direccion || sede.nombre)}`
+  const ubicacion = [sede?.distrito, sede?.direccion].filter(Boolean).join(', ')
   const osmSrc = tieneCoords
     ? `https://www.openstreetmap.org/export/embed.html?bbox=${Number(sede.longitud) - 0.006}%2C${Number(sede.latitud) - 0.0035}%2C${Number(sede.longitud) + 0.006}%2C${Number(sede.latitud) + 0.0035}&layer=mapnik&marker=${sede.latitud}%2C${sede.longitud}`
     : ''
@@ -479,7 +509,7 @@ export function PublicSedeDetailPage() {
     { key: 'equipo', label: 'Equipo', ref: refEquipo, show: trabajadores.length > 0 },
     { key: 'resenas', label: 'Reseñas', ref: refResenas, show: resenas.items.length > 0 },
     { key: 'horarios', label: 'Horarios', ref: refHorarios, show: horarios.length > 0 },
-    { key: 'ubicacion', label: 'Ubicación', ref: refUbicacion, show: !!sede.direccion || tieneCoords },
+    { key: 'ubicacion', label: 'Ubicación', ref: refUbicacion, show: !!ubicacion || tieneCoords },
   ].filter((t) => t.show)
 
   const Estrellas = ({ n, size = 16 }: { n: number; size?: number }) => (
@@ -579,7 +609,7 @@ export function PublicSedeDetailPage() {
 
       {/* ───────── CONTENEDOR ───────── */}
       <div className={styles.container}>
-        <div className={styles.breadcrumb}>Inicio • Barberías • Perú • {sede.nombre}</div>
+        <div className={styles.breadcrumb}>Inicio • Barberías • {sede.departamento || 'Perú'} • {sede.nombre}</div>
 
         {/* TÍTULO + ACCIONES (arriba, estilo Fresha) */}
         <div className={styles.head}>
@@ -601,9 +631,12 @@ export function PublicSedeDetailPage() {
                 <span className={horarios.length === 0 ? styles.estadoNone : (estadoOpen ? styles.openTxt : styles.closedTxt)}>{estadoWord}</span>
                 {estadoSub && <span className={styles.estadoSub}>{estadoSub}</span>}
               </span>
+              {ubicacion && (
+                <a className={styles.addrInline} href={mapsHref} target="_blank" rel="noreferrer"><MapPin width={15} height={15} /> {ubicacion}</a>
+              )}
             </div>
-            {sede.direccion && (
-              <a className={styles.addrPill} href={mapsHref} target="_blank" rel="noreferrer"><MapPin width={16} height={16} /> {sede.direccion}</a>
+            {ubicacion && (
+              <a className={styles.addrPill} href={mapsHref} target="_blank" rel="noreferrer"><MapPin width={16} height={16} /> {ubicacion}</a>
             )}
           </div>
           <div className={styles.headActions}>
@@ -677,7 +710,7 @@ export function PublicSedeDetailPage() {
               ) : (
                 <div className={styles.servList}>
                   {(verTodosServicios ? serviciosFiltrados : serviciosFiltrados.slice(0, 5)).map((s, idx) => (
-                    <motion.div key={s.idServicio || idx} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }} className={styles.servCard}>
+                    <motion.div key={s.idServicio || idx} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }} className={styles.servCard} style={{ cursor: 'pointer' }} onClick={() => setServicioSel(s)}>
                       <div className={styles.servLeft}>
                         {img(s.urlImagen)
                           ? <img className={styles.servImg} src={img(s.urlImagen)} alt={s.nombre} />
@@ -685,7 +718,7 @@ export function PublicSedeDetailPage() {
                         <div style={{ minWidth: 0 }}>
                           <div className={styles.servTitleRow}>
                             <span className={styles.servTitle}>{s.nombre}</span>
-                            {s.esDestacado && <span className={styles.topBadge}>Top</span>}
+                            {s.esDestacado && <span className={styles.topBadge}>Destacado</span>}
                           </div>
                           {s.descripcionCorta && <p className={styles.servDesc}>{s.descripcionCorta}</p>}
                           <div className={styles.servMeta}>
@@ -694,7 +727,7 @@ export function PublicSedeDetailPage() {
                           </div>
                         </div>
                       </div>
-                      <button className={styles.reservarBtn} onClick={() => navigate(`/reservar-publica?servicio=${s.idServicio || s.id}`)}>Reservar</button>
+                      <button className={styles.reservarBtn} onClick={(e) => { e.stopPropagation(); navigate(`/reservar-publica?servicio=${s.idServicio || s.id}`) }}>Reservar</button>
                     </motion.div>
                   ))}
                 </div>
@@ -713,23 +746,26 @@ export function PublicSedeDetailPage() {
                   <h2 className={styles.h2}>Portfolio</h2>
                   <span className={styles.pfCount}>{galeria.length}</span>
                 </div>
-                <div className={styles.pf}>
-                  {(verTodasFotos ? galeria : galeria.slice(0, 5)).map((src, idx) => (
-                    <button
-                      key={idx}
-                      className={`${styles.pfCell} ${idx === 0 ? styles.pfBig : ''}`}
-                      onClick={() => setLightbox(idx)}
-                      aria-label={`Foto ${idx + 1}`}
-                    >
-                      <img src={src} alt={`Foto ${idx + 1}`} loading="lazy" />
-                    </button>
-                  ))}
+                <div className={styles.pfWrap}>
+                  <div className={styles.pf}>
+                    {galeria.slice(0, 5).map((src, idx, arr) => {
+                      const esUltima = idx === arr.length - 1
+                      const restantes = galeria.length - arr.length
+                      return (
+                        <button
+                          key={idx}
+                          className={`${styles.pfCell} ${idx === 0 ? styles.pfBig : ''}`}
+                          onClick={() => setLightbox(idx)}
+                          aria-label={`Foto ${idx + 1}`}
+                        >
+                          <img src={src} alt={`Foto ${idx + 1}`} loading="lazy" />
+                          {esUltima && restantes > 0 && <span className={styles.pfMore}>+{restantes}</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <button className={styles.pfVerTodas} onClick={() => setLightbox(0)}>Ver todas las fotos</button>
                 </div>
-                {galeria.length > 5 && (
-                  <button className={styles.verTodo} onClick={() => setVerTodasFotos((v) => !v)}>
-                    {verTodasFotos ? 'Ver menos' : `Ver más (${galeria.length})`}
-                  </button>
-                )}
               </section>
             )}
 
@@ -742,9 +778,9 @@ export function PublicSedeDetailPage() {
                     <button key={t.idTrabajador || idx} className={styles.teamItem} onClick={() => setTrabajadorSel(t)}>
                       <div className={styles.teamPhoto}>
                         {t.urlFotoPerfil ? <img src={img(t.urlFotoPerfil)} alt={t.nombreCompleto} /> : <Monograma fill texto={t.nombreCompleto} style={{ fontSize: 30 }} />}
+                        {t.esDestacado && <span className={styles.teamBadge} style={{ background: brand }}>Destacado</span>}
                       </div>
                       <div className={styles.teamName}>{t.nombreCompleto}</div>
-                      {t.especializacion && <div className={styles.teamSpec}>{t.especializacion}</div>}
                     </button>
                   ))}
                 </div>
@@ -779,7 +815,7 @@ export function PublicSedeDetailPage() {
             {/* HORARIOS */}
             {horarios.length > 0 && (
               <section ref={refHorarios} className={`${styles.section} ${styles.sectionGap}`}>
-                <h2 className={styles.h2}>Horario de apertura</h2>
+                <h2 className={styles.h2}>Horarios de atención</h2>
                 <div className={styles.horList}>
                   {[1, 2, 3, 4, 5, 6, 7].map((d) => {
                     const rangos = horariosDia(d)
@@ -801,7 +837,7 @@ export function PublicSedeDetailPage() {
             )}
 
             {/* UBICACIÓN */}
-            {(sede.direccion || tieneCoords) && (
+            {(ubicacion || tieneCoords) && (
               <section ref={refUbicacion} className={`${styles.section} ${styles.sectionGap}`}>
                 <h2 className={styles.h2}>Ubicación</h2>
                 {tieneCoords ? (
@@ -812,9 +848,9 @@ export function PublicSedeDetailPage() {
                     <p className={styles.mapCredit}>© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a></p>
                   </>
                 ) : (
-                  <div className={styles.mapEmpty}>{sede.direccion}</div>
+                  <div className={styles.mapEmpty}>{ubicacion}</div>
                 )}
-                <a className={styles.comoLlegar} style={{ background: brand }} href={mapsHref} target="_blank" rel="noreferrer"><MapPin width={16} height={16} /> Cómo llegar</a>
+                <a className={styles.comoLlegar} style={{ background: brand }} href={mapsHref} target="_blank" rel="noreferrer"><Navigation width={16} height={16} /> Cómo llegar</a>
               </section>
             )}
 
@@ -825,7 +861,7 @@ export function PublicSedeDetailPage() {
                   {sede.urlLogo ? <img className={styles.footLogo} src={img(sede.urlLogo)} alt={sede.nombre} /> : <div className={styles.footLogoFb} style={{ background: brand }}><Scissors width={20} height={20} /></div>}
                   <div>
                     <div className={styles.footName}>{sede.nombre}</div>
-                    {sede.direccion && <div className={styles.footSub}>{sede.direccion}</div>}
+                    {ubicacion && <div className={styles.footSub}>{ubicacion}</div>}
                   </div>
                 </div>
                 {(igUrl || fbUrl || ttUrl || webUrl) && (
@@ -837,7 +873,7 @@ export function PublicSedeDetailPage() {
                   </div>
                 )}
               </div>
-              <p className={styles.copy}>© {new Date().getFullYear()} {sede.nombre}. Reservas con BarberPe.</p>
+              <p className={styles.copy}>© {new Date().getFullYear()} {sede.nombre}. Reservas con <a className={styles.copyLink} href="https://barber.pe" target="_blank" rel="noreferrer">barber.pe</a>.</p>
             </footer>
           </div>
 
@@ -897,10 +933,10 @@ export function PublicSedeDetailPage() {
                     </div>
                   )}
 
-                  {sede.direccion && (
+                  {ubicacion && (
                     <div className={styles.cardDivider}>
-                      <div className={styles.cardAddr}><MapPin width={16} height={16} /> <span>{sede.direccion}</span></div>
-                      <a className={styles.cardComoLlegar} href={mapsHref} target="_blank" rel="noreferrer"><MapPin width={16} height={16} /> Cómo llegar</a>
+                      <div className={styles.cardAddr}><MapPin width={16} height={16} /> <span>{ubicacion}</span></div>
+                      <a className={styles.cardComoLlegar} href={mapsHref} target="_blank" rel="noreferrer"><Navigation width={16} height={16} /> Cómo llegar</a>
                     </div>
                   )}
                 </>
@@ -950,6 +986,20 @@ export function PublicSedeDetailPage() {
               navigate(id ? `/reservar-publica?trabajador=${id}` : '/reservar-publica')
             }}
             onClose={() => setTrabajadorSel(null)}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {servicioSel && (
+          <ServicioModal
+            servicio={servicioSel}
+            brand={brand}
+            onReservar={() => {
+              const id = servicioSel?.idServicio || servicioSel?.id
+              setServicioSel(null)
+              navigate(id ? `/reservar-publica?servicio=${id}` : '/reservar-publica')
+            }}
+            onClose={() => setServicioSel(null)}
           />
         )}
       </AnimatePresence>

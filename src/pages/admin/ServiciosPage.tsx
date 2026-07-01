@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Plus, Edit2, Trash2, X, Eye, EyeOff, Upload, Image as ImageIcon, Tag, AlertCircle, ChevronDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ComboBox } from '@/components/ComboBox'
 import { toast } from 'sonner'
 import { apiClient, getActiveTenant } from '@/services/apiClient'
 import { sedeTenantService } from '@/services/sedeTenantService'
@@ -393,27 +394,22 @@ export function ServiciosPage() {
         {showModal && (
           <motion.div className={s.overlay} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowModal(false)}>
             <motion.div className={s.modal} initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={(e) => e.stopPropagation()}>
-              <div className={s.modalHead}>
-                <h2 className={s.modalTitle}>{editingId ? 'Editar servicio' : 'Nuevo servicio'}</h2>
-                <button className={s.modalClose} onClick={() => setShowModal(false)} aria-label="Cerrar"><X width={18} height={18} /></button>
-              </div>
+              <button className={s.modalCloseFloat} onClick={() => setShowModal(false)} aria-label="Cerrar"><X width={18} height={18} /></button>
 
               <form className={s.form} onSubmit={handleSubmit}>
                 <div className={s.field}>
                   <label className={s.label}>Imagen</label>
-                  {previewImage ? (
-                    <div className={s.photoPreview}>
-                      <img src={previewImage} alt="Preview" />
-                      <button type="button" className={s.photoRemove} onClick={() => { setPreviewImage(''); setForm({ ...form, urlImagen: '' }) }} aria-label="Quitar imagen"><X width={16} height={16} /></button>
+                  <div className={s.mediaRow}>
+                    <div className={s.thumb}>
+                      {previewImage ? <img src={previewImage} alt="Preview" /> : <ImageIcon width={22} height={22} />}
+                      {previewImage && <button type="button" className={s.thumbRemove} onClick={() => { setPreviewImage(''); setForm({ ...form, urlImagen: '' }) }} aria-label="Quitar imagen"><X width={12} height={12} /></button>}
                     </div>
-                  ) : (
-                    <div className={s.photoPlaceholder}><ImageIcon width={30} height={30} /></div>
-                  )}
-                  <label className={s.uploadLabel}>
-                    <Upload width={16} height={16} />
-                    {uploadingImage ? 'Subiendo...' : 'Seleccionar imagen'}
-                    <input className={s.uploadInput} type="file" accept="image/*" onChange={handleUploadImage} disabled={uploadingImage} />
-                  </label>
+                    <label className={s.uploadLabel}>
+                      <Upload width={16} height={16} />
+                      {uploadingImage ? 'Subiendo...' : (previewImage ? 'Cambiar imagen' : 'Seleccionar imagen')}
+                      <input className={s.uploadInput} type="file" accept="image/*" onChange={handleUploadImage} disabled={uploadingImage} />
+                    </label>
+                  </div>
                 </div>
 
                 <div className={s.field}>
@@ -439,28 +435,30 @@ export function ServiciosPage() {
 
                 <div className={s.field}>
                   <label className={s.label}>Categoría *</label>
-                  <select className={s.select} value={form.idCategoria || ''} onChange={(e) => setForm({ ...form, idCategoria: parseInt(e.target.value) })}>
-                    <option value="">Seleccionar categoría</option>
-                    {categorias.map((cat) => (
-                      <option key={cat.idCategoria} value={cat.idCategoria}>{cat.nombre}</option>
-                    ))}
-                  </select>
+                  <ComboBox
+                    value={form.idCategoria || ''}
+                    onChange={(v) => setForm({ ...form, idCategoria: v === '' ? 0 : Number(v) })}
+                    opciones={categorias.map((cat) => ({ valor: cat.idCategoria, etiqueta: cat.nombre }))}
+                    placeholder="Busca una categoría…"
+                    inputClassName={s.select}
+                  />
                   {categorias.length === 0 && (
                     <p className={s.hint}>No hay categorías. Crea una desde "Gestionar categorías".</p>
                   )}
                 </div>
 
-                <div className={s.checkRow}>
-                  <input className={s.checkbox} type="checkbox" id="esDestacado" checked={!!form.esDestacado} onChange={(e) => setForm({ ...form, esDestacado: e.target.checked })} />
-                  <label htmlFor="esDestacado" className={s.checkLabel}>⭐ Destacado</label>
-                </div>
-
-                {editingId && (
+                <div className={s.row2}>
                   <div className={s.checkRow}>
-                    <input className={s.checkbox} type="checkbox" id="estado" checked={!!form.estado} onChange={(e) => setForm({ ...form, estado: e.target.checked })} />
-                    <label htmlFor="estado" className={s.checkLabel}>✓ Activo</label>
+                    <input className={s.checkbox} type="checkbox" id="esDestacado" checked={!!form.esDestacado} onChange={(e) => setForm({ ...form, esDestacado: e.target.checked })} />
+                    <label htmlFor="esDestacado" className={s.checkLabel}>⭐ Destacado</label>
                   </div>
-                )}
+                  {editingId && (
+                    <div className={s.checkRow}>
+                      <input className={s.checkbox} type="checkbox" id="estado" checked={!!form.estado} onChange={(e) => setForm({ ...form, estado: e.target.checked })} />
+                      <label htmlFor="estado" className={s.checkLabel}>✓ Activo</label>
+                    </div>
+                  )}
+                </div>
 
                 <div className={s.actions}>
                   <button type="button" className={s.btnGhost} onClick={() => setShowModal(false)}>Cancelar</button>

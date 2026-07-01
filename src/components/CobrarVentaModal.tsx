@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Check, Plus, Minus, Camera, Scissors } from 'lucide-react'
 import { toast } from 'sonner'
+import { ComboBox } from '@/components/ComboBox'
 import { serviciosService } from '@/services/serviciosService'
 import { trabajadoresService } from '@/services/trabajadoresService'
 import { panelTrabajadorService } from '@/services/panelTrabajadorService'
@@ -96,9 +97,9 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
   const field = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="relative bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-6 max-h-[90vh] overflow-y-auto">
+      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="relative bg-white w-full sm:max-w-md rounded-2xl p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-gray-900">Cobrar venta sin reserva</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
@@ -109,10 +110,14 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
           <div className="space-y-3">
             {mode === 'admin' && (
               <div><label className="text-xs text-gray-500">Profesional</label>
-                <select className={field} value={idTrabajador ?? ''} onChange={e => setIdTrabajador(Number(e.target.value))}>
-                  {trabajadores.length === 0 && <option value="">Sin trabajadores</option>}
-                  {trabajadores.map(t => <option key={t.idTrabajador} value={t.idTrabajador}>{t.nombreCompleto}</option>)}
-                </select>
+                <ComboBox
+                  value={idTrabajador ?? ''}
+                  onChange={(v) => setIdTrabajador(v === '' ? null : Number(v))}
+                  opciones={trabajadores.map(t => ({ valor: t.idTrabajador, etiqueta: t.nombreCompleto }))}
+                  placeholder={trabajadores.length ? 'Busca un profesional…' : 'Sin trabajadores'}
+                  disabled={trabajadores.length === 0}
+                  inputClassName={field}
+                />
               </div>
             )}
 

@@ -374,32 +374,23 @@ export function TrabajadoresPage() {
               initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
               onClick={e => e.stopPropagation()}
             >
-              <div className={s.modalHead}>
-                <h2 className={s.modalTitle}>{editingId ? 'Editar trabajador' : 'Nuevo trabajador'}</h2>
-                <button className={s.modalClose} onClick={() => setShowModal(false)} aria-label="Cerrar">
-                  <X width={18} height={18} />
-                </button>
-              </div>
+              <button className={s.modalCloseFloat} onClick={() => setShowModal(false)} aria-label="Cerrar"><X width={18} height={18} /></button>
 
               <form className={s.form} onSubmit={handleSubmit}>
                 {/* Foto */}
                 <div className={s.field}>
                   <label className={s.label}>Foto de perfil</label>
-                  {previewImage ? (
-                    <div className={s.photoPreview}>
-                      <img src={previewImage} alt="Preview" />
-                      <button type="button" className={s.photoRemove} onClick={handleRemoveImage} aria-label="Quitar imagen">
-                        <X width={16} height={16} />
-                      </button>
+                  <div className={s.mediaRow}>
+                    <div className={s.thumb}>
+                      {previewImage ? <img src={previewImage} alt="Preview" /> : <ImageIcon width={22} height={22} />}
+                      {previewImage && <button type="button" className={s.thumbRemove} onClick={handleRemoveImage} aria-label="Quitar imagen"><X width={12} height={12} /></button>}
                     </div>
-                  ) : (
-                    <div className={s.photoPlaceholder}><ImageIcon width={30} height={30} /></div>
-                  )}
-                  <label className={s.uploadLabel}>
-                    <Upload width={16} height={16} />
-                    {uploadingImage ? 'Subiendo...' : 'Seleccionar imagen'}
-                    <input className={s.uploadInput} type="file" accept="image/*" onChange={handleUploadImage} disabled={uploadingImage} />
-                  </label>
+                    <label className={s.uploadLabel}>
+                      <Upload width={16} height={16} />
+                      {uploadingImage ? 'Subiendo...' : (previewImage ? 'Cambiar foto' : 'Seleccionar imagen')}
+                      <input className={s.uploadInput} type="file" accept="image/*" onChange={handleUploadImage} disabled={uploadingImage} />
+                    </label>
+                  </div>
                 </div>
 
                 <div className={s.field}>
@@ -408,46 +399,49 @@ export function TrabajadoresPage() {
                 </div>
 
                 <div className={s.field}>
-                  <label className={s.label}>Teléfono</label>
-                  <input className={s.input} type="text" value={form.telefono || ''} onChange={e => setForm({ ...form, telefono: e.target.value })} placeholder="9XXXXXXXX" />
-                </div>
-
-                <div className={s.field}>
-                  <label className={s.label}>Correo (para acceso por email)</label>
+                  <label className={s.label}>Correo (acceso por email)</label>
                   <input className={s.input} type="email" value={form.correo || ''} onChange={e => setForm({ ...form, correo: e.target.value })} placeholder="trabajador@correo.com" />
                 </div>
 
-                <div className={s.field}>
-                  <label className={s.label}>Especialidad</label>
-                  <input className={s.input} type="text" value={form.especialidad || ''} onChange={e => setForm({ ...form, especialidad: e.target.value })} />
+                <div className={s.row2}>
+                  <div className={s.field}>
+                    <label className={s.label}>Teléfono</label>
+                    <input className={s.input} type="text" value={form.telefono || ''} onChange={e => setForm({ ...form, telefono: e.target.value })} placeholder="9XXXXXXXX" />
+                  </div>
+                  <div className={s.field}>
+                    <label className={s.label}>% Comisión</label>
+                    <input className={s.input} type="number" value={form.porcentajeComision ?? 0} onChange={e => setForm({ ...form, porcentajeComision: parseFloat(e.target.value) })} min="0" max="100" step="0.01" />
+                  </div>
                 </div>
 
-                <div className={s.field}>
-                  <label className={s.label}>Experiencia</label>
-                  <input className={s.input} type="text" value={form.experiencia || ''} onChange={e => setForm({ ...form, experiencia: e.target.value })} />
+                <div className={s.row2}>
+                  <div className={s.field}>
+                    <label className={s.label}>Especialidad</label>
+                    <input className={s.input} type="text" value={form.especialidad || ''} onChange={e => setForm({ ...form, especialidad: e.target.value })} />
+                  </div>
+                  <div className={s.field}>
+                    <label className={s.label}>Experiencia</label>
+                    <input className={s.input} type="text" value={form.experiencia || ''} onChange={e => setForm({ ...form, experiencia: e.target.value })} />
+                  </div>
                 </div>
 
                 <div className={s.field}>
                   <label className={s.label}>Descripción</label>
-                  <textarea className={s.textarea} value={form.descripcion || ''} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={3} />
+                  <textarea className={s.textarea} value={form.descripcion || ''} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={2} />
                 </div>
 
-                <div className={s.field}>
-                  <label className={s.label}>% Comisión</label>
-                  <input className={s.input} type="number" value={form.porcentajeComision ?? 0} onChange={e => setForm({ ...form, porcentajeComision: parseFloat(e.target.value) })} min="0" max="100" step="0.01" />
-                </div>
-
-                <div className={s.checkRow}>
-                  <input className={s.checkbox} type="checkbox" id="esDestacado" checked={!!form.esDestacado} onChange={e => setForm({ ...form, esDestacado: e.target.checked })} />
-                  <label htmlFor="esDestacado" className={s.checkLabel}>⭐ Destacado</label>
-                </div>
-
-                {editingId && (
+                <div className={s.row2}>
                   <div className={s.checkRow}>
-                    <input className={s.checkbox} type="checkbox" id="estado" checked={!!form.estado} onChange={e => setForm({ ...form, estado: e.target.checked })} />
-                    <label htmlFor="estado" className={s.checkLabel}>✓ Activo</label>
+                    <input className={s.checkbox} type="checkbox" id="esDestacado" checked={!!form.esDestacado} onChange={e => setForm({ ...form, esDestacado: e.target.checked })} />
+                    <label htmlFor="esDestacado" className={s.checkLabel}>⭐ Destacado</label>
                   </div>
-                )}
+                  {editingId && (
+                    <div className={s.checkRow}>
+                      <input className={s.checkbox} type="checkbox" id="estado" checked={!!form.estado} onChange={e => setForm({ ...form, estado: e.target.checked })} />
+                      <label htmlFor="estado" className={s.checkLabel}>✓ Activo</label>
+                    </div>
+                  )}
+                </div>
 
                 <div className={s.actions}>
                   <button type="button" className={s.btnGhost} onClick={() => setShowModal(false)}>Cancelar</button>

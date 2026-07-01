@@ -43,7 +43,7 @@ export default function SeccionSheet({
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <motion.div
             className="absolute inset-0 bg-black/40"
             onClick={onClose}
@@ -55,7 +55,7 @@ export default function SeccionSheet({
             role="dialog"
             aria-modal="true"
             aria-label={titulo}
-            className="relative bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col max-h-[92vh] sm:max-h-[90vh] overflow-hidden"
+            className="relative bg-white w-full sm:max-w-lg rounded-2xl shadow-xl flex flex-col max-h-[90vh] overflow-hidden"
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 40, opacity: 0 }}

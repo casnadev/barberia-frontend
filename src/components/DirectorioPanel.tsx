@@ -5,6 +5,7 @@ import {
   Plus, Building2,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { ComboBox } from '@/components/ComboBox'
 import {
   directorioService,
   type DirectorioContacto,
@@ -415,13 +416,15 @@ export function DirectorioPanel() {
               className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 focus:border-blue-400 outline-none text-sm" />
           </div>
           {(tab === 'trabajadores' || tab === 'clientes') && (
-            <select value={idSede ?? ''} onChange={(e) => setIdSede(e.target.value ? Number(e.target.value) : null)}
-              className="px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 bg-white sm:w-64">
-              <option value="">Todas las sedes</option>
-              {sedes.map((s) => (
-                <option key={s.idSede} value={s.idSede}>{s.nombre} · {s.empresa}</option>
-              ))}
-            </select>
+            <div className="sm:w-64">
+              <ComboBox
+                value={idSede ?? ''}
+                onChange={(v) => setIdSede(v === '' ? null : Number(v))}
+                opciones={sedes.map((s) => ({ valor: s.idSede, etiqueta: `${s.nombre} · ${s.empresa}` }))}
+                placeholder="Todas las sedes"
+                inputClassName="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 bg-white"
+              />
+            </div>
           )}
         </div>
 
