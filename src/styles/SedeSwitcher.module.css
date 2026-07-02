@@ -101,3 +101,26 @@
   .triggerName { max-width: 110px; }
   .menu { min-width: 240px; }
 }
+/* --- Agregar local / upsell (Bloque A, Tanda 1) --- */
+.divider { height: 1px; background: var(--color-border, #e5e7eb); margin: 8px 4px; }
+.addBtn {
+  display: flex; align-items: center; gap: 11px;
+  width: 100%; padding: 10px 11px;
+  border-radius: 12px; border: none; background: transparent;
+  cursor: pointer; text-align: left; font-family: inherit;
+  transition: background 120ms ease;
+}
+.addBtn:hover { background: #f3f6ff; }
+.addIcon {
+  width: 30px; height: 30px; border-radius: 9px;
+  display: grid; place-items: center;
+  background: rgba(40, 85, 246, 0.1); color: var(--brand, #2855F6);
+  flex-shrink: 0;
+}
+.addName { font-size: 0.875rem; font-weight: 600; color: var(--brand, #2855F6); }
+.upsell {
+  padding: 10px 11px; border-radius: 12px;
+  background: #fff7ed; border: 1px solid #fed7aa;
+}
+.upsellTitle { font-size: 0.8rem; font-weight: 700; color: #9a3412; }
+.upsellText { font-size: 0.72rem; color: #b45309; margin-top: 2px; line-height: 1.3; }

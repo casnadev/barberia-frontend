@@ -247,8 +247,9 @@ export function PublicSedeDetailPage() {
         })
         .catch(() => setResenas({ promedio: 0, total: 0, items: [] }))
     } catch (err: any) {
+      // La pantalla completa "Establecimiento no disponible" ya comunica el estado;
+      // no mostramos además un toast rojo (era ruido redundante).
       setError(err.message || 'Error cargando información')
-      toast.error(err.message)
       setLoading(false)
     }
   }
@@ -609,12 +610,26 @@ export function PublicSedeDetailPage() {
 
       {/* ───────── CONTENEDOR ───────── */}
       <div className={styles.container}>
-        <div className={styles.breadcrumb}>Inicio • Barberías • {sede.departamento || 'Perú'} • {sede.nombre}</div>
+        <div className={styles.breadcrumb}>
+          {(() => {
+            const multi = (sede.totalSedesPublicasMarca ?? 1) >= 2
+            const titulo = multi
+              ? `${sede.nombreComercial} – ${sede.nombre}`
+              : (sede.nombreComercial || sede.nombre)
+            return multi
+              ? `Inicio • Barberías • ${sede.departamento || 'Perú'} • ${sede.distrito || sede.nombre} • ${titulo}`
+              : `Inicio • Barberías • ${sede.departamento || 'Perú'} • ${titulo}`
+          })()}
+        </div>
 
         {/* TÍTULO + ACCIONES (arriba, estilo Fresha) */}
         <div className={styles.head}>
           <div>
-            <h1 className={styles.title}>{sede.nombre}</h1>
+            <h1 className={styles.title}>
+              {(sede.totalSedesPublicasMarca ?? 1) >= 2
+                ? `${sede.nombreComercial} – ${sede.nombre}`
+                : (sede.nombreComercial || sede.nombre)}
+            </h1>
             <div className={styles.metaRow}>
               {resenas.total > 0 ? (
                 <span className={styles.ratingWrap}>

@@ -28,6 +28,7 @@ const SuperAdminDashboard = lazy(() => import('@/pages/SuperAdminDashboard').the
 const ReservaClientePage = lazy(() => import('@/pages/cliente/ReservaClientePage').then(m => ({ default: m.ReservaClientePage })))
 const ReservaAcciones = lazy(() => import('@/pages/cliente/ReservaAcciones').then(m => ({ default: m.ReservaAcciones })))
 const PublicSedeDetailPage = lazy(() => import('@/pages/PublicSedeDetailPage').then(m => ({ default: m.PublicSedeDetailPage })))
+const MarcaPortadaPage = lazy(() => import('@/pages/MarcaPortadaPage').then(m => ({ default: m.MarcaPortadaPage })))
 const NovedadesSedePage = lazy(() => import('@/pages/NovedadesSedePage').then(m => ({ default: m.NovedadesSedePage })))
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })))
 const TerminosPage = lazy(() => import('@/pages/legal/TerminosPage'))
@@ -190,7 +191,36 @@ function getTenantSlug(): string | null {
 }
 
 function HomeRoute() {
-  return getTenantSlug() ? <PublicSedeDetailPage /> : <LandingPage />
+  const slug = getTenantSlug()
+  return slug ? <TenantHome slug={slug} /> : <LandingPage />
+}
+
+/**
+ * En un host de sede resuelve QUÉ mostrar:
+ *  - si el slug corresponde a una MARCA (slug del nombre comercial) con locales
+ *    públicos → portada de marca (lista de locales);
+ *  - si no (es el subdominio de un local, ej. kisha-miraflores) → micrositio.
+ * (Bloque A, Tanda 2.)
+ */
+function TenantHome({ slug }: { slug: string }) {
+  const [modo, setModo] = useState<'cargando' | 'marca' | 'sede'>('cargando')
+  useEffect(() => {
+    let cancelado = false
+    import('@/services/marcaService').then(({ marcaService }) =>
+      marcaService.getPortada(slug).then((m) => {
+        if (cancelado) return
+        // Portada SOLO si hay 2+ Sedes públicas Y el slug NO es el subdominio de una
+        // Sede concreta. Si entras por el link de una Sede (su subdominio coincide con
+        // el slug), vas directo al micrositio — nunca a la portada. (Candado de routing.)
+        const esLinkDeSede = !!m && m.sedes.some((x) => x.subdominio === slug)
+        setModo(m && m.sedes.length >= 2 && !esLinkDeSede ? 'marca' : 'sede')
+      }),
+    )
+    return () => { cancelado = true }
+  }, [slug])
+
+  if (modo === 'cargando') return <RouteFallback />
+  return modo === 'marca' ? <MarcaPortadaPage slug={slug} /> : <PublicSedeDetailPage />
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -270,6 +300,9 @@ export function App() {
 
             {/* LANDING PÚBLICA - SEDE POR ID (legacy) */}
             <Route path="/sede/:idSede" element={<PublicSedeDetailPage />} />
+
+            {/* PORTADA DE MARCA - lista los locales de una marca (Bloque A, Tanda 2) */}
+            <Route path="/marca/:slugMarca" element={<MarcaPortadaPage />} />
 
             {/* NOVEDADES PÚBLICAS */}
             <Route path="/novedades" element={<NovedadesSedePage />} />

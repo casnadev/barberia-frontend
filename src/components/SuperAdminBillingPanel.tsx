@@ -31,6 +31,7 @@ export function SuperAdminBillingPanel() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [q, setQ] = useState('')
+  const [sel, setSel] = useState<EmpresaBilling | null>(null)
 
   useEffect(() => {
     let vivo = true
@@ -78,7 +79,8 @@ export function SuperAdminBillingPanel() {
       />
 
       {/* Tabla */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+      {/* Tabla (desktop) */}
+      <div className="hidden sm:block bg-white rounded-xl border border-gray-200 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-gray-500 border-b border-gray-200 bg-gray-50">
@@ -95,7 +97,7 @@ export function SuperAdminBillingPanel() {
           </thead>
           <tbody>
             {filas.map((e) => (
-              <tr key={e.idEmpresa} className="border-b border-gray-100 hover:bg-gray-50">
+              <tr key={e.idEmpresa} className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer" onClick={() => setSel(e)}>
                 <td className="py-2 px-3 font-medium text-gray-800">{e.nombre}</td>
                 <td className="py-2 px-3 text-gray-600">{e.plan ?? '—'}</td>
                 <td className="py-2 px-3">
@@ -119,6 +121,55 @@ export function SuperAdminBillingPanel() {
           </tbody>
         </table>
       </div>
+
+      {/* Lista (móvil): toca una empresa para ver su detalle en un modal — sin scroll lateral */}
+      <div className="sm:hidden space-y-2">
+        {filas.map((e) => (
+          <button
+            key={e.idEmpresa}
+            onClick={() => setSel(e)}
+            className="w-full text-left bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center gap-3 active:bg-gray-50"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-gray-900 truncate">{e.nombre}</div>
+              <div className="text-xs text-gray-500 truncate">{e.plan ?? 'Sin plan'}</div>
+            </div>
+            <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${estadoColor[e.estado] ?? 'bg-gray-100 text-gray-600'}`}>{e.estado}</span>
+          </button>
+        ))}
+        {filas.length === 0 && <p className="py-8 text-center text-gray-400 text-sm">Sin resultados.</p>}
+      </div>
+
+      {/* Modal detalle de empresa */}
+      {sel && (
+        <div className="fixed inset-0 z-[120] bg-gray-900/45 flex items-center justify-center p-4" onClick={() => setSel(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-5 max-h-[85vh] overflow-y-auto" onClick={(ev) => ev.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="min-w-0">
+                <h3 className="font-bold text-gray-900 truncate">{sel.nombre}</h3>
+                <p className="text-sm text-gray-500">{sel.plan ?? 'Sin plan'}</p>
+              </div>
+              <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${estadoColor[sel.estado] ?? 'bg-gray-100 text-gray-600'}`}>{sel.estado}</span>
+            </div>
+            <dl className="text-sm divide-y divide-gray-100">
+              {[
+                ['Trial / Cobro', fecha(sel.trialEnd ?? sel.proximoCobro)],
+                ['Stripe', sel.tieneStripeSubscription ? '✅ Suscripción' : sel.tieneStripeCustomer ? '👤 Cliente' : '—'],
+                ['WhatsApp / mes', String(sel.whatsAppUsadoMes)],
+                ['Referidos', String(sel.referidosConfirmados)],
+                ['Saldo referidos', soles(sel.saldoReferidoPEN)],
+                ['Último pago', sel.ultimoPagoFecha ? `${fecha(sel.ultimoPagoFecha)} · ${sel.ultimoPagoEstado}` : '—'],
+              ].map(([k, v]) => (
+                <div key={k} className="flex items-center justify-between py-2">
+                  <dt className="text-gray-500">{k}</dt>
+                  <dd className="text-gray-800 font-medium text-right">{v}</dd>
+                </div>
+              ))}
+            </dl>
+            <button onClick={() => setSel(null)} className="mt-4 w-full py-2.5 rounded-xl bg-gray-900 hover:bg-black text-white text-sm font-semibold">Cerrar</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

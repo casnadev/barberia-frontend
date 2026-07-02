@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Edit2, Trash2, AlertCircle, X, Eye, EyeOff, Upload, Image as ImageIcon, KeyRound } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { apiClient, buildImageUrl } from '@/services/apiClient'
+import { ComboBox } from '@/components/ComboBox'
+import { ROLES_TRABAJADOR } from '@/data/roles'
 import s from '@/styles/Trabajadores.module.css'
 
 interface Trabajador {
@@ -66,6 +68,15 @@ export function TrabajadoresPage() {
     esDestacado: false,
     estado: true,
   })
+
+  // Roles predefinidos + preserva un valor antiguo (texto libre) como opción, para
+  // no perder datos al editar trabajadores creados antes del dropdown.
+  const opcionesRol = useMemo(() => {
+    const base = [...ROLES_TRABAJADOR]
+    const val = (form.especialidad || '').trim()
+    if (val && !base.includes(val)) base.unshift(val)
+    return base
+  }, [form.especialidad])
 
   // ========== CARGA (admin/todos = activos + inactivos), cacheada con React Query ==========
   // Revisitar la pestaña dentro del staleTime (5 min) muestra los datos al instante,
@@ -416,8 +427,14 @@ export function TrabajadoresPage() {
 
                 <div className={s.row2}>
                   <div className={s.field}>
-                    <label className={s.label}>Especialidad</label>
-                    <input className={s.input} type="text" value={form.especialidad || ''} onChange={e => setForm({ ...form, especialidad: e.target.value })} />
+                    <label className={s.label}>Rol</label>
+                    <ComboBox
+                      value={form.especialidad || ''}
+                      onChange={(v) => setForm({ ...form, especialidad: String(v) })}
+                      opciones={opcionesRol}
+                      inputClassName={s.input}
+                      placeholder="Elige un rol"
+                    />
                   </div>
                   <div className={s.field}>
                     <label className={s.label}>Experiencia</label>

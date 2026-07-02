@@ -8,6 +8,8 @@ export interface Empresa {
   correoContacto: string
   telefonoContacto: string
   totalSedes?: number
+  /** Override manual del límite de sedes (SuperAdmin). Null = usar el plan. */
+  limiteSedesOverride?: number | null
   planActual?: string
   fechaFinPlan?: string
   /** True si la empresa está pausada (sin sedes activas). El público no la ve. */
@@ -84,6 +86,7 @@ export interface SedeAdmin {
   colorPrimarioHex?: string
   descripcionCorta?: string
   estado?: boolean
+  esPublica?: boolean
 }
 
 export interface UpdateSedeDTO {
@@ -102,6 +105,7 @@ export interface UpdateSedeDTO {
   colorPrimarioHex?: string
   descripcionCorta?: string
   estado?: boolean
+  esPublica?: boolean
 }
 
 export interface Plan {
@@ -186,6 +190,17 @@ export const empresasService = {
   /** Pausa/reactiva la barbería: apaga/prende TODAS sus sedes (no toca el login del dueño). */
   setEmpresaEstado: async (idEmpresa: number, activa: boolean) => {
     const res = await apiClient.patch(`/api/superadmin/empresas/${idEmpresa}/estado`, { activo: activa })
+    return res.data
+  },
+
+  /**
+   * Override del límite de sedes de una empresa ("a gusto" del SuperAdmin).
+   * limite = número (tope), 0 (ninguna), -1 (ilimitado) o null (limpiar → usar el plan).
+   */
+  setLimiteSedesOverride: async (idEmpresa: number, limite: number | null) => {
+    const res = await apiClient.put(`/api/superadmin/empresas/${idEmpresa}/limite-sedes`, {
+      limiteSedesOverride: limite,
+    })
     return res.data
   },
 

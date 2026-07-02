@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { Plus } from 'lucide-react'
 import { superAdminPlanesService, type PlanAdmin, type PlanAdminUpsert } from '@/services/superAdminPlanesService'
 
 const vacio: PlanAdminUpsert = {
@@ -67,12 +68,17 @@ export function SuperAdminPlanesPanel() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-lg font-bold text-gray-900">Planes</h2>
           <p className="text-sm text-gray-500">Administra precios, límites, días de prueba y los IDs de Stripe — sin tocar la base de datos.</p>
         </div>
-        <button onClick={abrirNuevo} className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">+ Nuevo plan</button>
+        <button
+          onClick={abrirNuevo}
+          className="shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap px-3.5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 shadow-sm shadow-blue-600/20 transition"
+        >
+          <Plus className="w-4 h-4" /> Nuevo plan
+        </button>
       </div>
 
       {/* Formulario */}
@@ -157,26 +163,43 @@ export function SuperAdminPlanesPanel() {
       {/* Cards (móvil) */}
       <div className="grid grid-cols-1 gap-3 sm:hidden">
         {planes.map(p => (
-          <div key={p.idPlan} className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="font-semibold text-gray-900">
+          <div
+            key={p.idPlan}
+            className={`rounded-2xl p-4 shadow-sm ${
+              p.esPopular
+                ? 'bg-blue-50 border border-blue-200'
+                : 'bg-gradient-to-b from-gray-50 to-white border border-gray-200'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-bold text-gray-900">
                 {p.nombre}
-                {p.esPopular && <span className="ml-1.5 text-[10px] bg-gray-900 text-white px-1.5 py-0.5 rounded-full">Popular</span>}
+                {p.esPopular && <span className="ml-1.5 text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded-full align-middle">Popular</span>}
               </div>
               <button onClick={() => toggle(p)} className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600'}`}>
                 {p.activo ? 'Activo' : 'Inactivo'}
               </button>
             </div>
+
+            {/* Precio destacado */}
+            <div className="rounded-xl bg-white/70 border border-gray-100 px-3 py-2.5 mb-3 flex items-end justify-between">
+              <div>
+                <div className="text-2xl font-extrabold text-gray-900 leading-none">{soles(p.precioMensual, p.moneda)}</div>
+                <div className="text-[11px] text-gray-400 mt-0.5">por mes</div>
+              </div>
+              <div className="text-right text-xs text-gray-500">
+                {p.precioAnual > 0 ? <>{soles(p.precioAnual, p.moneda)}<span className="text-gray-400"> /año</span></> : 'sin plan anual'}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-y-1.5 gap-x-3 text-sm">
-              <div className="text-gray-500">Mensual</div><div className="text-gray-800 text-right font-medium">{soles(p.precioMensual, p.moneda)}</div>
-              <div className="text-gray-500">Anual</div><div className="text-gray-800 text-right font-medium">{p.precioAnual > 0 ? soles(p.precioAnual, p.moneda) : '—'}</div>
               <div className="text-gray-500">Trial</div><div className="text-gray-800 text-right">{p.trialDuracionDias} d</div>
               <div className="text-gray-500">WhatsApp</div><div className="text-gray-800 text-right">{lim(p.maxWhatsAppMes)}</div>
               <div className="text-gray-500">Correos</div><div className="text-gray-800 text-right">{lim(p.maxEmailMes)}</div>
               <div className="text-gray-500">Trab. / Sedes</div><div className="text-gray-800 text-right">{lim(p.maxTrabajadores)} / {lim(p.maxSedes)}</div>
               <div className="text-gray-500">Stripe</div><div className="text-right">{p.stripePriceId ? <span className="text-emerald-600">✅</span> : <span className="text-gray-400">—</span>}</div>
             </div>
-            <button onClick={() => abrirEditar(p)} className="mt-3 w-full py-2 rounded-lg bg-blue-50 text-blue-600 text-sm font-semibold hover:bg-blue-100">Editar</button>
+            <button onClick={() => abrirEditar(p)} className="mt-3 w-full py-2 rounded-lg bg-white border border-gray-200 text-blue-600 text-sm font-semibold hover:bg-blue-50 transition">Editar</button>
           </div>
         ))}
       </div>

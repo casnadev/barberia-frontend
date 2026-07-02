@@ -98,6 +98,7 @@ type SheetId = 'info' | 'imagen' | 'contacto' | 'ubicacion' | 'horarios' | 'nego
 
 export function ConfiguracionPage() {
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [bannerPreview, setBannerPreview] = useState<string | null>(null)
@@ -134,10 +135,12 @@ export function ConfiguracionPage() {
   const [empresa, setEmpresa] = useState({
     idEmpresa: null as number | null,
     razonSocial: '', nombreComercial: '', ruc: '', correoContacto: '', telefonoContacto: '',
+    descripcion: '',
     codigoReferido: '' as string, saldoReferidoPEN: 0,
   })
-  // Correo/teléfono de la cuenta del admin: sirven como valor por defecto para no retipear.
-  const [cuenta, setCuenta] = useState({ correo: '', telefono: '' })
+  // Datos de la cuenta del admin (titular/dueño): nombre, correo y teléfono. El nombre
+  // es el "Titular" que se muestra en Datos del negocio; correo/tel sirven de default.
+  const [cuenta, setCuenta] = useState({ nombreCompleto: '', correo: '', telefono: '' })
 
   useEffect(() => { loadSede(); loadNegocio() }, [])
 
@@ -215,6 +218,7 @@ export function ConfiguracionPage() {
   const loadSede = async () => {
     try {
       setLoading(true)
+      setLoadError(false)
       const res = await apiClient.get('/api/Sedes/actual')
       const data = res.data?.data ?? res.data
       if (data) {
@@ -242,7 +246,9 @@ export function ConfiguracionPage() {
       }
     } catch (err) {
       console.error('❌ Error cargando configuración:', err)
-      toast.error('Error cargando configuración de la sede')
+      // En vez de un toast + un hub vacío que parece "negocio sin datos", marcamos
+      // el error para mostrar un estado claro con botón Reintentar.
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -258,13 +264,14 @@ export function ConfiguracionPage() {
       const p = perfil?.data?.data ?? perfil?.data
       const cuentaCorreo = p?.correo ?? ''
       const cuentaTel = p?.telefono ?? ''
-      setCuenta({ correo: cuentaCorreo, telefono: cuentaTel })
+      setCuenta({ nombreCompleto: p?.nombreCompleto ?? '', correo: cuentaCorreo, telefono: cuentaTel })
       if (e) {
         setEmpresa({
           idEmpresa: e.idEmpresa ?? null,
           razonSocial: e.razonSocial ?? '',
           nombreComercial: e.nombreComercial ?? '',
           ruc: e.ruc ?? '',
+          descripcion: e.descripcion ?? '',
           // Si la empresa aún no tiene contacto, se pre-carga con el de tu cuenta (no retipear).
           correoContacto: e.correoContacto || cuentaCorreo || '',
           telefonoContacto: e.telefonoContacto || cuentaTel || '',
@@ -399,7 +406,7 @@ export function ConfiguracionPage() {
 
   // Guarda sede + datos del negocio (empresa) en una sola acción. Devuelve true si OK.
   const guardarConfig = async (): Promise<boolean> => {
-    if (!sede.nombre?.trim()) { toast.error('El nombre de la barbería es obligatorio'); return false }
+    if (!sede.nombre?.trim()) { toast.error('El nombre de la Sede es obligatorio'); return false }
     if (empresa.idEmpresa != null && !empresa.nombreComercial?.trim()) { toast.error('El nombre del negocio es obligatorio.'); return false }
     try {
       setSubmitting(true)
@@ -433,6 +440,16 @@ export function ConfiguracionPage() {
           ruc: empresa.ruc?.trim() || undefined,
           correoContacto: empresa.correoContacto?.trim() || undefined,
           telefonoContacto: empresa.telefonoContacto?.trim() || undefined,
+          descripcion: empresa.descripcion?.trim() || undefined,
+        })
+      }
+
+      // Titular / dueño (nombre de la cuenta del admin). Solo si cambió y no está vacío.
+      if (cuenta.nombreCompleto?.trim()) {
+        await apiClient.put('/api/auth/mi-perfil', {
+          nombreCompleto: cuenta.nombreCompleto.trim(),
+          correo: cuenta.correo?.trim() || undefined,
+          telefono: cuenta.telefono?.trim() || undefined,
         })
       }
 
@@ -488,6 +505,21 @@ export function ConfiguracionPage() {
         <SkeletonRows rows={6} cols={2} />
         <Skeleton h={20} w="35%" style={{ marginTop: 8 }} />
         <SkeletonRows rows={4} cols={2} />
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="pb-10" style={{ maxWidth: 760, margin: '0 auto', paddingTop: 48, textAlign: 'center' }}>
+        <div style={{ color: '#b45309', fontWeight: 600, marginBottom: 6 }}>No pudimos cargar la configuración</div>
+        <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 16 }}>Revisa tu conexión e inténtalo de nuevo.</p>
+        <button
+          onClick={() => { loadSede(); loadNegocio() }}
+          className="inline-flex items-center gap-2 bg-gray-900 hover:bg-black text-white text-sm font-semibold px-4 py-2.5 rounded-xl"
+        >
+          Reintentar
+        </button>
       </div>
     )
   }
@@ -603,12 +635,16 @@ export function ConfiguracionPage() {
 
       {/* Información básica */}
       <SeccionSheet open={sheet === 'info'} onClose={cerrar} titulo="Información básica"
-        subtitulo="El nombre y la descripción de tu barbería"
+        subtitulo="El nombre de esta Sede (su zona) y su descripción"
         footer={<BotonGuardar onClick={guardarYcerrar} cargando={submitting} />}>
         <div className="space-y-4">
-          <Field label="Nombre de la barbería *">
-            <input className={inputCls} value={sede.nombre || ''} onChange={(e) => handleChange('nombre', e.target.value)} />
+          <Field label="Nombre de la Sede *">
+            <input className={inputCls} value={sede.nombre || ''} onChange={(e) => handleChange('nombre', e.target.value)} placeholder="Ej: Miraflores" />
           </Field>
+          <p className="text-xs text-gray-400 flex items-start gap-1.5">
+            <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            <span>Suele ser la zona/distrito. El nombre del negocio se edita en "Datos del negocio".</span>
+          </p>
           {sede.subdominio && (
             <p className="text-xs text-gray-400 flex items-start gap-1.5">
               <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
@@ -821,7 +857,17 @@ export function ConfiguracionPage() {
         footer={<BotonGuardar onClick={guardarYcerrar} cargando={submitting} />}>
         <div className="space-y-4">
           <Field label="Nombre del negocio *">
-            <input className={inputCls} value={empresa.nombreComercial} onChange={(e) => handleChangeEmpresa('nombreComercial', e.target.value)} />
+            <input className={inputCls} value={empresa.nombreComercial} onChange={(e) => handleChangeEmpresa('nombreComercial', e.target.value)} placeholder="Ej: Kisha Barber" />
+          </Field>
+          <p className="text-xs text-gray-400 flex items-start gap-1.5">
+            <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            <span>Es el nombre de tu marca y aplica a <b>todas tus Sedes</b>. Cada Sede además tiene su propia zona (ver "Información básica").</span>
+          </p>
+          <Field label="Titular / dueño">
+            <input className={inputCls} value={cuenta.nombreCompleto} onChange={(e) => setCuenta((p) => ({ ...p, nombreCompleto: e.target.value }))} placeholder="Ej: Nader Castle" />
+          </Field>
+          <Field label="Descripción del negocio">
+            <textarea className={inputCls + ' resize-none'} rows={3} value={empresa.descripcion} onChange={(e) => handleChangeEmpresa('descripcion', e.target.value)} placeholder="Breve descripción de tu negocio" />
           </Field>
           <Field label="Correo del negocio">
             <input type="email" className={inputCls} value={empresa.correoContacto} onChange={(e) => handleChangeEmpresa('correoContacto', e.target.value)} />

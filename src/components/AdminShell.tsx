@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { Home, Scissors, Users, Calendar, User, Clock, Settings, Wallet, Calculator, BadgeCheck, DollarSign, CreditCard } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { AdminHeader } from '@/components/AdminHeader'
+import AvisoLocalesActivos from '@/components/AvisoLocalesActivos'
 import { CobrarVentaModal } from '@/components/CobrarVentaModal'
 import { prefetchAdminPages } from '@/router/adminPages'
 import { prefetchRouteData } from '@/lib/prefetch'
@@ -202,6 +203,7 @@ export function AdminShell() {
         <div className={s.main}>
           {/* Header PERSISTENTE: SedeSwitcher + AccountMenu nunca se desmontan */}
           <AdminHeader />
+          <AvisoLocalesActivos />
           <main className={s.content}>
             {/* Solo el contenido (la página activa) se suspende/cambia */}
             <Suspense fallback={<ContentFallback />}>

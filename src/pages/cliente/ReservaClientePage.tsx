@@ -9,6 +9,7 @@ import { clientesService } from '@/services/clientesService'
 import { mensajeError } from '@/utils/apiError'
 import { buildImageUrl } from '@/services/apiClient'
 import { confirmDialog } from '@/components/ConfirmDialog'
+import { NegocioNoDisponible } from '@/components/NegocioNoDisponible'
 import { useAuthStore } from '@/store/authStore'
 import { CalendarModal } from './CalendarModal'
 import { ReservaResumen } from './ReservaResumen'
@@ -481,6 +482,13 @@ export function ReservaClientePage() {
 
   const brandStyle = { ['--brand' as any]: ((sede as any)?.colorPrimarioHex || '#2855F6') } as React.CSSProperties
 
+  // Gating Tanda 3: si el local no existe / está pausado / dejó de ser público, el
+  // backend responde 404 → sede queda null → mostramos "no disponible" en vez de un
+  // formulario vacío que no llevaría a ninguna reserva válida.
+  if (!sede) {
+    return <NegocioNoDisponible mensaje="Por el momento este local no está disponible para reservas." />
+  }
+
   return (
     <div className={styles.container} style={brandStyle}>
       {/* HEADER FLOTANTE */}
@@ -499,6 +507,13 @@ export function ReservaClientePage() {
       <div className={styles.mainContainer}>
         <div className={styles.header}>
           <h1 className={styles.title}>Reservar cita</h1>
+          {((sede as any)?.nombreComercial || (sede as any)?.nombre) && (
+            <p style={{ margin: '2px 0 0', fontSize: 13, color: '#6b7280', fontWeight: 600 }}>
+              {((sede as any)?.totalSedesPublicasMarca ?? 1) >= 2
+                ? `${(sede as any).nombreComercial} – ${(sede as any).nombre}`
+                : ((sede as any)?.nombreComercial || (sede as any)?.nombre)}
+            </p>
+          )}
           <div className={styles.progressBar}>
             {[1, 2, 3, 4].map((s) => (
               <div
