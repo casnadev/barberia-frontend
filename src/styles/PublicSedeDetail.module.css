@@ -426,9 +426,16 @@
 .estadoSub { color: var(--tx2); font-weight: 500; }
 .addrPill { display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; background: var(--bg2); border-radius: 12px; padding: 10px 14px; font-size: 14px; color: var(--tx); text-decoration: none; transition: background .15s; }
 .addrPill:hover { background: var(--bd-soft); }
+/* Fila mobile: dirección (izq) + teléfono (der) SIEMPRE en una línea.
+   La dirección se encoge y trunca; el teléfono nunca se comprime. Todo el
+   layout vive aquí (no en estilos inline) para que el CSS de desktop pueda
+   ocultarla sin que un inline lo anule. */
+.addrPillRow { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; width: 100%; margin-top: 10px; }
+.addrPillRow .addrPill { margin-top: 0; }
+.addrPillAddr { display: flex; flex: 1 1 0%; min-width: 0; overflow: hidden; }
+.addrPillAddr > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.addrPillTel { display: flex; flex: 0 0 auto; white-space: nowrap; }
 .addrInline { display: none; }
-
-/* Página dedicada de Novedades */
 .npPage { background: var(--bg2); }
 .npBar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(255,255,255,.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--bd); }
 .npBack { background: none; border: none; padding: 6px; color: var(--tx); cursor: pointer; display: inline-flex; }
@@ -477,6 +484,7 @@
   .addrInline::before { content: '\00B7'; margin-right: 12px; color: var(--tx3); }
   .addrInline:hover { color: var(--tx); }
   .addrPill { display: none; }
+  .addrPillRow { display: none; }
   .social:hover { color: var(--brand); }
   .title { font-size: 36px; }
   .titleRow { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
