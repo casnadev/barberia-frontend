@@ -135,6 +135,11 @@
 
 .head { padding-top: 32px; margin-bottom: 20px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .title { font-size: 28px; font-weight: 800; color: var(--tx); margin-bottom: 8px; line-height: 1.1; letter-spacing: -0.01em; }
+/* Header desktop: [LOGO] Marca - Distrito en una sola linea. En mobile el logo
+   vive en el hero (heroLogo), asi que aqui titleRow es transparente y no altera
+   el layout actual. */
+.titleRow { display: contents; }
+.headLogo { display: none; }
 .metaRow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin-bottom: 4px; }
 .ratingWrap { display: flex; align-items: center; gap: 8px; }
 .ratingVal { font-weight: 700; font-size: 14px; color: var(--tx); }
@@ -474,6 +479,13 @@
   .addrPill { display: none; }
   .social:hover { color: var(--brand); }
   .title { font-size: 36px; }
+  .titleRow { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  .titleRow .title { margin-bottom: 0; }
+  .headLogo {
+    display: block; flex: none; width: 56px; height: 56px;
+    border-radius: 14px; object-fit: cover; background: #fff;
+    border: 1px solid var(--edge, #e5e7eb);
+  }
 
   /* Portfolio: 4 columnas, primera imagen grande 2x2 */
   .pf { grid-template-columns: repeat(4, 1fr); gap: 12px; }

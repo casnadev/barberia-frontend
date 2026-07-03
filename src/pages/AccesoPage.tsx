@@ -6,8 +6,11 @@ import { ArrowLeft, ArrowRight, Loader2, Eye, EyeOff, UserPlus, LogIn, ShieldChe
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/authService'
 import { setTenant, clearTenant } from '@/services/apiClient'
+import { ComboBox } from '@/components/ComboBox'
+import { DEPARTAMENTOS, distritosDe, distritoValido } from '@/data/ubigeo'
 
 const LOGO = '/barber-logo-black.png'
+const comboCls = 'w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition'
 
 type Tipo = 'Cliente' | 'Profesional'
 type View = 'choose' | 'login' | 'password' | 'code' | 'finalize'
@@ -32,6 +35,8 @@ export function AccesoPage() {
 
   const [nombre, setNombre] = useState('')
   const [nombreNegocio, setNombreNegocio] = useState('')
+  const [departamento, setDepartamento] = useState('')
+  const [distrito, setDistrito] = useState('')
   const [correoVerificado, setCorreoVerificado] = useState('')
   // Código de referido: función LISTA pero OCULTA por ahora. Si llega ?ref= en la URL
   // se respeta en silencio; no mostramos campo visible (se habilitará más adelante).
@@ -158,10 +163,17 @@ export function AccesoPage() {
     finally { setLoading(false) }
   }
 
+  // Al cambiar el departamento, limpia el distrito si dejó de ser válido.
+  const elegirDepartamento = (dep: string) => {
+    setDepartamento(dep)
+    if (!distritoValido(dep, distrito)) setDistrito('')
+  }
+
   // Finaliza el registro PROFESIONAL (sea por OTP o por Google).
   const crearNegocio = async () => {
     if (!nombreNegocio.trim()) { toast.error('Ingresa el nombre de tu negocio.'); return }
     if (!nombre.trim()) { toast.error('Ingresa tu nombre.'); return }
+    if (!departamento || !distrito) { toast.error('Elige tu departamento y distrito.'); return }
     if (password.length < 8) { toast.error('La contraseña debe tener al menos 8 caracteres.'); return }
     setLoading(true)
     try {
@@ -170,6 +182,7 @@ export function AccesoPage() {
         resp = await authService.googleCompletarProfesional({
           credential: googleCredential, nombreNegocio: nombreNegocio.trim(),
           nombre: nombre.trim(), password,
+          departamento, distrito,
         })
       } else {
         resp = await authService.signupCompletar({
@@ -178,6 +191,7 @@ export function AccesoPage() {
           correo: esEmail ? idValor() : undefined,
           telefono: !esEmail ? idValor() : undefined,
           password,
+          departamento, distrito,
           codigoReferido: codigoReferido.trim() || undefined,
         })
       }
@@ -304,6 +318,17 @@ export function AccesoPage() {
 
               <Label>Tu nombre</Label>
               <Input value={nombre} onChange={setNombre} />
+
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <Label>Departamento</Label>
+                  <ComboBox value={departamento} onChange={(v) => elegirDepartamento(String(v))} opciones={DEPARTAMENTOS} inputClassName={comboCls} placeholder="Departamento" />
+                </div>
+                <div>
+                  <Label>Distrito</Label>
+                  <ComboBox value={distrito} onChange={(v) => setDistrito(String(v))} opciones={distritosDe(departamento)} disabled={!departamento} textoDeshabilitado="Elige departamento" inputClassName={comboCls} placeholder="Distrito" />
+                </div>
+              </div>
 
               <Label>Correo verificado</Label>
               <Input value={correoVerificado || (esEmail ? idValor() : displayId)} onChange={() => {}} readOnly />

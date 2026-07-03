@@ -625,11 +625,18 @@ export function PublicSedeDetailPage() {
         {/* TÍTULO + ACCIONES (arriba, estilo Fresha) */}
         <div className={styles.head}>
           <div>
-            <h1 className={styles.title}>
-              {(sede.totalSedesPublicasMarca ?? 1) >= 2
-                ? `${sede.nombreComercial} – ${sede.nombre}`
-                : (sede.nombreComercial || sede.nombre)}
-            </h1>
+            {/* Fila título: en DESKTOP se antepone el logo (LOGO — Marca – Distrito);
+                en mobile el logo va en el hero y titleRow es transparente. */}
+            <div className={styles.titleRow}>
+              {sede.urlLogo && (
+                <img className={styles.headLogo} src={img(sede.urlLogo)} alt={sede.nombre} />
+              )}
+              <h1 className={styles.title}>
+                {(sede.totalSedesPublicasMarca ?? 1) >= 2
+                  ? `${sede.nombreComercial} – ${sede.nombre}`
+                  : (sede.nombreComercial || sede.nombre)}
+              </h1>
+            </div>
             <div className={styles.metaRow}>
               {resenas.total > 0 ? (
                 <span className={styles.ratingWrap}>
