@@ -7,6 +7,7 @@ import {
   Heart, Mail, Phone, Instagram, Facebook, Youtube, MapPin,
 } from 'lucide-react'
 import { landingService, type SedeDestacada } from '@/services/landingService'
+import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
 import { planesService, type PlanPublico } from '@/services/planesService'
 import { resenasPublicasService, type ResenaDestacada } from '@/services/resenasPublicasService'
 import { setTenant, buildImageUrl, apiClient, urlMicrositio } from '@/services/apiClient'
@@ -300,7 +301,7 @@ export default function LandingPage() {
                   {s.logoUrl ? <img src={buildImageUrl(s.logoUrl)} alt="" onError={(e) => { const el = e.currentTarget as HTMLImageElement; el.style.display = 'none'; const cont = el.parentElement; if (cont && !cont.dataset.fb) { cont.dataset.fb = '1'; cont.appendChild(document.createTextNode(iniciales(s.nombre))) } }} /> : iniciales(s.nombre)}
                 </span>
                 <div className={styles.sedeText}>
-                  <span className={styles.sedeName}>{s.nombre} <ShieldCheck size={14} className={styles.verified} /></span>
+                  <span className={styles.sedeName}>{nombreParaMostrar(s) || s.nombre} <ShieldCheck size={14} className={styles.verified} /></span>
                   <span className={styles.sedeLoc}><MapPin size={12} /> {s.direccion || s.ciudad || 'Perú'}</span>
                 </div>
               </div>

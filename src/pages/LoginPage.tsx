@@ -1,585 +1,402 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
 import {
-  Scissors, CalendarClock, Wallet, Globe, Star, BarChart3,
-  Check, X, ShieldCheck, ArrowRight, ArrowLeft, Plus, Minus, Menu,
-  Heart, Mail, Phone, Instagram, Facebook, Youtube, MapPin,
+  ArrowLeft, ShieldCheck, KeyRound, Send, Loader2, LogIn,
+  Eye, EyeOff, MailCheck, MessageCircle,
 } from 'lucide-react'
-import { landingService, type SedeDestacada } from '@/services/landingService'
-import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
-import { planesService, type PlanPublico } from '@/services/planesService'
-import { resenasPublicasService, type ResenaDestacada } from '@/services/resenasPublicasService'
-import { setTenant, buildImageUrl, apiClient, urlMicrositio } from '@/services/apiClient'
 import { useAuthStore } from '@/store/authStore'
-import { useFavoritosStore } from '@/store/favoritosStore'
-import { AccountMenu } from '@/components/AccountMenu'
-import styles from './Landing.module.css'
+import { authService } from '@/services/authService'
+import { setTenant, clearTenant } from '@/services/apiClient'
+import { sedeTenantService } from '@/services/sedeTenantService'
 
-/* ════════════════════════════════════════════════════════════════════════
-   CONFIGURACIÓN — ajustar antes de publicar
-   ════════════════════════════════════════════════════════════════════════ */
-const WHATSAPP = '51999888777' // ← número real (51 + 9 dígitos) para "Agendar reunión"
+// Vistas del login. Tras retirar PIN y login-OTP, el ingreso es:
+//   - 'tradicional'    → correo/teléfono + contraseña  (+ botón Google)
+//   - 'recover-pass-id'→ "Olvidé mi contraseña": pide el correo/teléfono
+//   - 'sent'           → "revisa tu correo/WhatsApp" (el enlace lleva el código)
+//   - 'set-password'   → ingresar código + nueva contraseña
+type View = 'tradicional' | 'recover-pass-id' | 'set-password' | 'sent'
 
-/* ── helpers ───────────────────────────────────────────────────────────── */
-const waLink = (t: string) => `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(t)}`
-const iniciales = (n: string) =>
-  n.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
-const soles = (n: number) => `S/${Number.isInteger(n) ? n : n.toFixed(2)}`
+export function LoginPage() {
+  const navigate = useNavigate()
+  const { setUser, setToken } = useAuthStore()
 
-const WaIcon = ({ size = 18 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-    <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.2 1.1-1.7 1.2-.4.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.5-2.6-1.1-4.3-3.8-4.4-4-.1-.2-1-1.4-1-2.6 0-1.2.6-1.8.9-2 .2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2.1.3 0 .5l-.4.5-.3.3c-.1.1-.3.3-.1.5.1.3.6 1 1.3 1.6.9.8 1.6 1 1.9 1.2.2.1.4.1.5-.1l.7-.8c.2-.2.3-.2.5-.1l1.8.9c.2.1.4.2.5.3.1.2.1.6-.1 1.1Z" />
-  </svg>
-)
+  const [view, setView] = useState<View>('tradicional')
+  const [loading, setLoading] = useState(false)
 
-const ease = [0.2, 0.7, 0.2, 1] as const
-function Reveal({ children, delay = 0, className }: { children: React.ReactNode; delay?: number; className?: string }) {
+  const [identificador, setIdentificador] = useState('')
+  const [codigo, setCodigo] = useState('')
+
+  const [correo, setCorreo] = useState('')
+  const [password, setPassword] = useState('')
+
+  const [nuevaPass, setNuevaPass] = useState('')
+  const [repitePass, setRepitePass] = useState('')
+
+  // Google Sign-In. Si no hay VITE_GOOGLE_CLIENT_ID en el .env, el botón no
+  // aparece (no rompe nada).
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
+  const googleBtnRef = useRef<HTMLDivElement>(null)
+
+  // ----------------------------------------------------------- routing
+  const entrar = async (token: string, user: any, subdominio?: string) => {
+    setToken(token); setUser(user)
+    if (user.rol === 'SuperAdmin') clearTenant()
+    else if (subdominio) setTenant(subdominio)
+    else if (user.rol === 'Admin' || user.rol === 'Trabajador') {
+      // Pre-resuelve el tenant para que "Mi panel" abra sin fricción. Si aún no
+      // tiene sede (admin recién creado), no pasa nada: queda sin tenant.
+      // Con timeout corto: en móvil lento NO debe colgar el login. Si tarda,
+      // redirige igual y la sede se resuelve dentro del panel.
+      try {
+        const sedes = await Promise.race([
+          sedeTenantService.getMisSedes(),
+          new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 4000)),
+        ])
+        if (sedes[0]?.subdominio) setTenant(sedes[0].subdominio)
+      } catch { /* sin sede aun */ }
+    }
+    // Tras login exitoso, redirigir siempre al host canónico del panel.
+    // Si el usuario inició sesión desde kisha.barber.pe/login (lo que ya no
+    // debería pasar gracias a PanelGuard, pero por seguridad lo cubrimos aquí
+    // también), lo mandamos a barber.pe/<ruta-de-panel> y no al micrositio.
+    const panelHost = (import.meta.env.VITE_PANEL_HOST as string | undefined)?.trim() || ''
+    const esSede = window.location.hostname.endsWith('.barber.pe') &&
+      !['barber.pe', 'www.barber.pe', 'app.barber.pe', 'admin.barber.pe'].includes(window.location.hostname)
+    const rutaPanel =
+      user.rol === 'SuperAdmin' ? '/super-admin'
+      : user.rol === 'Trabajador' ? '/mi-agenda'
+      : user.rol === 'Admin' ? '/dashboard'
+      : '/'
+    if (panelHost && esSede && rutaPanel !== '/') {
+      window.location.replace(`https://${panelHost}${rutaPanel}`)
+    } else {
+      navigate(rutaPanel)
+    }
+  }
+
+  // ----------------------------------------------------------- deep-link del correo
+  // El botón del correo abre /login?acceso=password&id=<correo/tel>&code=<otp>
+  // → caemos directo en "Tu contraseña" con el contacto y el código precargados.
+  const [searchParams] = useSearchParams()
+  useEffect(() => {
+    const acceso = searchParams.get('acceso')
+    if (acceso !== 'password') return
+    const id = searchParams.get('id')
+    const code = searchParams.get('code')
+    if (id) setIdentificador(id)
+    if (code) setCodigo(code)
+    setView('set-password')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ----------------------------------------------------------- crear/recuperar contraseña
+  const enviarCodigoPassword = async () => {
+    if (!identificador.trim()) { toast.error('Ingresa tu correo o teléfono.'); return }
+    setLoading(true)
+    const r = await authService.solicitarPassword(identificador.trim())
+    setLoading(false)
+    if (!r.ok) {
+      // No registrado / inválido: se avisa y NO se avanza (no se envió ningún código).
+      toast.error(r.mensaje || 'Parece que el número o correo no está registrado. Regístrate.')
+      return
+    }
+    // Registrado: se envió el CÓDIGO (no un enlace). Vamos directo a ingresarlo.
+    toast.success('Te enviamos un código de 6 dígitos. Ingrésalo aquí.')
+    setView('set-password')
+  }
+
+  const establecerPassword = async () => {
+    if (!identificador.trim()) { toast.error('Ingresa tu correo o teléfono.'); return }
+    if (codigo.length !== 6) { toast.error('El código debe tener 6 dígitos.'); return }
+    if (nuevaPass.length < 8) { toast.error('La contraseña debe tener al menos 8 caracteres.'); return }
+    if (nuevaPass !== repitePass) { toast.error('Las contraseñas no coinciden.'); return }
+    setLoading(true)
+    const r = await authService.establecerPassword(identificador.trim(), codigo, nuevaPass)
+    setLoading(false)
+    if (r.ok) {
+      // Auto-login: ya se verificó por OTP y acaba de crear su clave → entra directo.
+      if (r.token && r.user) {
+        toast.success('¡Listo! Tu contraseña quedó guardada.')
+        await entrar(r.token, r.user, (r.user as any).subdominio)
+      } else {
+        // Respaldo por si no vino el token: lo mandamos al login normal.
+        toast.success('¡Contraseña lista! Ahora ingresa con ella.')
+        setCorreo(identificador.trim())
+        limpiar(); setView('tradicional')
+      }
+    } else toast.error(r.mensaje || 'No se pudo establecer la contraseña. Revisa el código.')
+  }
+
+  // ----------------------------------------------------------- tradicional (correo + contraseña)
+  const loginPassword = async () => {
+    if (!correo.trim() || !password) { toast.error('Completa el acceso y la contraseña.'); return }
+    setLoading(true)
+    try {
+      const res = await authService.login(correo.trim(), password)
+      if (res?.token && res.user) {
+        // El trabajador con contraseña temporal debe cambiarla en su primer
+        // ingreso. El backend marca debeCambiarPassword; le enviamos el OTP y lo
+        // mandamos a fijar su nueva contraseña.  (Flujo completo del trabajador
+        // se afina en el siguiente incremento.)
+        if (res.user.debeCambiarPassword) {
+          const id = res.user.correo || correo.trim()
+          setIdentificador(id)
+          await authService.solicitarPassword(id)
+          toast('Por seguridad, crea tu nueva contraseña. Te enviamos un código.')
+          limpiar(); setView('set-password')
+          return
+        }
+        await entrar(res.token, res.user as any, (res.user as any).subdominio)
+      } else toast.error('Acceso o contraseña incorrectos.')
+    } catch { toast.error('Acceso o contraseña incorrectos.') }
+    finally { setLoading(false) }
+  }
+
+  // ----------------------------------------------------------- Google
+  const handleGoogleCredential = async (resp: { credential?: string }) => {
+    if (!resp?.credential) return
+    setLoading(true)
+    try {
+      // En /login NO se crea cuenta: solo entra si ya existe (admin o trabajador).
+      // Si no existe, el backend avisa y mandamos a registrarse.
+      const res = await authService.loginGoogle(resp.credential, undefined, false)
+      if (res && 'token' in res && res.token) await entrar(res.token, (res as any).user)
+      else toast.error('No se pudo iniciar sesión con Google.')
+    } catch (e: any) {
+      const d = e?.response?.data
+      const msg = d?.detail || d?.mensaje || d?.message || ''
+      if (e?.response?.status === 404 || /no tienes una cuenta/i.test(msg)) {
+        toast.error('Parece que no tienes una cuenta creada. Regístrate para continuar.')
+        setTimeout(() => navigate('/acceso'), 1200)
+      } else {
+        toast.error(msg || 'No se pudo iniciar sesión con Google.')
+      }
+    } finally { setLoading(false) }
+  }
+
+  // Carga GSI (si falta) y dibuja el botón cuando estamos en la vista tradicional.
+  useEffect(() => {
+    if (!googleClientId || view !== 'tradicional') return
+    let cancelado = false
+
+    const pintarBoton = () => {
+      const g = (window as any).google
+      if (cancelado || !g?.accounts?.id || !googleBtnRef.current) return
+      g.accounts.id.initialize({ client_id: googleClientId, callback: handleGoogleCredential })
+      googleBtnRef.current.innerHTML = ''
+      g.accounts.id.renderButton(googleBtnRef.current, {
+        type: 'standard', theme: 'outline', size: 'large',
+        text: 'continue_with', shape: 'pill', logo_alignment: 'center',
+        locale: 'es', width: Math.min(googleBtnRef.current.offsetWidth || 320, 400),
+      })
+    }
+
+    const ID = 'google-gsi-script'
+    if (!document.getElementById(ID)) {
+      const s = document.createElement('script')
+      s.src = 'https://accounts.google.com/gsi/client'
+      s.async = true; s.defer = true; s.id = ID
+      document.head.appendChild(s)
+    }
+
+    if ((window as any).google?.accounts?.id) { pintarBoton(); return }
+    const intervalo = setInterval(() => {
+      if ((window as any).google?.accounts?.id) { clearInterval(intervalo); pintarBoton() }
+    }, 100)
+
+    return () => { cancelado = true; clearInterval(intervalo) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, googleClientId])
+
+  const limpiar = () => { setCodigo(''); setNuevaPass(''); setRepitePass('') }
+  const irA = (v: View) => { limpiar(); setView(v) }
+
+  // ================================================================= UI
   return (
-    <motion.div className={className} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.5, delay, ease }}>
-      {children}
-    </motion.div>
+    <div className="min-h-screen flex bg-white">
+      {/* ===================== PANEL IMAGEN (desktop) ===================== */}
+      <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
+        <img src="/login-barberia.jpg" alt="Barbería profesional" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 p-12 text-white">
+          <motion.h2 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="text-4xl font-bold leading-tight tracking-tight">
+            Tu barbería,<br /><span className="text-blue-200">en orden.</span>
+          </motion.h2>
+          <motion.p initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+            className="mt-4 text-white/85 text-lg max-w-sm">
+            Reservas, agenda y caja en un solo lugar.
+          </motion.p>
+        </div>
+      </div>
+
+      {/* ===================== PANEL DE FORMULARIO ===================== */}
+      <div className="flex-1 flex items-center justify-center p-6 relative overflow-hidden">
+        <img src="/login-barberia.jpg" alt="" aria-hidden="true" className="lg:hidden absolute inset-0 w-full h-full object-cover" />
+        <div className="lg:hidden absolute inset-0 bg-black/60" />
+
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl shadow-black/20 p-7 lg:bg-transparent lg:rounded-none lg:shadow-none lg:p-0">
+          {/* Logo (solo móvil) */}
+          <div className="lg:hidden text-center mb-7">
+            <img src="/barber-logo-black.png" alt="Barber.PE" className="h-11 mx-auto" />
+          </div>
+
+          <AnimatePresence mode="wait">
+            {/* ---------------- INGRESO TRADICIONAL (correo + contraseña + Google) ---------------- */}
+            {view === 'tradicional' && (
+              <motion.div key="tradicional" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <div className="hidden lg:block mb-6">
+                  <img src="/barber-logo-black.png" alt="Barber.PE" className="h-9 mb-2" />
+                  <p className="text-gray-400 text-sm mt-1">Reserva y gestiona fácil, rápido!</p>
+                </div>
+                <p className="lg:hidden text-center text-gray-500 text-sm mb-5">Reserva y gestiona fácil, rápido!</p>
+
+                <Label>Correo o teléfono</Label>
+                <Input value={correo} onChange={setCorreo} />
+                <Label>Contraseña</Label>
+                <PassInput value={password} onChange={setPassword} onEnter={loginPassword} />
+
+                <button onClick={loginPassword} disabled={loading} className={btnPrimary + ' mt-2'}>
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />} Entrar
+                </button>
+                <button onClick={() => irA('recover-pass-id')}
+                  className="w-full text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                  Olvidé mi contraseña
+                </button>
+                <button onClick={() => navigate('/acceso')}
+                  className="w-full text-blue-600 text-sm py-1 hover:text-blue-700 transition font-medium">
+                  ¿No tienes cuenta? Regístrate
+                </button>
+
+                {googleClientId && (
+                  <>
+                    <div className="flex items-center gap-3 my-4">
+                      <div className="h-px flex-1 bg-gray-200" />
+                      <span className="text-xs text-gray-400">o</span>
+                      <div className="h-px flex-1 bg-gray-200" />
+                    </div>
+                    <div ref={googleBtnRef} className="w-full flex justify-center" style={{ colorScheme: 'light' }} />
+                  </>
+                )}
+              </motion.div>
+            )}
+
+            {/* ---------------- OLVIDÉ MI CONTRASEÑA: identificador ---------------- */}
+            {view === 'recover-pass-id' && (
+              <motion.div key="recover-pass-id" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <Back onClick={() => irA('tradicional')} />
+                <p className="text-sm text-gray-500 mb-6">Te enviaremos un código para restablecer tu contraseña.</p>
+
+                <label className="block text-sm font-bold text-blue-700 mb-2">Correo o teléfono</label>
+                <Input value={identificador} onChange={setIdentificador} />
+
+                <button onClick={enviarCodigoPassword} disabled={loading} className={btnPrimary + ' mt-2'}>
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} Enviarme el código
+                </button>
+              </motion.div>
+            )}
+
+            {/* ---------------- ENVIADO: revisa tu correo / WhatsApp ---------------- */}
+            {/* ---------------- CONTRASEÑA: código + nueva contraseña ---------------- */}
+            {view === 'set-password' && (
+              <motion.div key="set-password" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <Back onClick={() => irA('recover-pass-id')} />
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Tu contraseña</h2>
+                <p className="text-sm text-gray-500 mb-5">Ingresa el código que recibiste y crea tu contraseña.</p>
+
+                <Label>Acceso (correo o teléfono)</Label>
+                <Input value={identificador} onChange={setIdentificador} />
+                <Label>Código (6 dígitos)</Label>
+                <Digits value={codigo} onChange={setCodigo} />
+                <Label>Nueva contraseña</Label>
+                <PassInput value={nuevaPass} onChange={setNuevaPass} />
+                <Label>Repite tu contraseña</Label>
+                <PassInput value={repitePass} onChange={setRepitePass} />
+
+                <button onClick={establecerPassword} disabled={loading} className={btnPrimary + ' mt-2'}>
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <KeyRound className="w-5 h-5" />} Guardar contraseña
+                </button>
+                <button onClick={enviarCodigoPassword} className="w-full text-gray-400 text-sm py-2 hover:text-gray-600">
+                  Reenviar código
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </div>
+    </div>
   )
 }
 
-/* Ventajas de la plataforma (contenido estático del producto). */
-const VENTAJAS = [
-  { icon: <WaIcon size={20} />, t: 'Reservas por WhatsApp 24/7', d: 'Tus clientes reservan, confirman y reprograman solos desde un link. Tú dejas de vivir respondiendo "¿hay hueco?".', tone: 'green' },
-  { icon: <CalendarClock size={20} />, t: 'Agenda por barbero', d: 'Cada barbero ve su propia agenda. Sin choques de horario ni citas pisadas.', tone: 'blue' },
-  { icon: <Wallet size={20} />, t: 'Caja y comisiones claras', d: 'Registra ventas por método de pago y al cierre sabes cuánto entró y cuánto le toca a cada barbero.', tone: 'amber' },
-  { icon: <BarChart3 size={20} />, t: 'Reportes en un clic', d: 'Mira tu mejor día, tu ticket promedio y exporta a Excel o PDF con tu logo.', tone: 'purple' },
-  { icon: <Globe size={20} />, t: 'Tu página, tu marca', d: 'Un sitio de reservas con tu logo y color en tu propio subdominio. Tu marca, no un marketplace.', tone: 'paper' },
-]
+/* ---------------------------------------------------------------- helpers UI */
+const btnPrimary =
+  'w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl transition disabled:opacity-50 shadow-lg shadow-blue-600/25 active:scale-[0.99]'
 
-/* FAQ — preguntas del wireframe + respuestas reales del producto. */
-const FAQS: [string, string][] = [
-  ['¿Mis clientes necesitan descargar una app?', 'No. Reservan desde tu link en el navegador y reciben todo por WhatsApp. Pueden confirmar, reprogramar o cancelar sin instalar nada.'],
-  ['¿Puedo poner mi logo, mi color y mi marca?', 'Sí. Cada barbería vive en su propio subdominio (ej. tubarberia.barber.pe) con tu logo, color de marca y datos. Es tu página, no un marketplace.'],
-  ['¿Cómo funcionan las comisiones de mis barberos?', 'Cada barbero tiene su agenda y sus comisiones se calculan solas según los servicios que atendió. Al cierre de caja ves cuánto le toca a cada uno.'],
-  ['¿Puedo ver cuánto gané y exportarlo?', 'Sí. Consultas por fecha o rango, ves gráficos y tu mejor día, y exportas el reporte a Excel o PDF con el logo de tu barbería en un clic.'],
-]
-
-/* Señales de confianza bajo los precios (contenido estático). */
-const BADGES = [
-  { icon: <Check size={18} />, t: 'Empieza gratis hoy', d: 'Días de prueba sin tarjeta' },
-  { icon: <X size={18} />, t: 'Sin contratos', d: 'Cancela cuando quieras' },
-  { icon: <WaIcon size={16} />, t: 'Soporte humano', d: 'Te ayudamos por WhatsApp' },
-  { icon: <ShieldCheck size={18} />, t: 'Seguridad garantizada', d: 'Tus datos siempre respaldados' },
-]
-
-/* ════════════════════════════════════════════════════════════════════════ */
-export default function LandingPage() {
-  const navigate = useNavigate()
-  const { user } = useAuthStore()
-  const favs = useFavoritosStore(s => s.favs)
-  const toggleFav = useFavoritosStore(s => s.toggle)
-  const [scrolled, setScrolled] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [faq, setFaq] = useState<number | null>(0)
-
-  const [sedes, setSedes] = useState<SedeDestacada[]>([])
-  const [planes, setPlanes] = useState<PlanPublico[]>([])
-  const [resenas, setResenas] = useState<ResenaDestacada[]>([])
-  const [intervalo, setIntervalo] = useState<'mensual' | 'anual'>('mensual')
-
-  const [lead, setLead] = useState({ negocio: '', duenio: '', tipoContacto: 'correo' as 'correo' | 'whatsapp', contacto: '' })
-  const [enviando, setEnviando] = useState(false)
-  const [enviado, setEnviado] = useState(false)
-  const [err, setErr] = useState('')
-  const [demoOpen, setDemoOpen] = useState(false)
-
-  const sedesRail = useRef<HTMLDivElement>(null)
-  const resenasRail = useRef<HTMLDivElement>(null)
-  const planesRail = useRef<HTMLDivElement>(null)
-
-  /* ── efectos ──────────────────────────────────────────────────────── */
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12)
-    onScroll(); window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  useEffect(() => {
-    let alive = true
-    landingService.getSedesPublicas().then((s) => { if (alive) setSedes(s) })
-    planesService.getPublicos().then((p) => { if (alive) setPlanes(p) })
-    resenasPublicasService.getDestacadas(12).then((r) => { if (alive) setResenas(r) })
-    return () => { alive = false }
-  }, [])
-
-  useEffect(() => {
-    if (!demoOpen) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDemoOpen(false) }
-    document.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
-  }, [demoOpen])
-
-  /* ── acciones ─────────────────────────────────────────────────────── */
-  const irA = (id: string) => { setMenuOpen(false); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
-  const verSede = (s: SedeDestacada) => {
-    if (!s.subdominio) { navigate(`/sede/${s.idSede}`); return }   // sin subdominio: fallback path
-    const url = urlMicrositio(s.subdominio)
-    if (url.startsWith('http')) {
-      window.location.href = url                                    // prod: carga al subdominio canónico
-    } else {
-      setTenant(s.subdominio)                                       // dev: ?s= manda en esta pestaña
-      navigate(`/sede/${s.idSede}${url.slice(1)}`)
-    }
-  }
-  const abrirDemo = () => navigate('/acceso')   // ahora entran solos: al acceso unificado
-  const scrollRail = (ref: React.RefObject<HTMLDivElement>, dir: 1 | -1) =>
-    ref.current?.scrollBy({ left: dir * Math.min(ref.current.clientWidth * 0.8, 520), behavior: 'smooth' })
-
-  const enviarLead = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (enviando) return
-    setEnviando(true); setErr('')
-    try {
-      await apiClient.post('/api/leads', {
-        negocio: lead.negocio,
-        duenio: lead.duenio || null,
-        correo: lead.tipoContacto === 'correo' ? lead.contacto : null,
-        telefono: lead.tipoContacto === 'whatsapp' ? lead.contacto : null,
-      })
-      setEnviado(true)
-    } catch {
-      setErr('No se pudo enviar. Revisa tu conexión e intenta de nuevo.')
-    } finally { setEnviando(false) }
-  }
-
-  /* ── datos derivados ──────────────────────────────────────────────── */
-  const tarjetas = planes
-  const avatars = sedes.slice(0, 5)
-
-  const navLinks: [string, string][] = [['Características', 'ventajas'], ['Planes/Precios', 'precios'], ['Contacto', 'contacto']]
-
+function Back({ onClick }: { onClick: () => void }) {
   return (
-    <div className={styles.page}>
-      {/* ══════════ NAV ══════════ */}
-      <header className={`${styles.nav} ${scrolled ? styles.navOn : ''}`}>
-        <div className={styles.navIn}>
-          <span className={styles.logo} onClick={() => irA('top')}>
-            <img src="/barber-logo.png" alt="Barber.PE" className={styles.logoImg} />
-          </span>
-          <nav className={styles.navLinks}>
-            {navLinks.map(([n, id]) => <a key={id} onClick={() => irA(id)}>{n}</a>)}
-          </nav>
-          <div className={styles.navCta}>
-            {user ? (
-              <AccountMenu variant="plain" />
-            ) : (
-              <>
-                <Link to="/login" className={styles.linkLogin}>Iniciar sesión</Link>
-                <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={abrirDemo}>Registrarse</button>
-              </>
-            )}
-            {!user && (
-              <button className={styles.hamb} aria-label="Menú" onClick={() => setMenuOpen((v) => !v)}>{menuOpen ? <X size={22} /> : <Menu size={22} />}</button>
-            )}
-          </div>
-        </div>
-        {menuOpen && !user && (
-          <div className={styles.mobileMenu}>
-            {navLinks.map(([n, id]) => <a key={id} onClick={() => irA(id)}>{n}</a>)}
-            <Link to="/login" className={`${styles.btn} ${styles.btnGhost}`}>Iniciar sesión</Link>
-          </div>
-        )}
-      </header>
+    <button onClick={onClick} className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 mb-4 transition">
+      <ArrowLeft className="w-4 h-4" /> Atrás
+    </button>
+  )
+}
 
-      {/* ══════════ HERO ══════════ */}
-      <section className={styles.hero} id="top">
-        <div className={styles.heroBg} />
-        <div className={`${styles.wrap} ${styles.heroIn}`}>
-          <div className={styles.heroCopy}>
-            {user && (
-              <nav className={styles.heroNav}>
-                {navLinks.map(([n, id]) => <a key={id} onClick={() => irA(id)}>{n}</a>)}
-              </nav>
-            )}
-            <Reveal><span className={styles.pill}>🇵🇪 Software para barberías · hecho en Perú</span></Reveal>
-            <Reveal delay={0.05}>
-              <h1>Más clientes en tu barbería <span className={styles.hl}>automatizando las citas por WhatsApp</span></h1>
-            </Reveal>
-            <Reveal delay={0.1}>
-              <p className={styles.heroSub}>Tus clientes reservan, confirman y reprograman solos las 24 horas. Tú recibes la cita en tu agenda sin mover un dedo — en soles y sin comisiones.</p>
-            </Reveal>
-            <Reveal delay={0.15}>
-              <div className={styles.heroCta}>
-                <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnLg}`} onClick={abrirDemo}>Inicia tu prueba GRATIS <ArrowRight size={18} /></button>
-              </div>
-            </Reveal>
-            <Reveal delay={0.2}><p className={styles.heroNote}>No requiere tarjeta de crédito.</p></Reveal>
+function Label({ children }: { children: ReactNode }) {
+  return <label className="block text-xs font-semibold text-gray-500 mb-1.5">{children}</label>
+}
 
-            <Reveal delay={0.25}>
-              <div className={styles.proof}>
-                <div className={styles.avs}>
-                  {(avatars.length ? avatars : [0, 1, 2, 3]).map((s: any, i) => {
-                    const isSede = typeof s === 'object'
-                    const ini = isSede ? iniciales(s.nombre || 'B') : ['AQ', 'MR', 'LP', 'DS'][i]
-                    const logo = isSede && s.logoUrl ? buildImageUrl(s.logoUrl) : ''
-                    return (
-                      <span key={i} className={styles.av}>
-                        {logo ? <img src={logo} alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).replaceWith(document.createTextNode(ini)) }} /> : ini}
-                      </span>
-                    )
-                  })}
-                  {sedes.length > 5 && <span className={`${styles.av} ${styles.avMore}`}>+{sedes.length - 5}</span>}
-                </div>
-                <div className={styles.proofTxt}>
-                  <span className={styles.stars}>★★★★★</span>
-                  <span>{sedes.length ? <><b>{sedes.length} barberías</b> ya reservan con barber.pe</> : 'Barberías de todo el Perú ya reservan con barber.pe'}</span>
-                </div>
-              </div>
-            </Reveal>
-          </div>
+function Input({ value, onChange, placeholder, onEnter }: { value: string; onChange: (v: string) => void; placeholder?: string; onEnter?: () => void }) {
+  return (
+    <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} autoCapitalize="none"
+      onKeyDown={(e) => { if (e.key === 'Enter' && onEnter) onEnter() }}
+      className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl mb-4 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition" />
+  )
+}
 
-          {/* Panel "Beneficios · Sistema de citas" */}
-          <Reveal delay={0.15} className={styles.heroVisual}>
-            <div className={styles.panel}>
-              <div className={styles.panelTop}>
-                <span className={styles.panelEye}>Beneficios</span>
-                <span className={styles.panelTitle}>Sistema de citas</span>
-              </div>
-              <div className={styles.panelBody}>
-                <div className={styles.kpis}>
-                  <div className={styles.kpi}><span className={styles.l}>Reservas hoy</span><span className={styles.v}>18</span><span className={styles.up}>+12%</span></div>
-                  <div className={styles.kpi}><span className={styles.l}>Ocupación</span><span className={styles.v}>86%</span></div>
-                  <div className={styles.kpi}><span className={styles.l}>Ingresos</span><span className={styles.v}>S/1.240</span></div>
-                </div>
-                <div className={styles.agendaHd}>Próximas citas</div>
-                {([['09:30', 'Carlos Ramírez', 'Corte + barba', true], ['10:15', 'José Medina', 'Corte clásico', true], ['11:00', 'Luis Paredes', 'Perfilado', false]] as const).map(([t, n, x, ok]) => (
-                  <div className={styles.row} key={t}>
-                    <span className={styles.time}>{t}</span>
-                    <span className={styles.rowMeta}><b>{n}</b><small>{x}</small></span>
-                    <span className={`${styles.chip} ${ok ? styles.chipOk : styles.chipWait}`}>{ok ? 'Confirmado' : 'Por confirmar'}</span>
-                  </div>
-                ))}
-                <div className={styles.waNote}><span className={styles.waDot}><WaIcon size={13} /></span> Recordatorio enviado por WhatsApp ✓</div>
-              </div>
-            </div>
-            <div className={`${styles.floatChip} ${styles.fc1}`}><span className={styles.fci}><Check size={14} /></span><div>Reserva confirmada<small>hace 2 min</small></div></div>
-          </Reveal>
-        </div>
-      </section>
+function PassInput({ value, onChange, placeholder, onEnter }: { value: string; onChange: (v: string) => void; placeholder?: string; onEnter?: () => void }) {
+  const [show, setShow] = useState(false)
+  return (
+    <div className="relative mb-4">
+      <input value={value} onChange={(e) => onChange(e.target.value)} type={show ? 'text' : 'password'} placeholder={placeholder}
+        onKeyDown={(e) => { if (e.key === 'Enter' && onEnter) onEnter() }}
+        className="w-full px-4 py-3 pr-12 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition" />
+      <button type="button" onClick={() => setShow((s) => !s)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 active:scale-90 transition"
+        aria-label={show ? 'Ocultar' : 'Mostrar'}>
+        {show ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+      </button>
+    </div>
+  )
+}
 
-      {/* ══════════ YA CONFÍAN EN NOSOTROS ══════════ */}
-      <section className={styles.sec} id="confian">
-        <div className={styles.wrap}>
-          <div className={styles.railHead}>
-            <div>
-              <h2 className={styles.h2}>Ya confían en nosotros</h2>
-              <p className={styles.sub}>Algunas barberías que ya usan barber.pe como su sistema de citas.</p>
-            </div>
-            {sedes.length > 3 && (
-              <div className={styles.railNav}>
-                <button aria-label="Anterior" onClick={() => scrollRail(sedesRail, -1)}><ArrowLeft size={18} /></button>
-                <button aria-label="Siguiente" onClick={() => scrollRail(sedesRail, 1)}><ArrowRight size={18} /></button>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className={styles.rail} ref={sedesRail}>
-          <div className={styles.railPad} />
-          {sedes.map((s) => (
-            <button className={styles.sedeCard} key={s.idSede} onClick={() => verSede(s)} title={`Ver ${s.nombre}`}>
-              <div className={styles.sedeCover} style={s.portadaUrl ? { backgroundImage: `url(${buildImageUrl(s.portadaUrl)})` } : undefined}>
-                <span
-                  className={styles.heart}
-                  role="button"
-                  aria-label={favs[s.idSede] ? 'Quitar de favoritos' : 'Añadir a favoritos'}
-                  onClick={(e) => { e.stopPropagation(); toggleFav({ idSede: s.idSede, nombre: s.nombre, subdominio: s.subdominio, logoUrl: s.logoUrl, direccion: s.direccion }) }}
-                >
-                  <Heart size={15} fill={favs[s.idSede] ? 'currentColor' : 'none'} />
-                </span>
-                {!s.portadaUrl && <Scissors size={26} className={styles.sedeCoverIcon} />}
-              </div>
-              <div className={styles.sedeInfo}>
-                <span className={styles.sedeLogo}>
-                  {s.logoUrl ? <img src={buildImageUrl(s.logoUrl)} alt="" onError={(e) => { const el = e.currentTarget as HTMLImageElement; el.style.display = 'none'; const cont = el.parentElement; if (cont && !cont.dataset.fb) { cont.dataset.fb = '1'; cont.appendChild(document.createTextNode(iniciales(s.nombre))) } }} /> : iniciales(s.nombre)}
-                </span>
-                <div className={styles.sedeText}>
-                  <span className={styles.sedeName}>{nombreParaMostrar(s) || s.nombre} <ShieldCheck size={14} className={styles.verified} /></span>
-                  <span className={styles.sedeLoc}><MapPin size={12} /> {s.direccion || s.ciudad || 'Perú'}</span>
-                </div>
-              </div>
-            </button>
-          ))}
-          {!sedes.length && [0, 1, 2, 3].map((i) => (
-            <div className={`${styles.sedeCard} ${styles.sedeSkeleton}`} key={i}><div className={styles.sedeCover} /><div className={styles.sedeInfo}><span className={styles.sedeLogo} /><div className={styles.sedeText}><span className={styles.skLine} /><span className={`${styles.skLine} ${styles.skShort}`} /></div></div></div>
-          ))}
-          <div className={styles.railPad} />
-        </div>
-      </section>
-
-      {/* ══════════ VENTAJAS (bento) ══════════ */}
-      <section className={`${styles.sec} ${styles.soft}`} id="ventajas">
-        <div className={styles.wrap}>
-          <Reveal><span className={styles.eyebrow}>Ventajas de usar BARBER.PE</span></Reveal>
-          <Reveal delay={0.05}><h2 className={styles.h2}>Olvídate de usar cuadernos</h2></Reveal>
-          <Reveal delay={0.1}><p className={styles.sub}>Una sola herramienta para reservar, recordar, atender y cobrar.</p></Reveal>
-          <div className={styles.bento}>
-            {VENTAJAS.map((v, i) => (
-              <Reveal key={v.t} delay={i * 0.05} className={`${styles.vCard} ${styles[`v_${v.tone}`]} ${i === 0 ? styles.vWide : ''}`}>
-                <span className={styles.vIcon}>{v.icon}</span>
-                <h3>{v.t}</h3>
-                <p>{v.d}</p>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════ RESEÑAS ══════════ */}
-      {resenas.length > 0 && (
-        <section className={styles.sec} id="resenas">
-          <div className={styles.wrap}>
-            <div className={styles.railHead}>
-              <div>
-                <span className={styles.eyebrow}>RESEÑAS</span>
-                <h2 className={styles.h2}>Qué dicen los que ya usan barber.pe</h2>
-              </div>
-              {resenas.length > 3 && (
-                <div className={styles.railNav}>
-                  <button aria-label="Anterior" onClick={() => scrollRail(resenasRail, -1)}><ArrowLeft size={18} /></button>
-                  <button aria-label="Siguiente" onClick={() => scrollRail(resenasRail, 1)}><ArrowRight size={18} /></button>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className={styles.rail} ref={resenasRail}>
-            <div className={styles.railPad} />
-            {resenas.map((r) => {
-              const p = Math.max(1, Math.min(5, r.puntuacion))
-              return (
-                <div className={styles.rCard} key={r.idCalificacion}>
-                  <div className={styles.rStars}>{'★'.repeat(p)}<span className={styles.rStarsOff}>{'★'.repeat(5 - p)}</span></div>
-                  <p className={styles.rQuote}>“{r.comentario}”</p>
-                  <div className={styles.rWho}>
-                    <span className={styles.rAv}>{iniciales(r.nombreCliente || r.nombreSede)}</span>
-                    <div>
-                      <span className={styles.rName}>{r.nombreCliente || 'Cliente de barber.pe'}</span>
-                      <span className={styles.rRole}>{[r.nombreSede, r.ciudadSede].filter(Boolean).join(' · ')}</span>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-            <div className={styles.railPad} />
-          </div>
-        </section>
-      )}
-
-      {/* ══════════ PLANES Y PRECIOS ══════════ */}
-      <section className={`${styles.sec} ${styles.soft}`} id="precios">
-        <div className={styles.wrap}>
-          <Reveal><span className={styles.eyebrow}>Planes y precios</span></Reveal>
-          <div className={styles.priceHead}>
-            <Reveal delay={0.05}>
-              <h2 className={styles.h2}>Precio justo. <span className={styles.muted}>Sin sorpresas.</span></h2>
-            </Reveal>
-            <div className={styles.priceHeadRight}><span className={styles.country}>🇵🇪 Perú</span></div>
-          </div>
-
-          {/* Toggle Mensual / Anual (solo si hay algún plan con precio anual) */}
-          {tarjetas.some((p) => p.precioAnualPEN > 0) && (
-            <Reveal delay={0.08}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ display: 'inline-flex', gap: 4, padding: 5, background: '#141416', border: '1px solid #27272c', borderRadius: 999, boxShadow: 'inset 0 1px 3px rgba(0,0,0,.45)' }}>
-                  {(['mensual', 'anual'] as const).map((modo) => {
-                    const activo = intervalo === modo
-                    return (
-                      <button
-                        key={modo}
-                        onClick={() => setIntervalo(modo)}
-                        style={{
-                          padding: '10px 28px', border: 'none', borderRadius: 999, cursor: 'pointer',
-                          fontWeight: 650, fontSize: '.92rem', letterSpacing: '.01em', transition: 'all .2s ease',
-                          ...(activo
-                            ? { background: 'linear-gradient(135deg,#6f9bff 0%,#2f6bff 52%,#1f57e6 100%)', color: '#fff', boxShadow: '0 8px 22px -8px rgba(47,107,255,.7), inset 0 1px 0 rgba(255,255,255,.28)' }
-                            : { background: 'transparent', color: '#b2b5bc' }),
-                        }}
-                      >
-                        {modo === 'mensual' ? 'Mensual' : 'Anual'}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            </Reveal>
-          )}
-
-          <div className={styles.plansRail} ref={planesRail}>
-            {tarjetas.map((p) => {
-              const tieneAnual = p.precioAnualPEN > 0
-              const verAnual = intervalo === 'anual' && tieneAnual
-              // Mensual equivalente del plan anual (annual ÷ 12) y % de ahorro al
-              // mes. NO mostramos el total al año para no asustar al cliente.
-              const mensualEquivAnual = tieneAnual ? p.precioAnualPEN / 12 : p.precioMensualPEN
-              const pctAhorro = tieneAnual && p.precioMensualPEN > 0
-                ? Math.round((1 - p.precioAnualPEN / (p.precioMensualPEN * 12)) * 100)
-                : 0
-              return (
-              <Reveal key={p.idPlan} className={`${styles.plan} ${p.popular ? styles.planPop : ''}`}>
-                {p.esGratis ? <span className={styles.freeBadge}><Star size={13} /> 14 días gratis</span> : (p.popular && <span className={styles.popBadge}><Star size={13} /> Más popular</span>)}
-                <span className={styles.planName}>{p.nombre}</span>
-                <div className={styles.planPrice}>
-                  {p.esGratis ? (
-                    <span className={styles.amount}>Gratis</span>
-                  ) : verAnual ? (
-                    <><span className={styles.amount}>{soles(mensualEquivAnual)}</span><span className={styles.per}>/mes</span></>
-                  ) : (
-                    <><span className={styles.amount}>{soles(p.precioMensualPEN)}</span><span className={styles.per}>/mes</span></>
-                  )}
-                </div>
-                {verAnual && pctAhorro > 0 ? (
-                  <p style={{ margin: '6px 0 0', fontSize: '.85rem', fontWeight: 700, color: '#34d399' }}>Ahorras {pctAhorro}% al mes</p>
-                ) : !verAnual && pctAhorro > 0 && !p.esGratis ? (
-                  <p style={{ margin: '6px 0 0', fontSize: '.82rem', color: '#71747d' }}>Ahorra {pctAhorro}% con el plan anual</p>
-                ) : (
-                  <p style={{ margin: '6px 0 0', fontSize: '.85rem', visibility: 'hidden' }} aria-hidden="true">·</p>
-                )}
-                {p.descripcion && <p className={styles.planTag}>{p.descripcion.split('·')[0].trim()}</p>}
-                <button className={`${styles.btn} ${p.popular || p.esGratis ? styles.btnPrimary : styles.btnGhost} ${styles.btnBlock}`} onClick={abrirDemo}>{p.esGratis ? 'Empezar gratis' : 'Comenzar'}</button>
-                <ul className={styles.planList}>
-                  {p.caracteristicas.map((c, i) => (
-                    <li key={i}><i className={styles.ck}><Check size={12} /></i>{c}</li>
-                  ))}
-                </ul>
-              </Reveal>
-              )
-            })}
-            {!tarjetas.length && [0, 1, 2].map((i) => <div className={`${styles.plan} ${styles.planSkeleton}`} key={i} />)}
-          </div>
-
-          {/* Señales de confianza */}
-          <div className={styles.badges}>
-            {BADGES.map((b) => (
-              <div className={styles.badge} key={b.t}>
-                <span className={styles.badgeIc}>{b.icon}</span>
-                <div><b>{b.t}</b><small>{b.d}</small></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════ FAQ ══════════ */}
-      <section className={styles.sec} id="faq">
-        <div className={styles.wrap}>
-          <div className={styles.faqGrid}>
-            <div className={styles.faqIntro}>
-              <span className={styles.eyebrow}>Preguntas y respuestas (FAQs)</span>
-              <h2 className={styles.h2}>Todo lo que necesitas saber, lo puedes encontrar aquí.</h2>
-              <p className={styles.sub}>Si necesitas más información, no dudes en contactarnos.</p>
-              <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => irA('contacto')}>Contáctanos <ArrowRight size={16} /></button>
-            </div>
-            <div className={styles.faqList}>
-              {FAQS.map(([q, a], i) => (
-                <div className={`${styles.qa} ${faq === i ? styles.qaOpen : ''}`} key={i}>
-                  <button onClick={() => setFaq(faq === i ? null : i)}>
-                    <span className={styles.qaNum}>{String(i + 1).padStart(2, '0')}</span>
-                    <span className={styles.qaQ}>{q}</span>
-                    <span className={styles.qaIcon}>{faq === i ? <Minus size={18} /> : <Plus size={18} />}</span>
-                  </button>
-                  <div className={styles.qaAns}><div><p>{a}</p></div></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════ CTA FINAL (banda oscura) ══════════ */}
-      <section className={styles.ctaBand} id="contacto">
-        <div className={styles.wrap}>
-          <Reveal className={styles.ctaInner}>
-            <h2>Lleva tu barbería a un siguiente <span className={styles.hl}>NIVEL</span> usando nuestro software.</h2>
-            <p>No necesitas tarjeta de crédito ni instalar nada. Si usas otro sistema, te ayudamos con la migración completamente GRATIS.</p>
-            <div className={styles.ctaBtns}>
-              <button className={`${styles.btn} ${styles.btnLight} ${styles.btnLg}`} onClick={abrirDemo}>Empieza ahora gratis</button>
-              
-            </div>
-            <p className={styles.ctaFine}>Empieza hoy, tienes 30 días de garantía.</p>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ══════════ FOOTER ══════════ */}
-      <footer className={styles.footer}>
-        <div className={styles.wrap}>
-          <div className={styles.footTop}>
-            <div className={styles.footBrand}>
-              <span className={styles.logo}><img src="/barber-logo.png" alt="Barber.PE" className={styles.logoImg} /></span>
-              <p>Automatiza tus reservas en WhatsApp, sin complicaciones.</p>
-              <div className={styles.social}>
-                <a href="#" aria-label="Facebook"><Facebook size={18} /></a>
-                <a href="#" aria-label="Instagram"><Instagram size={18} /></a>
-                <a href="#" aria-label="YouTube"><Youtube size={18} /></a>
-              </div>
-            </div>
-            <nav className={styles.footLinks}>
-              <Link to="/terminos">Términos y condiciones</Link>
-              <Link to="/privacidad">Política de privacidad</Link>
-              <Link to="/libro-reclamaciones">Libro de reclamaciones</Link>
-              <a onClick={() => irA('contacto')}>Contacto</a>
-            </nav>
-          </div>
-          <div className={styles.footBottom}>
-            <span>© {new Date().getFullYear()} Barber.pe — Todos los derechos reservados.</span>
-            <span>Computer Solutions L&amp;E E.I.R.L.</span>
-          </div>
-        </div>
-      </footer>
-
-      {/* ══════════ MODAL SOLICITAR ACCESO ══════════ */}
-      {demoOpen && (
-        <div className={styles.modalBg} onClick={() => setDemoOpen(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <button aria-label="Cerrar" className={styles.modalX} onClick={() => setDemoOpen(false)}><X size={18} /></button>
-            {enviado ? (
-              <div className={styles.modalDone}>
-                <div className={styles.doneIc}><Check size={30} /></div>
-                <h3>¡Solicitud enviada!</h3>
-                <p>Gracias{lead.duenio ? `, ${lead.duenio.split(' ')[0]}` : ''}. Te contactaremos muy pronto para activar tu barbería.</p>
-                <button className={`${styles.btn} ${styles.btnGhost} ${styles.btnBlock}`} onClick={() => setDemoOpen(false)}>Cerrar</button>
-              </div>
-            ) : (
-              <>
-                <h3>Inicia tu prueba gratis</h3>
-                <p className={styles.modalSub}>Toma menos de 1 minuto. Empieza a Gestionar tu Negocio!</p>
-                <form onSubmit={enviarLead}>
-                  <div className={styles.field}>
-                    <label htmlFor="m-negocio">Nombre del negocio</label>
-                    <input id="m-negocio" required value={lead.negocio} onChange={(e) => setLead({ ...lead, negocio: e.target.value })} />
-                  </div>
-                  <div className={styles.field}>
-                    <label htmlFor="m-duenio">Nombre del dueño <span className={styles.opt}>(opcional)</span></label>
-                    <input id="m-duenio" value={lead.duenio} onChange={(e) => setLead({ ...lead, duenio: e.target.value })} />
-                  </div>
-                  <div className={styles.field}>
-                    <label>¿Cómo te contactamos?</label>
-                    <div className={styles.seg}>
-                      <button type="button" className={lead.tipoContacto === 'correo' ? styles.segOn : ''} onClick={() => setLead({ ...lead, tipoContacto: 'correo', contacto: '' })}><Mail size={15} /> Correo</button>
-                      <button type="button" className={lead.tipoContacto === 'whatsapp' ? styles.segOn : ''} onClick={() => setLead({ ...lead, tipoContacto: 'whatsapp', contacto: '' })}><Phone size={15} /> WhatsApp</button>
-                    </div>
-                  </div>
-                  <div className={styles.field}>
-                    {lead.tipoContacto === 'correo'
-                      ? <input type="email" required value={lead.contacto} onChange={(e) => setLead({ ...lead, contacto: e.target.value })} />
-                      : <input inputMode="tel" required value={lead.contacto} onChange={(e) => setLead({ ...lead, contacto: e.target.value })} />}
-                  </div>
-                  <button type="submit" disabled={enviando} className={`${styles.btn} ${styles.btnPrimary} ${styles.btnBlock} ${styles.btnLg}`}>{enviando ? 'Enviando…' : 'Solicitar acceso'}</button>
-                  {err && <p className={styles.modalErr}>{err}</p>}
-                  <p className={styles.modalNote}>Te enviaremos un código de acceso, tenemos que verificar que eres tú.</p>
-                </form>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+/** 6 casillas estilo OTP (mismo look que /acceso). */
+function Digits({ value, onChange, secret }: { value: string; onChange: (v: string) => void; secret?: boolean }) {
+  const refs = useRef<(HTMLInputElement | null)[]>([])
+  const chars = Array.from({ length: 6 }, (_, i) => value[i] ?? '')
+  const setAt = (i: number, d: string) => {
+    const arr = value.padEnd(6, ' ').split('')
+    arr[i] = d || ' '
+    onChange(arr.join('').replace(/ /g, '').slice(0, 6))
+  }
+  return (
+    <div className="flex justify-center lg:justify-start gap-2 mb-4">
+      {chars.map((c, i) => (
+        <input key={i} ref={(el) => { refs.current[i] = el }}
+          value={secret && c ? '•' : c} inputMode="numeric" maxLength={1}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/\D/g, '')
+            if (!digits) return
+            if (digits.length === 1) { setAt(i, digits); if (i < 5) refs.current[i + 1]?.focus() }
+            else { const merged = (value.slice(0, i) + digits).slice(0, 6); onChange(merged); refs.current[Math.min(merged.length, 5)]?.focus() }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Backspace') { e.preventDefault(); if (value[i]) setAt(i, ''); else if (i > 0) { refs.current[i - 1]?.focus(); setAt(i - 1, '') } }
+          }}
+          onFocus={(e) => e.currentTarget.select()}
+          className="w-11 h-14 text-center text-2xl font-bold text-gray-900 rounded-xl border-2 border-gray-200 bg-gray-50 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition" />
+      ))}
     </div>
   )
 }
