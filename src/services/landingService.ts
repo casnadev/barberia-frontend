@@ -7,6 +7,10 @@ import { apiClient } from './apiClient'
 export interface SedeDestacada {
   idSede: number
   nombre: string
+  /** Nombre comercial de la marca (Empresa). Para el título "Marca – Sede". */
+  nombreComercial?: string
+  /** Nº de sedes públicas de la marca. ≥2 → mostrar "Marca – Sede". */
+  totalSedesPublicasMarca?: number
   subdominio: string
   direccion?: string
   telefono?: string
@@ -26,6 +30,8 @@ const normalizar = (raw: any, subdominio: string): SedeDestacada | null => {
   return {
     idSede: s.idSede ?? s.IdSede,
     nombre: s.nombre ?? s.Nombre ?? 'Barbería',
+    nombreComercial: s.nombreComercial ?? s.NombreComercial ?? undefined,
+    totalSedesPublicasMarca: s.totalSedesPublicasMarca ?? s.TotalSedesPublicasMarca ?? undefined,
     subdominio: s.subdominio ?? s.Subdominio ?? subdominio,
     direccion: s.direccion ?? s.Direccion,
     telefono: s.telefono ?? s.Telefono,
