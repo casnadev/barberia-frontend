@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { sedesService } from '@/services/sedesService'
+import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
 import { apiClient, getActiveTenant } from '@/services/apiClient'
 import { useFavoritosStore } from '@/store/favoritosStore'
 import { novedadesService } from '@/services/novedadesService'
@@ -137,6 +138,7 @@ export function PublicSedeDetailPage() {
   const refEquipo = useRef<HTMLElement>(null)
   const refResenas = useRef<HTMLElement>(null)
   const refUbicacion = useRef<HTMLElement>(null)
+  const refAcerca = useRef<HTMLElement>(null)
   const refHorarios = useRef<HTMLElement>(null)
   const heroTrackRef = useRef<HTMLDivElement>(null)
 
@@ -167,8 +169,14 @@ export function PublicSedeDetailPage() {
   // SEO dinámico por tenant
   useEffect(() => {
     if (!sede) return
-    const titulo = sede.nombre ? `${sede.nombre} | Barbería` : 'Barbería'
-    const desc = sede.descripcionCorta || `Reserva tu cita en ${sede.nombre || 'nuestra barbería'}.`
+    // Título con keywords para SEO local: "Marca – Sede — Barbería en <zona> | Reserva online".
+    const visible = nombreParaMostrar(sede as any) || sede.nombre || 'Barbería'
+    const zona = (sede.distrito || sede.nombre || '').trim()
+    const titulo = zona
+      ? `${visible} — Barbería en ${zona} | Reserva online`
+      : `${visible} — Reserva tu cita online`
+    const desc = sede.descripcionCorta
+      || `Reserva tu cita en ${visible}${zona ? ` (${zona})` : ''} de forma online, fácil y rápido. Confirmaciones automáticas.`
     const ogImg = img(sede.urlBanner || sede.urlLogo || '')
     document.title = titulo
     const upsert = (attr: 'name' | 'property', key: string, content?: string) => {
@@ -177,6 +185,14 @@ export function PublicSedeDetailPage() {
       if (!el) { el = document.createElement('meta'); el.setAttribute(attr, key); document.head.appendChild(el) }
       el.setAttribute('content', content)
     }
+    // Canonical hacia la URL del subdominio de la sede (evita contenido duplicado
+    // entre sede.barber.pe, barber.pe/?s=slug y /sede/:id).
+    const canonicalUrl = sede.subdominio
+      ? `https://${sede.subdominio}.barber.pe/`
+      : window.location.href.split('?')[0]
+    let canon = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
+    if (!canon) { canon = document.createElement('link'); canon.setAttribute('rel', 'canonical'); document.head.appendChild(canon) }
+    canon.setAttribute('href', canonicalUrl)
     upsert('name', 'description', desc)
     upsert('property', 'og:title', titulo)
     upsert('property', 'og:description', desc)
@@ -188,6 +204,63 @@ export function PublicSedeDetailPage() {
     upsert('name', 'twitter:description', desc)
     if (ogImg) upsert('name', 'twitter:image', ogImg)
   }, [sede])
+
+  // ── Datos estructurados JSON-LD (HairSalon) para resultados enriquecidos de
+  //    Google: nombre, dirección, geo, teléfono, horarios y reseñas. Toda la
+  //    data ya existe; solo la exponemos en el formato que Google entiende.
+  useEffect(() => {
+    if (!sede) return
+    const visible = nombreParaMostrar(sede as any) || sede.nombre
+    const DIAS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    const horariosLd = (horarios || [])
+      .filter((h: any) => h?.estaActivo && h?.horaInicio && h?.horaFin)
+      .map((h: any) => ({
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: DIAS[(h.diaSemana === 7 ? 0 : h.diaSemana) as number] || undefined,
+        opens: String(h.horaInicio).slice(0, 5),
+        closes: String(h.horaFin).slice(0, 5),
+      }))
+      .filter((h: any) => h.dayOfWeek)
+
+    const ld: any = {
+      '@context': 'https://schema.org',
+      '@type': 'HairSalon',
+      name: visible,
+      url: sede.subdominio ? `https://${sede.subdominio}.barber.pe/` : window.location.href.split('?')[0],
+      image: img(sede.urlBanner || sede.urlLogo || '') || undefined,
+      logo: img(sede.urlLogo || '') || undefined,
+      telephone: sede.telefono || undefined,
+      priceRange: '$$',
+      currenciesAccepted: 'PEN',
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: sede.direccion || undefined,
+        addressLocality: sede.distrito || sede.nombre || undefined,
+        addressRegion: sede.departamento || 'Lima',
+        addressCountry: 'PE',
+      },
+    }
+    if (sede.latitud && sede.longitud) {
+      ld.geo = { '@type': 'GeoCoordinates', latitude: sede.latitud, longitude: sede.longitud }
+    }
+    if (horariosLd.length) ld.openingHoursSpecification = horariosLd
+    if (resenas.total > 0) {
+      ld.aggregateRating = {
+        '@type': 'AggregateRating',
+        ratingValue: Number(resenas.promedio.toFixed(1)),
+        reviewCount: resenas.total,
+      }
+    }
+
+    let el = document.getElementById('ld-hairsalon') as HTMLScriptElement | null
+    if (!el) {
+      el = document.createElement('script')
+      el.id = 'ld-hairsalon'
+      el.type = 'application/ld+json'
+      document.head.appendChild(el)
+    }
+    el.textContent = JSON.stringify(ld)
+  }, [sede, horarios, resenas])
 
   const loadData = async () => {
     try {
@@ -258,7 +331,7 @@ export function PublicSedeDetailPage() {
   useEffect(() => {
     const secs: [string, React.RefObject<HTMLElement>][] = [
       ['servicios', refServicios], ['galeria', refGaleria],
-      ['equipo', refEquipo], ['resenas', refResenas], ['horarios', refHorarios], ['ubicacion', refUbicacion],
+      ['equipo', refEquipo], ['resenas', refResenas], ['horarios', refHorarios], ['acerca', refAcerca], ['ubicacion', refUbicacion],
     ]
     const onScroll = () => {
       setScrolled(window.scrollY > 360)
@@ -431,6 +504,13 @@ export function PublicSedeDetailPage() {
   }
 
   const brand = sede?.colorPrimarioHex || '#2855F6'
+  // Nombre visible unificado (Marca – Sede). Fuente única: utils/nombreParaMostrar.
+  const displayName = nombreParaMostrar(sede as any)
+  // Teléfono para el botón de llamada (tel:). Normalizamos a E.164: 9 dígitos → +51.
+  // En móvil abre el marcador con el número puesto; en desktop lo pasa al handler
+  // del sistema. Si no hay teléfono, el botón no se muestra.
+  const telDigits = (sede?.telefono || (sede as any)?.whatsappContacto || '').replace(/\D/g, '')
+  const telE164 = telDigits ? (telDigits.length === 9 ? `+51${telDigits}` : `+${telDigits}`) : ''
   const tieneCoords = sede?.latitud != null && sede?.longitud != null && Number(sede.latitud) !== 0 && Number(sede.longitud) !== 0
 
   // Categorías (campo correcto: nombreCategoria)
@@ -510,6 +590,7 @@ export function PublicSedeDetailPage() {
     { key: 'equipo', label: 'Equipo', ref: refEquipo, show: trabajadores.length > 0 },
     { key: 'resenas', label: 'Reseñas', ref: refResenas, show: resenas.items.length > 0 },
     { key: 'horarios', label: 'Horarios', ref: refHorarios, show: horarios.length > 0 },
+    { key: 'acerca', label: 'Acerca de', ref: refAcerca, show: !!sede?.descripcionCorta },
     { key: 'ubicacion', label: 'Ubicación', ref: refUbicacion, show: !!ubicacion || tieneCoords },
   ].filter((t) => t.show)
 
@@ -528,7 +609,12 @@ export function PublicSedeDetailPage() {
         {scrolled && (
           <motion.header className={styles.mHeader} initial={{ y: -64 }} animate={{ y: 0 }} exit={{ y: -64 }}>
             <div className={styles.mHeaderBar}>
-              <span className={styles.mHeaderTitle}>{sede.nombre}</span>
+              <span className={styles.mHeaderTitle} style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                {sede.urlLogo && (
+                  <img src={img(sede.urlLogo)} alt="" style={{ width: 24, height: 24, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+                )}
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</span>
+              </span>
               <div className={styles.mHeaderIcons}>
                 {puedeFavorito && (
                   <button className={styles.plainBtn} onClick={toggleFavorite} aria-label="Favorito">
@@ -556,7 +642,12 @@ export function PublicSedeDetailPage() {
         {scrolled && (
           <motion.nav className={styles.dNav} initial={{ y: -60 }} animate={{ y: 0 }} exit={{ y: -60 }}>
             <div className={styles.dNavInner}>
-              <span className={styles.dNavBrand}>{sede.nombre}</span>
+              <span className={styles.dNavBrand} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {sede.urlLogo && (
+                  <img src={img(sede.urlLogo)} alt="" style={{ width: 26, height: 26, borderRadius: 6, objectFit: 'cover' }} />
+                )}
+                {displayName}
+              </span>
               {tabs.map((t) => (
                 <button key={t.key} className={`${styles.dTab} ${activeTab === t.key ? styles.dTabActive : ''}`} onClick={() => scrollTo(t.ref)}>
                   {t.label}
@@ -656,10 +747,25 @@ export function PublicSedeDetailPage() {
               {ubicacion && (
                 <a className={styles.addrInline} href={mapsHref} target="_blank" rel="noreferrer"><MapPin width={15} height={15} /> {ubicacion}</a>
               )}
+              {telE164 && (
+                <a href={`tel:${telE164}`} className={styles.addrInline} style={{ color: brand, fontWeight: 600 }} aria-label="Llamar por teléfono">
+                  <Phone width={15} height={15} /> Llamar
+                </a>
+              )}
             </div>
-            {ubicacion && (
-              <a className={styles.addrPill} href={mapsHref} target="_blank" rel="noreferrer"><MapPin width={16} height={16} /> {ubicacion}</a>
-            )}
+            {/* Fila mobile: dirección (truncada para que quepa) + botón llamar */}
+            <div className={styles.addrPillRow} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'nowrap' }}>
+              {ubicacion && (
+                <a className={styles.addrPill} href={mapsHref} target="_blank" rel="noreferrer" style={{ minWidth: 0, overflow: 'hidden' }}>
+                  <MapPin width={16} height={16} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ubicacion}</span>
+                </a>
+              )}
+              {telE164 && (
+                <a href={`tel:${telE164}`} className={styles.addrPill} style={{ background: brand, color: '#fff', flexShrink: 0, border: 'none' }} aria-label="Llamar por teléfono">
+                  <Phone width={16} height={16} /> Llamar
+                </a>
+              )}
+            </div>
           </div>
           <div className={styles.headActions}>
             {novedades.length > 0 && (
@@ -855,6 +961,14 @@ export function PublicSedeDetailPage() {
                     )
                   })}
                 </div>
+              </section>
+            )}
+
+            {/* ACERCA DE */}
+            {sede?.descripcionCorta && (
+              <section ref={refAcerca} className={`${styles.section} ${styles.sectionGap}`}>
+                <h2 className={styles.h2}>Acerca de</h2>
+                <p style={{ whiteSpace: 'pre-line', lineHeight: 1.6, color: '#374151', maxWidth: 720 }}>{sede.descripcionCorta}</p>
               </section>
             )}
 

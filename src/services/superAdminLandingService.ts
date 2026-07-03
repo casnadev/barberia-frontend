@@ -6,6 +6,7 @@ import { apiClient } from './apiClient'
 export interface LandingSede {
   idSede: number
   nombre: string
+  nombreComercial?: string | null
   subdominio: string
   direccion?: string | null
   activa: boolean

@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Panel y API no aportan a SEO
+Disallow: /api/
+Disallow: /login
+Disallow: /dashboard
+Disallow: /admin/
+Disallow: /super-admin
+
+Sitemap: https://barber.pe/sitemap.xml

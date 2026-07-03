@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Eye, EyeOff, Star, Loader2, Save, Store, MessageSquare } from 'lucide-react'
+import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
 import {
   superAdminLandingService as svc,
   type LandingSede, type LandingResena,
@@ -67,7 +68,7 @@ function SedesTab() {
         {sedes.map((s) => (
           <div key={s.idSede} className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 py-3">
             <div className="min-w-0">
-              <p className="font-semibold text-gray-900 truncate">{s.nombre} {!s.activa && <span className="text-xs text-red-500">(inactiva)</span>}</p>
+              <p className="font-semibold text-gray-900 truncate">{nombreParaMostrar(s, { forzarMulti: true })} {!s.activa && <span className="text-xs text-red-500">(inactiva)</span>}</p>
               <p className="text-xs text-gray-500 truncate">{s.direccion || 'Sin dirección'} · {s.subdominio}</p>
             </div>
             <button onClick={() => toggle(s)} disabled={busy === s.idSede}

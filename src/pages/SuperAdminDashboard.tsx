@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
@@ -62,8 +62,11 @@ export function SuperAdminDashboard() {
   const [planTarget, setPlanTarget] = useState<Empresa | null>(null)
   const [sedeTarget, setSedeTarget] = useState<Empresa | null>(null)
 
-  const loadAll = async () => {
-    setLoading(true)
+  // silent = revalidación en segundo plano SIN blanquear la pantalla (no toca
+  // `loading`). Se usa al cerrar modales: si hubo cambios refrescamos los datos
+  // en sitio, sin el skeleton de carga inicial que hacía "parpadear" el panel.
+  const loadAll = async (silent = false) => {
+    if (!silent) setLoading(true)
     try {
       const [emps, pls] = await Promise.all([
         empresasService.getEmpresas(),
@@ -80,7 +83,7 @@ export function SuperAdminDashboard() {
       toast.error('No se pudieron cargar las barberías.')
     } finally { setLoading(false) }
   }
-  useEffect(() => { loadAll() }, [])
+  useEffect(() => { loadAll() }, [])  // primera carga: con skeleton
 
   const stats = useMemo(() => {
     const total = empresas.length
@@ -517,7 +520,7 @@ export function SuperAdminDashboard() {
       {/* ============================== SEDES ============================== */}
       <AnimatePresence>
         {sedeTarget && (
-          <SedesModal empresa={sedeTarget} onClose={() => { setSedeTarget(null); loadAll() }} />
+          <SedesModal empresa={sedeTarget} onClose={(changed?: boolean) => { setSedeTarget(null); if (changed) loadAll(true) }} />
         )}
       </AnimatePresence>
     </div>
@@ -555,7 +558,11 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
 }
 
 /* ----------------------------------------------------------------- Sedes */
-function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: () => void }) {
+function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: (changed?: boolean) => void }) {
+  // Marca si el admin creó/eliminó/pausó/renombró alguna sede. Al cerrar, el
+  // padre solo revalida (en segundo plano) si esto es true → sin parpadeo.
+  const huboCambios = useRef(false)
+  const cerrar = () => onClose(huboCambios.current)
   const [sedes, setSedes] = useState<SedeAdmin[]>([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ nombre: '', direccion: '', telefono: '', whatsapp: '' })
@@ -575,6 +582,7 @@ function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: () => voi
     try {
       await empresasService.updateSede(s.idSede, { estado: activar, esPublica: activar })
       setSedes((list) => list.map((x) => (x.idSede === s.idSede ? { ...x, estado: activar, esPublica: activar } : x)))
+      huboCambios.current = true
       toast.success(activar ? 'Sede reactivada.' : 'Sede pausada.')
     } catch {
       toast.error('No se pudo cambiar la Sede.')
@@ -616,6 +624,7 @@ function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: () => voi
         const alt = `${base}-${empresa.id}`
         await empresasService.createSede({ ...payload, subdominio: alt, slug: alt })
       }
+      huboCambios.current = true
       toast.success('Sede creada.')
       setForm({ nombre: '', direccion: '', telefono: '', whatsapp: '' })
       await load()
@@ -632,7 +641,7 @@ function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: () => voi
       cancelText: 'Cancelar',
       tone: 'danger',
     }))) return
-    try { await empresasService.deleteSede(s.idSede); toast.success('Sede eliminada.'); await load() }
+    try { await empresasService.deleteSede(s.idSede); huboCambios.current = true; toast.success('Sede eliminada.'); await load() }
     catch { toast.error('No se pudo eliminar.') }
   }
 
@@ -659,6 +668,7 @@ function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: () => voi
     setSavingSlug(true)
     try {
       await empresasService.cambiarSlugSede(s.idSede, nuevo)
+      huboCambios.current = true
       toast.success('Slug actualizado.')
       setEditId(null)
       await load()
@@ -668,7 +678,7 @@ function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: () => voi
   }
 
   return (
-    <Modal onClose={onClose}>
+    <Modal onClose={cerrar}>
       <h2 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
         <Store className="w-5 h-5 text-blue-600" /> Sedes de {empresa.nombreComercial}
       </h2>

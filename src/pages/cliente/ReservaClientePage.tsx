@@ -436,10 +436,23 @@ export function ReservaClientePage() {
 
   // ── Pantalla de ÉXITO (full-screen, oscuro · "reserva realizada, falta confirmar") ──
   if (exito) {
+    // Color de la marca (sede). Mantenemos el fondo oscuro premium por legibilidad
+    // (un color de marca claro como el dorado dejaría el texto blanco ilegible) y
+    // usamos la marca en los acentos: aro del ícono y botón. `brandOn` elige texto
+    // oscuro o blanco según el brillo del color → botón siempre legible.
+    const brand = ((sede as any)?.colorPrimarioHex || '#2855F6') as string
+    const brandOn = (() => {
+      const c = brand.replace('#', '')
+      const h = c.length === 3 ? c.split('').map((x) => x + x).join('') : c
+      const r = parseInt(h.slice(0, 2), 16) || 0
+      const g = parseInt(h.slice(2, 4), 16) || 0
+      const b = parseInt(h.slice(4, 6), 16) || 0
+      return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#111827' : '#ffffff'
+    })()
     return (
       <div style={{
         position: 'fixed', inset: 0, zIndex: 100, color: '#fff',
-        background: 'linear-gradient(165deg, #1c1c1e 0%, #0a0a0b 100%)',
+        background: `radial-gradient(120% 80% at 50% 0%, ${brand}22 0%, transparent 60%), linear-gradient(165deg, #1c1c1e 0%, #0a0a0b 100%)`,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         padding: 24, textAlign: 'center',
       }}>
@@ -449,7 +462,7 @@ export function ReservaClientePage() {
         `}</style>
 
         <div style={{
-          width: 120, height: 120, borderRadius: 999, background: 'rgba(255,255,255,.18)',
+          width: 120, height: 120, borderRadius: 999, background: `${brand}2E`, border: `1px solid ${brand}66`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'bpPop .5s ease-out',
         }}>
           <svg width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -472,7 +485,7 @@ export function ReservaClientePage() {
         </div>
 
         <div style={{ marginTop: 28, width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 10, opacity: 0, animation: 'bpFade .4s .95s forwards' }}>
-          <button onClick={() => navigate(volverA)} style={{ background: 'rgba(255,255,255,.18)', color: '#fff', border: '1px solid rgba(255,255,255,.4)', borderRadius: 999, padding: '13px', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
+          <button onClick={() => navigate(volverA)} style={{ background: brand, color: brandOn, border: 'none', borderRadius: 999, padding: '13px', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
             Volver al inicio
           </button>
         </div>
