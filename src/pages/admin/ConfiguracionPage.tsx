@@ -11,6 +11,7 @@ import { ComboBox } from '@/components/ComboBox'
 import SeccionFila from '@/components/SeccionFila'
 import SeccionSheet from '@/components/SeccionSheet'
 import { Skeleton, SkeletonRows } from '@/components/Skeleton'
+import BrandColorPicker from '@/components/BrandColorPicker'
 
 interface Sede {
   idSede?: number
@@ -530,33 +531,69 @@ export function ConfiguracionPage() {
         {/* Encabezado */}
 
 
-        {/* Enlace público (A): visible, de solo lectura y explicado */}
+        {/* Enlace público (A): visible, de solo lectura y explicado.
+            Layout compacto: en móvil el título + URL van a la izquierda y los
+            botones se encogen a solo-ícono (evita que el título se parta en 2
+            líneas y dispare el alto). En sm+ los botones muestran su etiqueta. */}
         {sede.subdominio && (
-          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 mb-4 flex items-start gap-3">
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-3.5 mb-4 flex items-center gap-3">
             <span className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
               <Link2 className="w-[18px] h-[18px]" />
             </span>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-2 mb-0.5">
-                <p className="text-sm font-medium text-gray-900">Tu enlace público</p>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button type="button" onClick={copiarEnlace}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-800 px-2 py-1 rounded-lg hover:bg-gray-100 transition">
-                    <Copy className="w-3.5 h-3.5" /> Copiar
-                  </button>
-                  <button type="button" onClick={abrirEnlace}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 px-2 py-1 rounded-lg hover:bg-blue-50 transition">
-                    <ExternalLink className="w-3.5 h-3.5" /> Abrir
-                  </button>
-                </div>
-              </div>
-              <p className="text-sm text-blue-600 truncate">{enlaceMostrar(sede.subdominio)}</p>
-              <p className="text-xs text-gray-400 mt-1">Es fijo a propósito: no cambia aunque cambies el nombre, para no romper reservas ni enlaces que ya compartiste.</p>
+              <p className="text-[13px] font-medium text-gray-900 leading-tight">Tu enlace público</p>
+              <p className="text-sm text-blue-600 truncate leading-snug">{enlaceMostrar(sede.subdominio)}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5 leading-snug line-clamp-2">
+                Es fijo: no cambia aunque cambies el nombre, para no romper enlaces ya compartidos.
+              </p>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <button type="button" onClick={copiarEnlace} title="Copiar" aria-label="Copiar enlace"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-800 p-2 sm:px-2 sm:py-1 rounded-lg hover:bg-gray-100 transition">
+                <Copy className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Copiar</span>
+              </button>
+              <button type="button" onClick={abrirEnlace} title="Abrir" aria-label="Abrir enlace"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 p-2 sm:px-2 sm:py-1 rounded-lg hover:bg-blue-50 transition">
+                <ExternalLink className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Abrir</span>
+              </button>
             </div>
           </div>
         )}
 
-        {/* HUB de secciones */}
+        {/* HUB de secciones — agrupado para que el usuario entienda qué es del
+            NEGOCIO (global, se comparte entre todas las sedes) y qué es de ESTA
+            SEDE (local). Con una sola sede son lo mismo; el aviso lo aclara y la
+            separación real cobra sentido al abrir una segunda sede. */}
+
+        {/* ---- TU NEGOCIO (global) ---- */}
+        <div className="flex items-center gap-1.5 mt-1 mb-2 px-1">
+          <Building2 className="w-3.5 h-3.5 text-gray-400" />
+          <span className="text-[11px] font-semibold text-gray-500 tracking-wide uppercase">Tu negocio</span>
+        </div>
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+          <SeccionFila
+            icono={<Building2 className="w-[18px] h-[18px]" />}
+            titulo="Datos del negocio"
+            preview={empresa.nombreComercial || 'Completa los datos'}
+            estado={empresa.nombreComercial ? 'listo' : 'falta'}
+            onClick={() => setSheet('negocio')}
+          />
+          <SeccionFila
+            icono={<Share2 className="w-[18px] h-[18px]" />}
+            titulo="Redes sociales"
+            preview={redes.length ? `${redes.length} red(es)` : 'Sin redes'}
+            estado={redes.length ? 'listo' : undefined}
+            onClick={() => setSheet('redes')}
+          />
+        </div>
+
+        {/* ---- ESTA SEDE (local) ---- */}
+        <div className="flex items-center gap-1.5 mt-5 mb-2 px-1">
+          <MapPin className="w-3.5 h-3.5 text-gray-400" />
+          <span className="text-[11px] font-semibold text-gray-500 tracking-wide uppercase">
+            Esta sede{sede.nombre ? ` · ${sede.nombre}` : ''}
+          </span>
+        </div>
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
           <SeccionFila
             icono={<Store className="w-[18px] h-[18px]" />}
@@ -598,13 +635,6 @@ export function ConfiguracionPage() {
             onClick={() => setSheet('horarios')}
           />
           <SeccionFila
-            icono={<Building2 className="w-[18px] h-[18px]" />}
-            titulo="Datos del negocio"
-            preview={empresa.nombreComercial || 'Completa los datos'}
-            estado={empresa.nombreComercial ? 'listo' : 'falta'}
-            onClick={() => setSheet('negocio')}
-          />
-          <SeccionFila
             icono={<Camera className="w-[18px] h-[18px]" />}
             titulo="Galería"
             preview={imagenes.length ? `${imagenes.length} foto(s)` : 'Sin fotos aún'}
@@ -620,13 +650,14 @@ export function ConfiguracionPage() {
               ) : undefined
             }
           />
-          <SeccionFila
-            icono={<Share2 className="w-[18px] h-[18px]" />}
-            titulo="Redes sociales"
-            preview={redes.length ? `${redes.length} red(es)` : 'Sin redes'}
-            estado={redes.length ? 'listo' : undefined}
-            onClick={() => setSheet('redes')}
-          />
+        </div>
+
+        {/* Aviso: con una sola sede, negocio = sede. */}
+        <div className="mt-3 flex items-start gap-2 rounded-xl bg-blue-50 border border-blue-100 px-3.5 py-2.5">
+          <Info className="w-3.5 h-3.5 text-blue-600 mt-0.5 shrink-0" />
+          <span className="text-xs text-blue-700 leading-relaxed">
+            Con una sola sede, el contacto del negocio y el de la sede son el mismo. Solo se separan cuando abres una segunda sede.
+          </span>
         </div>
 
       </div>
@@ -669,36 +700,28 @@ export function ConfiguracionPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Color de tema</label>
-            <div className="flex items-center gap-3">
-              <label className="relative cursor-pointer shrink-0" title="Elegir color">
-                <span className="block w-12 h-12 rounded-xl border border-gray-200 shadow-sm"
-                  style={{ background: sede.colorPrimarioHex || DEFAULT_BRAND }} />
-                <input type="color"
-                  value={(sede.colorPrimarioHex || DEFAULT_BRAND).slice(0, 7)}
-                  onChange={(e) => handleChange('colorPrimarioHex', e.target.value)}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-              </label>
-              <input className={inputCls + ' w-36 font-mono uppercase'}
-                value={sede.colorPrimarioHex || ''}
-                onChange={(e) => handleChange('colorPrimarioHex', e.target.value)}
-                maxLength={9} />
-            </div>
-            <div className="flex flex-wrap gap-2 mt-3">
-              {COLOR_PRESETS.map((c) => {
-                const active = (sede.colorPrimarioHex || '').toLowerCase() === c.toLowerCase()
-                return (
-                  <button key={c} type="button" onClick={() => handleChange('colorPrimarioHex', c)} aria-label={c}
-                    className={`w-8 h-8 rounded-lg transition ${active ? 'ring-2 ring-offset-2 ring-gray-900 scale-110' : 'shadow hover:scale-110'}`}
-                    style={{ background: c }} />
-                )
-              })}
-            </div>
-            <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50/60 p-4 flex items-center justify-between gap-3">
-              <span className="text-sm text-gray-500">Vista previa</span>
-              <span className="inline-flex items-center px-4 py-2 rounded-xl text-white text-sm font-semibold shadow"
-                style={{ background: sede.colorPrimarioHex || DEFAULT_BRAND }}>
-                Reservar ahora
-              </span>
+
+            {/* Picker propio (cuadro 2D + tono + hex + cuentagotas). Reemplaza al
+                <input type="color"> nativo, que en móvil abre la UI cruda del SO
+                (cuadros de colores primarios + sliders Tono/Saturación/Valor). */}
+            <BrandColorPicker
+              value={(sede.colorPrimarioHex || DEFAULT_BRAND).slice(0, 7)}
+              onChange={(hex) => handleChange('colorPrimarioHex', hex)}
+            />
+
+            {/* Presets rápidos: un toque aplica un color de marca ya elegido. */}
+            <div className="mt-3">
+              <span className="block text-xs text-gray-400 mb-1.5">Sugeridos</span>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_PRESETS.map((c) => {
+                  const active = (sede.colorPrimarioHex || '').toLowerCase() === c.toLowerCase()
+                  return (
+                    <button key={c} type="button" onClick={() => handleChange('colorPrimarioHex', c)} aria-label={c}
+                      className={`w-8 h-8 rounded-lg transition ${active ? 'ring-2 ring-offset-2 ring-gray-900 scale-110' : 'shadow hover:scale-110'}`}
+                      style={{ background: c }} />
+                  )
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -908,17 +931,42 @@ export function ConfiguracionPage() {
       <SeccionSheet open={sheet === 'redes'} onClose={cerrar} titulo="Redes sociales"
         subtitulo="Conecta tus perfiles para tu sitio"
         footer={<BotonListo onClick={cerrar} />}>
-        <div className="flex flex-col sm:flex-row gap-2 mb-4">
-          <select value={nuevaRedTipo} onChange={(e) => setNuevaRedTipo(e.target.value)}
-            className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-40">
-            {RED_OPCIONES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-          <input type="url" value={nuevaRedUrl} onChange={(e) => setNuevaRedUrl(e.target.value)}
-            className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white" />
-          <button type="button" onClick={agregarRed}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition">
-            <Plus className="w-4 h-4" /> Agregar
-          </button>
+        {/* Grilla de íconos: tocas la red → se resalta → aparece el campo de URL.
+            Más claro que el dropdown+input suelto, y mucho mejor en móvil. */}
+        <p className="text-xs text-gray-500 mb-3">Toca una red para agregar su enlace.</p>
+        <div className="grid grid-cols-4 sm:grid-cols-6 gap-2.5 mb-4">
+          {RED_OPCIONES.map((o) => {
+            const active = nuevaRedTipo === o.value
+            const yaTiene = redes.some((r) => (r.tipo || '').toLowerCase() === o.value)
+            return (
+              <button key={o.value} type="button" onClick={() => setNuevaRedTipo(o.value)} aria-label={o.label}
+                aria-pressed={active}
+                className={`relative flex flex-col items-center gap-1.5 py-2.5 rounded-2xl border transition
+                  ${active ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                <o.Icon className={`w-6 h-6 ${active ? 'text-blue-600' : 'text-gray-500'}`} />
+                <span className={`text-[10px] ${active ? 'text-blue-600 font-semibold' : 'text-gray-400'}`}>{o.label}</span>
+                {yaTiene && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-500" title="Ya agregada" />}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Campo de enlace para la red seleccionada. */}
+        <div className="bg-gray-50/70 border border-gray-100 rounded-xl p-3 mb-4">
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 mb-2">
+            {(() => { const A = redIcon(nuevaRedTipo); return <A className="w-3.5 h-3.5" /> })()}
+            Enlace de {RED_OPCIONES.find((o) => o.value === nuevaRedTipo)?.label || 'la red'}
+          </label>
+          <div className="flex gap-2">
+            <input type="url" value={nuevaRedUrl} onChange={(e) => setNuevaRedUrl(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') agregarRed() }}
+              placeholder="Pega el enlace de tu perfil"
+              className="flex-1 min-w-0 px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <button type="button" onClick={agregarRed}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-blue-700 transition shrink-0">
+              <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Agregar</span>
+            </button>
+          </div>
         </div>
         {redes.length === 0 ? (
           <p className="text-sm text-gray-400">Aún no hay redes configuradas.</p>

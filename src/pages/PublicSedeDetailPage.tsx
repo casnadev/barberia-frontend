@@ -511,6 +511,11 @@ export function PublicSedeDetailPage() {
   // del sistema. Si no hay teléfono, el botón no se muestra.
   const telDigits = (sede?.telefono || (sede as any)?.whatsappContacto || '').replace(/\D/g, '')
   const telE164 = telDigits ? (telDigits.length === 9 ? `+51${telDigits}` : `+${telDigits}`) : ''
+  // Número legible para el chip (ej. "943 811 931"). Solo formatea los 9 dígitos
+  // móviles de Perú; cualquier otro largo se muestra tal cual entró.
+  const telVisible = telDigits.length === 9
+    ? telDigits.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3')
+    : (sede?.telefono || telDigits)
   const tieneCoords = sede?.latitud != null && sede?.longitud != null && Number(sede.latitud) !== 0 && Number(sede.longitud) !== 0
 
   // Categorías (campo correcto: nombreCategoria)
@@ -753,16 +758,23 @@ export function PublicSedeDetailPage() {
                 </a>
               )}
             </div>
-            {/* Fila mobile: dirección (truncada para que quepa) + botón llamar */}
-            <div className={styles.addrPillRow} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'nowrap' }}>
+            {/* Fila mobile: dirección (izq) + teléfono (der) SIEMPRE en la misma
+                línea. Los estilos inline sobreescriben la clase .addrPill (que trae
+                inline-flex + margin-top propios) para que el flex reparta bien:
+                la dirección se encoge y trunca (flex:1 + minWidth:0), el teléfono
+                queda fijo a la derecha sin comprimirse (flexShrink:0). */}
+            <div className={styles.addrPillRow} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'nowrap', width: '100%', marginTop: 10 }}>
               {ubicacion && (
-                <a className={styles.addrPill} href={mapsHref} target="_blank" rel="noreferrer" style={{ minWidth: 0, overflow: 'hidden' }}>
-                  <MapPin width={16} height={16} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ubicacion}</span>
+                <a className={styles.addrPill} href={mapsHref} target="_blank" rel="noreferrer"
+                  style={{ display: 'flex', flex: '1 1 0%', minWidth: 0, marginTop: 0, overflow: 'hidden' }}>
+                  <MapPin width={16} height={16} style={{ flexShrink: 0 }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{ubicacion}</span>
                 </a>
               )}
               {telE164 && (
-                <a href={`tel:${telE164}`} className={styles.addrPill} style={{ background: brand, color: '#fff', flexShrink: 0, border: 'none' }} aria-label="Llamar por teléfono">
-                  <Phone width={16} height={16} /> Llamar
+                <a href={`tel:${telE164}`} className={styles.addrPill} aria-label={`Llamar al ${telE164}`}
+                  style={{ display: 'flex', flex: '0 0 auto', flexShrink: 0, marginTop: 0, color: brand, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  <Phone width={16} height={16} style={{ flexShrink: 0 }} /> {telVisible}
                 </a>
               )}
             </div>
