@@ -719,7 +719,7 @@ export function PublicSedeDetailPage() {
 
         {/* TÍTULO + ACCIONES (arriba, estilo Fresha) */}
         <div className={styles.head}>
-          <div>
+          <div className={styles.headMain}>
             {/* Fila título: en DESKTOP se antepone el logo (LOGO — Marca – Distrito);
                 en mobile el logo va en el hero y titleRow es transparente. */}
             <div className={styles.titleRow}>

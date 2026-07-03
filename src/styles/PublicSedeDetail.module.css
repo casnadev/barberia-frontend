@@ -134,6 +134,12 @@
 .breadcrumb { display: none; font-size: 12px; color: var(--tx2); padding-top: 24px; margin-bottom: 12px; }
 
 .head { padding-top: 32px; margin-bottom: 20px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+/* Columna de texto del header. min-width:0 es CLAVE: sin esto, como .head es
+   flex, este hijo toma min-width:auto y se niega a encogerse bajo el ancho de
+   su contenido → la dirección larga lo infla y el ellipsis de .addrPillAddr
+   nunca actúa (empuja el teléfono fuera de pantalla). Con min-width:0 respeta
+   el ancho real disponible y el truncado funciona en cualquier pantalla. */
+.headMain { min-width: 0; flex: 1 1 auto; }
 .title { font-size: 28px; font-weight: 800; color: var(--tx); margin-bottom: 8px; line-height: 1.1; letter-spacing: -0.01em; }
 /* Header desktop: [LOGO] Marca - Distrito en una sola linea. En mobile el logo
    vive en el hero (heroLogo), asi que aqui titleRow es transparente y no altera
