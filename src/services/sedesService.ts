@@ -13,6 +13,10 @@ export interface Sede {
   correo?: string
   horarioApertura?: string
   horarioCierre?: string
+  urlLogo?: string
+  urlBanner?: string
+  colorPrimarioHex?: string
+  mostrarTelefonoEnLanding?: boolean
 }
 
 export interface SedePublica {

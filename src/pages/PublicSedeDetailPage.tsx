@@ -509,7 +509,13 @@ export function PublicSedeDetailPage() {
   // Teléfono para el botón de llamada (tel:). Normalizamos a E.164: 9 dígitos → +51.
   // En móvil abre el marcador con el número puesto; en desktop lo pasa al handler
   // del sistema. Si no hay teléfono, el botón no se muestra.
-  const telDigits = (sede?.telefono || (sede as any)?.whatsappContacto || '').replace(/\D/g, '')
+  //
+  // FUENTE ÚNICA: SOLO sede.telefono. El backend lo devuelve en null cuando el toggle
+  // "Mostrar teléfono en mi landing" está apagado, así que ese toggle es lo ÚNICO que
+  // decide si aparece. NO se cae a whatsappContacto ni al teléfono del negocio: esos
+  // no tienen nada que ver con la landing de la sede (antes el fallback a WhatsApp
+  // re-mostraba el número y hacía que el toggle pareciera no funcionar).
+  const telDigits = (sede?.telefono || '').replace(/\D/g, '')
   const telE164 = telDigits ? (telDigits.length === 9 ? `+51${telDigits}` : `+${telDigits}`) : ''
   // Número legible para el chip mobile (ej. "943 811 931").
   const telVisible = telDigits.length === 9
@@ -1003,7 +1009,7 @@ export function PublicSedeDetailPage() {
                 <div className={styles.footBrand}>
                   {sede.urlLogo ? <img className={styles.footLogo} src={img(sede.urlLogo)} alt={sede.nombre} /> : <div className={styles.footLogoFb} style={{ background: brand }}><Scissors width={20} height={20} /></div>}
                   <div>
-                    <div className={styles.footName}>{sede.nombre}</div>
+                    <div className={styles.footName}>{displayName}</div>
                     {ubicacion && <div className={styles.footSub}>{ubicacion}</div>}
                   </div>
                 </div>
@@ -1016,7 +1022,7 @@ export function PublicSedeDetailPage() {
                   </div>
                 )}
               </div>
-              <p className={styles.copy}>© {new Date().getFullYear()} {sede.nombre}. Reservas con <a className={styles.copyLink} href="https://barber.pe" target="_blank" rel="noreferrer">barber.pe</a>.</p>
+              <p className={styles.copy}>© {new Date().getFullYear()} {displayName}. Reservas con <a className={styles.copyLink} href="https://barber.pe" target="_blank" rel="noreferrer">barber.pe</a>.</p>
             </footer>
           </div>
 

@@ -32,6 +32,7 @@ interface Sede {
   provincia?: string
   distrito?: string
   colorPrimarioHex?: string
+  mostrarTelefonoEnLanding?: boolean
 }
 
 const DIAS_SEMANA = [
@@ -129,7 +130,7 @@ export function ConfiguracionPage() {
   const [sede, setSede] = useState<Sede>({
     idSede: 1, nombre: '', descripcion: '', direccion: '', telefono: '', correo: '',
     subdominio: '', slug: '', urlLogo: '', latitud: undefined, longitud: undefined,
-    departamento: '', provincia: '', distrito: '',
+    departamento: '', provincia: '', distrito: '', mostrarTelefonoEnLanding: true,
   })
 
   // Datos del negocio (empresa) — ahora editables también desde aquí (antes solo en el primer login).
@@ -240,6 +241,7 @@ export function ConfiguracionPage() {
           provincia: data.provincia ?? '',
           distrito: data.distrito ?? '',
           colorPrimarioHex: data.colorPrimarioHex ?? '',
+          mostrarTelefonoEnLanding: data.mostrarTelefonoEnLanding ?? true,
         }
         setSede(sedeData)
         if (sedeData.urlLogo) setLogoPreview(sedeData.urlLogo)
@@ -288,7 +290,7 @@ export function ConfiguracionPage() {
   const handleChangeEmpresa = (field: string, value: string) =>
     setEmpresa((prev) => ({ ...prev, [field]: value }))
 
-  const handleChange = (field: keyof Sede, value: string | number) =>
+  const handleChange = (field: keyof Sede, value: string | number | boolean) =>
     setSede((prev) => ({ ...prev, [field]: value }))
 
   // Departamento -> resetea Distrito si ya no corresponde (selects dependientes).
@@ -427,6 +429,7 @@ export function ConfiguracionPage() {
         urlLogo: sede.urlLogo && !sede.urlLogo.startsWith('data:') ? sede.urlLogo : undefined,
         urlBanner: sede.urlBanner && !sede.urlBanner.startsWith('data:') ? sede.urlBanner : undefined,
         colorPrimarioHex: sede.colorPrimarioHex?.trim() || undefined,
+        mostrarTelefonoEnLanding: sede.mostrarTelefonoEnLanding ?? true,
       }
       if (sede.telefono?.trim() && !telValido) {
         toast.info('El teléfono no se guardó: debe ser 9 dígitos y empezar en 9 (ej. 987654321).')
@@ -578,6 +581,20 @@ export function ConfiguracionPage() {
             estado={empresa.nombreComercial ? 'listo' : 'falta'}
             onClick={() => setSheet('negocio')}
           />
+          {/* Imagen y color = identidad de MARCA: logo, portada y color son iguales
+              en TODAS las sedes del negocio. Por eso vive aquí (Tu negocio), no en
+              "Esta sede". El backend guarda estos campos a nivel Empresa. */}
+          <SeccionFila
+            icono={<ImageIcon className="w-[18px] h-[18px]" />}
+            titulo="Imagen y color"
+            preview={tieneImagen ? 'Logo / portada listos' : 'Sin imágenes aún'}
+            estado={tieneImagen ? 'listo' : undefined}
+            onClick={() => setSheet('imagen')}
+            derecha={
+              <span className="w-6 h-6 rounded-md border border-gray-200 shrink-0"
+                style={{ background: sede.colorPrimarioHex || DEFAULT_BRAND }} />
+            }
+          />
           <SeccionFila
             icono={<Share2 className="w-[18px] h-[18px]" />}
             titulo="Redes sociales"
@@ -601,17 +618,6 @@ export function ConfiguracionPage() {
             preview={sede.nombre || 'Falta el nombre'}
             estado={sede.nombre ? 'listo' : 'falta'}
             onClick={() => setSheet('info')}
-          />
-          <SeccionFila
-            icono={<ImageIcon className="w-[18px] h-[18px]" />}
-            titulo="Imagen y color"
-            preview={tieneImagen ? 'Logo / portada listos' : 'Sin imágenes aún'}
-            estado={tieneImagen ? 'listo' : undefined}
-            onClick={() => setSheet('imagen')}
-            derecha={
-              <span className="w-6 h-6 rounded-md border border-gray-200 shrink-0"
-                style={{ background: sede.colorPrimarioHex || DEFAULT_BRAND }} />
-            }
           />
           <SeccionFila
             icono={<Phone className="w-[18px] h-[18px]" />}
@@ -740,6 +746,26 @@ export function ConfiguracionPage() {
           <Field label="Teléfono *">
             <input type="tel" className={inputCls} value={sede.telefono || ''} onChange={(e) => handleChange('telefono', e.target.value)} />
           </Field>
+          {/* Toggle SOLO de la sede: decide si su teléfono se ve en su landing pública.
+              No borra el número (se sigue usando para recordatorios/gestión); solo
+              controla su visibilidad en el micrositio. */}
+          <label className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50/60 px-3.5 py-3 cursor-pointer">
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-gray-800">Mostrar teléfono en mi landing</span>
+              <span className="block text-xs text-gray-500 leading-relaxed">
+                Si lo apagas, tu número no aparecerá en la página pública de esta sede. Lo seguimos usando para tus recordatorios y la gestión de citas.
+              </span>
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={sede.mostrarTelefonoEnLanding ?? true}
+              onClick={() => handleChange('mostrarTelefonoEnLanding', !(sede.mostrarTelefonoEnLanding ?? true))}
+              className={`relative shrink-0 w-11 h-6 rounded-full transition-colors ${(sede.mostrarTelefonoEnLanding ?? true) ? 'bg-blue-600' : 'bg-gray-300'}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${(sede.mostrarTelefonoEnLanding ?? true) ? 'translate-x-5' : ''}`} />
+            </button>
+          </label>
           <Field label="Email">
             <input type="email" className={inputCls} value={sede.correo || ''} onChange={(e) => handleChange('correo', e.target.value)} />
           </Field>

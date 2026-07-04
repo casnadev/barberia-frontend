@@ -438,7 +438,11 @@
    ocultarla sin que un inline lo anule. */
 .addrPillRow { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; width: 100%; margin-top: 10px; }
 .addrPillRow .addrPill { margin-top: 0; }
-.addrPillAddr { display: flex; flex: 1 1 0%; min-width: 0; overflow: hidden; }
+.addrPillAddr { display: flex; align-items: center; flex: 1 1 0%; min-width: 0; overflow: hidden; }
+/* Solo el ícono: nunca se encoge. Antes, al ser hijo de un flex sin flex-shrink,
+   una dirección larga lo comprimía/deformaba. Con flex-shrink:0 mantiene su tamaño
+   y es SOLO la dirección (el <span>) la que se trunca y se alinea con el teléfono. */
+.addrPillAddr > svg { flex-shrink: 0; }
 .addrPillAddr > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .addrPillTel { display: flex; flex: 0 0 auto; white-space: nowrap; }
 .addrInline { display: none; }
