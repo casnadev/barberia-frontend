@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import {
   Store, Building2, Phone, Clock, MapPin, Image as ImageIcon, Camera, Share2, Save, Loader2,
-  X, ChevronDown, Upload, Plus, Instagram, Facebook, Globe, Music2, Youtube, Twitter, Link2, Copy, ExternalLink, Info, Gift,
+  X, ChevronDown, Upload, Plus, Instagram, Facebook, Globe, Music2, Youtube, Link2, Copy, ExternalLink, Info, Gift,
 } from 'lucide-react'
 import { apiClient } from '@/services/apiClient'
 import { geoService } from '@/services/geoService'
@@ -46,12 +46,25 @@ const DIAS_SEMANA = [
 ]
 type DiaHorario = { dia: number; label: string; abierto: boolean; inicio: string; fin: string; idHorario?: number }
 
+// Logos que lucide no trae (o trae desactualizados): inline.
+type RedIcoProps = { className?: string; width?: number | string; height?: number | string }
+const XIcon = ({ className, width = 18, height = 18 }: RedIcoProps) => (
+  <svg viewBox="0 0 24 24" width={width} height={height} className={className} fill="currentColor" aria-hidden="true">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.66l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+)
+const WhatsAppIcon = ({ className, width = 18, height = 18 }: RedIcoProps) => (
+  <svg viewBox="0 0 24 24" width={width} height={height} className={className} fill="currentColor" aria-hidden="true">
+    <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.8 14.03c-.24.68-1.4 1.3-1.94 1.38-.5.07-1.12.1-1.81-.11-.42-.13-.95-.31-1.64-.6-2.88-1.24-4.76-4.14-4.9-4.33-.14-.19-1.17-1.56-1.17-2.97 0-1.41.74-2.11 1-2.4.26-.29.57-.36.76-.36.19 0 .38 0 .55.01.18.01.42-.07.65.5.24.58.82 2 .89 2.14.07.14.12.31.02.5-.09.19-.14.31-.28.48-.14.17-.29.37-.42.5-.14.14-.28.29-.12.57.16.28.72 1.18 1.54 1.91 1.06.94 1.95 1.24 2.23 1.38.28.14.44.12.6-.07.16-.19.69-.8.87-1.08.18-.28.36-.23.6-.14.24.09 1.55.73 1.81.86.26.13.44.2.5.31.06.11.06.64-.18 1.32z" />
+  </svg>
+)
 const RED_OPCIONES = [
   { value: 'instagram', label: 'Instagram', Icon: Instagram },
   { value: 'facebook', label: 'Facebook', Icon: Facebook },
   { value: 'tiktok', label: 'TikTok', Icon: Music2 },
   { value: 'youtube', label: 'YouTube', Icon: Youtube },
-  { value: 'x', label: 'X', Icon: Twitter },
+  { value: 'x', label: 'X', Icon: XIcon },
+  { value: 'whatsapp', label: 'WhatsApp', Icon: WhatsAppIcon },
   { value: 'web', label: 'Sitio web', Icon: Globe },
 ]
 const redIcon = (tipo: string) => RED_OPCIONES.find((o) => o.value === (tipo || '').toLowerCase())?.Icon || Globe
@@ -984,9 +997,9 @@ export function ConfiguracionPage() {
             Enlace de {RED_OPCIONES.find((o) => o.value === nuevaRedTipo)?.label || 'la red'}
           </label>
           <div className="flex gap-2">
-            <input type="url" value={nuevaRedUrl} onChange={(e) => setNuevaRedUrl(e.target.value)}
+            <input type={nuevaRedTipo === 'whatsapp' ? 'tel' : 'url'} value={nuevaRedUrl} onChange={(e) => setNuevaRedUrl(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') agregarRed() }}
-              placeholder="Pega el enlace de tu perfil"
+              placeholder={nuevaRedTipo === 'whatsapp' ? 'Tu número, ej. 987654321' : 'Pega el enlace de tu perfil'}
               className="flex-1 min-w-0 px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             <button type="button" onClick={agregarRed}
               className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-blue-700 transition shrink-0">

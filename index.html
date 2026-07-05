@@ -14,6 +14,41 @@
     <meta property="og:image" content="https://barber.pe/og-default.png" />
     <meta name="twitter:card" content="summary_large_image" />
 
+    <!-- Datos estructurados (SEO): plataforma + organización + sitio -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://barber.pe/#org",
+          "name": "barber.pe",
+          "url": "https://barber.pe/",
+          "logo": "https://barber.pe/barber-logo.png"
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://barber.pe/#web",
+          "url": "https://barber.pe/",
+          "name": "barber.pe",
+          "inLanguage": "es-PE",
+          "publisher": { "@id": "https://barber.pe/#org" }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "barber.pe",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "url": "https://barber.pe/",
+          "description": "Software de reservas y agenda para barberías y salones en Perú. Tus clientes reservan y confirman 24/7. En soles, sin comisiones.",
+          "offers": { "@type": "Offer", "priceCurrency": "PEN" },
+          "areaServed": { "@type": "Country", "name": "Perú" },
+          "publisher": { "@id": "https://barber.pe/#org" }
+        }
+      ]
+    }
+    </script>
+
     <!-- Fuentes de la landing: Bricolage Grotesque (display) + Plus Jakarta Sans (texto) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   MapPin, Navigation, Phone, Clock, Star, ChevronRight, ChevronLeft, Scissors,
-  Heart, Forward, X, ChevronDown, Instagram, Facebook, Globe,
+  Heart, Forward, X, ChevronDown, Instagram, Facebook, Globe, Youtube,
   Gift,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -40,12 +40,39 @@ const h12 = (t?: string) => {
   return `${h}:${m} ${ap}`
 }
 
-// TikTok no existe en lucide-react: ícono inline
-const TikTokIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+// Íconos que lucide-react no cubre (o cubre desactualizado): inline.
+type IcoProps = { className?: string; width?: number | string; height?: number | string }
+const TikTokIcon = ({ className, width = 16, height = 16 }: IcoProps) => (
+  <svg viewBox="0 0 24 24" width={width} height={height} className={className} fill="currentColor" aria-hidden="true">
     <path d="M16.5 3c.3 2 1.7 3.6 3.5 3.9v2.6c-1.3 0-2.6-.4-3.6-1.1v6.1c0 3.1-2.5 5.5-5.6 5.5S5.2 17.6 5.2 14.5 7.7 9 10.8 9c.3 0 .6 0 .9.1v2.7c-.3-.1-.6-.2-.9-.2-1.5 0-2.6 1.2-2.6 2.6s1.2 2.6 2.6 2.6 2.6-1.2 2.6-2.6V3h3.1z" />
   </svg>
 )
+// Logo actual de X (el pájaro de Twitter quedó obsoleto).
+const XIcon = ({ className, width = 16, height = 16 }: IcoProps) => (
+  <svg viewBox="0 0 24 24" width={width} height={height} className={className} fill="currentColor" aria-hidden="true">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.66l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+)
+const WhatsAppIcon = ({ className, width = 16, height = 16 }: IcoProps) => (
+  <svg viewBox="0 0 24 24" width={width} height={height} className={className} fill="currentColor" aria-hidden="true">
+    <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.8 14.03c-.24.68-1.4 1.3-1.94 1.38-.5.07-1.12.1-1.81-.11-.42-.13-.95-.31-1.64-.6-2.88-1.24-4.76-4.14-4.9-4.33-.14-.19-1.17-1.56-1.17-2.97 0-1.41.74-2.11 1-2.4.26-.29.57-.36.76-.36.19 0 .38 0 .55.01.18.01.42-.07.65.5.24.58.82 2 .89 2.14.07.14.12.31.02.5-.09.19-.14.31-.28.48-.14.17-.29.37-.42.5-.14.14-.28.29-.12.57.16.28.72 1.18 1.54 1.91 1.06.94 1.95 1.24 2.23 1.38.28.14.44.12.6-.07.16-.19.69-.8.87-1.08.18-.28.36-.23.6-.14.24.09 1.55.73 1.81.86.26.13.44.2.5.31.06.11.06.64-.18 1.32z" />
+  </svg>
+)
+// Mapa tipo→ícono: pinta TODAS las redes configuradas, no solo algunas.
+const ICONO_RED: Record<string, any> = {
+  instagram: Instagram, insta: Instagram,
+  facebook: Facebook, face: Facebook,
+  tiktok: TikTokIcon, tik: TikTokIcon,
+  youtube: Youtube, you: Youtube,
+  whatsapp: WhatsAppIcon, whats: WhatsAppIcon,
+  twitter: XIcon, x: XIcon,
+  web: Globe, sitio: Globe,
+}
+const iconoDeRed = (tipo: string) => {
+  const t = (tipo || '').toLowerCase().trim()
+  for (const clave in ICONO_RED) if (t.includes(clave)) return ICONO_RED[clave]
+  return Globe
+}
 
 // ─────────────────────────── Modal de trabajador ───────────────────────────
 function ModalShell({ onClose, children }: any) {
@@ -536,10 +563,8 @@ export function PublicSedeDetailPage() {
     ? galeria
     : [sede?.urlBanner ? img(sede.urlBanner) : '/barber-logo.png']
 
-  // Redes
+  // Redes (se pintan TODAS dinámicamente en el pie, ver ICONO_RED / iconoDeRed)
   const redes: any[] = Array.isArray(sede?.redesSociales) ? sede.redesSociales : []
-  const urlRed = (clave: string) => redes.find((r) => (r.tipo || '').toLowerCase().includes(clave))?.url
-  const igUrl = urlRed('insta'), fbUrl = urlRed('face'), ttUrl = urlRed('tik'), webUrl = urlRed('web') || urlRed('sitio')
 
   // Estado abierto/cerrado hoy
   const hoy = new Date().getDay() // 0=Dom..6=Sab
@@ -1013,12 +1038,26 @@ export function PublicSedeDetailPage() {
                     {ubicacion && <div className={styles.footSub}>{ubicacion}</div>}
                   </div>
                 </div>
-                {(igUrl || fbUrl || ttUrl || webUrl) && (
+                {redes.some((r) => r?.url) && (
                   <div className={styles.socials}>
-                    {igUrl && <a className={styles.social} href={igUrl} target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram width={16} height={16} /></a>}
-                    {fbUrl && <a className={styles.social} href={fbUrl} target="_blank" rel="noreferrer" aria-label="Facebook"><Facebook width={16} height={16} /></a>}
-                    {ttUrl && <a className={styles.social} href={ttUrl} target="_blank" rel="noreferrer" aria-label="TikTok"><TikTokIcon className={styles.social} /></a>}
-                    {webUrl && <a className={styles.social} href={webUrl} target="_blank" rel="noreferrer" aria-label="Sitio web"><Globe width={16} height={16} /></a>}
+                    {redes
+                      .filter((r) => r?.url)
+                      .map((r, i) => {
+                        const Ico = iconoDeRed(r.tipo)
+                        const t = (r.tipo || '').toLowerCase()
+                        let href = String(r.url)
+                        if (t.includes('whats')) {
+                          const d = href.replace(/\D/g, '')
+                          const num = d.length === 9 ? '51' + d : d // Perú: 9 dígitos → +51
+                          const msg = encodeURIComponent(`Hola ${displayName}, quisiera más información para hacer una reserva`)
+                          href = `https://wa.me/${num}?text=${msg}`
+                        }
+                        return (
+                          <a key={r.idRedSocial ?? i} className={styles.social} href={href} target="_blank" rel="noreferrer" aria-label={r.tipo || 'Red social'}>
+                            <Ico width={16} height={16} />
+                          </a>
+                        )
+                      })}
                   </div>
                 )}
               </div>
