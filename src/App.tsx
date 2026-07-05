@@ -36,6 +36,7 @@ const PrivacidadPage = lazy(() => import('@/pages/legal/PrivacidadPage'))
 const LibroReclamacionesPage = lazy(() => import('@/pages/legal/LibroReclamacionesPage'))
 const TrabajadorMiAgenda = lazy(() => import('@/pages/trabajador/TrabajadorMiAgenda').then(m => ({ default: m.TrabajadorMiAgenda })))
 const CompletarPerfilAdmin = lazy(() => import('@/pages/CompletarPerfilAdmin').then(m => ({ default: m.CompletarPerfilAdmin })))
+const VerificarCorreoPage = lazy(() => import('@/pages/VerificarCorreoPage').then(m => ({ default: m.VerificarCorreoPage })))
 const LandingPage = lazy(() => import('@/pages/LandingPage'))
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -372,6 +373,9 @@ export function App() {
             <Route path="/reprogramar/:token" element={<ReservaAcciones />} />
             <Route path="/calificar/:token" element={<ReservaAcciones />} />
             <Route path="/resena/:token" element={<ReservaAcciones />} />
+
+            {/* Verificación de correo (Bloque 4) */}
+            <Route path="/verificar-correo/:token" element={<VerificarCorreoPage />} />
 
             {/* 404 */}
             <Route path="*" element={<NotFoundPage />} />

@@ -13,6 +13,7 @@ export interface MiPerfil {
   idUsuario: number
   nombreCompleto: string
   correo?: string
+  correoConfirmado?: boolean
   telefono?: string
   urlFotoPerfil?: string | null
   rol: string

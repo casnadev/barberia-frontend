@@ -6,6 +6,7 @@ import {
   Scissors, Plus, Building2, MapPin, KeyRound, Power,
   X, Check, Mail, Phone, CreditCard,
   Store, Trash2, Loader2, Pencil, RefreshCw,
+  Search, ExternalLink, MoreHorizontal, CalendarDays, User,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { AccountMenu } from '@/components/AccountMenu'
@@ -35,6 +36,28 @@ const fechaCorta = (iso?: string) => {
   return d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
+// Fecha de alta legible ("3 jul 2026").
+const fechaAlta = (iso?: string) => {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+// Iniciales para el avatar de marca (1-2 letras).
+const iniciales = (nombre: string) => {
+  const p = (nombre || '').trim().split(/\s+/).filter(Boolean)
+  if (p.length === 0) return '?'
+  return (p[0][0] + (p[1]?.[0] ?? '')).toUpperCase()
+}
+
+// Hex válido → se usa como color de marca; si no, un neutro.
+const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
+const colorMarca = (hex?: string | null) => (hex && HEX_RE.test(hex.trim()) ? hex.trim() : '#111827')
+
+// URL pública del sitio de la barbería a partir del subdominio.
+const urlSitio = (sub?: string | null) => (sub ? `https://${sub}.barber.pe` : null)
+
 type CrearForm = {
   nombre: string
   ownerNombre: string
@@ -61,6 +84,10 @@ export function SuperAdminDashboard() {
   // Modales auxiliares
   const [planTarget, setPlanTarget] = useState<Empresa | null>(null)
   const [sedeTarget, setSedeTarget] = useState<Empresa | null>(null)
+  const [duenoTarget, setDuenoTarget] = useState<Empresa | null>(null)
+  const [menuId, setMenuId] = useState<number | null>(null)
+  const [busqueda, setBusqueda] = useState('')
+  const [rango, setRango] = useState<'todas' | 'hoy' | 'semana' | 'mes'>('todas')
 
   // silent = revalidación en segundo plano SIN blanquear la pantalla (no toca
   // `loading`). Se usa al cerrar modales: si hubo cambios refrescamos los datos
@@ -91,6 +118,26 @@ export function SuperAdminDashboard() {
     const sinAcceso = empresas.filter((e) => owners[e.id] == null).length
     return { total, activas, sinAcceso }
   }, [empresas, owners])
+
+  // Vista: filtra por búsqueda y rango de fecha de alta; ordena por más recientes.
+  const empresasVista = useMemo(() => {
+    const q = busqueda.trim().toLowerCase()
+    const now = new Date()
+    const startHoy = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const startSemana = new Date(startHoy); startSemana.setDate(startHoy.getDate() - ((now.getDay() + 6) % 7))
+    const startMes = new Date(now.getFullYear(), now.getMonth(), 1)
+    const desde = rango === 'hoy' ? startHoy : rango === 'semana' ? startSemana : rango === 'mes' ? startMes : null
+    return empresas
+      .filter((e) => {
+        if (q) {
+          const hay = `${e.nombreComercial} ${e.razonSocial} ${e.subdominioPrincipal ?? ''}`.toLowerCase()
+          if (!hay.includes(q)) return false
+        }
+        if (desde && e.fechaCreacion && new Date(e.fechaCreacion) < desde) return false
+        return true
+      })
+      .sort((a, b) => (b.fechaCreacion ? Date.parse(b.fechaCreacion) : 0) - (a.fechaCreacion ? Date.parse(a.fechaCreacion) : 0))
+  }, [empresas, busqueda, rango])
 
   // ----------------------------------------------------------------- Alta mínima
   const abrirCrear = () => { setForm(emptyForm); setCrearOpen(true) }
@@ -278,6 +325,24 @@ export function SuperAdminDashboard() {
           </button>
         </div>
 
+        {/* Filtro por fecha de alta + búsqueda */}
+        <div className="flex flex-col sm:flex-row gap-2.5 mb-4">
+          <div className="inline-flex bg-gray-100 rounded-xl p-1 self-start">
+            {([['todas', 'Todas'], ['hoy', 'Hoy'], ['semana', 'Semana'], ['mes', 'Mes']] as const).map(([k, label]) => (
+              <button key={k} onClick={() => setRango(k)}
+                className={`text-sm font-medium px-3 py-1.5 rounded-lg transition ${
+                  rango === k ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="relative flex-1 sm:max-w-xs">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar barbería"
+              className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          </div>
+        </div>
+
         {/* Lista */}
         {loading ? (
           <div className="flex items-center justify-center py-20 text-gray-400">
@@ -288,26 +353,38 @@ export function SuperAdminDashboard() {
             <Building2 className="w-10 h-10 mx-auto mb-3 text-gray-300" />
             <p>Aún no hay barberías. Crea la primera.</p>
           </div>
+        ) : empresasVista.length === 0 ? (
+          <div className="text-center py-16 text-gray-500">
+            <Search className="w-9 h-9 mx-auto mb-3 text-gray-300" />
+            <p>Sin resultados para tu búsqueda o filtro.</p>
+          </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {empresas.map((e) => {
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {empresasVista.map((e) => {
               const owner = owners[e.id]
               const inactivo = e.pausada === true
               const esPrueba = (e.planActual || '').toLowerCase().includes('prueba')
+              const marca = colorMarca(e.colorPrimarioHex)
+              const sitio = urlSitio(e.subdominioPrincipal)
+              const abierto = menuId === e.id
               return (
                 <motion.div key={e.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                  className={`bg-white border rounded-2xl p-5 ${inactivo ? 'border-gray-200 opacity-70' : 'border-gray-200'}`}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
+                  className={`bg-white border rounded-2xl p-4 ${inactivo ? 'border-gray-200 opacity-70' : 'border-gray-200'}`}>
+                  {/* Encabezado: avatar de marca + nombre/subdominio + estado */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold text-sm shrink-0" style={{ background: marca }}>
+                      {iniciales(e.nombreComercial)}
+                    </div>
+                    <div className="min-w-0 flex-1">
                       <h3 className="font-semibold text-gray-900 truncate">{e.nombreComercial}</h3>
-                      <p className="text-xs text-gray-400 truncate">{e.razonSocial}</p>
+                      <p className="text-xs text-gray-400 truncate">{e.subdominioPrincipal ? `${e.subdominioPrincipal}.barber.pe` : e.razonSocial}</p>
                     </div>
                     {inactivo
                       ? <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 shrink-0">Inactiva</span>
                       : <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-600 shrink-0">Activa</span>}
                   </div>
 
-                  {/* Plan + sedes (siempre visible) */}
+                  {/* Meta: plan + sedes + fecha de alta */}
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     {e.planActual ? (
                       <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
@@ -324,87 +401,40 @@ export function SuperAdminDashboard() {
                     <span className="inline-flex items-center gap-1 text-xs text-gray-500 px-2 py-0.5 rounded-full bg-gray-50">
                       <MapPin className="w-3.5 h-3.5" /> {e.totalSedes ?? 0} {(e.totalSedes ?? 0) === 1 ? 'sede' : 'sedes'}
                     </span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-gray-50 p-0.5" title="Sedes permitidas (override del plan)">
-                      <span className="text-[11px] text-gray-400 px-1.5">Sedes:</span>
-                      {[1, 2, 3].map((n) => (
-                        <button
-                          key={n}
-                          type="button"
-                          onClick={() => setLimite(e, n)}
-                          className={`w-6 h-6 rounded-full text-xs font-semibold transition ${
-                            e.limiteSedesOverride === n ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-200'
-                          }`}
-                        >
-                          {n}
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => setLimite(e, -1)}
-                        title="Ilimitadas"
-                        className={`w-6 h-6 rounded-full text-xs font-semibold transition ${
-                          (e.limiteSedesOverride ?? 0) < 0 ? 'bg-violet-600 text-white' : 'text-gray-500 hover:bg-gray-200'
-                        }`}
-                      >
-                        ∞
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setLimite(e, null)}
-                        title="Usar el límite del plan"
-                        className={`px-2 h-6 rounded-full text-[11px] font-semibold transition ${
-                          e.limiteSedesOverride == null ? 'bg-gray-700 text-white' : 'text-gray-500 hover:bg-gray-200'
-                        }`}
-                      >
-                        plan
-                      </button>
+                    <span className="inline-flex items-center gap-1 text-xs text-gray-400 px-2 py-0.5 rounded-full bg-gray-50">
+                      <CalendarDays className="w-3.5 h-3.5" /> Alta {fechaAlta(e.fechaCreacion)}
                     </span>
+                    {!owner && <span className="text-xs text-red-500">Sin dueño</span>}
                   </div>
 
-                  {/* Dueño */}
-                  <div className="mt-3 text-sm">
-                    {owner ? (
-                      <div className="flex items-center gap-2 text-gray-600">
-                        {owner.correo
-                          ? <Mail className="w-4 h-4 text-gray-400 shrink-0" />
-                          : <Phone className="w-4 h-4 text-gray-400 shrink-0" />}
-                        <span className="truncate">{owner.correo || owner.telefono}</span>
-                        <span className={`ml-auto text-xs px-2 py-0.5 rounded-full shrink-0 ${
-                          owner.metodoLogin === 'Password' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
-                          {owner.metodoLogin === 'Password' ? 'Contraseña' : 'PIN / OTP'}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-red-500">Sin dueño asignado</span>
-                    )}
-                  </div>
-
-                  {/* Acciones */}
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <button onClick={() => toggleAccesoAdmin(e)} disabled={!owner}
-                      className={`inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition disabled:opacity-40 ${
-                        owner?.estado === false
-                          ? 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-                          : 'bg-green-50 text-green-700 hover:bg-green-100'}`}>
-                      <KeyRound className="w-4 h-4" /> {owner?.estado === false ? 'Acceso apagado' : 'Acceso activo'}
-                    </button>
-                    <button onClick={() => setPlanTarget(e)}
-                      className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition">
-                      <CreditCard className="w-4 h-4" /> Plan
-                    </button>
-                    <button onClick={() => setSedeTarget(e)}
-                      className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition">
-                      <MapPin className="w-4 h-4" /> Sedes
-                    </button>
-                    <button onClick={() => toggleEstado(e)}
-                      className={`inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition disabled:opacity-40 ml-auto ${
-                        inactivo ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}>
-                      <Power className="w-4 h-4" /> {inactivo ? 'Activar' : 'Desactivar'}
-                    </button>
-                    <button onClick={() => eliminarEmpresa(e)} title="Eliminar barbería"
-                      className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition">
-                      <Trash2 className="w-4 h-4" /> Eliminar
-                    </button>
+                  {/* Acciones: Ver sitio + menú */}
+                  <div className="mt-4 flex items-center gap-2">
+                    <a href={sitio ?? undefined} target="_blank" rel="noopener noreferrer"
+                      onClick={(ev) => { if (!sitio) ev.preventDefault() }}
+                      className={`inline-flex items-center justify-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition flex-1 ${
+                        sitio ? 'bg-gray-50 text-gray-700 hover:bg-gray-100' : 'bg-gray-50 text-gray-300 cursor-not-allowed'}`}>
+                      <ExternalLink className="w-4 h-4" /> Ver sitio
+                    </a>
+                    <div className="relative">
+                      <button onClick={() => setMenuId(abierto ? null : e.id)} aria-label="Más acciones"
+                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 transition">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+                      {abierto && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setMenuId(null)} />
+                          <div className="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded-xl shadow-lg z-20 py-1">
+                            <MenuItem icon={User} label="Dueño" onClick={() => { setMenuId(null); setDuenoTarget(e) }} />
+                            <MenuItem icon={CreditCard} label="Plan" onClick={() => { setMenuId(null); setPlanTarget(e) }} />
+                            <MenuItem icon={MapPin} label="Sedes" onClick={() => { setMenuId(null); setSedeTarget(e) }} />
+                            <MenuItem icon={KeyRound} label={owner?.estado === false ? 'Activar acceso' : 'Apagar acceso'} disabled={!owner} onClick={() => { setMenuId(null); toggleAccesoAdmin(e) }} />
+                            <MenuItem icon={Power} label={inactivo ? 'Activar barbería' : 'Desactivar barbería'} onClick={() => { setMenuId(null); toggleEstado(e) }} />
+                            <div className="my-1 border-t border-gray-100" />
+                            <MenuItem icon={Trash2} label="Eliminar" danger onClick={() => { setMenuId(null); eliminarEmpresa(e) }} />
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </motion.div>
               )
@@ -520,8 +550,53 @@ export function SuperAdminDashboard() {
       {/* ============================== SEDES ============================== */}
       <AnimatePresence>
         {sedeTarget && (
-          <SedesModal empresa={sedeTarget} onClose={(changed?: boolean) => { setSedeTarget(null); if (changed) loadAll(true) }} />
+          <SedesModal empresa={sedeTarget} onLimite={(v) => setLimite(sedeTarget, v)}
+            onClose={(changed?: boolean) => { setSedeTarget(null); if (changed) loadAll(true) }} />
         )}
+      </AnimatePresence>
+
+      {/* ============================== DUEÑO ============================== */}
+      <AnimatePresence>
+        {duenoTarget && (() => {
+          const o = owners[duenoTarget.id]
+          return (
+            <Modal onClose={() => setDuenoTarget(null)}>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Dueño</h3>
+              <p className="text-sm text-gray-500 mb-4">{duenoTarget.nombreComercial}</p>
+              {o ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-semibold">{iniciales(o.nombreCompleto)}</div>
+                    <div>
+                      <p className="font-semibold text-gray-900">{o.nombreCompleto}</p>
+                      <p className="text-xs text-gray-500">{o.metodoLogin === 'Password' ? 'Ingresa con contraseña' : 'Ingresa con PIN / OTP'}</p>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 divide-y divide-gray-100">
+                    <div className="flex items-center gap-2 px-3 py-2.5 text-sm">
+                      <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+                      <span className={o.correo ? 'text-gray-800' : 'text-gray-400'}>{o.correo || 'Sin correo'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-2.5 text-sm">
+                      <Phone className="w-4 h-4 text-gray-400 shrink-0" />
+                      <span className={o.telefono ? 'text-gray-800' : 'text-gray-400'}>{o.telefono || 'Sin teléfono'}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5">
+                    <span className="text-sm text-gray-600">Acceso {o.estado === false ? 'apagado' : 'activo'}</span>
+                    <button onClick={() => toggleAccesoAdmin(duenoTarget)}
+                      className={`inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition ${
+                        o.estado === false ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                      <KeyRound className="w-4 h-4" /> {o.estado === false ? 'Activar' : 'Apagar'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-red-500">Esta barbería no tiene dueño asignado.</p>
+              )}
+            </Modal>
+          )
+        })()}
       </AnimatePresence>
     </div>
   )
@@ -537,6 +612,22 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
       {children}
     </div>
+  )
+}
+
+function MenuItem({ icon: Icon, label, onClick, danger, disabled }: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  onClick: () => void
+  danger?: boolean
+  disabled?: boolean
+}) {
+  return (
+    <button onClick={onClick} disabled={disabled}
+      className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition disabled:opacity-40 disabled:cursor-not-allowed ${
+        danger ? 'text-red-600 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-50'}`}>
+      <Icon className="w-4 h-4" /> {label}
+    </button>
   )
 }
 
@@ -558,7 +649,7 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
 }
 
 /* ----------------------------------------------------------------- Sedes */
-function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: (changed?: boolean) => void }) {
+function SedesModal({ empresa, onClose, onLimite }: { empresa: Empresa; onClose: (changed?: boolean) => void; onLimite: (v: number | null) => void }) {
   // Marca si el admin creó/eliminó/pausó/renombró alguna sede. Al cerrar, el
   // padre solo revalida (en segundo plano) si esto es true → sin parpadeo.
   const huboCambios = useRef(false)
@@ -567,6 +658,10 @@ function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: (changed?
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ nombre: '', direccion: '', telefono: '', whatsapp: '' })
   const [saving, setSaving] = useState(false)
+  const [limite, setLimiteLocal] = useState<number | null>(empresa.limiteSedesOverride ?? null)
+
+  // Cambia el límite de sedes (override del plan) y avisa al padre.
+  const cambiarLimite = (v: number | null) => { setLimiteLocal(v); onLimite(v) }
 
   // Edición de slug (solo SuperAdmin)
   const [editId, setEditId] = useState<number | null>(null)
@@ -683,6 +778,33 @@ function SedesModal({ empresa, onClose }: { empresa: Empresa; onClose: (changed?
         <Store className="w-5 h-5 text-blue-600" /> Sedes de {empresa.nombreComercial}
       </h2>
       <p className="text-sm text-gray-500 mb-4">El subdominio se genera del nombre; puedes editarlo con el lápiz.</p>
+
+      {/* Límite de sedes permitidas (override del plan) */}
+      <div className="mb-5 rounded-xl bg-gray-50 border border-gray-200 p-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <span className="text-sm font-medium text-gray-700">Sedes permitidas</span>
+          <div className="inline-flex items-center gap-1">
+            {[1, 2, 3].map((n) => (
+              <button key={n} type="button" onClick={() => cambiarLimite(n)}
+                className={`w-8 h-8 rounded-lg text-sm font-semibold transition ${
+                  limite === n ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'}`}>
+                {n}
+              </button>
+            ))}
+            <button type="button" onClick={() => cambiarLimite(-1)} title="Ilimitadas"
+              className={`w-8 h-8 rounded-lg text-sm font-semibold transition ${
+                (limite ?? 0) < 0 ? 'bg-violet-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'}`}>
+              ∞
+            </button>
+            <button type="button" onClick={() => cambiarLimite(null)} title="Usar el límite del plan"
+              className={`px-3 h-8 rounded-lg text-xs font-semibold transition ${
+                limite == null ? 'bg-gray-800 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'}`}>
+              Plan
+            </button>
+          </div>
+        </div>
+        <p className="text-[11px] text-gray-400 mt-1.5">Override manual. "Plan" respeta el límite del plan contratado.</p>
+      </div>
 
       {loading ? (
         <div className="py-6 text-center text-gray-400"><Loader2 className="w-5 h-5 animate-spin inline" /></div>

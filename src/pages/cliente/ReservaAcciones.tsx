@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type CSSProperties } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { X, Clock, MapPin, User, Star, Check, CalendarClock, Scissors, RotateCcw } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -20,6 +20,7 @@ interface Reserva {
   idTrabajador: number
   idServicio: number
   logoSede?: string
+  colorPrimario?: string | null
   subdominio?: string
 }
 
@@ -27,6 +28,13 @@ interface Slot {
   horaInicio: string
   horaFin: string
   etiqueta: string
+}
+
+const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
+/** Devuelve el estilo con --brand si el color es un hex válido; si no, {} (usa el fallback del CSS). */
+function brandVar(color?: string | null): CSSProperties {
+  const c = (color || '').trim()
+  return HEX_RE.test(c) ? ({ ['--brand']: c } as CSSProperties) : {}
 }
 
 type DoneType = 'confirmada' | 'cancelada' | 'reprogramada' | 'resena' | null
@@ -86,6 +94,7 @@ export function ReservaAcciones() {
         idTrabajador: data.idTrabajador,
         idServicio: data.idServicio,
         logoSede: data.urlLogo,
+        colorPrimario: data.colorPrimarioHex,
         subdominio: data.subdominio,
       })
     } catch {
@@ -259,7 +268,7 @@ export function ReservaAcciones() {
   }[reserva.estado]
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} style={brandVar(reserva.colorPrimario)}>
       <header className={styles.topbar}>
         {reserva.logoSede ? (
           <img

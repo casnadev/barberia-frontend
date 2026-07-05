@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, Edit2, Trash2, X, Eye, EyeOff, Upload, Image as ImageIcon, Tag, AlertCircle, ChevronDown } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, Eye, EyeOff, Upload, Image as ImageIcon, Tag, AlertCircle, ChevronDown, Sparkles, Check, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ComboBox } from '@/components/ComboBox'
 import { toast } from 'sonner'
 import { apiClient, getActiveTenant } from '@/services/apiClient'
 import { sedeTenantService } from '@/services/sedeTenantService'
+import { serviciosService, type CategoriaPredeterminada } from '@/services/serviciosService'
+import { resolverIconoServicio } from '@/utils/iconosServicio'
 import s from '@/styles/Servicios.module.css'
 
 interface Servicio {
@@ -56,6 +58,87 @@ export function ServiciosPage() {
   const [catEditingId, setCatEditingId] = useState<number | 'new' | null>(null)
   const [catSubmitting, setCatSubmitting] = useState(false)
   const [catConfirmDelete, setCatConfirmDelete] = useState<number | null>(null)
+
+  // Predeterminados (Bloque 3): picker por categorías
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [catalogo, setCatalogo] = useState<CategoriaPredeterminada[]>([])
+  const [catalogoLoading, setCatalogoLoading] = useState(false)
+  const [seleccion, setSeleccion] = useState<Set<string>>(new Set())
+  const [aplicando, setAplicando] = useState(false)
+
+  const abrirPicker = async () => {
+    setPickerOpen(true)
+    setSeleccion(new Set())
+    setCatalogoLoading(true)
+    try {
+      const data = await serviciosService.getPredeterminados()
+      setCatalogo(data)
+      // Preselecciona los que aún NO existen en la sede (un clic y listo).
+      const nuevos = new Set<string>()
+      data.forEach((c) => c.servicios.forEach((sv) => { if (!sv.yaExiste) nuevos.add(sv.clave) }))
+      setSeleccion(nuevos)
+    } catch (err: any) {
+      console.error('Error cargando predeterminados:', err)
+      toast.error('No se pudo cargar el catálogo predeterminado')
+    } finally {
+      setCatalogoLoading(false)
+    }
+  }
+
+  const toggleServicio = (clave: string, yaExiste: boolean) => {
+    if (yaExiste) return
+    setSeleccion((prev) => {
+      const next = new Set(prev)
+      next.has(clave) ? next.delete(clave) : next.add(clave)
+      return next
+    })
+  }
+
+  const seleccionablesDe = (cat: CategoriaPredeterminada) =>
+    cat.servicios.filter((sv) => !sv.yaExiste).map((sv) => sv.clave)
+
+  const todosSeleccionados = (cat: CategoriaPredeterminada) => {
+    const sel = seleccionablesDe(cat)
+    return sel.length > 0 && sel.every((k) => seleccion.has(k))
+  }
+
+  const toggleCategoria = (cat: CategoriaPredeterminada) => {
+    const sel = seleccionablesDe(cat)
+    if (sel.length === 0) return
+    setSeleccion((prev) => {
+      const next = new Set(prev)
+      const todos = sel.every((k) => next.has(k))
+      sel.forEach((k) => (todos ? next.delete(k) : next.add(k)))
+      return next
+    })
+  }
+
+  const aplicarPredeterminados = async () => {
+    const claves = Array.from(seleccion)
+    if (claves.length === 0) {
+      toast.error('Selecciona al menos un servicio')
+      return
+    }
+    try {
+      setAplicando(true)
+      const r = await serviciosService.cargarPredeterminados(claves)
+      if (r.serviciosCreados > 0) {
+        toast.success(
+          `Se agregaron ${r.serviciosCreados} servicio${r.serviciosCreados === 1 ? '' : 's'}` +
+            (r.categoriasCreadas > 0 ? ` y ${r.categoriasCreadas} categoría${r.categoriasCreadas === 1 ? '' : 's'}` : ''),
+        )
+      } else {
+        toast('No se agregó ningún servicio nuevo')
+      }
+      setPickerOpen(false)
+      await Promise.all([loadServicios(), loadCategorias(idSede)])
+    } catch (err: any) {
+      console.error('Error aplicando predeterminados:', err)
+      toast.error(err.response?.data?.message || 'No se pudieron cargar los predeterminados')
+    } finally {
+      setAplicando(false)
+    }
+  }
 
   // ========== CARGA ==========
   // Lista de servicios cacheada con React Query (navegación instantánea al revisitar).
@@ -280,7 +363,10 @@ export function ServiciosPage() {
   }
 
   // ========== CARD ==========
-  const renderCard = (servicio: Servicio, inactivo: boolean) => (
+  const renderCard = (servicio: Servicio, inactivo: boolean) => {
+    const tieneFoto = !!servicio.urlImagen && servicio.urlImagen !== 'string'
+    const Icono = resolverIconoServicio(servicio.nombre)
+    return (
     <motion.div
       key={servicio.idServicio}
       initial={{ opacity: 0, y: 16 }}
@@ -288,9 +374,9 @@ export function ServiciosPage() {
       className={`${s.card} ${inactivo ? s.cardInactive : ''}`}
     >
       <div className={s.media}>
-        {servicio.urlImagen && servicio.urlImagen !== 'string'
+        {tieneFoto
           ? <img src={servicio.urlImagen} alt={servicio.nombre} />
-          : <div className={s.mediaEmpty}><ImageIcon width={30} height={30} /></div>}
+          : <div className={s.mediaEmpty}><Icono width={34} height={34} strokeWidth={1.5} /></div>}
         <div className={s.cardActions}>
           <button className={s.iconBtn} onClick={() => handleEdit(servicio)} title="Editar" aria-label="Editar">
             <Edit2 width={15} height={15} />
@@ -314,7 +400,8 @@ export function ServiciosPage() {
         </div>
       </div>
     </motion.div>
-  )
+    )
+  }
 
   if (loading) {
     return (
@@ -331,13 +418,20 @@ export function ServiciosPage() {
 
   return (
     <>
-      <div className={s.toolbar}>
+      <div className={s.toolbar} style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <motion.button
           whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
           className={s.newBtn}
           onClick={() => { resetForm(); setShowModal(true) }}
         >
           <Plus width={18} height={18} /> Nuevo servicio
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+          onClick={abrirPicker}
+          className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-100 transition"
+        >
+          <Sparkles width={17} height={17} /> Cargar predeterminados
         </motion.button>
       </div>
 
@@ -420,6 +514,7 @@ export function ServiciosPage() {
                 <div className={s.field}>
                   <label className={s.label}>Descripción corta</label>
                   <textarea className={s.textarea} value={form.descripcionCorta || ''} onChange={(e) => setForm({ ...form, descripcionCorta: e.target.value })} rows={2} />
+                  <p className={s.hint}>Personalízala con tu estilo y zona para mejorar tu SEO (evita el mismo texto en todos tus servicios).</p>
                 </div>
 
                 <div className={s.row2}>
@@ -575,6 +670,109 @@ export function ServiciosPage() {
                     )
                   })}
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Picker de servicios predeterminados (Bloque 3) */}
+      <AnimatePresence>
+        {pickerOpen && (
+          <motion.div className={s.overlay} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => !aplicando && setPickerOpen(false)}>
+            <motion.div
+              className={s.modal}
+              style={{ maxWidth: 640, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={s.modalHead}>
+                <div>
+                  <h2 className={s.modalTitle}>Cargar servicios predeterminados</h2>
+                  <p className="text-sm text-gray-500 mt-0.5">Elige los que ofreces. Podrás editar precios, duraciones y textos después.</p>
+                </div>
+                <button className={s.modalClose} onClick={() => setPickerOpen(false)} aria-label="Cerrar" disabled={aplicando}><X width={18} height={18} /></button>
+              </div>
+
+              {catalogoLoading ? (
+                <div className="flex items-center justify-center gap-2 py-14 text-gray-500">
+                  <Loader2 className="animate-spin" width={20} height={20} /> Cargando catálogo…
+                </div>
+              ) : (
+                <div style={{ overflowY: 'auto' }} className="flex-1 -mx-1 px-1">
+                  {catalogo.map((cat) => {
+                    const IconoCat = resolverIconoServicio(cat.nombre, cat.icono)
+                    const selectAll = todosSeleccionados(cat)
+                    const disponibles = seleccionablesDe(cat).length
+                    return (
+                      <div key={cat.clave} className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <IconoCat width={17} height={17} className="text-blue-600" strokeWidth={1.8} />
+                            <span className="font-semibold text-gray-800">{cat.nombre}</span>
+                          </div>
+                          {disponibles > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => toggleCategoria(cat)}
+                              className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                            >
+                              {selectAll ? 'Quitar todos' : 'Seleccionar todos'}
+                            </button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {cat.servicios.map((sv) => {
+                            const IconoSrv = resolverIconoServicio(sv.nombre, sv.icono)
+                            const marcado = sv.yaExiste || seleccion.has(sv.clave)
+                            return (
+                              <button
+                                key={sv.clave}
+                                type="button"
+                                disabled={sv.yaExiste}
+                                onClick={() => toggleServicio(sv.clave, sv.yaExiste)}
+                                className={`flex items-center gap-2.5 rounded-xl border-2 px-3 py-2.5 text-left transition
+                                  ${sv.yaExiste
+                                    ? 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-70'
+                                    : marcado
+                                      ? 'border-blue-500 bg-blue-50'
+                                      : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                              >
+                                <span className={`flex h-8 w-8 items-center justify-center rounded-lg flex-shrink-0 ${marcado && !sv.yaExiste ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                  {marcado ? <Check width={16} height={16} strokeWidth={3} /> : <IconoSrv width={16} height={16} strokeWidth={1.8} />}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="font-semibold text-sm text-gray-900 truncate">{sv.nombre}</span>
+                                    {sv.destacado && <span className="text-[10px]">⭐</span>}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {sv.yaExiste ? 'Ya en tu catálogo' : `S/ ${sv.precio.toFixed(0)} · ${sv.duracionMinutos} min`}
+                                  </span>
+                                </span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              <div className={s.actions} style={{ borderTop: '1px solid #f1f5f9', paddingTop: 14, marginTop: 4 }}>
+                <span className="text-sm text-gray-500 mr-auto self-center">
+                  {seleccion.size > 0 ? `${seleccion.size} seleccionado${seleccion.size === 1 ? '' : 's'}` : 'Nada seleccionado'}
+                </span>
+                <button type="button" className={s.btnGhost} onClick={() => setPickerOpen(false)} disabled={aplicando}>Cancelar</button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  type="button" className={s.btnPrimary}
+                  onClick={aplicarPredeterminados}
+                  disabled={aplicando || seleccion.size === 0 || catalogoLoading}
+                >
+                  {aplicando ? 'Agregando…' : `Agregar${seleccion.size > 0 ? ` (${seleccion.size})` : ''}`}
+                </motion.button>
               </div>
             </motion.div>
           </motion.div>

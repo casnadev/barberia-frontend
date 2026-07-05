@@ -31,6 +31,7 @@ export function AccesoPage() {
   const [identificador, setIdentificador] = useState('')
   const [password, setPassword] = useState('')
   const [codigo, setCodigo] = useState('')
+  const [otpInvalid, setOtpInvalid] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
 
   const [nombre, setNombre] = useState('')
@@ -149,17 +150,20 @@ export function AccesoPage() {
   }
 
   // Cliente: crea directo (sin formulario). Profesional: pasa al formulario final.
-  const continuarConCodigo = async () => {
-    if (codigo.length !== 6) { toast.error('Ingresa los 6 dígitos.'); return }
+  // Acepta el código por argumento (auto-submit) para no leer estado obsoleto.
+  const continuarConCodigo = async (codigoArg?: string) => {
+    const cod = (codigoArg ?? codigo).trim()
+    if (cod.length !== 6) { toast.error('Ingresa los 6 dígitos.'); return }
     if (tipo === 'Profesional') { setGoogleCredential(null); setView('finalize'); return }
     setLoading(true)
+    setOtpInvalid(false)
     try {
       const resp = await authService.signupCompletar({
-        tipo: 'Cliente', identificador: idValor(), codigo: codigo.trim(),
+        tipo: 'Cliente', identificador: idValor(), codigo: cod,
       })
-      if (!resp) { toast.error('No pudimos crear tu cuenta.'); return }
+      if (!resp) { setOtpInvalid(true); setCodigo(''); toast.error('No pudimos crear tu cuenta.'); return }
       entrar(resp.token, resp.user)
-    } catch (e: any) { toast.error(e?.message || 'Código incorrecto o vencido.') }
+    } catch (e: any) { setOtpInvalid(true); setCodigo(''); toast.error(e?.message || 'Código incorrecto o vencido.') }
     finally { setLoading(false) }
   }
 
@@ -294,9 +298,14 @@ export function AccesoPage() {
                 </p>
               </div>
 
-              <OtpBoxes value={codigo} onChange={setCodigo} />
+              <OtpBoxes
+                value={codigo}
+                onChange={(v) => { setCodigo(v); if (otpInvalid) setOtpInvalid(false) }}
+                onComplete={(v) => continuarConCodigo(v)}
+                invalid={otpInvalid}
+              />
 
-              <button onClick={continuarConCodigo} disabled={loading || codigo.length !== 6} className={btnPrimary}>
+              <button onClick={() => continuarConCodigo()} disabled={loading || codigo.length !== 6} className={btnPrimary}>
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />} Continuar
               </button>
               <button onClick={continuar} disabled={loading} className="w-full text-sm py-4 text-gray-400 hover:text-blue-700 transition">
@@ -379,27 +388,48 @@ function PassInput({ value, onChange, placeholder, onEnter }: { value: string; o
   )
 }
 
-/** 6 casillas estilo OTP, con auto-avance, borrado y pegado. */
-function OtpBoxes({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+/** 6 casillas estilo OTP, con auto-avance, borrado, pegado y auto-submit. */
+function OtpBoxes({ value, onChange, onComplete, invalid }: {
+  value: string
+  onChange: (v: string) => void
+  onComplete?: (v: string) => void
+  invalid?: boolean
+}) {
   const refs = useRef<(HTMLInputElement | null)[]>([])
+  const disparado = useRef(false)
   const chars = Array.from({ length: 6 }, (_, i) => value[i] ?? '')
 
-  const setAt = (i: number, d: string) => {
+  // Al limpiarse (p. ej. tras código incorrecto), reenfoca el primer casillero.
+  useEffect(() => {
+    if (value.length < 6) disparado.current = false
+    if (value.length === 0) refs.current[0]?.focus()
+  }, [value])
+
+  const emitir = (v: string) => {
+    if (v.length === 6 && !disparado.current && onComplete) { disparado.current = true; onComplete(v) }
+  }
+
+  const nuevoValor = (i: number, d: string) => {
     const arr = value.padEnd(6, ' ').split('')
     arr[i] = d || ' '
-    onChange(arr.join('').replace(/ /g, '').slice(0, 6))
+    return arr.join('').replace(/ /g, '').slice(0, 6)
   }
+
+  const setAt = (i: number, d: string) => onChange(nuevoValor(i, d))
 
   const onChangeBox = (i: number, raw: string) => {
     const digits = raw.replace(/\D/g, '')
     if (!digits) return
     if (digits.length === 1) {
-      setAt(i, digits)
+      const nv = nuevoValor(i, digits)
+      onChange(nv)
       if (i < 5) refs.current[i + 1]?.focus()
+      emitir(nv)
     } else {
       const merged = (value.slice(0, i) + digits).slice(0, 6)
       onChange(merged)
       refs.current[Math.min(merged.length, 5)]?.focus()
+      emitir(merged)
     }
   }
 
@@ -411,6 +441,11 @@ function OtpBoxes({ value, onChange }: { value: string; onChange: (v: string) =>
     }
   }
 
+  const base = 'w-11 h-14 text-center text-2xl font-bold rounded-xl border-2 outline-none transition focus:ring-4'
+  const estado = invalid
+    ? 'border-red-400 bg-red-50 text-red-600 focus:border-red-500 focus:ring-red-500/10'
+    : 'border-gray-200 bg-gray-50 text-gray-900 focus:border-blue-500 focus:bg-white focus:ring-blue-500/10'
+
   return (
     <div className="flex justify-center gap-2 mb-6">
       {chars.map((c, i) => (
@@ -419,7 +454,7 @@ function OtpBoxes({ value, onChange }: { value: string; onChange: (v: string) =>
           onChange={(e) => onChangeBox(i, e.target.value)}
           onKeyDown={(e) => onKeyDown(i, e)}
           onFocus={(e) => e.currentTarget.select()}
-          className="w-11 h-14 text-center text-2xl font-bold text-gray-900 rounded-xl border-2 border-gray-200 bg-gray-50 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition" />
+          className={`${base} ${estado}`} />
       ))}
     </div>
   )

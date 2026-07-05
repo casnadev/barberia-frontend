@@ -8,6 +8,12 @@ export interface Empresa {
   correoContacto: string
   telefonoContacto: string
   totalSedes?: number
+  /** Color de marca de la empresa (acento visual en el panel). */
+  colorPrimarioHex?: string | null
+  /** Subdominio de la sede pública principal (para "Ver sitio"). */
+  subdominioPrincipal?: string | null
+  /** Fecha de alta (creación de la empresa). ISO. */
+  fechaCreacion?: string
   /** Override manual del límite de sedes (SuperAdmin). Null = usar el plan. */
   limiteSedesOverride?: number | null
   planActual?: string

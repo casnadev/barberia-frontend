@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { CompletaTuNegocio } from '@/components/CompletaTuNegocio'
 import { CalendarModal } from '@/pages/cliente/CalendarModal'
 import { AvisoBanner } from '@/components/AvisoBanner'
+import { NudgeCorreo } from '@/components/NudgeCorreo'
 import { Skeleton } from '@/components/Skeleton'
 import s from '@/styles/Dashboard.module.css'
 
@@ -206,6 +207,7 @@ export function DashboardPage() {
     <>
       <AvisoBanner />
       <CompletaTuNegocio />
+      <NudgeCorreo />
 
       {/* LAYOUT: card azul (hero) + panel de rango/contenido al lado */}
       <div className={s.topGrid}>
