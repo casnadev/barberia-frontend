@@ -206,11 +206,6 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
                       <LifeBuoy className={s.itemIcon} width={18} height={18} /> Ayuda y soporte
                     </button>
                   )}
-                  {siteLink && (
-                    <button className={s.item} onClick={abrirSitio}>
-                      <ExternalLink className={s.itemIcon} width={18} height={18} /> Ver sitio
-                    </button>
-                  )}
                   <div className={s.sep} />
                   <button className={`${s.item} ${s.danger}`} onClick={onLogout}>
                     <LogOut className={s.itemIcon} width={18} height={18} /> Cerrar sesión

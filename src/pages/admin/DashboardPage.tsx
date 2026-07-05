@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { Calendar, Activity, Clock, User, TrendingDown, Wallet, CalendarDays, ShoppingBag, Download, FileSpreadsheet, FileText } from 'lucide-react'
+import { Calendar, Activity, Clock, User, TrendingDown, Wallet, CalendarDays, ShoppingBag, Download, FileSpreadsheet, FileText, ExternalLink } from 'lucide-react'
 import { ventasService, type ResumenFinanciero } from '@/services/ventasService'
 import { sedeTenantService } from '@/services/sedeTenantService'
 import { getActiveTenant } from '@/services/apiClient'
@@ -118,6 +118,15 @@ export function DashboardPage() {
 
   const tenant = getActiveTenant()
 
+  // "Mi Web": abre el sitio público de reservas de la sede activa en otra pestaña.
+  const abrirMiWeb = () => {
+    const sub = getActiveTenant()
+    const url = sub
+      ? (window.location.hostname.endsWith('barber.pe') ? `https://${sub}.barber.pe` : `/?s=${encodeURIComponent(sub)}`)
+      : '/'
+    window.open(url, '_blank', 'noopener')
+  }
+
   // Resumen financiero + serie de la gráfica. Cacheado con React Query: revisitar
   // el dashboard lo muestra al instante. Gracias a `placeholderData` global,
   // cambiar de rango CONSERVA los datos anteriores mientras llegan los nuevos
@@ -217,7 +226,13 @@ export function DashboardPage() {
           <div className={s.heroGlow} />
           <div className={s.heroHead}>
             <span className={s.heroLabel}><Activity width={13} height={13} /> Utilidad neta</span>
-            {rango === 'hoy' && <span className={s.heroLive} title="En vivo"><span className={s.heroLiveDot} /></span>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+              <button onClick={abrirMiWeb} title="Ver mi sitio de reservas"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#fff', background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.28)', borderRadius: 999, padding: '5px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                <ExternalLink width={13} height={13} /> Mi Web
+              </button>
+              {rango === 'hoy' && <span className={s.heroLive} title="En vivo"><span className={s.heroLiveDot} /></span>}
+            </div>
           </div>
           <div className={s.heroValue}>
             {loading ? <span className={s.sk} style={{ width: 180, height: 38 }} />

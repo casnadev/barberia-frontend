@@ -85,7 +85,7 @@ export function SuperAdminDashboard() {
   const [planTarget, setPlanTarget] = useState<Empresa | null>(null)
   const [sedeTarget, setSedeTarget] = useState<Empresa | null>(null)
   const [duenoTarget, setDuenoTarget] = useState<Empresa | null>(null)
-  const [menuId, setMenuId] = useState<number | null>(null)
+  const [accionesTarget, setAccionesTarget] = useState<Empresa | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [rango, setRango] = useState<'todas' | 'hoy' | 'semana' | 'mes'>('todas')
 
@@ -366,7 +366,6 @@ export function SuperAdminDashboard() {
               const esPrueba = (e.planActual || '').toLowerCase().includes('prueba')
               const marca = colorMarca(e.colorPrimarioHex)
               const sitio = urlSitio(e.subdominioPrincipal)
-              const abierto = menuId === e.id
               return (
                 <motion.div key={e.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   className={`bg-white border rounded-2xl p-4 ${inactivo ? 'border-gray-200 opacity-70' : 'border-gray-200'}`}>
@@ -415,26 +414,10 @@ export function SuperAdminDashboard() {
                         sitio ? 'bg-gray-50 text-gray-700 hover:bg-gray-100' : 'bg-gray-50 text-gray-300 cursor-not-allowed'}`}>
                       <ExternalLink className="w-4 h-4" /> Ver sitio
                     </a>
-                    <div className="relative">
-                      <button onClick={() => setMenuId(abierto ? null : e.id)} aria-label="Más acciones"
-                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 transition">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </button>
-                      {abierto && (
-                        <>
-                          <div className="fixed inset-0 z-10" onClick={() => setMenuId(null)} />
-                          <div className="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded-xl shadow-lg z-20 py-1">
-                            <MenuItem icon={User} label="Dueño" onClick={() => { setMenuId(null); setDuenoTarget(e) }} />
-                            <MenuItem icon={CreditCard} label="Plan" onClick={() => { setMenuId(null); setPlanTarget(e) }} />
-                            <MenuItem icon={MapPin} label="Sedes" onClick={() => { setMenuId(null); setSedeTarget(e) }} />
-                            <MenuItem icon={KeyRound} label={owner?.estado === false ? 'Activar acceso' : 'Apagar acceso'} disabled={!owner} onClick={() => { setMenuId(null); toggleAccesoAdmin(e) }} />
-                            <MenuItem icon={Power} label={inactivo ? 'Activar barbería' : 'Desactivar barbería'} onClick={() => { setMenuId(null); toggleEstado(e) }} />
-                            <div className="my-1 border-t border-gray-100" />
-                            <MenuItem icon={Trash2} label="Eliminar" danger onClick={() => { setMenuId(null); eliminarEmpresa(e) }} />
-                          </div>
-                        </>
-                      )}
-                    </div>
+                    <button onClick={() => setAccionesTarget(e)} aria-label="Más acciones"
+                      className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 transition">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
                   </div>
                 </motion.div>
               )
@@ -561,40 +544,69 @@ export function SuperAdminDashboard() {
           const o = owners[duenoTarget.id]
           return (
             <Modal onClose={() => setDuenoTarget(null)}>
-              <h3 className="text-lg font-bold text-gray-900 mb-1">Dueño</h3>
-              <p className="text-sm text-gray-500 mb-4">{duenoTarget.nombreComercial}</p>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-semibold text-lg shrink-0">
+                  {iniciales(o?.nombreCompleto || duenoTarget.nombreComercial)}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-lg font-bold text-gray-900 leading-tight">Dueño</h3>
+                  <p className="text-sm text-gray-500 truncate">{duenoTarget.nombreComercial}</p>
+                </div>
+              </div>
               {o ? (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-semibold">{iniciales(o.nombreCompleto)}</div>
-                    <div>
-                      <p className="font-semibold text-gray-900">{o.nombreCompleto}</p>
-                      <p className="text-xs text-gray-500">{o.metodoLogin === 'Password' ? 'Ingresa con contraseña' : 'Ingresa con PIN / OTP'}</p>
-                    </div>
+                  <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 p-3">
+                    <p className="font-semibold text-gray-900">{o.nombreCompleto}</p>
+                    <p className="text-xs text-indigo-600 font-medium">{o.metodoLogin === 'Password' ? 'Ingresa con contraseña' : 'Ingresa con PIN / OTP'}</p>
                   </div>
-                  <div className="rounded-xl border border-gray-200 divide-y divide-gray-100">
-                    <div className="flex items-center gap-2 px-3 py-2.5 text-sm">
-                      <Mail className="w-4 h-4 text-gray-400 shrink-0" />
-                      <span className={o.correo ? 'text-gray-800' : 'text-gray-400'}>{o.correo || 'Sin correo'}</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-2.5 text-sm">
-                      <Phone className="w-4 h-4 text-gray-400 shrink-0" />
-                      <span className={o.telefono ? 'text-gray-800' : 'text-gray-400'}>{o.telefono || 'Sin teléfono'}</span>
-                    </div>
+                  <div className="flex items-center gap-3 rounded-xl border border-gray-100 p-3">
+                    <span className="w-9 h-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0"><Mail className="w-4 h-4" /></span>
+                    <span className={`text-sm truncate ${o.correo ? 'text-gray-800' : 'text-gray-400'}`}>{o.correo || 'Sin correo'}</span>
                   </div>
-                  <div className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5">
-                    <span className="text-sm text-gray-600">Acceso {o.estado === false ? 'apagado' : 'activo'}</span>
+                  <div className="flex items-center gap-3 rounded-xl border border-gray-100 p-3">
+                    <span className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><Phone className="w-4 h-4" /></span>
+                    <span className={`text-sm truncate ${o.telefono ? 'text-gray-800' : 'text-gray-400'}`}>{o.telefono || 'Sin teléfono'}</span>
+                  </div>
+                  <div className={`flex items-center justify-between rounded-xl p-3 border ${
+                    o.estado === false ? 'bg-gray-50 border-gray-200' : 'bg-green-50 border-green-200'}`}>
+                    <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <span className={`w-2 h-2 rounded-full ${o.estado === false ? 'bg-gray-400' : 'bg-green-500'}`} />
+                      Acceso {o.estado === false ? 'apagado' : 'activo'}
+                    </span>
                     <button onClick={() => toggleAccesoAdmin(duenoTarget)}
-                      className={`inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition ${
-                        o.estado === false ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                      className={`inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition ${
+                        o.estado === false ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'}`}>
                       <KeyRound className="w-4 h-4" /> {o.estado === false ? 'Activar' : 'Apagar'}
                     </button>
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-red-500">Esta barbería no tiene dueño asignado.</p>
+                <div className="rounded-xl bg-red-50 border border-red-100 p-4 text-sm text-red-600 text-center">
+                  Esta barbería no tiene dueño asignado.
+                </div>
               )}
             </Modal>
+          )
+        })()}
+      </AnimatePresence>
+
+      {/* ====================== ACCIONES DE LA CARD (action sheet) ====================== */}
+      <AnimatePresence>
+        {accionesTarget && (() => {
+          const e = accionesTarget
+          const owner = owners[e.id]
+          const inactivo = e.pausada === true
+          return (
+            <ActionSheet title={e.nombreComercial} onClose={() => setAccionesTarget(null)}>
+              <div className="grid grid-cols-3 gap-2">
+                <AccionCard icon={User} label="Dueño" color="indigo" onClick={() => { setAccionesTarget(null); setDuenoTarget(e) }} />
+                <AccionCard icon={CreditCard} label="Plan" color="emerald" onClick={() => { setAccionesTarget(null); setPlanTarget(e) }} />
+                <AccionCard icon={MapPin} label="Sedes" color="sky" onClick={() => { setAccionesTarget(null); setSedeTarget(e) }} />
+                <AccionCard icon={KeyRound} label={owner?.estado === false ? 'Activar acceso' : 'Apagar acceso'} color="amber" disabled={!owner} onClick={() => { setAccionesTarget(null); toggleAccesoAdmin(e) }} />
+                <AccionCard icon={Power} label={inactivo ? 'Activar' : 'Desactivar'} color="violet" onClick={() => { setAccionesTarget(null); toggleEstado(e) }} />
+                <AccionCard icon={Trash2} label="Eliminar" color="red" onClick={() => { setAccionesTarget(null); eliminarEmpresa(e) }} />
+              </div>
+            </ActionSheet>
           )
         })()}
       </AnimatePresence>
@@ -615,22 +627,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function MenuItem({ icon: Icon, label, onClick, danger, disabled }: {
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-  onClick: () => void
-  danger?: boolean
-  disabled?: boolean
-}) {
-  return (
-    <button onClick={onClick} disabled={disabled}
-      className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition disabled:opacity-40 disabled:cursor-not-allowed ${
-        danger ? 'text-red-600 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-50'}`}>
-      <Icon className="w-4 h-4" /> {label}
-    </button>
-  )
-}
-
 function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -645,6 +641,55 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
         {children}
       </motion.div>
     </motion.div>
+  )
+}
+
+/** Hoja de acciones centrada (móvil y desktop). Nunca se corta. */
+function ActionSheet({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4"
+      onClick={onClose}>
+      <motion.div initial={{ y: 30, opacity: 0, scale: 0.98 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 30, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white w-full max-w-sm rounded-2xl p-4 shadow-2xl max-h-[85vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-semibold text-gray-900 truncate">{title}</p>
+          <button onClick={onClose} aria-label="Cerrar" className="text-gray-400 hover:text-gray-700">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        {children}
+      </motion.div>
+    </motion.div>
+  )
+}
+
+const ACCION_COLORS: Record<string, string> = {
+  indigo: 'bg-indigo-100 text-indigo-600',
+  emerald: 'bg-emerald-100 text-emerald-600',
+  sky: 'bg-sky-100 text-sky-600',
+  amber: 'bg-amber-100 text-amber-600',
+  violet: 'bg-violet-100 text-violet-600',
+  red: 'bg-red-100 text-red-600',
+}
+
+/** Tarjeta de acción con tile de color (estilo cards de barber.pe). */
+function AccionCard({ icon: Icon, label, color, onClick, disabled }: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  color: keyof typeof ACCION_COLORS
+  onClick: () => void
+  disabled?: boolean
+}) {
+  return (
+    <button onClick={onClick} disabled={disabled}
+      className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl border border-gray-100 bg-white transition hover:bg-gray-50 hover:border-gray-200 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed">
+      <span className={`w-11 h-11 rounded-xl flex items-center justify-center ${ACCION_COLORS[color]}`}>
+        <Icon className="w-5 h-5" />
+      </span>
+      <span className={`text-xs font-medium text-center leading-tight ${color === 'red' ? 'text-red-600' : 'text-gray-700'}`}>{label}</span>
+    </button>
   )
 }
 
