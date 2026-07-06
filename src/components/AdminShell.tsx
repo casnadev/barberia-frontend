@@ -1,6 +1,6 @@
 import { useState, useEffect, useTransition, useCallback, useContext, createContext, useRef, Suspense } from 'react'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
-import { Home, Scissors, Users, Calendar, User, Clock, Settings, Wallet, Calculator, BadgeCheck, DollarSign, CreditCard } from 'lucide-react'
+import { Home, Scissors, Users, Calendar, User, Clock, Settings, Wallet, Calculator, BadgeCheck, DollarSign, CreditCard, Menu, X } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { AdminHeader } from '@/components/AdminHeader'
 import AvisoLocalesActivos from '@/components/AvisoLocalesActivos'
@@ -31,30 +31,25 @@ import s from '@/styles/AdminLayout.module.css'
  * transición actúa como red de seguridad para la primera visita a cada sección.
  */
 
-type NavItem = { to: string; label: string; icon: typeof Home; end?: boolean }
+type NavItem = { to: string; label: string; icon: typeof Home; color: string; end?: boolean }
 
 /* Secciones del admin (orden del riel lateral en desktop) */
 const NAV: NavItem[] = [
-  { to: '/dashboard', label: 'Inicio', icon: Home, end: true },
-  { to: '/admin/servicios', label: 'Servicios', icon: Scissors },
-  { to: '/admin/trabajadores', label: 'Equipo', icon: Users },
-  { to: '/admin/agenda', label: 'Agenda', icon: Calendar },
-  { to: '/admin/clientes', label: 'Clientes', icon: User },
-  { to: '/admin/reservas', label: 'Reservas', icon: Clock },
-  { to: '/admin/ventas', label: 'Ventas', icon: BadgeCheck },
-  { to: '/admin/pagos', label: 'Pagos', icon: Wallet },
-  { to: '/admin/caja', label: 'Caja', icon: Calculator },
-  { to: '/admin/configuracion', label: 'Config', icon: Settings },
-  { to: '/admin/mi-plan', label: 'Mi Plan', icon: CreditCard },
+  { to: '/dashboard', label: 'Inicio', icon: Home, color: '#2563EB', end: true },
+  { to: '/admin/servicios', label: 'Servicios', icon: Scissors, color: '#7C3AED' },
+  { to: '/admin/trabajadores', label: 'Equipo', icon: Users, color: '#4F46E5' },
+  { to: '/admin/agenda', label: 'Agenda', icon: Calendar, color: '#0EA5E9' },
+  { to: '/admin/clientes', label: 'Clientes', icon: User, color: '#14B8A6' },
+  { to: '/admin/reservas', label: 'Reservas', icon: Clock, color: '#16A34A' },
+  { to: '/admin/ventas', label: 'Ventas', icon: BadgeCheck, color: '#F97316' },
+  { to: '/admin/pagos', label: 'Pagos', icon: Wallet, color: '#F59E0B' },
+  { to: '/admin/caja', label: 'Caja', icon: Calculator, color: '#E11D48' },
+  { to: '/admin/configuracion', label: 'Config', icon: Settings, color: '#64748B' },
+  { to: '/admin/mi-plan', label: 'Mi Plan', icon: CreditCard, color: '#D946EF' },
 ]
 
-/* Footer (mobile): carrusel deslizable con peek. NO incluye Config (vive en el
-   Account Menu). Orden: las 4 principales primero, luego las secundarias que se
-   ven deslizando ←. */
-const FOOTER_TOS = ['/dashboard', '/admin/agenda', '/admin/reservas', '/admin/ventas', '/admin/clientes', '/admin/servicios', '/admin/trabajadores']
-const footerItems = FOOTER_TOS
-  .map((to) => NAV.find((n) => n.to === to))
-  .filter((n): n is NavItem => Boolean(n))
+/* Menú móvil: las 9 operativas (Config y Mi Plan viven en el Account Menu). */
+const MENU_MOVIL = NAV.filter((n) => n.to !== '/admin/configuracion' && n.to !== '/admin/mi-plan')
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Contexto de navegación con transición. AdminShell provee `navTo`; los enlaces
@@ -71,6 +66,7 @@ type TNavLinkProps = {
   to: string
   end?: boolean
   className: (active: boolean) => string
+  style?: React.CSSProperties
   children: React.ReactNode
 }
 
@@ -80,7 +76,7 @@ type TNavLinkProps = {
  * izquierdo simple intercepta y navega vía startTransition. Con modificadores
  * (Ctrl/Cmd/Shift/Alt) o clic medio deja que el navegador abra normalmente.
  */
-function TNavLink({ to, end, className, children }: TNavLinkProps) {
+function TNavLink({ to, end, className, style, children }: TNavLinkProps) {
   const location = useLocation()
   const navTo = useContext(NavCtx)
   const prefetch = useContext(PrefetchCtx)
@@ -111,6 +107,7 @@ function TNavLink({ to, end, className, children }: TNavLinkProps) {
       onTouchStart={onIntent}
       onFocus={onIntent}
       className={className(active)}
+      style={style}
       aria-current={active ? 'page' : undefined}
     >
       {children}
@@ -150,6 +147,7 @@ function TopProgressBar() {
 
 export function AdminShell() {
   const [cobrar, setCobrar] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const qc = useQueryClient()
@@ -190,6 +188,7 @@ export function AdminShell() {
                 key={n.to}
                 to={n.to}
                 end={n.end}
+                style={{ '--ic': n.color } as React.CSSProperties}
                 className={(active) => `${s.railItem} ${active ? s.railItemActive : ''}`}
               >
                 <n.icon width={20} height={20} />
@@ -212,28 +211,50 @@ export function AdminShell() {
           </main>
         </div>
 
-        {/* Footer (mobile): carrusel deslizable — PERSISTENTE */}
+        {/* Footer (mobile): un solo botón "Menú" que abre el modal — PERSISTENTE */}
         <nav className={s.bottomBar}>
-          <div className={s.bottomScroll}>
-            {footerItems.map((n) => (
-              <TNavLink
-                key={n.to}
-                to={n.to}
-                end={n.end}
-                className={(active) => `${s.bottomItem} ${active ? s.bottomItemActive : ''}`}
-              >
-                <n.icon width={20} height={20} />
-                <span>{n.label}</span>
-              </TNavLink>
-            ))}
-          </div>
+          <button type="button" className={s.menuBtn} onClick={() => setMenuOpen(true)}>
+            <Menu width={20} height={20} /> Menú
+          </button>
         </nav>
+
+        {/* Modal del menú (mobile): 9 opciones en cuadrícula de color, centrado */}
+        {menuOpen && (
+          <div className={s.menuOverlay} onClick={() => setMenuOpen(false)}>
+            <div className={s.menuModal} onClick={(e) => e.stopPropagation()}>
+              <div className={s.menuHead}>
+                <div>
+                  <div className={s.menuTitle}>Menú</div>
+                  <div className={s.menuSub}>Todas las opciones</div>
+                </div>
+                <button type="button" aria-label="Cerrar" className={s.menuClose} onClick={() => setMenuOpen(false)}>
+                  <X width={20} height={20} />
+                </button>
+              </div>
+              <div className={s.menuGrid}>
+                {MENU_MOVIL.map((n) => (
+                  <button
+                    key={n.to}
+                    type="button"
+                    className={s.menuTile}
+                    onClick={() => { setMenuOpen(false); navTo(n.to) }}
+                  >
+                    <span className={s.menuTileIcon} style={{ background: n.color }}>
+                      <n.icon width={25} height={25} />
+                    </span>
+                    <span className={s.menuTileLabel}>{n.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Venta rápida (walk-in) — FAB en móvil, botón en desktop. PERSISTENTE. */}
         <button
           onClick={() => setCobrar(true)}
           aria-label="Venta rápida"
-          className="fixed right-4 md:right-6 bottom-[calc(150px+env(safe-area-inset-bottom))] md:bottom-6 z-40 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full md:rounded-2xl shadow-xl shadow-emerald-600/40 active:scale-95 transition flex items-center justify-center gap-2 w-14 h-14 md:w-auto md:h-auto md:px-5 md:py-3"
+          className="fixed right-4 md:right-6 bottom-[calc(88px+env(safe-area-inset-bottom))] md:bottom-6 z-40 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full md:rounded-2xl shadow-xl shadow-emerald-600/40 active:scale-95 transition flex items-center justify-center gap-2 w-14 h-14 md:w-auto md:h-auto md:px-5 md:py-3"
         >
           <DollarSign className="w-6 h-6 md:w-5 md:h-5" />
           <span className="hidden md:inline font-semibold">Venta rápida</span>
