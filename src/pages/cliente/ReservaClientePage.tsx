@@ -13,7 +13,7 @@ import { NegocioNoDisponible } from '@/components/NegocioNoDisponible'
 import { useAuthStore } from '@/store/authStore'
 import { CalendarModal } from './CalendarModal'
 import { ReservaResumen } from './ReservaResumen'
-import { getActiveTenant } from '@/services/apiClient'
+import { getActiveTenant, getTenantOverride } from '@/services/apiClient'
 
 import { DateTimeModal, BarberCard, ServiceCard } from '@/components'
 import styles from '@/styles/ReservaClientePage.module.css'
@@ -163,9 +163,11 @@ export function ReservaClientePage() {
       const host = window.location.hostname
       const subdominio = sParam
         ? sParam
-        : (host === 'localhost' || host.startsWith('192.168.') || host.startsWith('10.') || host.startsWith('172.'))
-          ? getActiveTenant()
-          : host.split('.')[0]
+        : getTenantOverride()
+          ? getTenantOverride()!
+          : (host === 'localhost' || host.startsWith('192.168.') || host.startsWith('10.') || host.startsWith('172.'))
+            ? getActiveTenant()
+            : host.split('.')[0]
 
       const [trabData, servData, sedeData] = await Promise.all([
         sedesService.getTrabajadoresPublicos(subdominio).catch(() => []),

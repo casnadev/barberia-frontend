@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { sedesService } from '@/services/sedesService'
 import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
-import { apiClient, getActiveTenant } from '@/services/apiClient'
+import { apiClient, getActiveTenant, getTenantOverride } from '@/services/apiClient'
 import { useFavoritosStore } from '@/store/favoritosStore'
 import { novedadesService } from '@/services/novedadesService'
 import { AccountMenu } from '@/components/AccountMenu'
@@ -307,8 +307,8 @@ export function PublicSedeDetailPage() {
         hostname.startsWith('10.') ||
         hostname.startsWith('172.')
       const subHost = !esLocalOLan && hostname.split('.').length >= 3 ? hostname.split('.')[0] : ''
-      // Prioridad: ?s= → subdominio real del host → tenant activo (persistido).
-      const subdominio = sParam || subHost || getActiveTenant()
+      // Prioridad: ?s= → override del link único → subdominio real del host → tenant activo.
+      const subdominio = sParam || getTenantOverride() || subHost || getActiveTenant()
 
       const [sedeData, serviciosData, trabajadoresData] = await Promise.all([
         sedesService.getSedePublica(subdominio),

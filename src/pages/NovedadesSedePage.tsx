@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, Gift } from 'lucide-react'
 import { sedesService } from '@/services/sedesService'
-import { getActiveTenant } from '@/services/apiClient'
+import { getActiveTenant, getTenantOverride } from '@/services/apiClient'
 import { novedadesService } from '@/services/novedadesService'
 import { AccountMenu } from '@/components/AccountMenu'
 import { FlyerNovedad } from '@/components/FlyerNovedad'
@@ -22,9 +22,9 @@ export function NovedadesSedePage() {
     (async () => {
       try {
         const hostname = window.location.hostname
-        const subdominio = (hostname === 'localhost' || hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.'))
+        const subdominio = getTenantOverride() || ((hostname === 'localhost' || hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.'))
           ? getActiveTenant()
-          : hostname.split('.')[0]
+          : hostname.split('.')[0])
 
         const sedeData = await sedesService.getSedePublica(subdominio)
         setSede(sedeData)

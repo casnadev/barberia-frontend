@@ -12,6 +12,10 @@ let tenantOverride: string | null = null
 export const setTenantOverride = (sub: string | null): void => {
   tenantOverride = sub && sub.trim() ? sub.trim().toLowerCase() : null
 }
+/** Sede fijada por el link único (o null). Las páginas públicas la priorizan
+ *  sobre el subdominio del host, porque en el dominio de marca el host es la
+ *  MARCA (kisha), no la sede. */
+export const getTenantOverride = (): string | null => tenantOverride
 
 const esLocalOLan = (host: string): boolean =>
   host === 'localhost' ||
