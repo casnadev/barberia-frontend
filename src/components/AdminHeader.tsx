@@ -11,20 +11,29 @@ import { AccesoModal } from '@/components/AccesoModal'
  *
  * Mantiene las props title/subtitle por compatibilidad (se ignoran).
  */
-export function AdminHeader(_props: { title?: string; subtitle?: string }) {
+export function AdminHeader({ onMenu }: { title?: string; subtitle?: string; onMenu?: () => void }) {
   const [perfilOpen, setPerfilOpen] = useState(false)
   const [accesoOpen, setAccesoOpen] = useState(false)
 
   return (
     <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-gray-100">
-      <div className="px-4 sm:px-6 h-16 flex items-center justify-end gap-2">
-        <SedeSwitcher />
-        <AccountMenu
-          variant="plain"
-          siteLink
-          onMiPerfil={() => setPerfilOpen(true)}
-          onAcceso={() => setAccesoOpen(true)}
-        />
+      <div className="px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={onMenu}
+          className="md:hidden inline-flex items-center px-3.5 py-2 rounded-xl text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 active:scale-95 transition"
+        >
+          Menú
+        </button>
+        <div className="flex items-center gap-2 ml-auto">
+          <SedeSwitcher />
+          <AccountMenu
+            variant="plain"
+            siteLink
+            onMiPerfil={() => setPerfilOpen(true)}
+            onAcceso={() => setAccesoOpen(true)}
+          />
+        </div>
       </div>
       <MiPerfilAdminModal open={perfilOpen} onClose={() => setPerfilOpen(false)} />
       <AccesoModal open={accesoOpen} onClose={() => setAccesoOpen(false)} />

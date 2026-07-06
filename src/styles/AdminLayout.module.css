@@ -14,17 +14,16 @@
   display: flex; flex-direction: column; gap: 4px;
   padding: 14px 8px; overflow-y: auto;
 }
-.railNav { display: flex; flex-direction: column; gap: 8px; }
+.railNav { display: flex; flex-direction: column; gap: 4px; }
 .railItem {
   display: flex; flex-direction: column; align-items: center; gap: 5px;
   padding: 11px 4px; border-radius: 14px; text-decoration: none;
-  background: var(--ic, #2855F6); color: #fff; font-size: 0.7rem; font-weight: 600;
-  transition: transform .12s ease, filter .12s ease;
+  color: #64748b; font-size: 0.7rem; font-weight: 600;
+  transition: background .15s ease, color .15s ease;
 }
-.railItem svg { stroke-width: 1.9; transition: stroke-width .12s ease; }
-.railItem:hover { transform: translateY(-2px); filter: brightness(1.08); }
-.railItemActive svg { stroke-width: 2.7; }
-.railLabel { font-size: 0.68rem; line-height: 1; color: #fff; }
+.railItem:hover { background: #f1f5f9; color: #334155; }
+.railItemActive, .railItemActive:hover { background: #EAF1FE; color: var(--brand, #2855F6); }
+.railLabel { font-size: 0.68rem; line-height: 1; }
 
 /* ===== Columna principal ===== */
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -63,18 +62,18 @@
 .menuTitle { font-size: 1rem; font-weight: 700; color: var(--color-text-dark, #111827); }
 .menuSub { font-size: 0.75rem; color: var(--color-text-muted, #9ca3af); }
 .menuClose { border: none; background: transparent; color: var(--color-text-muted, #9ca3af); cursor: pointer; padding: 4px; }
-.menuGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 8px; }
+.menuGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .menuTile {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  border: none; background: transparent; cursor: pointer; padding: 2px;
-  font-family: inherit;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  border: 1.5px solid #e5e7eb; background: #fff; cursor: pointer;
+  border-radius: 16px; padding: 16px 6px; font-family: inherit; color: #334155;
+  transition: border-color .15s ease, color .15s ease, background .15s ease;
 }
-.menuTile:active { transform: scale(.96); }
-.menuTileIcon {
-  width: 56px; height: 56px; border-radius: 16px;
-  display: flex; align-items: center; justify-content: center; color: #fff;
-}
-.menuTileLabel { font-size: 0.75rem; font-weight: 600; color: var(--color-text-dark, #111827); }
+.menuTile:hover { border-color: #cbd5e1; }
+.menuTile:active { transform: scale(.97); }
+.menuTileActive { border-color: var(--brand, #2855F6); color: var(--brand, #2855F6); background: #f5f8ff; }
+.menuTileLabel { font-size: 0.78rem; font-weight: 600; color: #111827; }
+.menuTileActive .menuTileLabel { color: var(--brand, #2855F6); }
 
 /* ===== Sheet "Más" (mobile) ===== */
 .sheetOverlay { position: fixed; inset: 0; z-index: 70; background: rgba(0, 0, 0, .45); }
@@ -98,7 +97,7 @@
 /* ===== Responsive: < 768px → footer carrusel ===== */
 @media (max-width: 768px) {
   .rail { display: none; }
-  .content { padding: 10px 16px 88px; }
+  .content { padding: 10px 16px 28px; }
   .bottomBar {
     display: block;
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;

@@ -9,8 +9,6 @@ type SeccionFilaProps = {
   preview?: ReactNode
   estado?: 'listo' | 'falta'
   onClick: () => void
-  /** Color del tile del ícono (hex). Por defecto azul. */
-  color?: string
   /** Contenido opcional a la derecha del texto (p. ej. miniaturas de galería). */
   derecha?: ReactNode
 }
@@ -25,7 +23,6 @@ export default function SeccionFila({
   preview,
   estado,
   onClick,
-  color = '#2563EB',
   derecha,
 }: SeccionFilaProps) {
   return (
@@ -34,7 +31,7 @@ export default function SeccionFila({
       onClick={onClick}
       className="w-full flex items-center gap-3 px-4 py-3.5 text-left bg-white hover:bg-gray-50 transition border-b border-gray-100 last:border-b-0"
     >
-      <span className="w-9 h-9 rounded-lg text-white flex items-center justify-center shrink-0" style={{ background: color }}>
+      <span className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
         {icono}
       </span>
       <span className="flex-1 min-w-0">

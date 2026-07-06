@@ -1,6 +1,7 @@
 import { useState, useEffect, useTransition, useCallback, useContext, createContext, useRef, Suspense } from 'react'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
-import { Home, Scissors, Users, Calendar, User, Clock, Settings, Wallet, Calculator, BadgeCheck, DollarSign, CreditCard, Menu, X } from 'lucide-react'
+import { DollarSign, X } from 'lucide-react'
+import { House, Scissors, Users, Calendar, User, Clock, Gear, Wallet, Calculator, SealCheck, CreditCard, type Icon } from '@phosphor-icons/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { AdminHeader } from '@/components/AdminHeader'
 import AvisoLocalesActivos from '@/components/AvisoLocalesActivos'
@@ -31,25 +32,30 @@ import s from '@/styles/AdminLayout.module.css'
  * transición actúa como red de seguridad para la primera visita a cada sección.
  */
 
-type NavItem = { to: string; label: string; icon: typeof Home; color: string; end?: boolean }
+type NavItem = { to: string; label: string; icon: Icon; end?: boolean }
 
 /* Secciones del admin (orden del riel lateral en desktop) */
 const NAV: NavItem[] = [
-  { to: '/dashboard', label: 'Inicio', icon: Home, color: '#2563EB', end: true },
-  { to: '/admin/servicios', label: 'Servicios', icon: Scissors, color: '#7C3AED' },
-  { to: '/admin/trabajadores', label: 'Equipo', icon: Users, color: '#4F46E5' },
-  { to: '/admin/agenda', label: 'Agenda', icon: Calendar, color: '#0EA5E9' },
-  { to: '/admin/clientes', label: 'Clientes', icon: User, color: '#14B8A6' },
-  { to: '/admin/reservas', label: 'Reservas', icon: Clock, color: '#16A34A' },
-  { to: '/admin/ventas', label: 'Ventas', icon: BadgeCheck, color: '#F97316' },
-  { to: '/admin/pagos', label: 'Pagos', icon: Wallet, color: '#F59E0B' },
-  { to: '/admin/caja', label: 'Caja', icon: Calculator, color: '#E11D48' },
-  { to: '/admin/configuracion', label: 'Config', icon: Settings, color: '#64748B' },
-  { to: '/admin/mi-plan', label: 'Mi Plan', icon: CreditCard, color: '#D946EF' },
+  { to: '/dashboard', label: 'Inicio', icon: House, end: true },
+  { to: '/admin/servicios', label: 'Servicios', icon: Scissors },
+  { to: '/admin/trabajadores', label: 'Equipo', icon: Users },
+  { to: '/admin/agenda', label: 'Agenda', icon: Calendar },
+  { to: '/admin/clientes', label: 'Clientes', icon: User },
+  { to: '/admin/reservas', label: 'Reservas', icon: Clock },
+  { to: '/admin/ventas', label: 'Ventas', icon: SealCheck },
+  { to: '/admin/pagos', label: 'Pagos', icon: Wallet },
+  { to: '/admin/caja', label: 'Caja', icon: Calculator },
+  { to: '/admin/configuracion', label: 'Config', icon: Gear },
+  { to: '/admin/mi-plan', label: 'Mi Plan', icon: CreditCard },
 ]
 
 /* Menú móvil: las 9 operativas (Config y Mi Plan viven en el Account Menu). */
 const MENU_MOVIL = NAV.filter((n) => n.to !== '/admin/configuracion' && n.to !== '/admin/mi-plan')
+
+/** ¿La ruta `to` está activa respecto a la ubicación actual? */
+function esActivo(to: string, pathname: string, end?: boolean) {
+  return end ? pathname === to : pathname === to || pathname.startsWith(to + '/')
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Contexto de navegación con transición. AdminShell provee `navTo`; los enlaces
@@ -183,25 +189,27 @@ export function AdminShell() {
         {/* Riel lateral (desktop) — PERSISTENTE */}
         <aside className={s.rail}>
           <nav className={s.railNav}>
-            {NAV.map((n) => (
-              <TNavLink
-                key={n.to}
-                to={n.to}
-                end={n.end}
-                style={{ '--ic': n.color } as React.CSSProperties}
-                className={(active) => `${s.railItem} ${active ? s.railItemActive : ''}`}
-              >
-                <n.icon width={20} height={20} />
-                <span className={s.railLabel}>{n.label}</span>
-              </TNavLink>
-            ))}
+            {NAV.map((n) => {
+              const active = esActivo(n.to, location.pathname, n.end)
+              return (
+                <TNavLink
+                  key={n.to}
+                  to={n.to}
+                  end={n.end}
+                  className={(a) => `${s.railItem} ${a ? s.railItemActive : ''}`}
+                >
+                  <n.icon size={22} weight={active ? 'fill' : 'regular'} />
+                  <span className={s.railLabel}>{n.label}</span>
+                </TNavLink>
+              )
+            })}
           </nav>
         </aside>
 
         {/* Columna principal */}
         <div className={s.main}>
           {/* Header PERSISTENTE: SedeSwitcher + AccountMenu nunca se desmontan */}
-          <AdminHeader />
+          <AdminHeader onMenu={() => setMenuOpen(true)} />
           <AvisoLocalesActivos />
           <main className={s.content}>
             {/* Solo el contenido (la página activa) se suspende/cambia */}
@@ -211,14 +219,7 @@ export function AdminShell() {
           </main>
         </div>
 
-        {/* Footer (mobile): un solo botón "Menú" que abre el modal — PERSISTENTE */}
-        <nav className={s.bottomBar}>
-          <button type="button" className={s.menuBtn} onClick={() => setMenuOpen(true)}>
-            <Menu width={20} height={20} /> Menú
-          </button>
-        </nav>
-
-        {/* Modal del menú (mobile): 9 opciones en cuadrícula de color, centrado */}
+        {/* Modal del menú (mobile): 9 opciones, tiles de contorno con ícono + texto adentro */}
         {menuOpen && (
           <div className={s.menuOverlay} onClick={() => setMenuOpen(false)}>
             <div className={s.menuModal} onClick={(e) => e.stopPropagation()}>
@@ -232,19 +233,20 @@ export function AdminShell() {
                 </button>
               </div>
               <div className={s.menuGrid}>
-                {MENU_MOVIL.map((n) => (
-                  <button
-                    key={n.to}
-                    type="button"
-                    className={s.menuTile}
-                    onClick={() => { setMenuOpen(false); navTo(n.to) }}
-                  >
-                    <span className={s.menuTileIcon} style={{ background: n.color }}>
-                      <n.icon width={25} height={25} />
-                    </span>
-                    <span className={s.menuTileLabel}>{n.label}</span>
-                  </button>
-                ))}
+                {MENU_MOVIL.map((n) => {
+                  const active = esActivo(n.to, location.pathname, n.end)
+                  return (
+                    <button
+                      key={n.to}
+                      type="button"
+                      className={`${s.menuTile} ${active ? s.menuTileActive : ''}`}
+                      onClick={() => { setMenuOpen(false); navTo(n.to) }}
+                    >
+                      <n.icon size={24} weight={active ? 'fill' : 'regular'} />
+                      <span className={s.menuTileLabel}>{n.label}</span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -254,7 +256,7 @@ export function AdminShell() {
         <button
           onClick={() => setCobrar(true)}
           aria-label="Venta rápida"
-          className="fixed right-4 md:right-6 bottom-[calc(88px+env(safe-area-inset-bottom))] md:bottom-6 z-40 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full md:rounded-2xl shadow-xl shadow-emerald-600/40 active:scale-95 transition flex items-center justify-center gap-2 w-14 h-14 md:w-auto md:h-auto md:px-5 md:py-3"
+          className="fixed right-4 md:right-6 bottom-[calc(20px+env(safe-area-inset-bottom))] md:bottom-6 z-40 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full md:rounded-2xl shadow-xl shadow-emerald-600/40 active:scale-95 transition flex items-center justify-center gap-2 w-14 h-14 md:w-auto md:h-auto md:px-5 md:py-3"
         >
           <DollarSign className="w-6 h-6 md:w-5 md:h-5" />
           <span className="hidden md:inline font-semibold">Venta rápida</span>
