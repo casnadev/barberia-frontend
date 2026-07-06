@@ -1,8 +1,9 @@
 import { useState, useEffect, useTransition, useCallback, useContext, createContext, useRef, Suspense } from 'react'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { X } from 'lucide-react'
-import { House, Scissors, Users, Calendar, User, Clock, Gear, Wallet, Calculator, SealCheck, CreditCard, type Icon } from '@phosphor-icons/react'
+import { House, Scissors, Users, Calendar, User, Clock, Gear, Wallet, Calculator, SealCheck, CreditCard, Globe, type Icon } from '@phosphor-icons/react'
 import { useQueryClient } from '@tanstack/react-query'
+import { getActiveTenant } from '@/services/apiClient'
 import { AdminHeader } from '@/components/AdminHeader'
 import AvisoLocalesActivos from '@/components/AvisoLocalesActivos'
 import { prefetchAdminPages } from '@/router/adminPages'
@@ -48,8 +49,8 @@ const NAV: NavItem[] = [
   { to: '/admin/mi-plan', label: 'Mi Plan', icon: CreditCard },
 ]
 
-/* Menú móvil: las 9 operativas (Config y Mi Plan viven en el Account Menu). */
-const MENU_MOVIL = NAV.filter((n) => n.to !== '/admin/configuracion' && n.to !== '/admin/mi-plan')
+/* Menú móvil: las 11 secciones + "Mi Sitio" (se agrega en el render). */
+const MENU_MOVIL = NAV
 
 /** ¿La ruta `to` está activa respecto a la ubicación actual? */
 function esActivo(to: string, pathname: string, end?: boolean) {
@@ -170,6 +171,14 @@ export function AdminShell() {
   // Prefetch de datos de la sección destino (lo disparan los enlaces al hover/touch).
   const prefetch = useCallback((to: string) => prefetchRouteData(qc, to), [qc])
 
+  // "Mi Sitio": abre el sitio público de la sede activa en otra pestaña.
+  const goMiSitio = () => {
+    setMenuOpen(false)
+    const sub = getActiveTenant()
+    const url = sub && window.location.hostname.endsWith('barber.pe') ? `https://${sub}.barber.pe` : '/'
+    window.open(url, '_blank', 'noopener')
+  }
+
   // Calienta los chunks de todas las páginas admin en cuanto el shell monta.
   useEffect(() => {
     prefetchAdminPages()
@@ -207,7 +216,7 @@ export function AdminShell() {
         {/* Columna principal */}
         <div className={s.main}>
           {/* Header PERSISTENTE: SedeSwitcher + AccountMenu nunca se desmontan */}
-          <AdminHeader onMenu={() => setMenuOpen(true)} />
+          <AdminHeader onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />
           <AvisoLocalesActivos />
           <main className={s.content}>
             {/* Solo el contenido (la página activa) se suspende/cambia */}
@@ -245,6 +254,10 @@ export function AdminShell() {
                     </button>
                   )
                 })}
+                <button type="button" className={s.menuTile} onClick={goMiSitio}>
+                  <Globe size={24} weight="regular" />
+                  <span className={s.menuTileLabel}>Mi Sitio</span>
+                </button>
               </div>
             </div>
           </div>

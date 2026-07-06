@@ -186,16 +186,6 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
                   <button className={s.item} onClick={abrirAcceso}>
                     <KeyRound className={s.itemIcon} width={18} height={18} /> Acceso
                   </button>
-                  {user.rol === 'Admin' && (
-                    <button className={s.item} onClick={() => go('/admin/mi-plan')}>
-                      <CreditCard className={s.itemIcon} width={18} height={18} /> Mi Plan
-                    </button>
-                  )}
-                  {user.rol === 'Admin' && (
-                    <button className={s.item} onClick={() => go('/admin/configuracion')}>
-                      <Settings className={s.itemIcon} width={18} height={18} /> Configuración
-                    </button>
-                  )}
                   {user.rol === 'Trabajador' && (
                     <button className={s.item} onClick={() => go('/mi-agenda?config=1')}>
                       <Settings className={s.itemIcon} width={18} height={18} /> Configuración

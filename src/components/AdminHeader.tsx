@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SquaresFour } from '@phosphor-icons/react'
 import { SedeSwitcher } from '@/components/SedeSwitcher'
 import { AccountMenu } from '@/components/AccountMenu'
 import { MiPerfilAdminModal } from '@/components/MiPerfilAdminModal'
@@ -11,7 +12,7 @@ import { AccesoModal } from '@/components/AccesoModal'
  *
  * Mantiene las props title/subtitle por compatibilidad (se ignoran).
  */
-export function AdminHeader({ onMenu }: { title?: string; subtitle?: string; onMenu?: () => void }) {
+export function AdminHeader({ onMenu, menuOpen }: { title?: string; subtitle?: string; onMenu?: () => void; menuOpen?: boolean }) {
   const [perfilOpen, setPerfilOpen] = useState(false)
   const [accesoOpen, setAccesoOpen] = useState(false)
 
@@ -21,9 +22,12 @@ export function AdminHeader({ onMenu }: { title?: string; subtitle?: string; onM
         <button
           type="button"
           onClick={onMenu}
-          className="md:hidden inline-flex items-center px-3.5 py-2 rounded-xl text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 active:scale-95 transition"
+          aria-expanded={menuOpen}
+          className={`md:hidden inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold active:scale-95 transition ${
+            menuOpen ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
         >
-          Menú
+          <SquaresFour size={18} weight={menuOpen ? 'fill' : 'regular'} /> Menú
         </button>
         <div className="flex items-center gap-2 ml-auto">
           <SedeSwitcher />
