@@ -589,6 +589,7 @@ export function ConfiguracionPage() {
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
           <SeccionFila
             icono={<Building2 className="w-[18px] h-[18px]" />}
+            color="#2563EB"
             titulo="Datos del negocio"
             preview={empresa.nombreComercial || 'Completa los datos'}
             estado={empresa.nombreComercial ? 'listo' : 'falta'}
@@ -599,6 +600,7 @@ export function ConfiguracionPage() {
               "Esta sede". El backend guarda estos campos a nivel Empresa. */}
           <SeccionFila
             icono={<ImageIcon className="w-[18px] h-[18px]" />}
+            color="#7C3AED"
             titulo="Imagen y color"
             preview={tieneImagen ? 'Logo / portada listos' : 'Sin imágenes aún'}
             estado={tieneImagen ? 'listo' : undefined}
@@ -610,6 +612,7 @@ export function ConfiguracionPage() {
           />
           <SeccionFila
             icono={<Share2 className="w-[18px] h-[18px]" />}
+            color="#EC4899"
             titulo="Redes sociales"
             preview={redes.length ? `${redes.length} red(es)` : 'Sin redes'}
             estado={redes.length ? 'listo' : undefined}
@@ -627,6 +630,7 @@ export function ConfiguracionPage() {
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
           <SeccionFila
             icono={<Store className="w-[18px] h-[18px]" />}
+            color="#14B8A6"
             titulo="Información básica"
             preview={sede.nombre || 'Falta el nombre'}
             estado={sede.nombre ? 'listo' : 'falta'}
@@ -634,6 +638,7 @@ export function ConfiguracionPage() {
           />
           <SeccionFila
             icono={<Phone className="w-[18px] h-[18px]" />}
+            color="#16A34A"
             titulo="Contacto"
             preview={sede.telefono || 'Agrega un teléfono'}
             estado={sede.telefono ? 'listo' : 'falta'}
@@ -641,6 +646,7 @@ export function ConfiguracionPage() {
           />
           <SeccionFila
             icono={<MapPin className="w-[18px] h-[18px]" />}
+            color="#E11D48"
             titulo="Ubicación"
             preview={sede.direccion || 'Sin dirección'}
             estado={sede.direccion ? 'listo' : undefined}
@@ -648,6 +654,7 @@ export function ConfiguracionPage() {
           />
           <SeccionFila
             icono={<Clock className="w-[18px] h-[18px]" />}
+            color="#F59E0B"
             titulo="Horarios de atención"
             preview={cargandoHorarios ? 'Cargando...' : diasAbiertos ? `${diasAbiertos} día(s) abierto(s)` : 'Sin horarios'}
             estado={diasAbiertos ? 'listo' : 'falta'}
@@ -655,6 +662,7 @@ export function ConfiguracionPage() {
           />
           <SeccionFila
             icono={<Camera className="w-[18px] h-[18px]" />}
+            color="#0EA5E9"
             titulo="Galería"
             preview={imagenes.length ? `${imagenes.length} foto(s)` : 'Sin fotos aún'}
             estado={imagenes.length ? 'listo' : undefined}

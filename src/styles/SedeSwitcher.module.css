@@ -27,8 +27,8 @@
   width: 26px; height: 26px;
   border-radius: 8px;
   display: grid; place-items: center;
-  background: rgba(40, 85, 246, 0.1);
-  color: var(--brand, #2855F6);
+  background: var(--brand, #2855F6);
+  color: #fff;
   flex-shrink: 0;
 }
 .triggerText { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.05; min-width: 0; }
@@ -82,7 +82,7 @@
 .itemDot {
   width: 30px; height: 30px; border-radius: 9px;
   display: grid; place-items: center;
-  background: rgba(40, 85, 246, 0.1); color: var(--brand, #2855F6);
+  background: var(--brand, #2855F6); color: #fff;
   flex-shrink: 0;
 }
 .itemActive .itemDot { background: rgba(255, 255, 255, 0.2); color: #fff; }
