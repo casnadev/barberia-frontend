@@ -9,6 +9,8 @@ import { toast } from 'sonner'
 import { CalendarModal } from '@/pages/cliente/CalendarModal'
 import { buildImageUrl } from '@/services/apiClient'
 import { ventasService, type VentaResumen } from '@/services/ventasService'
+import { CobrarVentaModal } from '@/components/CobrarVentaModal'
+import { Fab } from '@/components/Fab'
 import { SkeletonRows } from '@/components/Skeleton'
 import { mensajeError } from '@/utils/apiError'
 import { montoFmt } from '@/utils/kpiMonto'
@@ -63,6 +65,7 @@ export function VentasPage() {
   const [calRango, setCalRango] = useState<'desde' | 'hasta' | null>(null)
   const [filtro, setFiltro] = useState<FiltroKey>('PendienteAprobacion')
   const [detail, setDetail] = useState<VentaResumen | null>(null)
+  const [cobrar, setCobrar] = useState(false)
 
   const { d, h } = useMemo(() => {
     const today = new Date()
@@ -112,6 +115,18 @@ export function VentasPage() {
 
   return (
     <>
+      {/* Venta rápida: desktop arriba a la derecha; móvil = barra flotante abajo */}
+      <div className="hidden md:flex justify-end mb-4">
+        <button
+          onClick={() => setCobrar(true)}
+          className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-5 py-2.5 font-semibold active:scale-95 transition"
+        >
+          <DollarSign className="w-5 h-5" /> Venta rápida
+        </button>
+      </div>
+      <Fab onClick={() => setCobrar(true)} label="Venta rápida" icon={DollarSign} color="green" />
+      {cobrar && <CobrarVentaModal mode="admin" onClose={() => setCobrar(false)} onDone={() => setCobrar(false)} />}
+
       {/* Resumen */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <ResumenCard icon={Clock} tone="amber" label="Pendientes" value={String(counts.PendienteAprobacion)} />

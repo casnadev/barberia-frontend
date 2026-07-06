@@ -97,7 +97,7 @@
 /* ===== Responsive: < 768px → footer carrusel ===== */
 @media (max-width: 768px) {
   .rail { display: none; }
-  .content { padding: 10px 16px 28px; }
+  .content { padding: 10px 16px 92px; }
   .bottomBar {
     display: block;
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;

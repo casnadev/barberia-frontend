@@ -1,11 +1,10 @@
 import { useState, useEffect, useTransition, useCallback, useContext, createContext, useRef, Suspense } from 'react'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
-import { DollarSign, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { House, Scissors, Users, Calendar, User, Clock, Gear, Wallet, Calculator, SealCheck, CreditCard, type Icon } from '@phosphor-icons/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { AdminHeader } from '@/components/AdminHeader'
 import AvisoLocalesActivos from '@/components/AvisoLocalesActivos'
-import { CobrarVentaModal } from '@/components/CobrarVentaModal'
 import { prefetchAdminPages } from '@/router/adminPages'
 import { prefetchRouteData } from '@/lib/prefetch'
 import s from '@/styles/AdminLayout.module.css'
@@ -152,7 +151,6 @@ function TopProgressBar() {
 }
 
 export function AdminShell() {
-  const [cobrar, setCobrar] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
@@ -252,17 +250,6 @@ export function AdminShell() {
           </div>
         )}
 
-        {/* Venta rápida (walk-in) — FAB en móvil, botón en desktop. PERSISTENTE. */}
-        <button
-          onClick={() => setCobrar(true)}
-          aria-label="Venta rápida"
-          className="fixed right-4 md:right-6 bottom-[calc(20px+env(safe-area-inset-bottom))] md:bottom-6 z-40 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full md:rounded-2xl shadow-xl shadow-emerald-600/40 active:scale-95 transition flex items-center justify-center gap-2 w-14 h-14 md:w-auto md:h-auto md:px-5 md:py-3"
-        >
-          <DollarSign className="w-6 h-6 md:w-5 md:h-5" />
-          <span className="hidden md:inline font-semibold">Venta rápida</span>
-        </button>
-
-        {cobrar && <CobrarVentaModal mode="admin" onClose={() => setCobrar(false)} onDone={() => setCobrar(false)} />}
       </div>
       </PrefetchCtx.Provider>
     </NavCtx.Provider>

@@ -2,30 +2,38 @@ import { Plus } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 /**
- * Botón flotante (FAB) reutilizable. Solo se muestra en móvil (md:hidden),
- * porque en escritorio las páginas ya tienen su botón "Nuevo ..." en la barra.
+ * Barra de acción flotante (solo móvil, md:hidden). Fija abajo, a todo el ancho,
+ * con texto — mismo estilo que el botón "Menú". En escritorio las páginas usan su
+ * propio botón arriba, por eso esta barra se oculta en md+.
  *
  * Uso:
- *   <Fab onClick={() => navigate('/reservar-publica')} label="Añadir cita" />
- *   <Fab onClick={() => { resetForm(); setShowModal(true) }} label="Nuevo servicio" />
+ *   <Fab onClick={goReservar} label="Añadir cita" />
+ *   <Fab onClick={() => setCobrar(true)} label="Venta rápida" icon={DollarSign} color="green" />
  */
 export function Fab({
   onClick,
   label = 'Añadir',
   icon: Icon = Plus,
+  color = 'blue',
 }: {
   onClick: () => void
   label?: string
   icon?: LucideIcon
+  color?: 'blue' | 'green'
 }) {
+  const cls = color === 'green' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'
   return (
-    <button
-      onClick={onClick}
-      aria-label={label}
-      className="md:hidden fixed right-4 z-40 w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xl shadow-blue-600/40 active:scale-95 hover:bg-blue-700 transition"
-      style={{ bottom: 'calc(78px + env(safe-area-inset-bottom))' }}
+    <div
+      className="md:hidden fixed left-0 right-0 bottom-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-100 px-4 pt-2.5"
+      style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom))' }}
     >
-      <Icon className="w-6 h-6" />
-    </button>
+      <button
+        onClick={onClick}
+        aria-label={label}
+        className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-white font-semibold active:scale-95 transition ${cls}`}
+      >
+        <Icon className="w-5 h-5" /> {label}
+      </button>
+    </div>
   )
 }
