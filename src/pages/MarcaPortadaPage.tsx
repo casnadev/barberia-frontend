@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { MapPin, ChevronRight, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import { MapPin, CaretRight } from '@phosphor-icons/react'
 import { getActiveTenant, setTenant, urlMicrositio, buildImageUrl } from '@/services/apiClient'
 import { marcaService, MarcaPublica, SedeDeMarca } from '@/services/marcaService'
 import { NegocioNoDisponible } from '@/components/NegocioNoDisponible'
@@ -8,7 +9,8 @@ import { NegocioNoDisponible } from '@/components/NegocioNoDisponible'
 /**
  * Portada pública de una MARCA (kisha.barber.pe o barber.pe/marca/kisha): lista sus
  * SEDES como tarjetas sobre un fondo estilo login. Solo tiene sentido con 2+ Sedes;
- * con 1 el router entra directo al micrositio. Cada tarjeta abre esa Sede. (Bloque A · Tanda 2.)
+ * con 1 el router entra directo al micrositio. Cada tarjeta abre esa Sede.
+ * El acento usa el color de marca elegido por el negocio (colorPrimarioHex).
  */
 export function MarcaPortadaPage({ slug: slugProp }: { slug?: string } = {}) {
   const { slugMarca: slugParam } = useParams()
@@ -31,13 +33,15 @@ export function MarcaPortadaPage({ slug: slugProp }: { slug?: string } = {}) {
     return () => { cancelado = true }
   }, [slug])
 
+  // NOTA: la lógica de apertura NO cambia en este paso (se mantiene el comportamiento
+  // actual). El cambio de "quedarse en el mismo dominio" se hará aparte, ya probado.
   const abrirSede = (s: SedeDeMarca) => {
     if (!s.subdominio) { navigate(`/sede/${s.idSede}`); return }
     const url = urlMicrositio(s.subdominio)
     if (url.startsWith('http')) {
-      window.location.href = url                        // prod: subdominio canónico
+      window.location.href = url
     } else {
-      setTenant(s.subdominio)                           // dev: ?s= manda en esta pestaña
+      setTenant(s.subdominio)
       navigate(`/sede/${s.idSede}${url.slice(1)}`)
     }
   }
@@ -55,67 +59,75 @@ export function MarcaPortadaPage({ slug: slugProp }: { slug?: string } = {}) {
   }
 
   const logo = marca.sedes[0]?.urlLogo
+  const brand = marca.sedes[0]?.colorPrimarioHex || '#2855F6'
+  const rgba = (hex: string, a: number) => {
+    const h = hex.replace('#', '')
+    const n = h.length === 3 ? h.split('').map((c) => c + c).join('') : h
+    const r = parseInt(n.slice(0, 2), 16) || 40
+    const g = parseInt(n.slice(2, 4), 16) || 85
+    const b = parseInt(n.slice(4, 6), 16) || 246
+    return `rgba(${r},${g},${b},${a})`
+  }
 
   return (
     <div style={{ minHeight: '100vh', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       {/* Fondo estilo login */}
-      <img
-        src="/login-barberia.jpg"
-        alt=""
-        aria-hidden="true"
-        style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-      />
-      <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(180deg, rgba(9,14,28,.72) 0%, rgba(9,14,28,.86) 60%, rgba(9,14,28,.94) 100%)' }} />
+      <img src="/login-barberia.jpg" alt="" aria-hidden="true"
+        style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+      <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(180deg, rgba(9,14,28,.74) 0%, rgba(9,14,28,.88) 55%, rgba(9,14,28,.95) 100%)' }} />
 
       {/* Contenido */}
-      <div style={{ position: 'relative', width: '100%', maxWidth: 480, padding: '48px 20px 40px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+      <div style={{ position: 'relative', width: '100%', maxWidth: 480, padding: '52px 20px 44px', margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 30 }}>
           {logo && (
-            <img
-              src={buildImageUrl(logo)}
-              alt={marca.nombreComercial}
-              style={{ width: 84, height: 84, borderRadius: 20, objectFit: 'cover', margin: '0 auto 16px', boxShadow: '0 8px 30px rgba(0,0,0,.35)' }}
-            />
+            <div style={{ position: 'relative', width: 90, height: 90, margin: '0 auto 16px' }}>
+              <div style={{ position: 'absolute', inset: -6, borderRadius: 26, background: rgba(brand, 0.45), filter: 'blur(18px)' }} />
+              <img src={buildImageUrl(logo)} alt={marca.nombreComercial}
+                style={{ position: 'relative', width: 90, height: 90, borderRadius: 22, objectFit: 'cover', boxShadow: '0 10px 34px rgba(0,0,0,.4)' }} />
+            </div>
           )}
-          <h1 style={{ color: '#fff', fontSize: 30, fontWeight: 800, letterSpacing: '-.02em' }}>
+          <h1 style={{ color: '#fff', fontSize: 30, fontWeight: 800, letterSpacing: '-.02em', margin: 0 }}>
             {marca.nombreComercial}
           </h1>
-          <p style={{ color: 'rgba(255,255,255,.75)', fontSize: 15, marginTop: 6 }}>
-            Elige tu Sede ({marca.sedes.length})
+          <p style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: 'rgba(255,255,255,.82)', fontSize: 14, marginTop: 10, background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.16)', padding: '5px 14px', borderRadius: 999 }}>
+            <MapPin size={15} weight="fill" style={{ color: brand }} />
+            Elige tu sede · {marca.sedes.length}
           </p>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {marca.sedes.map((s) => (
-            <button
-              key={s.idSede}
-              onClick={() => abrirSede(s)}
+            <button key={s.idSede} onClick={() => abrirSede(s)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 14, width: '100%', textAlign: 'left',
-                background: 'rgba(255,255,255,.97)', border: '1px solid rgba(255,255,255,.6)',
-                borderRadius: 16, padding: 16, cursor: 'pointer',
-                boxShadow: '0 6px 20px rgba(0,0,0,.18)', transition: 'transform .12s ease',
+                background: '#fff', border: '1px solid rgba(255,255,255,.5)',
+                borderRadius: 18, padding: '15px 16px', cursor: 'pointer',
+                boxShadow: '0 8px 24px rgba(0,0,0,.22)', transition: 'transform .14s ease, box-shadow .14s ease',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 14px 30px ${rgba(brand, 0.3)}` }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,.22)' }}
             >
-              <span style={{ width: 46, height: 46, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'rgba(40,85,246,.12)', color: '#2855F6', flexShrink: 0 }}>
-                <MapPin className="w-5 h-5" />
+              <span style={{ width: 48, height: 48, borderRadius: 14, display: 'grid', placeItems: 'center', background: rgba(brand, 0.12), color: brand, flexShrink: 0 }}>
+                <MapPin size={22} weight="fill" />
               </span>
               <span style={{ minWidth: 0, flex: 1 }}>
-                <span style={{ display: 'block', fontWeight: 700, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {marca.nombreComercial} – {s.nombre}
+                <span style={{ display: 'block', fontWeight: 700, color: '#111827', fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {s.nombre}
                 </span>
-                <span style={{ display: 'block', fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <span style={{ display: 'block', fontSize: 13, color: '#6b7280', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {[s.direccion, s.distrito].filter(Boolean).join(' · ') || 'Sede disponible'}
                 </span>
               </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#2855F6', fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
-                Reservar <ChevronRight className="w-4 h-4" />
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: '#fff', fontWeight: 700, fontSize: 13.5, flexShrink: 0, background: brand, padding: '8px 12px', borderRadius: 11 }}>
+                Reservar <CaretRight size={15} weight="bold" />
               </span>
             </button>
           ))}
         </div>
+
+        <p style={{ textAlign: 'center', color: 'rgba(255,255,255,.5)', fontSize: 12, marginTop: 26 }}>
+          Reserva online · {marca.nombreComercial}
+        </p>
       </div>
     </div>
   )
