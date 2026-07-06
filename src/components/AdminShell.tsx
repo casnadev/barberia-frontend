@@ -210,6 +210,10 @@ export function AdminShell() {
                 </TNavLink>
               )
             })}
+            <button type="button" className={s.railItem} onClick={goMiSitio} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit' }}>
+              <Globe size={22} weight="regular" />
+              <span className={s.railLabel}>Mi Sitio</span>
+            </button>
           </nav>
         </aside>
 

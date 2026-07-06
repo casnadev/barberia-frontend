@@ -328,8 +328,11 @@
   .plansRail { display: grid; grid-template-columns: repeat(4, 1fr); overflow: visible; gap: 18px; }
   .plansRail .plan { flex: initial; }
 }
-/* En móvil: la tarjeta deja asomar la siguiente (no ocupa toda la pantalla). */
-@media (max-width: 760px) { .plansRail .plan { flex: 0 0 80vw; max-width: 300px; } }
+/* En móvil: las 4 tarjetas apiladas, sin carrusel (todas visibles). */
+@media (max-width: 760px) {
+  .plansRail { flex-direction: column; overflow-x: visible; scroll-snap-type: none; align-items: stretch; }
+  .plansRail .plan { flex: 1 1 auto; width: 100%; max-width: none; }
+}
 .freeBadge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 5px; background: var(--ok); color: #06140d; font-weight: 750; font-size: .76rem; padding: 6px 14px; border-radius: 999px; box-shadow: 0 8px 18px -8px rgba(52, 211, 153, .7); white-space: nowrap; }
 
 .logoImg { height: 30px; width: auto; display: block; }

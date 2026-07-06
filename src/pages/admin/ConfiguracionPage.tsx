@@ -515,7 +515,7 @@ export function ConfiguracionPage() {
   // ================================================================= UI
   if (loading) {
     return (
-      <div className="pb-10" style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 760, margin: '0 auto', paddingTop: 8 }}>
+      <div className="pb-10" style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
         {/* Silueta de la página de configuración (en vez de un círculo en vacío). */}
         <Skeleton h={120} r={14} />
         <Skeleton h={20} w="40%" />

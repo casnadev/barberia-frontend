@@ -138,7 +138,7 @@ export function MiPlanPage() {
   }
 
   return (
-    <div className="w-full px-4 py-6 space-y-6">
+    <div className="w-full space-y-6">
       {/* Encabezado plan — con el azul de marca */}
       <div className="rounded-2xl p-5 sm:p-6 text-white relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #2855F6 0%, #1e3fb8 55%, #16308f 100%)', boxShadow: '0 14px 30px -10px rgba(40,85,246,.5)' }}>
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(120% 80% at 100% 0%, rgba(255,255,255,.16), transparent 60%)' }} />
