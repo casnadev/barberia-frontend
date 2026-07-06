@@ -5,6 +5,14 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.100.25
 // Clave donde se persiste el subdominio del tenant activo.
 const TENANT_KEY = 'tenant_subdomain'
 
+// LINK ÚNICO: sede fijada por la portada de marca para quedarse en el mismo dominio
+// del negocio (kisha.barber.pe) sin redirigir al subdominio de la sede. Runtime-only;
+// se re-establece en cada carga desde la URL (/:sedeSlug). null por defecto = sin efecto.
+let tenantOverride: string | null = null
+export const setTenantOverride = (sub: string | null): void => {
+  tenantOverride = sub && sub.trim() ? sub.trim().toLowerCase() : null
+}
+
 const esLocalOLan = (host: string): boolean =>
   host === 'localhost' ||
   host === '127.0.0.1' ||
@@ -68,6 +76,11 @@ export const getActiveTenant = (): string => {
   // 1. ?s= en la URL (microsite explícito) — igual que antes
   const fromUrl = tenantDesdeUrl()
   if (fromUrl) return fromUrl
+
+  // 1.b LINK ÚNICO: sede elegida en la portada de marca, quedándose en el MISMO
+  //     dominio del negocio (sin redirigir). Se fija con setTenantOverride y por
+  //     defecto es null → no altera ningún flujo existente.
+  if (tenantOverride) return tenantOverride
 
   // 2. NUEVO: con sesión de admin, la sede elegida en el panel
   //    gana sobre el subdominio del host. Esto permite cambiar de

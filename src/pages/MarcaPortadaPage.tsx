@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { MapPin, CaretRight } from '@phosphor-icons/react'
-import { getActiveTenant, setTenant, urlMicrositio, buildImageUrl } from '@/services/apiClient'
+import { getActiveTenant, setTenant, setTenantOverride, urlMicrositio, buildImageUrl } from '@/services/apiClient'
 import { marcaService, MarcaPublica, SedeDeMarca } from '@/services/marcaService'
 import { NegocioNoDisponible } from '@/components/NegocioNoDisponible'
 
@@ -33,17 +33,28 @@ export function MarcaPortadaPage({ slug: slugProp }: { slug?: string } = {}) {
     return () => { cancelado = true }
   }, [slug])
 
-  // NOTA: la lógica de apertura NO cambia en este paso (se mantiene el comportamiento
-  // actual). El cambio de "quedarse en el mismo dominio" se hará aparte, ya probado.
+  // Slug de zona = subdominio de la sede sin el prefijo de la marca.
+  // Ej: "shanell-salon-miraflores" con marca "shanell-salon" → "miraflores".
+  const zonaDeSubdominio = (sub: string, slugMarca: string): string => {
+    const pref = `${slugMarca}-`.toLowerCase()
+    const s = sub.toLowerCase()
+    return s.startsWith(pref) ? s.slice(pref.length) : s
+  }
+
   const abrirSede = (s: SedeDeMarca) => {
     if (!s.subdominio) { navigate(`/sede/${s.idSede}`); return }
-    const url = urlMicrositio(s.subdominio)
-    if (url.startsWith('http')) {
-      window.location.href = url
-    } else {
-      setTenant(s.subdominio)
-      navigate(`/sede/${s.idSede}${url.slice(1)}`)
+    // PROD: link único — nos quedamos en el MISMO dominio del negocio
+    // (kisha.barber.pe/miraflores), sin redirigir al subdominio de la sede.
+    if (window.location.hostname.endsWith('barber.pe') && marca?.slugMarca) {
+      const zona = zonaDeSubdominio(s.subdominio, marca.slugMarca)
+      setTenantOverride(s.subdominio)
+      navigate(`/${zona}`)
+      return
     }
+    // DEV (localhost, sin subdominios reales): se usa ?s= como siempre.
+    setTenant(s.subdominio)
+    const url = urlMicrositio(s.subdominio)
+    navigate(`/sede/${s.idSede}${url.startsWith('/') ? url.slice(1) : ''}`)
   }
 
   if (estado === 'cargando') {

@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom'
+import { setTenantOverride } from '@/services/apiClient'
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/authService'
@@ -214,7 +215,16 @@ function TenantHome({ slug }: { slug: string }) {
         // Sede concreta. Si entras por el link de una Sede (su subdominio coincide con
         // el slug), vas directo al micrositio — nunca a la portada. (Candado de routing.)
         const esLinkDeSede = !!m && m.sedes.some((x) => x.subdominio === slug)
-        setModo(m && m.sedes.length >= 2 && !esLinkDeSede ? 'marca' : 'sede')
+        if (m && m.sedes.length >= 2 && !esLinkDeSede) {
+          setTenantOverride(null)   // portada: no hay una sede fija todavía
+          setModo('marca')
+        } else {
+          // 1 sola sede en el dominio de marca (kisha.barber.pe): micrositio directo.
+          // Como el host es la marca (no el subdominio de la sede), fijamos la sede única
+          // para que las peticiones resuelvan al tenant correcto.
+          if (m && !esLinkDeSede && m.sedes.length >= 1) setTenantOverride(m.sedes[0].subdominio)
+          setModo('sede')
+        }
       }),
     )
     return () => { cancelado = true }
@@ -222,6 +232,37 @@ function TenantHome({ slug }: { slug: string }) {
 
   if (modo === 'cargando') return <RouteFallback />
   return modo === 'marca' ? <MarcaPortadaPage slug={slug} /> : <PublicSedeDetailPage />
+}
+
+/**
+ * LINK ÚNICO: en el dominio de marca, la ruta /:sedeSlug (ej. kisha.barber.pe/miraflores)
+ * resuelve la sede por su slug de zona y fija el tenant SIN redirigir. Refresh-safe porque
+ * el slug viaja en la URL. Si no hay marca en el host o el slug no existe → 404.
+ */
+function TenantSedeRoute() {
+  const { sedeSlug } = useParams()
+  const brand = getSubdominio()
+  const [estado, setEstado] = useState<'cargando' | 'ok' | 'no'>('cargando')
+  useEffect(() => {
+    let cancelado = false
+    if (!brand || !sedeSlug) { setEstado('no'); return }
+    import('@/services/marcaService').then(({ marcaService }) =>
+      marcaService.getPortada(brand).then((m) => {
+        if (cancelado) return
+        const objetivo = `${(m?.slugMarca || brand)}-${sedeSlug}`.toLowerCase()
+        const sede =
+          m?.sedes.find((x) => x.subdominio.toLowerCase() === objetivo) ||
+          m?.sedes.find((x) => x.subdominio.toLowerCase().endsWith(`-${sedeSlug.toLowerCase()}`))
+        if (sede) { setTenantOverride(sede.subdominio); setEstado('ok') }
+        else setEstado('no')
+      }),
+    )
+    return () => { cancelado = true }
+  }, [brand, sedeSlug])
+
+  if (estado === 'cargando') return <RouteFallback />
+  if (estado === 'no') return <NotFoundPage />
+  return <PublicSedeDetailPage />
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -378,6 +419,9 @@ export function App() {
             <Route path="/verificar-correo/:token" element={<VerificarCorreoPage />} />
 
             {/* 404 */}
+            {/* LINK ÚNICO: kisha.barber.pe/miraflores → sede por slug (solo dominio de marca).
+                Va al final: las rutas estáticas (/login, /acceso, etc.) tienen prioridad. */}
+            <Route path="/:sedeSlug" element={<TenantSedeRoute />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
