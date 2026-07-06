@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { X, Clock, MapPin, User, Star, Check, CalendarClock, Scissors, RotateCcw } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { setTenant } from '@/services/apiClient'
+import { setTenant, urlSedeCanonica } from '@/services/apiClient'
 import { reservasService } from '@/services/reservasService' // ← endpoints reales
 import styles from '@/styles/ReservaAcciones.module.css'
 
@@ -22,6 +22,9 @@ interface Reserva {
   logoSede?: string
   colorPrimario?: string | null
   subdominio?: string
+  slugMarca?: string
+  slug?: string
+  totalSedesPublicasMarca?: number
 }
 
 interface Slot {
@@ -96,6 +99,9 @@ export function ReservaAcciones() {
         logoSede: data.urlLogo,
         colorPrimario: data.colorPrimarioHex,
         subdominio: data.subdominio,
+        slugMarca: data.slugMarca,
+        slug: data.slug,
+        totalSedesPublicasMarca: data.totalSedesPublicasMarca,
       })
     } catch {
       toast.error('No pudimos cargar la reserva. El enlace no es válido o expiró.')
@@ -131,10 +137,17 @@ export function ReservaAcciones() {
   }
 
   // Cierre inteligente: intenta cerrar la pestaña; si no, vuelve atrás (Gmail) o a barber.pe
-  const cerrar = () => {
-    window.location.href = reserva?.subdominio
-      ? `https://${reserva.subdominio}.barber.pe`
+  const urlPublica = (): string =>
+    reserva?.slugMarca
+      ? urlSedeCanonica({
+          slugMarca: reserva.slugMarca,
+          slugSede: reserva.slug,
+          subdominio: reserva.subdominio,
+          esMultisede: (reserva.totalSedesPublicasMarca ?? 1) >= 2,
+        })
       : 'https://barber.pe'
+  const cerrar = () => {
+    window.location.href = urlPublica()
   }
 
   const handleConfirmar = async () => {
@@ -334,12 +347,9 @@ export function ReservaAcciones() {
               Esta cita está cancelada. ¡Esperamos verte pronto! Cuando quieras, reserva de nuevo.
             </p>
             <button className={styles.btnPrimary} onClick={() => {
-              // "Reservar de nuevo" debe ir a la página pública de ESTA sede
-              // ({sede}.barber.pe), no a barber.pe. navigate() es relativo y se
-              // quedaba en el host actual, por eso caía en barber.pe.
-              window.location.href = reserva?.subdominio
-                ? `https://${reserva.subdominio}.barber.pe/reservar-publica`
-                : '/reservar-publica'
+              // "Reservar de nuevo" → página pública canónica del negocio (raíz de
+              // marca, o /{distrito} si 2+ sedes). Desde ahí el cliente reserva.
+              window.location.href = urlPublica()
             }}>
               <RotateCcw size={17} /> Reservar de nuevo
             </button>

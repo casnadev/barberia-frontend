@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { User, LogOut, LogIn, UserPlus, Settings, ExternalLink, LifeBuoy, KeyRound, CreditCard } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/authService'
-import { getActiveTenant, buildImageUrl } from '@/services/apiClient'
+import { urlMarca, buildImageUrl } from '@/services/apiClient'
+import { sedeTenantService } from '@/services/sedeTenantService'
 import { miCuentaService } from '@/services/miCuentaService'
 import { perfilService } from '@/services/perfilService'
 import { panelTrabajadorService } from '@/services/panelTrabajadorService'
@@ -49,7 +50,19 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
   //   dashboard, AdminHeader sigue pasando su propio onMiPerfil y este queda en false.
   const [perfilOpen, setPerfilOpen] = useState(false)
   const [accesoOpen, setAccesoOpen] = useState(false)
+  // Slug de marca (raíz pública) para "Ver sitio" de admin/trabajador. Los Cliente
+  // no lo necesitan (su "Ver sitio" abre el marketplace barber.pe).
+  const [marcaSlug, setMarcaSlug] = useState('')
   const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!user || user.rol === 'Cliente') return
+    let cancel = false
+    sedeTenantService.getMisSedes()
+      .then((ss) => { if (!cancel) setMarcaSlug(ss[0]?.slugMarca || '') })
+      .catch(() => { /* silencioso */ })
+    return () => { cancel = true }
+  }, [user])
 
   useEffect(() => {
     if (!open) return
@@ -121,8 +134,9 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
       window.open(window.location.hostname.endsWith('barber.pe') ? 'https://barber.pe' : '/', '_blank', 'noopener')
       return
     }
-    const sub = getActiveTenant()
-    window.open(sub ? (window.location.hostname.endsWith('barber.pe') ? `https://${sub}.barber.pe` : `/?s=${encodeURIComponent(sub)}`) : '/', '_blank', 'noopener')
+    // No-Cliente (admin/trabajador): "Ver sitio" abre SIEMPRE la RAÍZ DE MARCA
+    // (negocio.barber.pe), no el subdominio de la sede activa.
+    window.open(marcaSlug ? urlMarca(marcaSlug) : '/', '_blank', 'noopener')
   }
   const abrirSoporte = () => { setOpen(false); useSoporteStore.getState().abrir() }
 

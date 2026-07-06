@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { sedesService } from '@/services/sedesService'
 import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
-import { apiClient, getActiveTenant, getTenantOverride } from '@/services/apiClient'
+import { apiClient, getActiveTenant, getTenantOverride, urlSedeCanonica } from '@/services/apiClient'
 import { useFavoritosStore } from '@/store/favoritosStore'
 import { novedadesService } from '@/services/novedadesService'
 import { AccountMenu } from '@/components/AccountMenu'
@@ -212,11 +212,17 @@ export function PublicSedeDetailPage() {
       if (!el) { el = document.createElement('meta'); el.setAttribute(attr, key); document.head.appendChild(el) }
       el.setAttribute('content', content)
     }
-    // Canonical hacia la URL del subdominio de la sede (evita contenido duplicado
-    // entre sede.barber.pe, barber.pe/?s=slug y /sede/:id).
-    const canonicalUrl = sede.subdominio
-      ? `https://${sede.subdominio}.barber.pe/`
-      : window.location.href.split('?')[0]
+    // Canonical hacia la URL CANÓNICA DE MARCA (negocio.barber.pe, o /{slug} si 2+
+    // sedes). Nunca el subdominio de sede. Evita contenido duplicado.
+    const cUrl = sede.slugMarca
+      ? urlSedeCanonica({
+          slugMarca: sede.slugMarca,
+          slugSede: sede.slug,
+          subdominio: sede.subdominio,
+          esMultisede: (sede.totalSedesPublicasMarca ?? 1) >= 2,
+        })
+      : ''
+    const canonicalUrl = cUrl.startsWith('http') ? cUrl : window.location.href.split('?')[0]
     let canon = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
     if (!canon) { canon = document.createElement('link'); canon.setAttribute('rel', 'canonical'); document.head.appendChild(canon) }
     canon.setAttribute('href', canonicalUrl)
@@ -253,7 +259,17 @@ export function PublicSedeDetailPage() {
       '@context': 'https://schema.org',
       '@type': 'HairSalon',
       name: visible,
-      url: sede.subdominio ? `https://${sede.subdominio}.barber.pe/` : window.location.href.split('?')[0],
+      url: (() => {
+        const u = sede.slugMarca
+          ? urlSedeCanonica({
+              slugMarca: sede.slugMarca,
+              slugSede: sede.slug,
+              subdominio: sede.subdominio,
+              esMultisede: (sede.totalSedesPublicasMarca ?? 1) >= 2,
+            })
+          : ''
+        return u.startsWith('http') ? u : window.location.href.split('?')[0]
+      })(),
       image: img(sede.urlBanner || sede.urlLogo || '') || undefined,
       logo: img(sede.urlLogo || '') || undefined,
       telephone: sede.telefono || undefined,

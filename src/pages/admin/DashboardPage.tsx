@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { Calendar, Activity, Clock, User, TrendingDown, Wallet, CalendarDays, ShoppingBag, Download, FileSpreadsheet, FileText, ExternalLink } from 'lucide-react'
 import { ventasService, type ResumenFinanciero } from '@/services/ventasService'
 import { sedeTenantService } from '@/services/sedeTenantService'
-import { getActiveTenant } from '@/services/apiClient'
+import { getActiveTenant, urlSedeCanonica } from '@/services/apiClient'
 import { qk, fetchDashboardResumen, fetchDashboardHoy } from '@/lib/prefetch'
 import { exportarExcel, exportarPDF, type FilaVenta } from '@/utils/exportReportes'
 import { toast } from 'sonner'
@@ -118,13 +118,21 @@ export function DashboardPage() {
 
   const tenant = getActiveTenant()
 
-  // "Mi Web": abre el sitio público de reservas de la sede activa en otra pestaña.
-  const abrirMiWeb = () => {
+  // "Mi Web": abre el sitio público de reservas de la sede activa en otra pestaña
+  // (URL canónica de marca; nunca el subdominio de sede).
+  const abrirMiWeb = async () => {
     const sub = getActiveTenant()
-    const url = sub
-      ? (window.location.hostname.endsWith('barber.pe') ? `https://${sub}.barber.pe` : `/?s=${encodeURIComponent(sub)}`)
-      : '/'
-    window.open(url, '_blank', 'noopener')
+    try {
+      const mis = await sedeTenantService.getMisSedes()
+      const activa = mis.find((x) => x.subdominio === sub) ?? mis[0]
+      const multi = mis.filter((x) => x.esPublica).length >= 2
+      const url = activa?.slugMarca
+        ? urlSedeCanonica({ slugMarca: activa.slugMarca, slugSede: activa.slug, subdominio: activa.subdominio, esMultisede: multi })
+        : (sub ? `/?s=${encodeURIComponent(sub)}` : '/')
+      window.open(url, '_blank', 'noopener')
+    } catch {
+      window.open(sub ? `/?s=${encodeURIComponent(sub)}` : '/', '_blank', 'noopener')
+    }
   }
 
   // Resumen financiero + serie de la gráfica. Cacheado con React Query: revisitar

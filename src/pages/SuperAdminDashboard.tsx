@@ -55,8 +55,10 @@ const iniciales = (nombre: string) => {
 const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 const colorMarca = (hex?: string | null) => (hex && HEX_RE.test(hex.trim()) ? hex.trim() : '#111827')
 
-// URL pública del sitio de la barbería a partir del subdominio.
-const urlSitio = (sub?: string | null) => (sub ? `https://${sub}.barber.pe` : null)
+// URL pública del sitio de la barbería = raíz de marca (slug del nombre comercial),
+// nunca el subdominio de sede.
+const urlSitio = (nombreComercial?: string | null) =>
+  nombreComercial ? `https://${slugify(nombreComercial)}.barber.pe` : null
 
 type CrearForm = {
   nombre: string
@@ -365,7 +367,7 @@ export function SuperAdminDashboard() {
               const inactivo = e.pausada === true
               const esPrueba = (e.planActual || '').toLowerCase().includes('prueba')
               const marca = colorMarca(e.colorPrimarioHex)
-              const sitio = urlSitio(e.subdominioPrincipal)
+              const sitio = e.subdominioPrincipal ? urlSitio(e.nombreComercial) : null
               return (
                 <motion.div key={e.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   className={`bg-white border rounded-2xl p-4 ${inactivo ? 'border-gray-200 opacity-70' : 'border-gray-200'}`}>
@@ -376,7 +378,7 @@ export function SuperAdminDashboard() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="font-semibold text-gray-900 truncate">{e.nombreComercial}</h3>
-                      <p className="text-xs text-gray-400 truncate">{e.subdominioPrincipal ? `${e.subdominioPrincipal}.barber.pe` : e.razonSocial}</p>
+                      <p className="text-xs text-gray-400 truncate">{e.subdominioPrincipal ? `${slugify(e.nombreComercial)}.barber.pe` : e.razonSocial}</p>
                     </div>
                     {inactivo
                       ? <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 shrink-0">Inactiva</span>

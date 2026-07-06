@@ -10,7 +10,7 @@ import { landingService, type SedeDestacada } from '@/services/landingService'
 import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
 import { planesService, type PlanPublico } from '@/services/planesService'
 import { resenasPublicasService, type ResenaDestacada } from '@/services/resenasPublicasService'
-import { setTenant, buildImageUrl, apiClient, urlMicrositio } from '@/services/apiClient'
+import { setTenant, buildImageUrl, apiClient, urlSedeCanonica } from '@/services/apiClient'
 import { useAuthStore } from '@/store/authStore'
 import { useFavoritosStore } from '@/store/favoritosStore'
 import { AccountMenu } from '@/components/AccountMenu'
@@ -120,13 +120,27 @@ export default function LandingPage() {
   /* ── acciones ─────────────────────────────────────────────────────── */
   const irA = (id: string) => { setMenuOpen(false); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
   const verSede = (s: SedeDestacada) => {
-    if (!s.subdominio) { navigate(`/sede/${s.idSede}`); return }   // sin subdominio: fallback path
-    const url = urlMicrositio(s.subdominio)
-    if (url.startsWith('http')) {
-      window.location.href = url                                    // prod: carga al subdominio canónico
+    if (!s.subdominio && !s.slugMarca) { navigate(`/sede/${s.idSede}`); return }   // sin datos: fallback path
+    // Enlace CANÓNICO sobre la raíz de marca (nunca el subdominio de sede):
+    //  - 1 sede  → {slugMarca}.barber.pe
+    //  - 2+ sedes → {slugMarca}.barber.pe/{slug}
+    if (s.slugMarca) {
+      const url = urlSedeCanonica({
+        slugMarca: s.slugMarca,
+        slugSede: s.slug,
+        subdominio: s.subdominio,
+        esMultisede: (s.totalSedesPublicasMarca ?? 1) >= 2,
+      })
+      if (url.startsWith('http')) {
+        window.location.href = url                                  // prod: raíz de marca canónica
+      } else {
+        setTenant(s.subdominio)                                     // dev: ?s= manda en esta pestaña
+        navigate(`/sede/${s.idSede}${url.slice(1)}`)
+      }
     } else {
-      setTenant(s.subdominio)                                       // dev: ?s= manda en esta pestaña
-      navigate(`/sede/${s.idSede}${url.slice(1)}`)
+      // Registro viejo sin slugMarca: página del marketplace, sin exponer subdominio.
+      setTenant(s.subdominio)
+      navigate(`/sede/${s.idSede}`)
     }
   }
   const abrirDemo = () => navigate('/acceso')   // ahora entran solos: al acceso unificado

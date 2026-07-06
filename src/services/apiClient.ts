@@ -236,12 +236,47 @@ export const buildImageUrl = (ruta?: string | null): string => {
 export { API_BASE_URL }
 
 /**
- * URL canónica del micrositio público de una sede.
- *  - Producción (host *.barber.pe): subdominio propio → https://<sub>.barber.pe
- *  - Dev/local (sin subdominios reales): se usa el query param ?s=<sub>
- * Mismo criterio que el "Ver sitio" del panel; centralizado aquí para reusar.
+ * Tenant por query param para DEV/local (sin subdominios reales): /?s=<sub>.
+ * En producción las URLs públicas son canónicas de marca (ver urlMarca /
+ * urlSedeCanonica); este helper ya NO construye <sub>.barber.pe.
  */
 export const urlMicrositio = (subdominio: string): string =>
-  window.location.hostname.endsWith('barber.pe')
-    ? `https://${subdominio}.barber.pe`
-    : `/?s=${encodeURIComponent(subdominio)}`
+  `/?s=${encodeURIComponent(subdominio)}`
+
+/**
+ * RAÍZ PÚBLICA DE LA MARCA (canónica): https://{slugMarca}.barber.pe
+ * Es "donde vive el negocio". Con 1 sede carga el micrositio directo; con 2+ carga
+ * la página "elige tu sede". "Mi Sitio" y "Ver sitio" SIEMPRE apuntan aquí.
+ * Dev (localhost, sin subdominios): /?s={slugMarca} (getPortada resuelve la marca).
+ */
+export const urlMarca = (slugMarca: string): string => {
+  const v = (slugMarca || '').trim().toLowerCase()
+  if (!v) return '/'
+  return window.location.hostname.endsWith('barber.pe')
+    ? `https://${v}.barber.pe`
+    : `/?s=${encodeURIComponent(v)}`
+}
+
+/**
+ * URL pública CANÓNICA de una sede concreta, siempre dentro del dominio de marca:
+ *  - multisede (2+): https://{slugMarca}.barber.pe/{slugSede}
+ *  - sede única:      https://{slugMarca}.barber.pe   (la sede vive en la raíz)
+ * Nunca devuelve el subdominio de sede (negocio-distrito.barber.pe).
+ * Dev: /?s={subdominio} (mecanismo de sede de localhost, sin rutas /distrito reales).
+ */
+export const urlSedeCanonica = (args: {
+  slugMarca: string
+  slugSede?: string
+  subdominio?: string
+  esMultisede: boolean
+}): string => {
+  const enProd = window.location.hostname.endsWith('barber.pe')
+  if (!enProd) {
+    const sub = (args.subdominio || '').trim().toLowerCase()
+    return sub ? `/?s=${encodeURIComponent(sub)}` : urlMarca(args.slugMarca)
+  }
+  const base = urlMarca(args.slugMarca)
+  if (!args.esMultisede) return base
+  const z = (args.slugSede || '').trim().toLowerCase()
+  return z ? `${base}/${encodeURIComponent(z)}` : base
+}

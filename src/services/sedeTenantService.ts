@@ -5,6 +5,10 @@ export interface MiSede {
   idEmpresa: number
   /** Nombre comercial de la marca (Empresa), para componer "Marca – Local". */
   nombreComercial?: string
+  /** Slug canónico de la marca (raíz pública: {slugMarca}.barber.pe). */
+  slugMarca?: string
+  /** Slug de la sede (= distrito). Para deep-link canónico /{slug} con 2+ sedes. */
+  slug?: string
   nombre: string
   subdominio: string
   estado?: boolean

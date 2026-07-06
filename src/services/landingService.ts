@@ -11,6 +11,10 @@ export interface SedeDestacada {
   nombreComercial?: string
   /** Nº de sedes públicas de la marca. ≥2 → mostrar "Marca – Sede". */
   totalSedesPublicasMarca?: number
+  /** Slug canónico de la marca (raíz pública {slugMarca}.barber.pe). */
+  slugMarca?: string
+  /** Slug de la sede (= distrito), para el deep-link canónico /{slug}. */
+  slug?: string
   subdominio: string
   direccion?: string
   telefono?: string
@@ -32,6 +36,8 @@ const normalizar = (raw: any, subdominio: string): SedeDestacada | null => {
     nombre: s.nombre ?? s.Nombre ?? 'Barbería',
     nombreComercial: s.nombreComercial ?? s.NombreComercial ?? undefined,
     totalSedesPublicasMarca: s.totalSedesPublicasMarca ?? s.TotalSedesPublicasMarca ?? undefined,
+    slugMarca: s.slugMarca ?? s.SlugMarca ?? undefined,
+    slug: s.slug ?? s.Slug ?? undefined,
     subdominio: s.subdominio ?? s.Subdominio ?? subdominio,
     direccion: s.direccion ?? s.Direccion,
     telefono: s.telefono ?? s.Telefono,

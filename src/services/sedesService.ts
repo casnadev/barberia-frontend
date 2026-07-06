@@ -23,6 +23,9 @@ export interface SedePublica {
   idSede: number
   nombre: string
   subdominio: string
+  slugMarca?: string
+  slug?: string
+  totalSedesPublicasMarca?: number
   direccion?: string
   telefono?: string
   correo?: string

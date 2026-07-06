@@ -3,6 +3,10 @@ import { apiClient } from './apiClient'
 export interface SedeDeMarca {
   idSede: number
   nombreComercial: string
+  /** Slug canónico de la marca (raíz pública). Espejo de MarcaPublica.slugMarca. */
+  slugMarca?: string
+  /** Slug de la sede (= distrito). Para navegar a /{slug} sin salir del dominio. */
+  slug?: string
   nombre: string
   subdominio: string
   direccion?: string

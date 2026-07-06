@@ -4,7 +4,8 @@ import {
   Store, Building2, Phone, Clock, MapPin, Image as ImageIcon, Camera, Share2, Save, Loader2,
   X, ChevronDown, Upload, Plus, Instagram, Facebook, Globe, Music2, Youtube, Link2, Copy, ExternalLink, Info, Gift,
 } from 'lucide-react'
-import { apiClient } from '@/services/apiClient'
+import { apiClient, urlSedeCanonica } from '@/services/apiClient'
+import { sedeTenantService } from '@/services/sedeTenantService'
 import { geoService } from '@/services/geoService'
 import { DEPARTAMENTOS, distritosDe, distritoValido } from '@/data/ubigeo'
 import { ComboBox } from '@/components/ComboBox'
@@ -19,6 +20,7 @@ interface Sede {
   descripcion?: string
   subdominio?: string
   slug?: string
+  slugMarca?: string
   direccion?: string
   telefono?: string
   correo?: string
@@ -146,6 +148,17 @@ export function ConfiguracionPage() {
     departamento: '', provincia: '', distrito: '', mostrarTelefonoEnLanding: true,
   })
 
+  // ¿La marca tiene 2+ sedes? Decide el enlace público canónico: con 1 sede la
+  // sede vive en la raíz {slugMarca}.barber.pe; con 2+ vive en {slugMarca}.barber.pe/{slug}.
+  const [esMultisede, setEsMultisede] = useState(false)
+  useEffect(() => {
+    let cancel = false
+    sedeTenantService.getMisSedes()
+      .then((ss) => { if (!cancel) setEsMultisede(ss.length >= 2) })
+      .catch(() => { /* silencioso: por defecto trata como 1 sede (raíz) */ })
+    return () => { cancel = true }
+  }, [])
+
   // Datos del negocio (empresa) — ahora editables también desde aquí (antes solo en el primer login).
   const [empresa, setEmpresa] = useState({
     idEmpresa: null as number | null,
@@ -243,6 +256,7 @@ export function ConfiguracionPage() {
           descripcion: data.descripcionCorta ?? '',
           subdominio: data.subdominio ?? '',
           slug: data.slug ?? '',
+          slugMarca: data.slugMarca ?? '',
           direccion: data.direccion ?? '',
           telefono: data.telefono ?? '',
           correo: data.correoContacto ?? '',
@@ -491,24 +505,27 @@ export function ConfiguracionPage() {
   const diasAbiertos = horariosDias.filter((d) => d.abierto).length
   const tieneImagen = !!(logoPreview || bannerPreview)
 
-  // Enlace público (mismo criterio que "Ver sitio"): en prod usa el subdominio
-  // real; en dev, el link con ?s= que sí funciona en localhost.
-  const enlacePublico = (sub?: string): string => {
-    const v = (sub || '').trim()
-    if (!v) return ''
-    return window.location.hostname.endsWith('barber.pe')
-      ? `https://${v}.barber.pe`
-      : `${window.location.origin}/?s=${encodeURIComponent(v)}`
+  // Enlace público CANÓNICO sobre la RAÍZ DE MARCA. Con 1 sede la sede vive en
+  // {slugMarca}.barber.pe; con 2+ en {slugMarca}.barber.pe/{slug}. Nunca el
+  // subdominio de sede (negocio-distrito.barber.pe), que ahora redirige a la raíz.
+  const enlacePublico = (): string => {
+    if (!sede.slugMarca) return ''
+    return urlSedeCanonica({
+      slugMarca: sede.slugMarca,
+      slugSede: sede.slug,
+      subdominio: sede.subdominio,
+      esMultisede,
+    })
   }
-  const enlaceMostrar = (sub?: string) => enlacePublico(sub).replace(/^https?:\/\//, '')
+  const enlaceMostrar = () => enlacePublico().replace(/^https?:\/\//, '')
   const copiarEnlace = async () => {
-    const url = enlacePublico(sede.subdominio)
+    const url = enlacePublico()
     if (!url) return
     try { await navigator.clipboard.writeText(url); toast.success('Enlace copiado') }
     catch { toast.error('No se pudo copiar') }
   }
   const abrirEnlace = () => {
-    const url = enlacePublico(sede.subdominio)
+    const url = enlacePublico()
     if (url) window.open(url, '_blank', 'noopener')
   }
 
@@ -551,14 +568,14 @@ export function ConfiguracionPage() {
             Layout compacto: en móvil el título + URL van a la izquierda y los
             botones se encogen a solo-ícono (evita que el título se parta en 2
             líneas y dispare el alto). En sm+ los botones muestran su etiqueta. */}
-        {sede.subdominio && (
+        {sede.slugMarca && (
           <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-3.5 mb-4 flex items-center gap-3">
             <span className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
               <Link2 className="w-[18px] h-[18px]" />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-medium text-gray-900 leading-tight">Tu enlace público</p>
-              <p className="text-sm text-blue-600 truncate leading-snug">{enlaceMostrar(sede.subdominio)}</p>
+              <p className="text-sm text-blue-600 truncate leading-snug">{enlaceMostrar()}</p>
               <p className="text-[11px] text-gray-400 mt-0.5 leading-snug line-clamp-2">
                 Es fijo: no cambia aunque cambies el nombre, para no romper enlaces ya compartidos.
               </p>
@@ -698,7 +715,7 @@ export function ConfiguracionPage() {
           {sede.subdominio && (
             <p className="text-xs text-gray-400 flex items-start gap-1.5">
               <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-              <span>Cambiar el nombre no cambia tu enlace público (<span className="font-medium text-gray-500">{enlaceMostrar(sede.subdominio)}</span>).</span>
+              <span>Cambiar el nombre no cambia tu enlace público (<span className="font-medium text-gray-500">{enlaceMostrar()}</span>).</span>
             </p>
           )}
           <Field label="Descripción">

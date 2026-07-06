@@ -84,7 +84,8 @@ export default function AgregarLocalModal({ open, onClose, sedes, onCreated }: P
 
   const zonaSlug = useMemo(() => slugify(nombre || distrito), [nombre, distrito])
   const marcaSlug = useMemo(() => slugify(marca) || 'tu-marca', [marca])
-  const subdominioPreview = zonaSlug ? `${marcaSlug}-${zonaSlug}` : `${marcaSlug}-…`
+  // Preview de la URL PÚBLICA canónica (al agregar un local hay 2+ sedes → /{zona}).
+  const urlPublicaPreview = zonaSlug ? `${marcaSlug}.barber.pe/${zonaSlug}` : `${marcaSlug}.barber.pe/…`
 
   const aplicarUbicacion = async (raw: string) => {
     let t = (raw || '').trim()
@@ -207,7 +208,7 @@ export default function AgregarLocalModal({ open, onClose, sedes, onCreated }: P
         {/* Preview del subdominio */}
         <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
           <p className="text-[11px] font-medium text-gray-500 mb-0.5">Dirección web de la Sede</p>
-          <p className="text-sm font-mono text-gray-800 break-all">{subdominioPreview}.barber.pe</p>
+          <p className="text-sm font-mono text-gray-800 break-all">{urlPublicaPreview}</p>
         </div>
 
         {/* Ubicación */}

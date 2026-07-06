@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom'
-import { setTenantOverride } from '@/services/apiClient'
+import { setTenantOverride, urlSedeCanonica } from '@/services/apiClient'
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/authService'
@@ -208,25 +208,52 @@ function TenantHome({ slug }: { slug: string }) {
   const [modo, setModo] = useState<'cargando' | 'marca' | 'sede'>('cargando')
   useEffect(() => {
     let cancelado = false
-    import('@/services/marcaService').then(({ marcaService }) =>
-      marcaService.getPortada(slug).then((m) => {
+    ;(async () => {
+      const { marcaService } = await import('@/services/marcaService')
+      const m = await marcaService.getPortada(slug)
+      if (cancelado) return
+
+      // Portada SOLO si hay 2+ Sedes públicas Y el slug NO es el subdominio de una
+      // Sede concreta. Si entras por el link de una Sede (su subdominio coincide con
+      // el slug), vas directo al micrositio — nunca a la portada. (Candado de routing.)
+      const esLinkDeSede = !!m && m.sedes.some((x) => x.subdominio === slug)
+
+      if (m && m.sedes.length >= 2 && !esLinkDeSede) {
+        setTenantOverride(null)   // portada: no hay una sede fija todavía
+        setModo('marca')
+        return
+      }
+      if (m && !esLinkDeSede && m.sedes.length >= 1) {
+        // 1 sola sede en el dominio de marca (kisha.barber.pe): micrositio directo.
+        setTenantOverride(m.sedes[0].subdominio)
+        setModo('sede')
+        return
+      }
+
+      // CANONIZACIÓN: 'slug' NO es una marca → es el subdominio de una SEDE
+      // (negocio-distrito.barber.pe). En producción redirigimos a la RAÍZ de marca
+      // {slugMarca}.barber.pe (+ /{slug} si la marca tiene 2+ sedes), para que el
+      // subdominio de sede deje de ser una URL pública viva. Redirect suave del cliente;
+      // lo IDEAL en prod es además un 301 en el proxy (ver notas de entrega).
+      if (!m && window.location.hostname.endsWith('barber.pe')) {
+        const { landingService } = await import('@/services/landingService')
+        const sede = await landingService.getSedePublica(slug)
         if (cancelado) return
-        // Portada SOLO si hay 2+ Sedes públicas Y el slug NO es el subdominio de una
-        // Sede concreta. Si entras por el link de una Sede (su subdominio coincide con
-        // el slug), vas directo al micrositio — nunca a la portada. (Candado de routing.)
-        const esLinkDeSede = !!m && m.sedes.some((x) => x.subdominio === slug)
-        if (m && m.sedes.length >= 2 && !esLinkDeSede) {
-          setTenantOverride(null)   // portada: no hay una sede fija todavía
-          setModo('marca')
-        } else {
-          // 1 sola sede en el dominio de marca (kisha.barber.pe): micrositio directo.
-          // Como el host es la marca (no el subdominio de la sede), fijamos la sede única
-          // para que las peticiones resuelvan al tenant correcto.
-          if (m && !esLinkDeSede && m.sedes.length >= 1) setTenantOverride(m.sedes[0].subdominio)
-          setModo('sede')
+        if (sede?.slugMarca) {
+          const destino = urlSedeCanonica({
+            slugMarca: sede.slugMarca,
+            slugSede: sede.slug,
+            subdominio: sede.subdominio,
+            esMultisede: (sede.totalSedesPublicasMarca ?? 1) >= 2,
+          })
+          window.location.replace(destino)   // no deja el subdominio de sede en el historial
+          return
         }
-      }),
-    )
+      }
+
+      // Fallback (dev, link directo de sede, o sede no resuelta): micrositio por host.
+      setModo('sede')
+    })()
     return () => { cancelado = true }
   }, [slug])
 

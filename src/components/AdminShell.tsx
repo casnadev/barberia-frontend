@@ -3,7 +3,8 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { House, Scissors, Users, Calendar, User, Clock, Gear, Wallet, Calculator, SealCheck, CreditCard, Globe, type Icon } from '@phosphor-icons/react'
 import { useQueryClient } from '@tanstack/react-query'
-import { getActiveTenant } from '@/services/apiClient'
+import { urlMarca } from '@/services/apiClient'
+import { sedeTenantService } from '@/services/sedeTenantService'
 import { AdminHeader } from '@/components/AdminHeader'
 import AvisoLocalesActivos from '@/components/AvisoLocalesActivos'
 import { prefetchAdminPages } from '@/router/adminPages'
@@ -153,6 +154,10 @@ function TopProgressBar() {
 
 export function AdminShell() {
   const [menuOpen, setMenuOpen] = useState(false)
+  // Slug canónico de la MARCA del admin (raíz pública {slugMarca}.barber.pe).
+  // Se resuelve al montar para que "Mi Sitio" abra la RAÍZ de marca de forma
+  // síncrona (sin await → sin bloqueo del popup blocker).
+  const [marcaSlug, setMarcaSlug] = useState('')
   const navigate = useNavigate()
   const location = useLocation()
   const qc = useQueryClient()
@@ -171,17 +176,26 @@ export function AdminShell() {
   // Prefetch de datos de la sección destino (lo disparan los enlaces al hover/touch).
   const prefetch = useCallback((to: string) => prefetchRouteData(qc, to), [qc])
 
-  // "Mi Sitio": abre el sitio público de la sede activa en otra pestaña.
+  // "Mi Sitio": abre SIEMPRE la RAÍZ DE MARCA (negocio.barber.pe), tenga 1 o más
+  // sedes. Con 1 sede es el micrositio directo; con 2+ es la página "elige tu sede".
+  // Nunca abre el subdominio de una sede.
   const goMiSitio = () => {
     setMenuOpen(false)
-    const sub = getActiveTenant()
-    const url = sub && window.location.hostname.endsWith('barber.pe') ? `https://${sub}.barber.pe` : '/'
-    window.open(url, '_blank', 'noopener')
+    window.open(urlMarca(marcaSlug), '_blank', 'noopener')
   }
 
   // Calienta los chunks de todas las páginas admin en cuanto el shell monta.
   useEffect(() => {
     prefetchAdminPages()
+  }, [])
+
+  // Resuelve el slug de marca del admin (para "Mi Sitio"). Una sola vez.
+  useEffect(() => {
+    let cancelado = false
+    sedeTenantService.getMisSedes()
+      .then((sedes) => { if (!cancelado) setMarcaSlug(sedes[0]?.slugMarca || '') })
+      .catch(() => { /* silencioso: "Mi Sitio" cae a '/' si no hay slug */ })
+    return () => { cancelado = true }
   }, [])
 
   return (

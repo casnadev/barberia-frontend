@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { sedesService } from '@/services/sedesService'
 import { reservasService, Reserva } from '@/services/reservasService'
 import { trabajadoresService, Trabajador } from '@/services/trabajadoresService'
-import { apiClient, buildImageUrl, getActiveTenant } from '@/services/apiClient'
+import { apiClient, buildImageUrl, getActiveTenant, urlSedeCanonica } from '@/services/apiClient'
+import { sedeTenantService } from '@/services/sedeTenantService'
 import { toast } from 'sonner'
 import { ChevronLeft, ChevronRight, X, Check, CheckCheck, Clock, User, Calendar, Scissors, CalendarOff, Maximize2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -329,14 +330,25 @@ export function AgendaBoard({ mode = 'admin', trabajadorPropio, onAtenderTrabaja
     if (y && m && dd) setCurrentDate(new Date(y, m - 1, dd))
   }
   const labelFecha = currentDate.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
-  const goReservar = () => {
-    // "Añadir cita" abre la reserva pública de la SEDE ACTIVA (no el sitio genérico).
+  const goReservar = async () => {
+    // "Añadir cita" abre la reserva pública de la SEDE ACTIVA en su URL canónica
+    // (negocio.barber.pe o /{distrito}), nunca el subdominio de sede.
     const sub = getActiveTenant()
     if (sub && window.location.hostname.endsWith('barber.pe')) {
-      window.open(`https://${sub}.barber.pe/reservar-publica`, '_blank', 'noopener')
-    } else {
-      navigate('/reservar-publica')
+      try {
+        const mis = await sedeTenantService.getMisSedes()
+        const activa = mis.find((x) => x.subdominio === sub) ?? mis[0]
+        const multi = mis.filter((x) => x.esPublica).length >= 2
+        if (activa?.slugMarca) {
+          window.open(
+            urlSedeCanonica({ slugMarca: activa.slugMarca, slugSede: activa.slug, subdominio: activa.subdominio, esMultisede: multi }),
+            '_blank', 'noopener',
+          )
+          return
+        }
+      } catch { /* cae al navigate en la misma pestaña */ }
     }
+    navigate('/reservar-publica')
   }
 
   // ===== Bloques de una columna (grilla) =====
