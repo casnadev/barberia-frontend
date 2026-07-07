@@ -46,7 +46,10 @@ export function MarcaPortadaPage({ slug: slugProp }: { slug?: string } = {}) {
     // PROD: link único — nos quedamos en el MISMO dominio del negocio
     // (kisha.barber.pe/miraflores), sin redirigir al subdominio de la sede.
     if (window.location.hostname.endsWith('barber.pe') && marca?.slugMarca) {
-      const zona = zonaDeSubdominio(s.subdominio, marca.slugMarca)
+      // La ruta pública es el Slug de la sede (negocio.barber.pe/{slug}); es lo que
+      // edita SuperAdmin y es independiente del subdominio interno. Solo si la sede
+      // (legacy) no trae slug se recae en la zona derivada del subdominio.
+      const zona = (s.slug || '').trim().toLowerCase() || zonaDeSubdominio(s.subdominio, marca.slugMarca)
       setTenantOverride(s.subdominio)
       navigate(`/${zona}`)
       return

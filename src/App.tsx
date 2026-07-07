@@ -276,10 +276,15 @@ function TenantSedeRoute() {
     import('@/services/marcaService').then(({ marcaService }) =>
       marcaService.getPortada(brand).then((m) => {
         if (cancelado) return
-        const objetivo = `${(m?.slugMarca || brand)}-${sedeSlug}`.toLowerCase()
+        const objetivo = sedeSlug.toLowerCase()
         const sede =
-          m?.sedes.find((x) => x.subdominio.toLowerCase() === objetivo) ||
-          m?.sedes.find((x) => x.subdominio.toLowerCase().endsWith(`-${sedeSlug.toLowerCase()}`))
+          // Canónico: la ruta /{slug} ES el Slug público de la sede (lo que edita
+          // SuperAdmin). Es independiente del Subdominio interno, así que la sede se
+          // resuelve SIEMPRE por su slug.
+          m?.sedes.find((x) => (x.slug || '').toLowerCase() === objetivo) ||
+          // Legacy: enlaces/QR viejos que usaban el subdominio (marca-zona) como ruta.
+          m?.sedes.find((x) => x.subdominio.toLowerCase() === `${(m?.slugMarca || brand)}-${objetivo}`) ||
+          m?.sedes.find((x) => x.subdominio.toLowerCase().endsWith(`-${objetivo}`))
         if (sede) { setTenantOverride(sede.subdominio); setEstado('ok') }
         else setEstado('no')
       }),
