@@ -245,14 +245,11 @@ export const empresasService = {
   },
 
   /**
-   * Cambia el subdominio/slug de una sede. Solo SuperAdmin.
-   * Cambia la URL publica de la sede; rompe los enlaces/QR anteriores.
+   * Cambia el SLUG público de una sede (negocio.barber.pe/{slug}). Solo SuperAdmin.
+   * NO toca el subdominio interno. Rompe los enlaces/QR con el slug anterior.
    */
-  cambiarSlugSede: async (idSede: number, subdominio: string) => {
-    const res = await apiClient.patch(`/api/superadmin/sedes/${idSede}/slug`, {
-      subdominio,
-      slug: subdominio,
-    })
+  cambiarSlugSede: async (idSede: number, slug: string) => {
+    const res = await apiClient.patch(`/api/superadmin/sedes/${idSede}/slug`, { slug })
     return res.data.data ?? res.data
   },
 

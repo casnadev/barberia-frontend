@@ -479,7 +479,7 @@ export function SuperAdminDashboard() {
 
               <div className="flex items-start gap-2 text-xs text-gray-500 bg-blue-50/60 border border-blue-100 rounded-xl p-3">
                 <Check className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                <span>Se crea con el plan <strong>Prueba</strong> (14 días) y una <strong>sede inicial</strong>. El subdominio se genera del nombre y solo tú puedes cambiarlo.</span>
+                <span>Se crea con el plan <strong>Prueba</strong> (14 días) y una <strong>sede inicial</strong>. La dirección pública (negocio.barber.pe) se genera del nombre.</span>
               </div>
             </div>
 
@@ -787,10 +787,10 @@ function SedesModal({ empresa, onClose, onLimite }: { empresa: Empresa; onClose:
     catch { toast.error('No se pudo eliminar.') }
   }
 
-  // Abrir editor y guardar el nuevo slug/subdominio (con advertencia)
+  // Abrir editor del SLUG público (no toca el subdominio interno)
   const abrirEditor = (s: SedeAdmin) => {
     setEditId(s.idSede)
-    setEditSlug(s.subdominio || '')
+    setEditSlug(s.slug || '')
   }
 
   const guardarSlug = async (s: SedeAdmin) => {
@@ -799,10 +799,10 @@ function SedesModal({ empresa, onClose, onLimite }: { empresa: Empresa; onClose:
       toast.error('Slug inválido: solo minúsculas, números y guiones (mínimo 3).')
       return
     }
-    if (nuevo === s.subdominio) { setEditId(null); return }
+    if (nuevo === s.slug) { setEditId(null); return }
     if (!(await confirmDialog({
-      title: 'Cambiar slug',
-      message: `Vas a cambiar la URL de "${s.nombre}" a ${nuevo}.barber.pe. Esto ROMPE los enlaces, QR y favoritos que apuntaban al slug anterior. ¿Continuar?`,
+      title: 'Cambiar dirección pública',
+      message: `Vas a cambiar la URL de "${s.nombre}" a ${slugify(empresa.nombreComercial)}.barber.pe/${nuevo}. Esto ROMPE los enlaces, QR y favoritos con el slug anterior. ¿Continuar?`,
       confirmText: 'Sí, cambiar',
       cancelText: 'Cancelar',
       tone: 'danger',
@@ -824,7 +824,7 @@ function SedesModal({ empresa, onClose, onLimite }: { empresa: Empresa; onClose:
       <h2 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
         <Store className="w-5 h-5 text-blue-600" /> Sedes de {empresa.nombreComercial}
       </h2>
-      <p className="text-sm text-gray-500 mb-4">El subdominio se genera del nombre; puedes editarlo con el lápiz.</p>
+      <p className="text-sm text-gray-500 mb-4">La dirección pública sale del distrito (negocio.barber.pe/distrito); puedes editarla con el lápiz.</p>
 
       {/* Límite de sedes permitidas (override del plan) */}
       <div className="mb-5 rounded-xl bg-gray-50 border border-gray-200 p-3">
@@ -864,7 +864,13 @@ function SedesModal({ empresa, onClose, onLimite }: { empresa: Empresa; onClose:
                 <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-800 truncate">{s.nombre}</p>
-                  <p className="text-xs text-gray-400 truncate">{s.direccion || 'Sin dirección'} · /{s.subdominio}</p>
+                  <p className="text-xs text-gray-400 truncate">{s.direccion || 'Sin dirección'}</p>
+                  <p className="text-xs text-blue-500 truncate">
+                    {slugify(empresa.nombreComercial)}.barber.pe{sedes.length >= 2 ? `/${s.slug || ''}` : ''}
+                  </p>
+                  {s.subdominio && (
+                    <p className="text-[10px] text-gray-300 truncate">id interno: {s.subdominio}</p>
+                  )}
                 </div>
                 <button
                   onClick={() => toggleSede(s)}
@@ -893,12 +899,12 @@ function SedesModal({ empresa, onClose, onLimite }: { empresa: Empresa; onClose:
                 <div className="mt-3 pl-6 space-y-2">
                   <input className={inputCls} value={editSlug}
                     onChange={(e) => setEditSlug(e.target.value)} />
-                  <button type="button" onClick={() => setEditSlug(slugify(s.nombre))}
+                  <button type="button" onClick={() => setEditSlug(slugify(s.distrito || s.nombre))}
                     className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-700">
-                    <RefreshCw className="w-3 h-3" /> Regenerar desde el nombre ({slugify(s.nombre) || '—'})
+                    <RefreshCw className="w-3 h-3" /> Regenerar desde el distrito ({slugify(s.distrito || s.nombre) || '—'})
                   </button>
                   <p className="text-[11px] text-amber-600 leading-snug">
-                    ⚠ Cambiará la URL pública a <strong>{(editSlug.trim() || '...')}.barber.pe</strong> y romperá los enlaces anteriores de esta sede.
+                    ⚠ Cambiará la URL pública a <strong>{slugify(empresa.nombreComercial)}.barber.pe/{(editSlug.trim() || '...')}</strong> y romperá los enlaces anteriores de esta sede.
                   </p>
                   <div className="flex gap-2">
                     <button onClick={() => guardarSlug(s)} disabled={savingSlug}
