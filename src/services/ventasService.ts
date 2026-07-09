@@ -61,17 +61,32 @@ export const ventasService = {
     return res.data?.data ?? res.data
   },
 
-  /** Listado de ventas con filtros (estado, rango de fechas). Paginado. */
-  listarVentas: async (filtros: { estado?: string; desde?: string; hasta?: string; pagina?: number; tamanoPagina?: number } = {}): Promise<VentaResumen[]> => {
+  /** Listado de ventas con filtros (estado, rango de fechas, trabajador). Paginado. */
+  listarVentas: async (filtros: { estado?: string; desde?: string; hasta?: string; idTrabajador?: number | null; pagina?: number; tamanoPagina?: number } = {}): Promise<VentaResumen[]> => {
     const params = new URLSearchParams()
     if (filtros.estado) params.set('estado', filtros.estado)
     if (filtros.desde) params.set('desde', filtros.desde)
     if (filtros.hasta) params.set('hasta', filtros.hasta)
+    if (filtros.idTrabajador) params.set('idTrabajador', String(filtros.idTrabajador))
     params.set('pagina', String(filtros.pagina ?? 1))
     params.set('tamanoPagina', String(filtros.tamanoPagina ?? 100))
     const res = await apiClient.get(`/api/Ventas?${params.toString()}`)
     const data = res.data?.data ?? res.data
     return Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : []
+  },
+
+  /** Cuenta rápida de ventas pendientes de aprobación (para el badge del menú). */
+  contarPendientes: async (): Promise<number> => {
+    try {
+      const res = await apiClient.get('/api/Ventas', {
+        params: { estado: 'PendienteAprobacion', pagina: 1, tamanoPagina: 1 },
+      })
+      const data = res.data?.data ?? res.data
+      const total = data?.total ?? (Array.isArray(data?.items) ? data.items.length : Array.isArray(data) ? data.length : 0)
+      return Number(total) || 0
+    } catch {
+      return 0
+    }
   },
 
   /** Detalle completo de una venta (incluye servicios y motivo de rechazo). */

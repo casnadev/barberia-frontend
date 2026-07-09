@@ -22,6 +22,7 @@ interface Trabajador {
   estado?: boolean
   accesoHabilitado?: boolean 
   fechaIngreso?: string
+  fechaBaja?: string
 }
 
 /**
@@ -97,6 +98,20 @@ export function TrabajadoresPage() {
     },
   })
   const loadTrabajadores = () => refetch()
+
+  // Histórico de trabajadores dados de baja (solo lectura)
+  const [showBaja, setShowBaja] = useState(false)
+  const { data: dadosDeBaja = [] } = useQuery<Trabajador[]>({
+    queryKey: ['trabajadores', 'dados-de-baja'],
+    queryFn: async () => {
+      const res = await apiClient.get('/api/Trabajadores/admin/dados-de-baja')
+      const data = res.data.data ?? res.data
+      return Array.isArray(data) ? data : []
+    },
+  })
+  const fmtFecha = (iso?: string) => iso
+    ? new Date(iso).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+    : '—'
   const qc = useQueryClient()
 
   // Helper: actualiza un trabajador dentro de la caché de React Query (optimista).
@@ -372,6 +387,38 @@ export function TrabajadoresPage() {
           <div className={s.grid}>{inactivos.map(t => renderCard(t, true))}</div>
         </section>
       )}
+      {dadosDeBaja.length > 0 && (
+        <section className={s.section}>
+          <button type="button" onClick={() => setShowBaja(v => !v)}
+            className="flex items-center gap-2 mb-3 cursor-pointer">
+            <span className="text-sm font-semibold text-gray-500">Dados de baja ({dadosDeBaja.length})</span>
+            <span className="text-xs text-gray-400 underline">{showBaja ? 'ocultar' : 'ver histórico'}</span>
+          </button>
+          {showBaja && (
+            <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
+              {dadosDeBaja.map(t => (
+                <div key={t.idTrabajador}
+                  className="flex items-center gap-3 p-3 rounded-2xl border border-gray-200 bg-gray-50">
+                  <div className="w-11 h-11 rounded-full bg-gray-200 overflow-hidden shrink-0 grayscale">
+                    {t.urlFotoPerfil && (
+                      <img src={buildImageUrl(t.urlFotoPerfil)} alt={t.nombreCompleto}
+                        className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-700 truncate">{t.nombreCompleto}</p>
+                    {t.especialidad && <p className="text-xs text-gray-400 truncate">{t.especialidad}</p>}
+                    <p className="text-[11px] text-gray-400 mt-0.5">
+                      Alta: {fmtFecha(t.fechaIngreso)} · Baja: {fmtFecha(t.fechaBaja)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       {/* Modal crear/editar */}
       <AnimatePresence>
         {showModal && (

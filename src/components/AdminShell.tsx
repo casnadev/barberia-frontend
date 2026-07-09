@@ -2,8 +2,9 @@ import { useState, useEffect, useTransition, useCallback, useContext, createCont
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { House, Scissors, Users, Calendar, User, Clock, Gear, Wallet, Calculator, SealCheck, CreditCard, Globe, type Icon } from '@phosphor-icons/react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { urlMarca } from '@/services/apiClient'
+import { ventasService } from '@/services/ventasService'
 import { sedeTenantService } from '@/services/sedeTenantService'
 import { AdminHeader } from '@/components/AdminHeader'
 import AvisoLocalesActivos from '@/components/AvisoLocalesActivos'
@@ -163,6 +164,15 @@ export function AdminShell() {
   const qc = useQueryClient()
   const [isPending, startTransition] = useTransition()
 
+  // Badge "N ventas por aprobar": conteo ligero, refrescado cada 60s.
+  const { data: ventasPendientes = 0 } = useQuery({
+    queryKey: ['ventas', 'pendientes-count'],
+    queryFn: () => ventasService.contarPendientes(),
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+    staleTime: 30_000,
+  })
+
   // Navegación no bloqueante: mantiene el contenido anterior hasta que el nuevo
   // está listo. Ignora navegar a la ruta en la que ya estamos.
   const navTo = useCallback(
@@ -219,7 +229,17 @@ export function AdminShell() {
                   end={n.end}
                   className={(a) => `${s.railItem} ${a ? s.railItemActive : ''}`}
                 >
-                  <n.icon size={22} weight={active ? 'fill' : 'regular'} />
+                  <span style={{ position: 'relative', display: 'inline-flex' }}>
+                    <n.icon size={22} weight={active ? 'fill' : 'regular'} />
+                    {n.to === '/admin/ventas' && ventasPendientes > 0 && (
+                      <span
+                        aria-label={`${ventasPendientes} ventas por aprobar`}
+                        style={{ position: 'absolute', top: -6, right: -9, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 9999, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 800, lineHeight: '16px', textAlign: 'center', boxShadow: '0 0 0 2px #fff' }}
+                      >
+                        {ventasPendientes > 99 ? '99+' : ventasPendientes}
+                      </span>
+                    )}
+                  </span>
                   <span className={s.railLabel}>{n.label}</span>
                 </TNavLink>
               )
@@ -267,7 +287,17 @@ export function AdminShell() {
                       className={`${s.menuTile} ${active ? s.menuTileActive : ''}`}
                       onClick={() => { setMenuOpen(false); navTo(n.to) }}
                     >
-                      <n.icon size={24} weight={active ? 'fill' : 'regular'} />
+                      <span style={{ position: 'relative', display: 'inline-flex' }}>
+                        <n.icon size={24} weight={active ? 'fill' : 'regular'} />
+                        {n.to === '/admin/ventas' && ventasPendientes > 0 && (
+                          <span
+                            aria-label={`${ventasPendientes} ventas por aprobar`}
+                            style={{ position: 'absolute', top: -6, right: -10, minWidth: 17, height: 17, padding: '0 4px', borderRadius: 9999, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 800, lineHeight: '17px', textAlign: 'center', boxShadow: '0 0 0 2px #fff' }}
+                          >
+                            {ventasPendientes > 99 ? '99+' : ventasPendientes}
+                          </span>
+                        )}
+                      </span>
                       <span className={s.menuTileLabel}>{n.label}</span>
                     </button>
                   )

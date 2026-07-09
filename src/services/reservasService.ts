@@ -70,14 +70,15 @@ export const reservasService = {
   /**
    * Obtiene reservas con filtros opcionales
    */
-  getReservas: async (desde?: string, hasta?: string, estado?: string): Promise<Reserva[]> => {
+  getReservas: async (desde?: string, hasta?: string, estado?: string, idTrabajador?: number | null): Promise<Reserva[]> => {
     try {
-      console.log('📥 Obteniendo reservas...', { desde, hasta, estado })
+      console.log('📥 Obteniendo reservas...', { desde, hasta, estado, idTrabajador })
 
       const params = new URLSearchParams()
       if (desde) params.append('desde', desde)
       if (hasta) params.append('hasta', hasta)
       if (estado) params.append('estado', estado)
+      if (idTrabajador) params.append('idTrabajador', String(idTrabajador))
 
       const url = `/api/Reservas${params.toString() ? '?' + params.toString() : ''}`
       console.log('🔗 URL final:', url)

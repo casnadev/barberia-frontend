@@ -12,8 +12,11 @@ import { ventasService, type VentaResumen } from '@/services/ventasService'
 import { CobrarVentaModal } from '@/components/CobrarVentaModal'
 import { Fab } from '@/components/Fab'
 import { SkeletonRows } from '@/components/Skeleton'
+import { FiltroTrabajador } from '@/components/FiltroTrabajador'
+import { trabajadoresService } from '@/services/trabajadoresService'
 import { mensajeError } from '@/utils/apiError'
 import { montoFmt } from '@/utils/kpiMonto'
+import { fechaHoraPeru } from '@/utils/fecha'
 
 const soles = (n?: number) => `S/ ${(Number(n) || 0).toFixed(2)}`
 const isoLocal = (d: Date) => {
@@ -24,11 +27,8 @@ const fmtCorta = (iso: string) => {
   try { return new Date(`${iso}T00:00:00`).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }) }
   catch { return iso }
 }
-const fmtFechaHora = (iso?: string) => {
-  if (!iso) return ''
-  try { return new Date(iso).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) }
-  catch { return iso }
-}
+// Fecha+hora de una VENTA (instante UTC del backend) -> hora de Perú.
+const fmtFechaHora = (iso?: string) => (iso ? fechaHoraPeru(iso) : '')
 
 /** Estado de la venta → etiqueta + colores del badge. */
 const estadoMeta = (estado: string): { label: string; cls: string } => {
@@ -64,8 +64,16 @@ export function VentasPage() {
   const [hasta, setHasta] = useState(hoyISO)
   const [calRango, setCalRango] = useState<'desde' | 'hasta' | null>(null)
   const [filtro, setFiltro] = useState<FiltroKey>('PendienteAprobacion')
+  const [idTrabFiltro, setIdTrabFiltro] = useState<number | null>(null)
   const [detail, setDetail] = useState<VentaResumen | null>(null)
   const [cobrar, setCobrar] = useState(false)
+
+  // Equipo de la sede (para la barra de filtro por trabajador).
+  const { data: trabajadores = [] } = useQuery({
+    queryKey: ['trabajadores', 'para-filtro'],
+    queryFn: () => trabajadoresService.getTrabajadores(),
+    staleTime: 5 * 60 * 1000,
+  })
 
   const { d, h } = useMemo(() => {
     const today = new Date()
@@ -75,16 +83,16 @@ export function VentasPage() {
     return { d: desde, h: hasta }
   }, [rango, desde, hasta])
 
-  // Ventas del rango, cacheadas por [desde, hasta]. Cambiar de rango refetchea;
-  // revisitar un rango ya visto sale al instante.
+  // Ventas del rango, cacheadas por [desde, hasta, trabajador]. El filtro por
+  // trabajador es server-side (el listado no trae detalles/barbero por eficiencia).
   const {
     data: ventas = [],
     isLoading: loading,
     refetch,
   } = useQuery<VentaResumen[]>({
-    queryKey: ['ventas', d, h],
+    queryKey: ['ventas', d, h, idTrabFiltro],
     queryFn: async () => {
-      const data = await ventasService.listarVentas({ desde: d, hasta: h, tamanoPagina: 200 })
+      const data = await ventasService.listarVentas({ desde: d, hasta: h, idTrabajador: idTrabFiltro, tamanoPagina: 200 })
       return Array.isArray(data) ? data : []
     },
   })
@@ -167,6 +175,15 @@ export function VentasPage() {
             </button>
           )
         })}
+      </div>
+
+      {/* Filtro por trabajador */}
+      <div className="mb-4">
+        <FiltroTrabajador
+          trabajadores={(trabajadores as any[]).filter(t => t.estado !== false)}
+          value={idTrabFiltro}
+          onChange={setIdTrabFiltro}
+        />
       </div>
 
       {/* Lista */}

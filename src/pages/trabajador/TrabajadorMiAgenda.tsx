@@ -6,7 +6,7 @@ import { AgendaBoard, type TrabajadorPropio } from '@/components/AgendaBoard'
 import { CalendarModal } from '@/pages/cliente/CalendarModal'
 import {
   CalendarCheck, Check, X, DollarSign, Star, Wallet, Camera, AlertTriangle,
-  CalendarDays, CalendarOff, Plus, Trash2, Mail, Phone, Home, Clock, Calendar, MapPin,
+  CalendarDays, CalendarOff, Plus, Trash2, Mail, Phone, Home, Clock, Calendar, MapPin, Menu,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
@@ -24,6 +24,9 @@ import { AccountMenu } from '@/components/AccountMenu'
 import { CompletaTuPerfil } from '@/components/CompletaTuPerfil'
 import { buildImageUrl, setTenant } from '@/services/apiClient'
 import { CobrarVentaModal } from '@/components/CobrarVentaModal'
+import { TrabajadorMenu } from '@/components/TrabajadorMenu'
+import { HistorialTrabajadorModal } from '@/components/HistorialTrabajadorModal'
+import { fechaPeru } from '@/utils/fecha'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const METODOS = ['Efectivo', 'Yape', 'Plin', 'Tarjeta', 'Transferencia', 'Otro']
@@ -62,6 +65,8 @@ export function TrabajadorMiAgenda() {
   const [loading, setLoading] = useState(true)
   const [atender, setAtender] = useState<any | null>(null)
   const [cobrar, setCobrar] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [historialOpen, setHistorialOpen] = useState(false)
 
   const showConfig = params.get('config') === '1'
   const cerrarConfig = () => { params.delete('config'); setParams(params, { replace: true }) }
@@ -110,6 +115,13 @@ export function TrabajadorMiAgenda() {
     { key: 'resenas', label: 'Reseñas', icon: Star },
   ]
 
+  // "Mi Sitio": abre el sitio público de su sede (subdominio de marca). En
+  // localhost apunta a producción, que para "ver mi sitio" es correcto.
+  const irMiSitio = () => {
+    if (perfil?.subdominio) window.open(`https://${perfil.subdominio}.barber.pe`, '_blank')
+    else navigate('/')
+  }
+
   // El + genera una venta/reserva en SU sede (el wizard resuelve la sede por el
   // tenant activo = su subdominio). Sin sede (caso teórico), al sitio principal.
   const irReservar = () => {
@@ -126,9 +138,16 @@ export function TrabajadorMiAgenda() {
       {/* Header limpio: marca + cuenta */}
       <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-gray-100">
         <div className="mx-auto max-w-[1380px] px-4 sm:px-6 h-16 flex items-center justify-between">
-          <button onClick={() => navigate('/')} className="flex items-center" aria-label="Ir al inicio">
-            <img src="/barber-logo-black.png" alt="Barber.PE" className="h-7 w-auto" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate('/')} className="flex items-center" aria-label="Ir al inicio">
+              <img src="/barber-logo-black.png" alt="Barber.PE" className="h-7 w-auto" />
+            </button>
+            <button onClick={() => setMenuOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 active:scale-95 transition"
+              aria-label="Abrir menú">
+              <Menu className="w-4 h-4" /> Menú
+            </button>
+          </div>
           {perfil?.nombreSede && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-white max-w-[55%]">
               <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
@@ -143,27 +162,7 @@ export function TrabajadorMiAgenda() {
       </header>
 
       <div className="mx-auto max-w-[1380px] px-4 sm:px-6 py-6 pb-28 md:pb-10">
-        {/* Tabs desktop + botón Reservar */}
-        <div className="hidden md:flex items-center justify-between gap-3 mb-5">
-          <div className="flex gap-1 bg-white border border-gray-200 rounded-2xl p-1 w-fit">
-            {TABS.map(t => (
-              <button key={t.key} onClick={() => setTab(t.key)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition ${tab === t.key ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
-                <t.icon className="w-4 h-4" /> {t.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setCobrar(true)}
-              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm shadow-emerald-600/20 active:scale-95 transition">
-              <DollarSign className="w-4 h-4" /> Venta rápida
-            </button>
-            <button onClick={irReservar}
-              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm shadow-blue-600/20 active:scale-95 transition">
-              <Plus className="w-4 h-4" /> Reservar
-            </button>
-          </div>
-        </div>
+        {/* Navegación y acciones ahora viven en el botón "Menú" del header */}
 
         {loading ? (
           <div className="text-center py-12 text-gray-400"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3" /> Cargando…</div>
@@ -191,29 +190,27 @@ export function TrabajadorMiAgenda() {
         )}
       </div>
 
-      {/* Bottom bar mobile */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-200 flex">
-        {TABS.map(t => (
-          <button key={t.key} onClick={() => { setTab(t.key); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
-            className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 text-[10px] ${tab === t.key ? 'text-blue-600' : 'text-gray-500'}`}>
-            <t.icon className="w-5 h-5" /> {t.label}
-          </button>
-        ))}
-      </nav>
-
       {atender && <AtenderModal reserva={atender} onClose={() => setAtender(null)} onDone={async () => { setAtender(null); await cargar() }} />}
 
       {cobrar && idT != null && <CobrarVentaModal mode="trabajador" lockTrabajadorId={idT} onClose={() => setCobrar(false)} onDone={async () => { setCobrar(false); await cargar() }} />}
 
-      {showConfig && <ConfigModal perfil={perfil} onClose={cerrarConfig} onSaved={async () => { await cargar() }} />}
+      <TrabajadorMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        tab={tab}
+        onTab={setTab}
+        onVentaRapida={() => setCobrar(true)}
+        onReservar={irReservar}
+        onMiSitio={irMiSitio}
+        onHistorial={() => setHistorialOpen(true)}
+        nombreSede={perfil?.nombreSede}
+      />
 
-      {/* FAB (móvil): reservar desde cualquier pestaña */}
-      <button onClick={() => setCobrar(true)} aria-label="Cobrar venta"
-        className="md:hidden fixed right-4 z-40 w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xl shadow-emerald-600/40 active:scale-95 hover:bg-emerald-700 transition"
-        style={{ bottom: 'calc(150px + env(safe-area-inset-bottom))' }}>
-        <DollarSign className="w-6 h-6" />
-      </button>
-      <Fab onClick={irReservar} label="Reservar" />
+      {historialOpen && idT != null && (
+        <HistorialTrabajadorModal idTrabajador={idT} onClose={() => setHistorialOpen(false)} />
+      )}
+
+      {showConfig && <ConfigModal perfil={perfil} onClose={cerrarConfig} onSaved={async () => { await cargar() }} />}
     </div>
   )
 }
@@ -688,7 +685,7 @@ function ComisionesTab({ idT, comisiones }: { idT: number | null; comisiones: Mi
             <div key={p.idPago} className="bg-white border border-gray-200 rounded-2xl p-4 flex items-center justify-between gap-3">
               <div>
                 <p className="font-semibold text-gray-900">{soles(p.montoPagado)} <span className="text-xs font-normal text-gray-500">· {p.metodoPago}</span></p>
-                <p className="text-xs text-gray-500">{new Date(p.fechaPago).toLocaleDateString('es-PE')} · por {p.nombreUsuarioRegistra}</p>
+                <p className="text-xs text-gray-500">{fechaPeru(p.fechaPago)} · por {p.nombreUsuarioRegistra}</p>
                 {p.observacion && <p className="text-xs text-gray-400">{p.observacion}</p>}
               </div>
               {p.rutaImagenEvidencia && <a href={p.rutaImagenEvidencia} target="_blank" rel="noopener" className="text-xs text-blue-600 hover:underline shrink-0">Ver comprobante</a>}
@@ -719,7 +716,7 @@ function ResenasTab({ idT }: { idT: number | null }) {
               <span className="inline-flex items-center gap-0.5">{[1, 2, 3, 4, 5].map(n => <Star key={n} className={`w-4 h-4 ${n <= r.puntuacion ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />)}</span>
             </div>
             {r.comentario && <p className="text-sm text-gray-600 mt-1">{r.comentario}</p>}
-            <p className="text-xs text-gray-400 mt-1">{new Date(r.fechaCreacion).toLocaleDateString('es-PE')}</p>
+            <p className="text-xs text-gray-400 mt-1">{fechaPeru(r.fechaCreacion)}</p>
           </div>
         ))}</div>}
     </div>

@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { reservasService, Reserva } from '@/services/reservasService'
 import { SkeletonRows } from '@/components/Skeleton'
+import { FiltroTrabajador } from '@/components/FiltroTrabajador'
 import { toast } from 'sonner'
 import {
   Check, CheckCheck, X, Clock, User, Phone, Mail, Calendar, Scissors,
@@ -115,6 +116,7 @@ export function ReservasPage() {
   const [filterEstado, setFilterEstado] = useState('todos')
   const [fecha, setFecha] = useState(isoDia(new Date()))   // por defecto: HOY
   const [franja, setFranja] = useState('todo')
+  const [idTrabFiltro, setIdTrabFiltro] = useState<number | null>(null)
   const [visible, setVisible] = useState(16)          // "Ver más"
   const [selected, setSelected] = useState<Reserva | null>(null)  // modal de detalle
   // Modal de cancelación con motivo (el motivo solo se incluye en el correo al cliente)
@@ -184,6 +186,23 @@ export function ReservasPage() {
   // Conteos (completada agrupa con atendida)
   // Reservas del día seleccionado (la vista es "solo del día").
   const delDia = reservas.filter((r) => isoDia((r as any).fechaReserva) === fecha)
+
+  // Trabajadores presentes en el día (para los chips de filtro, con foto+nombre).
+  const trabajadores = useMemo(() => {
+    const map = new Map<number, { idTrabajador: number; nombreCompleto: string; urlFotoPerfil?: string | null }>()
+    for (const r of delDia) {
+      const x: any = r
+      const id = x.idTrabajador
+      if (!id || map.has(id)) continue
+      map.set(id, {
+        idTrabajador: id,
+        nombreCompleto: x.nombreTrabajador || x.nombreTrabajadorSnap || 'Barbero',
+        urlFotoPerfil: x.fotoTrabajador ?? null,
+      })
+    }
+    return Array.from(map.values())
+  }, [delDia])
+
   const count = (e: string) => delDia.filter((r) => {
     const est = (r.estado || '').toLowerCase()
     return e === 'completada' ? (est === 'completada' || est === 'atendida') : est === e
@@ -191,9 +210,10 @@ export function ReservasPage() {
   const countFranja = (f: string) =>
     f === 'todo' ? delDia.length : delDia.filter((r) => franjaDe((r as any).horaInicio) === f).length
 
-  // Filtrado (día → franja → estado → búsqueda)
+  // Filtrado (día → trabajador → franja → estado → búsqueda)
   const filtradas = delDia.filter((r) => {
     const est = (r.estado || '').toLowerCase()
+    if (idTrabFiltro != null && (r as any).idTrabajador !== idTrabFiltro) return false
     if (franja !== 'todo' && franjaDe((r as any).horaInicio) !== franja) return false
     if (filterEstado !== 'todos') {
       const match = filterEstado === 'completada' ? (est === 'completada' || est === 'atendida') : est === filterEstado
@@ -294,6 +314,13 @@ export function ReservasPage() {
           })}
         </div>
       </div>
+
+      {/* Filtro por trabajador */}
+      {trabajadores.length > 0 && (
+        <div className="mb-4">
+          <FiltroTrabajador trabajadores={trabajadores} value={idTrabFiltro} onChange={setIdTrabFiltro} />
+        </div>
+      )}
 
       {/* Contenido */}
       {loading ? (
