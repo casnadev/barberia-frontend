@@ -21,6 +21,7 @@ export function AccesoModal({ open, onClose }: { open: boolean; onClose: () => v
   const [loading, setLoading] = useState(true)
   const [correoRegistrado, setCorreoRegistrado] = useState('')
   const [correoConfirmado, setCorreoConfirmado] = useState(false)
+  const [telefonoConfirmado, setTelefonoConfirmado] = useState(false)
   const [telefono, setTelefono] = useState('')
   const [tienePassword, setTienePassword] = useState(false)
   const [activo, setActivo] = useState(false)
@@ -52,6 +53,7 @@ export function AccesoModal({ open, onClose }: { open: boolean; onClose: () => v
         setCorreo(p?.correo || '')
         setTelefono(p?.telefono || '')
         setCorreoConfirmado(Boolean(p?.correoConfirmado))
+        setTelefonoConfirmado(Boolean(p?.telefonoConfirmado))
         setTienePassword(Boolean(p?.tienePassword))
         setActivo(Boolean(p?.ingresoTradicionalActivo))
       })
@@ -146,6 +148,30 @@ export function AccesoModal({ open, onClose }: { open: boolean; onClose: () => v
           <p className="text-sm text-gray-400 py-8 text-center">Cargando…</p>
         ) : (
           <div className="space-y-4">
+
+            {/* CONTACTOS VERIFICADOS (correo / teléfono) */}
+            {(correoRegistrado || telefono) && (
+              <div className="border border-gray-100 rounded-xl p-3 space-y-2">
+                <p className="text-xs font-semibold text-gray-500">Tus contactos</p>
+                {correoRegistrado && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-gray-800 truncate">{correoRegistrado}</span>
+                    {correoConfirmado
+                      ? <span className="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full inline-flex items-center gap-1 shrink-0"><Check className="w-3 h-3" /> Verificado</span>
+                      : <span className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full shrink-0">Sin verificar</span>}
+                  </div>
+                )}
+                {telefono && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-gray-800 truncate">{telefono}</span>
+                    {telefonoConfirmado
+                      ? <span className="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full inline-flex items-center gap-1 shrink-0"><Check className="w-3 h-3" /> Verificado</span>
+                      : <span className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full shrink-0">Sin verificar</span>}
+                  </div>
+                )}
+                <p className="text-[11px] text-gray-400">Verifícalos desde “Mi perfil”.</p>
+              </div>
+            )}
 
             {/* INGRESO TRADICIONAL */}
             <div className="border border-gray-100 rounded-xl p-3">

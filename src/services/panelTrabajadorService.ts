@@ -57,6 +57,8 @@ export interface MiPerfilTrabajador {
   descripcion?: string
   urlFotoPerfil?: string
   porcentajeComision?: number
+  correoConfirmado?: boolean
+  telefonoConfirmado?: boolean
 }
 export interface HorarioSede { diaSemana: number; horaInicio: string; horaFin: string; estaActivo: boolean }
 export interface AtenderPayload { metodoPago?: string; numeroOperacion?: string; rutaImagenEvidencia?: string }

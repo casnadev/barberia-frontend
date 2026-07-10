@@ -699,16 +699,18 @@ export function ServiciosPage() {
                   <Loader2 className="animate-spin" width={20} height={20} /> Cargando catálogo…
                 </div>
               ) : (
-                <div style={{ overflowY: 'auto' }} className="flex-1 -mx-1 px-1">
+                <div style={{ overflowY: 'auto' }} className="flex-1 px-5 py-4 space-y-6">
                   {catalogo.map((cat) => {
                     const IconoCat = resolverIconoServicio(cat.nombre, cat.icono)
                     const selectAll = todosSeleccionados(cat)
                     const disponibles = seleccionablesDe(cat).length
                     return (
-                      <div key={cat.clave} className="mb-4">
-                        <div className="flex items-center justify-between mb-2">
+                      <div key={cat.clave}>
+                        <div className="flex items-center justify-between pb-2 mb-3 border-b border-gray-100">
                           <div className="flex items-center gap-2">
-                            <IconoCat width={17} height={17} className="text-blue-600" strokeWidth={1.8} />
+                            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                              <IconoCat width={16} height={16} strokeWidth={1.8} />
+                            </span>
                             <span className="font-semibold text-gray-800">{cat.nombre}</span>
                           </div>
                           {disponibles > 0 && (
@@ -721,7 +723,7 @@ export function ServiciosPage() {
                             </button>
                           )}
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           {cat.servicios.map((sv) => {
                             const IconoSrv = resolverIconoServicio(sv.nombre, sv.icono)
                             const marcado = sv.yaExiste || seleccion.has(sv.clave)
@@ -731,14 +733,14 @@ export function ServiciosPage() {
                                 type="button"
                                 disabled={sv.yaExiste}
                                 onClick={() => toggleServicio(sv.clave, sv.yaExiste)}
-                                className={`flex items-center gap-2.5 rounded-xl border-2 px-3 py-2.5 text-left transition
+                                className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition
                                   ${sv.yaExiste
                                     ? 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-70'
                                     : marcado
-                                      ? 'border-blue-500 bg-blue-50'
-                                      : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                                      ? 'border-blue-500 bg-blue-50/60 ring-1 ring-blue-500/20'
+                                      : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'}`}
                               >
-                                <span className={`flex h-8 w-8 items-center justify-center rounded-lg flex-shrink-0 ${marcado && !sv.yaExiste ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                <span className={`flex h-9 w-9 items-center justify-center rounded-lg flex-shrink-0 transition-colors ${marcado && !sv.yaExiste ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
                                   {marcado ? <Check width={16} height={16} strokeWidth={3} /> : <IconoSrv width={16} height={16} strokeWidth={1.8} />}
                                 </span>
                                 <span className="min-w-0 flex-1">

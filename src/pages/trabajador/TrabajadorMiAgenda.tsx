@@ -27,6 +27,7 @@ import { CobrarVentaModal } from '@/components/CobrarVentaModal'
 import { TrabajadorMenu } from '@/components/TrabajadorMenu'
 import { HistorialTrabajadorModal } from '@/components/HistorialTrabajadorModal'
 import { fechaPeru, citaYaEmpezo, MSG_CITA_NO_LLEGA } from '@/utils/fecha'
+import { VerificacionContacto } from '@/components/VerificacionContacto'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const METODOS = ['Efectivo', 'Yape', 'Plin', 'Tarjeta', 'Transferencia', 'Otro']
@@ -144,9 +145,9 @@ export function TrabajadorMiAgenda() {
       <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-gray-100">
         <div className="mx-auto max-w-[1380px] px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <button onClick={() => navigate('/')} className="flex items-center" aria-label="Ir al inicio">
+            <span className="flex items-center" aria-label="Barber.PE">
               <img src="/barber-logo-black.png" alt="Barber.PE" className="h-7 w-auto" />
-            </button>
+            </span>
             <button onClick={() => setMenuOpen(true)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 active:scale-95 transition"
               aria-label="Abrir menú">
@@ -494,6 +495,20 @@ function DisponibilidadTab({ idT, idSede }: { idT: number | null; idSede: number
     catch (e: any) { toast.error(mensajeError(e, 'No se pudo guardar')) } finally { setSaving(false) }
   }
 
+  // Iguala mi horario al del local: activa los días que abre la sede con sus horas
+  // y desactiva los días que la sede cierra. No guarda: deja revisar y luego "Guardar".
+  const sincronizarConSede = () => {
+    const hayHorario = Object.keys(sede).length > 0
+    if (!hayHorario) return toast.error('Aún no hay horario de la sede para copiar.')
+    setDias(DIAS.map((_, i) => {
+      const s = sede[i]
+      return s
+        ? { activo: true, horaInicio: s.ini, horaFin: s.fin }
+        : { activo: false, horaInicio: '09:00', horaFin: '18:00' }
+    }))
+    toast.info('Horario igualado al del local. Revisa y pulsa “Guardar horario”.')
+  }
+
   return (
     <div className="space-y-5">
       {/* Horario semanal */}
@@ -543,7 +558,12 @@ function DisponibilidadTab({ idT, idSede }: { idT: number | null; idSede: number
             )
           })}
         </div>
-        <button onClick={guardar} disabled={saving} className="mt-4 w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-5 py-2.5 font-semibold disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar horario'}</button>
+        <div className="mt-4 flex flex-col sm:flex-row gap-2">
+          <button onClick={guardar} disabled={saving} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-5 py-2.5 font-semibold disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar horario'}</button>
+          <button type="button" onClick={sincronizarConSede} disabled={saving} className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl px-5 py-2.5 font-semibold disabled:opacity-50">
+            <Clock className="w-4 h-4" /> Actualizar a horarios del local
+          </button>
+        </div>
       </div>
 
       {/* No disponibilidad / descansos */}
@@ -675,6 +695,7 @@ function DescansosSection({ idT, idSede }: { idT: number | null; idSede: number 
 /* ---------- Comisiones ---------- */
 function ComisionesTab({ idT, comisiones }: { idT: number | null; comisiones: MisComisiones | null }) {
   const [pagos, setPagos] = useState<PagoTrabajador[]>([])
+  const [verComprobante, setVerComprobante] = useState<string | null>(null)
   useEffect(() => { if (idT) panelTrabajadorService.getMisPagos(idT).then(setPagos) }, [idT])
   return (
     <div className="space-y-5">
@@ -693,10 +714,27 @@ function ComisionesTab({ idT, comisiones }: { idT: number | null; comisiones: Mi
                 <p className="text-xs text-gray-500">{fechaPeru(p.fechaPago)} · por {p.nombreUsuarioRegistra}</p>
                 {p.observacion && <p className="text-xs text-gray-400">{p.observacion}</p>}
               </div>
-              {p.rutaImagenEvidencia && <a href={p.rutaImagenEvidencia} target="_blank" rel="noopener" className="text-xs text-blue-600 hover:underline shrink-0">Ver comprobante</a>}
+              {p.rutaImagenEvidencia && (
+                <button onClick={() => setVerComprobante(buildImageUrl(p.rutaImagenEvidencia))} className="shrink-0" title="Ver comprobante">
+                  <img src={buildImageUrl(p.rutaImagenEvidencia)} alt="Comprobante" className="w-12 h-12 rounded-lg object-cover border border-gray-200 hover:ring-2 hover:ring-blue-400 transition" />
+                </button>
+              )}
             </div>
           ))}</div>}
       </section>
+      {verComprobante && <ComprobanteViewer url={verComprobante} onClose={() => setVerComprobante(null)} />}
+    </div>
+  )
+}
+
+/* ---------- Visor de comprobante (imagen a pantalla completa) ---------- */
+function ComprobanteViewer({ url, onClose }: { url: string; onClose: () => void }) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(0,0,0,.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <button onClick={onClose} className="absolute top-4 right-4 text-white/80 hover:text-white" aria-label="Cerrar">
+        <X width={28} height={28} />
+      </button>
+      <img src={url} alt="Comprobante" onClick={e => e.stopPropagation()} className="max-w-full max-h-full rounded-xl object-contain" />
     </div>
   )
 }
@@ -797,12 +835,20 @@ function ConfigModal({ perfil, onClose, onSaved }: { perfil: MiPerfilTrabajador 
   const [foto, setFoto] = useState<string>('')        // ruta cruda (lo que se guarda)
   const [subiendo, setSubiendo] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [correoConfirmado, setCorreoConfirmado] = useState(false)
+  const [telefonoConfirmado, setTelefonoConfirmado] = useState(false)
+  const [correoOriginal, setCorreoOriginal] = useState('')
+  const [telefonoOriginal, setTelefonoOriginal] = useState('')
 
   useEffect(() => {
     if (!perfil) return
     setNombre(perfil.nombreCompleto || '')
     setCorreo(perfil.correo || '')
     setTelefono(perfil.telefono || '')
+    setCorreoOriginal(perfil.correo || '')
+    setTelefonoOriginal(perfil.telefono || '')
+    setCorreoConfirmado(Boolean(perfil.correoConfirmado))
+    setTelefonoConfirmado(Boolean(perfil.telefonoConfirmado))
     setEspecialidad(perfil.especialidad || '')
     setExperiencia(perfil.experiencia || '')
     setDescripcion(perfil.descripcion || '')
@@ -873,8 +919,12 @@ function ConfigModal({ perfil, onClose, onSaved }: { perfil: MiPerfilTrabajador 
           </div>
         </div>
         <div><label className="text-xs text-gray-500">Nombre completo</label><input className={field} value={nombre} onChange={e => setNombre(e.target.value)} /></div>
-        <div><label className="text-xs text-gray-500 flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> Correo</label><input className={field} type="email" value={correo} onChange={e => setCorreo(e.target.value)} /></div>
-        <div><label className="text-xs text-gray-500 flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> Teléfono</label><input className={field} value={telefono} onChange={e => setTelefono(e.target.value)} inputMode="numeric" placeholder="9XXXXXXXX" /></div>
+        <div><label className="text-xs text-gray-500 flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> Correo</label><input className={field} type="email" value={correo} onChange={e => setCorreo(e.target.value)} />
+          <VerificacionContacto key={correo} canal="correo" valor={correo} guardado={correoOriginal} verificado={correoConfirmado && correo.trim().toLowerCase() === correoOriginal.trim().toLowerCase()} onVerificado={() => { setCorreoConfirmado(true); setCorreoOriginal(correo) }} />
+        </div>
+        <div><label className="text-xs text-gray-500 flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> Teléfono</label><input className={field} value={telefono} onChange={e => setTelefono(e.target.value)} inputMode="numeric" placeholder="9XXXXXXXX" />
+          <VerificacionContacto key={telefono} canal="telefono" valor={telefono} guardado={telefonoOriginal} verificado={telefonoConfirmado && telefono.trim() === telefonoOriginal.trim()} onVerificado={() => { setTelefonoConfirmado(true); setTelefonoOriginal(telefono) }} />
+        </div>
         <div><label className="text-xs text-gray-500">Especialidad</label><input className={field} value={especialidad} onChange={e => setEspecialidad(e.target.value)} placeholder="Ej. Fade, barba…" /></div>
         <div><label className="text-xs text-gray-500">Experiencia</label><input className={field} value={experiencia} onChange={e => setExperiencia(e.target.value)} placeholder="Ej. 3 años" /></div>
         <div><label className="text-xs text-gray-500">Descripción</label><textarea className={field} rows={3} value={descripcion} onChange={e => setDescripcion(e.target.value)} /></div>

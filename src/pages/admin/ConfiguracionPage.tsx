@@ -440,14 +440,18 @@ export function ConfiguracionPage() {
     if (empresa.idEmpresa != null && !empresa.nombreComercial?.trim()) { toast.error('El nombre del negocio es obligatorio.'); return false }
     try {
       setSubmitting(true)
-      const telDigits = (sede.telefono || '').replace(/\D/g, '')
-      const telValido = /^9\d{8}$/.test(telDigits) ? telDigits : undefined
+      const telRaw = (sede.telefono || '').trim()
+      const telDigits = telRaw.replace(/\D/g, '')
+      const telValido = /^9\d{8}$/.test(telDigits)
+      // '' => limpiar (se envía vacío para que el backend lo borre);
+      // válido => guardar; inválido no vacío => no tocar (se avisa abajo).
+      const telefonoPayload = telRaw === '' ? '' : (telValido ? telDigits : undefined)
       const payload: any = {
         nombre: sede.nombre.trim(),
         descripcionCorta: sede.descripcion?.trim() || undefined,
         direccion: sede.direccion?.trim() || undefined,
-        telefono: telValido,
-        correoContacto: sede.correo?.trim() || undefined,
+        telefono: telefonoPayload,
+        correoContacto: sede.correo?.trim() ?? '',
         latitud: sede.latitud != null ? Number(sede.latitud) : undefined,
         longitud: sede.longitud != null ? Number(sede.longitud) : undefined,
         departamento: sede.departamento?.trim() || undefined,
@@ -458,7 +462,7 @@ export function ConfiguracionPage() {
         colorPrimarioHex: sede.colorPrimarioHex?.trim() || undefined,
         mostrarTelefonoEnLanding: sede.mostrarTelefonoEnLanding ?? true,
       }
-      if (sede.telefono?.trim() && !telValido) {
+      if (telRaw !== '' && !telValido) {
         toast.info('El teléfono no se guardó: debe ser 9 dígitos y empezar en 9 (ej. 987654321).')
       }
       await apiClient.put('/api/Sedes/actual', payload)
