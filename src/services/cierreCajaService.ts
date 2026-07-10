@@ -10,6 +10,7 @@ export interface PreviewCierre {
   cantidadVentas: number
   montoPendienteAprobacion?: number
   cantidadPendiente?: number
+  cantidadCitasNoCompletadas?: number
 }
 
 export interface CierreCaja {

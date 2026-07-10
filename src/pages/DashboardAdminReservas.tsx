@@ -3,6 +3,7 @@ import { Clock, User, Scissors, MapPin, CheckCircle, XCircle, AlertCircle } from
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
+import { citaYaEmpezo, MSG_CITA_NO_LLEGA } from '@/utils/fecha'
 import styles from '@/styles/DashboardAdminReservas.module.css'
 
 interface Reserva {
@@ -395,7 +396,7 @@ export function DashboardAdminReservas() {
               {detalleReserva.estado === 'Confirmada' && (
                 <>
                   <button
-                    onClick={() => handleAtender(detalleReserva.idReserva)}
+                    onClick={() => { if (!citaYaEmpezo(detalleReserva.fechaReserva, detalleReserva.horaInicio)) { toast.error(MSG_CITA_NO_LLEGA); return } handleAtender(detalleReserva.idReserva) }}
                     disabled={submitting}
                     className={styles.btnAtender}
                   >

@@ -26,7 +26,7 @@ import { buildImageUrl, setTenant } from '@/services/apiClient'
 import { CobrarVentaModal } from '@/components/CobrarVentaModal'
 import { TrabajadorMenu } from '@/components/TrabajadorMenu'
 import { HistorialTrabajadorModal } from '@/components/HistorialTrabajadorModal'
-import { fechaPeru } from '@/utils/fecha'
+import { fechaPeru, citaYaEmpezo, MSG_CITA_NO_LLEGA } from '@/utils/fecha'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const METODOS = ['Efectivo', 'Yape', 'Plin', 'Tarjeta', 'Transferencia', 'Otro']
@@ -64,6 +64,11 @@ export function TrabajadorMiAgenda() {
   const [foto, setFoto] = useState<string | undefined>(undefined)
   const [loading, setLoading] = useState(true)
   const [atender, setAtender] = useState<any | null>(null)
+  // Gate de hora (Tarea 3): no abrir el modal de atención antes de la hora de la cita.
+  const pedirAtender = (r: any) => {
+    if (!citaYaEmpezo(r?.fechaReserva, r?.horaInicio)) { toast.error(MSG_CITA_NO_LLEGA); return }
+    setAtender(r)
+  }
   const [cobrar, setCobrar] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [historialOpen, setHistorialOpen] = useState(false)
@@ -125,7 +130,7 @@ export function TrabajadorMiAgenda() {
   // El + genera una venta/reserva en SU sede (el wizard resuelve la sede por el
   // tenant activo = su subdominio). Sin sede (caso teórico), al sitio principal.
   const irReservar = () => {
-    if (idSede) { navigate('/reservar-publica'); return }
+    if (idSede) { navigate(`/reservar/${idSede}`); return }
     if (typeof window !== 'undefined' && window.location.hostname.endsWith('barber.pe')) {
       window.location.href = 'https://barber.pe'
     } else {
@@ -175,11 +180,11 @@ export function TrabajadorMiAgenda() {
             reservas={reservas}
             perfil={perfil}
             onCompletar={abrirConfig}
-            onAtender={(r) => setAtender(r)}
+            onAtender={(r) => pedirAtender(r)}
           />
         ) : tab === 'agenda' ? (
           trabajadorPropio
-            ? <AgendaBoard mode="trabajador" trabajadorPropio={trabajadorPropio} onAtenderTrabajador={(r) => setAtender(r)} />
+            ? <AgendaBoard mode="trabajador" trabajadorPropio={trabajadorPropio} onAtenderTrabajador={(r) => pedirAtender(r)} />
             : <p className="text-sm text-gray-400 bg-white border border-dashed border-gray-300 rounded-2xl p-6 text-center">No se pudo identificar tu perfil.</p>
         ) : tab === 'disponibilidad' ? (
           <DisponibilidadTab idT={idT} idSede={idSede} />

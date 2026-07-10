@@ -131,6 +131,22 @@ export function CierreCajaPage() {
         </div>
       )}
 
+      {/* Aviso: citas del día sin completar (Tarea 4). Advierte, no bloquea el cierre. */}
+      {(preview?.cantidadCitasNoCompletadas ?? 0) > 0 && (
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 mb-4 flex items-start gap-3">
+          <span className="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0"><AlertTriangle className="w-5 h-5" /></span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-rose-900">
+              Tienes {preview?.cantidadCitasNoCompletadas} cita{(preview?.cantidadCitasNoCompletadas ?? 0) > 1 ? 's' : ''} no completada{(preview?.cantidadCitasNoCompletadas ?? 0) > 1 ? 's' : ''}
+            </p>
+            <p className="text-xs text-rose-700 mt-0.5">
+              Márcalas como atendidas o como <span className="font-semibold">“No Asistió”</span> antes de cerrar caja.{' '}
+              <Link to={`/admin/reservas?fecha=${fecha}`} className="underline font-semibold">Ver citas del día</Link>.
+            </p>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center py-16 text-gray-400"><Loader2 className="w-6 h-6 animate-spin" /></div>
       ) : (

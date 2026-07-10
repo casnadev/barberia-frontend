@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { CalendarModal } from '@/pages/cliente/CalendarModal'
 import { Fab } from '@/components/Fab'
 import s from '@/styles/AgendaPage.module.css'
+import { citaYaEmpezo, MSG_CITA_NO_LLEGA } from '@/utils/fecha'
 
 /* PUT /api/Reservas/{id}/reprogramar  body { idTrabajador, fechaReserva, horaInicio } */
 const RESCHEDULE = (id: number) => `/api/Reservas/${id}/reprogramar`
@@ -348,7 +349,9 @@ export function AgendaBoard({ mode = 'admin', trabajadorPropio, onAtenderTrabaja
         }
       } catch { /* cae al navigate en la misma pestaña */ }
     }
-    navigate('/reservar-publica')
+    // Fallback: landing de reserva de LA sede activa (no la ruta huérfana sin sede).
+    if (sede?.idSede) { navigate(`/reservar/${sede.idSede}`); return }
+    navigate('/')
   }
 
   // ===== Bloques de una columna (grilla) =====
@@ -586,7 +589,11 @@ export function AgendaBoard({ mode = 'admin', trabajadorPropio, onAtenderTrabaja
                       className={s.actFull}
                       style={{ background: '#16a34a' }}
                       disabled={busy}
-                      onClick={() => { const r = detail; setDetail(null); onAtenderTrabajador?.(r) }}
+                      onClick={() => {
+                        const r = detail
+                        if (!citaYaEmpezo(r.fechaReserva, r.horaInicio)) { toast.error(MSG_CITA_NO_LLEGA); return }
+                        setDetail(null); onAtenderTrabajador?.(r)
+                      }}
                     >
                       <CheckCheck width={16} height={16} /> Atender y adjuntar evidencia
                     </button>
@@ -597,7 +604,7 @@ export function AgendaBoard({ mode = 'admin', trabajadorPropio, onAtenderTrabaja
                       <button className={s.actFull} style={{ background: '#2563eb' }} disabled={busy} onClick={() => accion(() => reservasService.confirmarReserva((detail.idReserva || detail.id)!), 'Reserva confirmada')}><Check width={16} height={16} /> Confirmar</button>
                     )}
                     {(detail.estado || '').toLowerCase() === 'confirmada' && (
-                      <button className={s.actFull} style={{ background: '#16a34a' }} disabled={busy} onClick={() => accion(() => reservasService.marcarAtendida((detail.idReserva || detail.id)!), 'Marcada como atendida')}><CheckCheck width={16} height={16} /> Marcar atendida</button>
+                      <button className={s.actFull} style={{ background: '#16a34a' }} disabled={busy} onClick={() => { if (!citaYaEmpezo(detail.fechaReserva, detail.horaInicio)) { toast.error(MSG_CITA_NO_LLEGA); return } accion(() => reservasService.marcarAtendida((detail.idReserva || detail.id)!), 'Marcada como atendida') }}><CheckCheck width={16} height={16} /> Marcar atendida</button>
                     )}
                     {((detail.estado || '').toLowerCase() === 'pendiente' || (detail.estado || '').toLowerCase() === 'confirmada') && (
                       <button className={s.actFull} style={{ background: '#ef4444' }} disabled={busy} onClick={() => accion(() => reservasService.cancelarReserva((detail.idReserva || detail.id)!), 'Reserva cancelada')}><X width={16} height={16} /> Cancelar</button>

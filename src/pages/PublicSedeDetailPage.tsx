@@ -334,7 +334,10 @@ export function PublicSedeDetailPage() {
       if (!sedeData) throw new Error('No se encontró información de la barbería')
       setSede(sedeData)
       setServicios(serviciosData || [])
-      setTrabajadores(trabajadoresData || [])
+      // Oculta del landing público las fichas marcadas como no visibles
+      // (p.ej. la ficha-Admin del dueño que no atiende en esta sede).
+      setTrabajadores((trabajadoresData || []).filter(
+        (t: any) => t?.visibleEnLandingPublico !== false))
 
       // La página YA se puede mostrar con lo esencial (sede + servicios + equipo).
       // Quitamos el skeleton aquí, sin esperar a horarios ni reseñas: así el

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { mensajeError } from '@/utils/apiError'
+import { citaYaEmpezo, MSG_CITA_NO_LLEGA } from '@/utils/fecha'
 import s from '@/styles/Reservas.module.css'
 import d from '@/styles/Dashboard.module.css'
 
@@ -59,6 +60,7 @@ const datos = (reserva: Reserva) => {
     servicio: x.nombreServicio || x.servicios?.[0]?.nombre || '',
     trabajador: x.nombreTrabajador || x.nombreTrabajadorSnap || '',
     fecha: reserva.fechaReserva ? new Date(reserva.fechaReserva).toLocaleDateString('es-PE') : '-',
+    fechaRaw: reserva.fechaReserva || '',
     horaIni: reserva.horaInicio || '',
     horaFin: reserva.horaFin || '',
     precio: x.precioServicioSnap ?? x.precioServicio,
@@ -433,7 +435,7 @@ export function ReservasPage() {
                     </button>
                   )}
                   {x.est === 'confirmada' && (
-                    <button onClick={() => doAtender(x.id)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition active:scale-95">
+                    <button onClick={() => { if (!citaYaEmpezo(x.fechaRaw, x.horaIni)) { toast.error(MSG_CITA_NO_LLEGA); return } doAtender(x.id) }} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition active:scale-95">
                       <CheckCheck width={16} height={16} /> Atendida
                     </button>
                   )}

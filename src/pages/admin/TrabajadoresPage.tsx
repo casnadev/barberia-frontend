@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Edit2, Trash2, AlertCircle, X, Eye, EyeOff, Upload, Image as ImageIcon, KeyRound } from 'lucide-react'
+import { Plus, Edit2, Trash2, AlertCircle, X, Eye, EyeOff, Upload, Image as ImageIcon, KeyRound, SendHorizontal } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { apiClient, buildImageUrl } from '@/services/apiClient'
+import { verificacionContactoService } from '@/services/verificacionContactoService'
 import { ComboBox } from '@/components/ComboBox'
 import { ROLES_TRABAJADOR } from '@/data/roles'
 import s from '@/styles/Trabajadores.module.css'
@@ -20,7 +21,9 @@ interface Trabajador {
   experiencia?: string
   esDestacado?: boolean
   estado?: boolean
-  accesoHabilitado?: boolean 
+  accesoHabilitado?: boolean
+  esDuenoAdmin?: boolean
+  visibleEnLandingPublico?: boolean
   fechaIngreso?: string
   fechaBaja?: string
 }
@@ -240,6 +243,20 @@ export function TrabajadoresPage() {
     }
   }
 
+  // Llave de Acceso: envía OTP + habilita para que el trabajador cree/recupere su
+  // contraseña. Requiere que tenga correo (el backend valida y avisa si falta).
+  const enviarAcceso = async (t: Trabajador) => {
+    if (!t.idTrabajador) return
+    if (!t.correo) { toast.error('Agrega un correo a este trabajador para enviarle acceso.'); return }
+    try {
+      const msg = await verificacionContactoService.enviarAccesoTrabajador(t.idTrabajador)
+      parchearTrabajador(t.idTrabajador, { accesoHabilitado: true })
+      toast.success(msg)
+    } catch (err: any) {
+      toast.error(getApiError(err, 'No se pudo enviar el acceso.'))
+    }
+  }
+
   const handleEdit = (trabajador: Trabajador) => {
     setForm({
       nombreCompleto: trabajador.nombreCompleto,
@@ -317,12 +334,24 @@ export function TrabajadoresPage() {
           >
             <KeyRound width={15} height={15} />
           </button>
+          {!t.esDuenoAdmin && (
+            <button
+              className={s.iconBtn}
+              onClick={() => enviarAcceso(t)}
+              title="Enviar acceso / recuperar contraseña (código por correo)"
+              aria-label="Enviar acceso"
+            >
+              <SendHorizontal width={15} height={15} />
+            </button>
+          )}
           <button className={s.iconBtn} onClick={() => handleEdit(t)} title="Editar" aria-label="Editar">
             <Edit2 width={15} height={15} />
           </button>
-          <button className={`${s.iconBtn} ${s.iconBtnDanger}`} onClick={() => setDeleteConfirm(t.idTrabajador || null)} title="Eliminar" aria-label="Eliminar">
-            <Trash2 width={15} height={15} />
-          </button>
+          {!t.esDuenoAdmin && (
+            <button className={`${s.iconBtn} ${s.iconBtnDanger}`} onClick={() => setDeleteConfirm(t.idTrabajador || null)} title="Eliminar" aria-label="Eliminar">
+              <Trash2 width={15} height={15} />
+            </button>
+          )}
         </div>
       </div>
       <div className={s.cardFooter}>

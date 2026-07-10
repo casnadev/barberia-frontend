@@ -6,6 +6,7 @@ import { perfilService } from '@/services/perfilService'
 import { authService } from '@/services/authService'
 import { useAuthStore } from '@/store/authStore'
 import { buildImageUrl } from '@/services/apiClient'
+import { VerificacionContacto } from '@/components/VerificacionContacto'
 
 /**
  * Modal "Mi perfil" del Admin (su propio Usuario). Permite editar nombre,
@@ -28,6 +29,10 @@ export function MiPerfilAdminModal({ open, onClose }: { open: boolean; onClose: 
   const [passRepite, setPassRepite] = useState('')
   const [guardandoPass, setGuardandoPass] = useState(false)
   const [tienePassword, setTienePassword] = useState(false)
+  const [correoConfirmado, setCorreoConfirmado] = useState(false)
+  const [telefonoConfirmado, setTelefonoConfirmado] = useState(false)
+  const [correoOriginal, setCorreoOriginal] = useState('')
+  const [telefonoOriginal, setTelefonoOriginal] = useState('')
   const [enviandoEnlace, setEnviandoEnlace] = useState(false)
 
   // Cargar datos al abrir
@@ -41,8 +46,12 @@ export function MiPerfilAdminModal({ open, onClose }: { open: boolean; onClose: 
         setNombre(p.nombreCompleto || '')
         setCorreo(p.correo || '')
         setTelefono(p.telefono || '')
+        setCorreoOriginal(p.correo || '')
+        setTelefonoOriginal(p.telefono || '')
         setFoto(p.urlFotoPerfil || '')
         setTienePassword(Boolean((p as any).tienePassword))
+        setCorreoConfirmado(Boolean((p as any).correoConfirmado))
+        setTelefonoConfirmado(Boolean((p as any).telefonoConfirmado))
       })
       .catch(() => toast.error('No se pudo cargar tu perfil'))
       .finally(() => { if (vivo) setLoading(false) })
@@ -145,8 +154,16 @@ export function MiPerfilAdminModal({ open, onClose }: { open: boolean; onClose: 
             </div>
 
             <div><label className="text-xs text-gray-500">Nombre completo</label><input className={field} value={nombre} onChange={e => setNombre(e.target.value)} /></div>
-            <div><label className="text-xs text-gray-500">Correo</label><input className={field} value={correo} onChange={e => setCorreo(e.target.value)} type="email" /></div>
-            <div><label className="text-xs text-gray-500">Teléfono</label><input className={field} value={telefono} onChange={e => setTelefono(e.target.value)} inputMode="numeric" /></div>
+            <div>
+              <label className="text-xs text-gray-500">Correo</label>
+              <input className={field} value={correo} onChange={e => setCorreo(e.target.value)} type="email" />
+              <VerificacionContacto key={correo} canal="correo" valor={correo} guardado={correoOriginal} verificado={correoConfirmado && correo.trim().toLowerCase() === correoOriginal.trim().toLowerCase()} onVerificado={() => { setCorreoConfirmado(true); setCorreoOriginal(correo) }} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Teléfono</label>
+              <input className={field} value={telefono} onChange={e => setTelefono(e.target.value)} inputMode="numeric" />
+              <VerificacionContacto key={telefono} canal="telefono" valor={telefono} guardado={telefonoOriginal} verificado={telefonoConfirmado && telefono.trim() === telefonoOriginal.trim()} onVerificado={() => { setTelefonoConfirmado(true); setTelefonoOriginal(telefono) }} />
+            </div>
 
             <button onClick={guardar} disabled={saving || subiendo} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2.5 font-semibold disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar cambios'}</button>
           </div>

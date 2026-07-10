@@ -97,3 +97,23 @@ export function fechaLargaPeru(input?: string | number | Date | null): string {
     return ''
   }
 }
+
+/**
+ * ¿La cita ya llegó a su hora de inicio? (Perú = UTC-5)
+ * Se usa para NO permitir "Atender" antes de tiempo: el botón se bloquea y el
+ * aviso sale al instante, sin abrir el modal ni pedir evidencia (Tarea 3).
+ * fechaReserva: 'YYYY-MM-DD' (o ISO). horaInicio: 'HH:mm' o 'HH:mm:ss'.
+ * Si faltan datos, devuelve true (no bloquea).
+ */
+export function citaYaEmpezo(fechaReserva?: string | null, horaInicio?: string | null): boolean {
+  if (!fechaReserva || !horaInicio) return true
+  const fecha = String(fechaReserva).slice(0, 10)
+  const hora = String(horaInicio).slice(0, 5)
+  const inicioPeru = new Date(`${fecha}T${hora}:00-05:00`)
+  if (isNaN(inicioPeru.getTime())) return true
+  return Date.now() >= inicioPeru.getTime()
+}
+
+/** Mensaje estándar cuando se intenta atender antes de la hora. */
+export const MSG_CITA_NO_LLEGA =
+  'Aún no llega la fecha y hora de esta cita. Podrás atenderla recién a esa hora.'
