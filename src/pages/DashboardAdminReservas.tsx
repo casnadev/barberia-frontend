@@ -177,8 +177,8 @@ export function DashboardAdminReservas() {
     }
   }
 
-  const reservasFiltradas = filtroEstado === 'todos' 
-    ? reservas 
+  const reservasFiltradas = filtroEstado === 'todos'
+    ? reservas
     : reservas.filter(r => r.estado === filtroEstado)
 
   return (
@@ -396,7 +396,13 @@ export function DashboardAdminReservas() {
               {detalleReserva.estado === 'Confirmada' && (
                 <>
                   <button
-                    onClick={() => { if (!citaYaEmpezo(detalleReserva.fechaReserva, detalleReserva.horaInicio)) { toast.error(MSG_CITA_NO_LLEGA); return } handleAtender(detalleReserva.idReserva) }}
+                    onClick={() => {
+                      if (!citaYaEmpezo(detalleReserva.fecha, detalleReserva.hora)) {
+                        toast.error(MSG_CITA_NO_LLEGA)
+                        return
+                      }
+                      handleAtender(detalleReserva.idReserva)
+                    }}
                     disabled={submitting}
                     className={styles.btnAtender}
                   >
