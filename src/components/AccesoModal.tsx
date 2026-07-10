@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Lock, Check } from 'lucide-react'
+import { X, LockKey, Check, SealCheck, EnvelopeSimple, Phone, Password } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { perfilService } from '@/services/perfilService'
 import { authService } from '@/services/authService'
@@ -138,11 +138,16 @@ export function AccesoModal({ open, onClose }: { open: boolean; onClose: () => v
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-white w-full sm:max-w-md p-5 shadow-xl rounded-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-1">
-          <h3 className="text-base font-semibold text-gray-900">Acceso</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Cerrar"><X className="w-5 h-5" /></button>
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0"><LockKey size={20} weight="duotone" /></span>
+            <div>
+              <h3 className="text-base font-semibold text-gray-900 leading-tight">Acceso</h3>
+              <p className="text-xs text-gray-400">Así entras a tu cuenta. Puedes sumar más formas.</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 -mt-0.5" aria-label="Cerrar"><X size={20} /></button>
         </div>
-        <p className="text-xs text-gray-400 mb-4">Así entras a tu cuenta. Puedes sumar más formas.</p>
 
         {loading ? (
           <p className="text-sm text-gray-400 py-8 text-center">Cargando…</p>
@@ -151,21 +156,27 @@ export function AccesoModal({ open, onClose }: { open: boolean; onClose: () => v
 
             {/* CONTACTOS VERIFICADOS (correo / teléfono) */}
             {(correoRegistrado || telefono) && (
-              <div className="border border-gray-100 rounded-xl p-3 space-y-2">
+              <div className="border border-gray-100 rounded-xl p-3.5 space-y-2.5">
                 <p className="text-xs font-semibold text-gray-500">Tus contactos</p>
                 {correoRegistrado && (
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-gray-800 truncate">{correoRegistrado}</span>
+                    <span className="flex items-center gap-2 min-w-0">
+                      <EnvelopeSimple size={17} className="text-gray-400 shrink-0" />
+                      <span className="text-sm text-gray-800 truncate">{correoRegistrado}</span>
+                    </span>
                     {correoConfirmado
-                      ? <span className="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full inline-flex items-center gap-1 shrink-0"><Check className="w-3 h-3" /> Verificado</span>
+                      ? <span className="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full inline-flex items-center gap-1 shrink-0"><SealCheck size={13} weight="fill" /> Verificado</span>
                       : <span className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full shrink-0">Sin verificar</span>}
                   </div>
                 )}
                 {telefono && (
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-gray-800 truncate">{telefono}</span>
+                    <span className="flex items-center gap-2 min-w-0">
+                      <Phone size={17} className="text-gray-400 shrink-0" />
+                      <span className="text-sm text-gray-800 truncate">{telefono}</span>
+                    </span>
                     {telefonoConfirmado
-                      ? <span className="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full inline-flex items-center gap-1 shrink-0"><Check className="w-3 h-3" /> Verificado</span>
+                      ? <span className="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full inline-flex items-center gap-1 shrink-0"><SealCheck size={13} weight="fill" /> Verificado</span>
                       : <span className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full shrink-0">Sin verificar</span>}
                   </div>
                 )}
@@ -174,16 +185,22 @@ export function AccesoModal({ open, onClose }: { open: boolean; onClose: () => v
             )}
 
             {/* INGRESO TRADICIONAL */}
-            <div className="border border-gray-100 rounded-xl p-3">
+            <div className="border border-gray-100 rounded-xl p-3.5">
               <div className="flex items-center gap-3">
-                <span className="w-8 h-8 rounded-lg bg-gray-50 text-gray-500 flex items-center justify-center shrink-0"><Lock className="w-4 h-4" /></span>
+                <span className="w-9 h-9 rounded-lg bg-gray-50 text-gray-500 flex items-center justify-center shrink-0"><Password size={18} weight="duotone" /></span>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium text-gray-900 whitespace-nowrap">Ingreso tradicional</span>
-                    {tienePassword && activo && <span className="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full inline-flex items-center gap-1"><Check className="w-3 h-3" /> Activo</span>}
+                    {tienePassword && activo && <span className="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full inline-flex items-center gap-1"><Check size={12} weight="bold" /> Activo</span>}
                     {tienePassword && !activo && <span className="text-[11px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Desactivado</span>}
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5">Correo + Contraseña</p>
+                  <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    {correoRegistrado && <span className="inline-flex items-center gap-1"><EnvelopeSimple size={13} /> Correo</span>}
+                    {correoRegistrado && telefono && <span className="text-gray-300">o</span>}
+                    {telefono && <span className="inline-flex items-center gap-1"><Phone size={13} /> Teléfono</span>}
+                    <span className="text-gray-300">+</span>
+                    <span>contraseña</span>
+                  </p>
                 </div>
                 {!cambiarAbierto && (
                   tienePassword && !activo

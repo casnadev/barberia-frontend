@@ -64,7 +64,23 @@ export interface EstadoPublicacion {
   sedes: SedePublicacionItem[]
 }
 
+// Caché de sesión de "mis sedes": no cambian mientras el usuario navega, pero
+// DEBE limpiarse en cada logout/login para no heredar sedes de otra cuenta
+// (si no, el tenant activo queda apuntando a la empresa anterior → 403).
+let _misSedesCache: MiSede[] | null = null
+
+/** Limpia el caché de "mis sedes". Llamar en logout y al iniciar sesión. */
+export const clearMisSedesCache = (): void => { _misSedesCache = null }
+
 export const sedeTenantService = {
+  /** Igual que getMisSedes pero cacheado por sesión (una sola llamada por sesión). */
+  getMisSedesCached: async (): Promise<MiSede[]> => {
+    if (_misSedesCache) return _misSedesCache
+    const lista = await sedeTenantService.getMisSedes()
+    _misSedesCache = lista
+    return lista
+  },
+
   /** Sedes de la empresa del admin logueado (resueltas por el JWT, sin tenant). */
   getMisSedes: async (): Promise<MiSede[]> => {
     const res = await apiClient.get('/api/Sedes/mias')

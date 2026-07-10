@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { X, Loader2, CalendarCheck, Receipt, Wallet, Image as ImageIcon, Store } from 'lucide-react'
 import { buildImageUrl } from '@/services/apiClient'
@@ -58,6 +58,20 @@ export function HistorialTrabajadorModal({
 }) {
   const [seccion, setSeccion] = useState<Seccion>('citas')
   const [verImagen, setVerImagen] = useState<string | null>(null)
+  const [rango, setRango] = useState<'todo' | 'hoy' | 'semana' | 'mes'>('mes')
+  const [limite, setLimite] = useState(5)
+  useEffect(() => { setLimite(5) }, [seccion, rango])
+
+  const enRango = (iso?: string) => {
+    if (rango === 'todo' || !iso) return true
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return true
+    const now = new Date()
+    const hoy0 = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    if (rango === 'hoy') return d >= hoy0
+    if (rango === 'semana') { const s = new Date(hoy0); s.setDate(s.getDate() - 6); return d >= s }
+    const s = new Date(hoy0); s.setMonth(s.getMonth() - 1); return d >= s
+  }
 
   const citas = useQuery({
     queryKey: ['historial-trab', 'citas', idTrabajador],
@@ -116,19 +130,43 @@ export function HistorialTrabajadorModal({
           </div>
         </div>
 
+        {/* Filtro por fecha */}
+        <div className="px-4 pt-2">
+          <div className="inline-flex w-full gap-1 text-xs">
+            {([['hoy', 'Hoy'], ['semana', 'Semana'], ['mes', 'Mes'], ['todo', 'Todo']] as const).map(([k, l]) => (
+              <button key={k} onClick={() => setRango(k)}
+                className={`flex-1 py-1.5 rounded-lg font-medium transition ${rango === k ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:text-gray-800'}`}>{l}</button>
+            ))}
+          </div>
+        </div>
+
         {/* Contenido */}
         <div className="overflow-y-auto p-4">
           {cargando ? (
             <div className="flex items-center justify-center py-12 text-gray-400">
               <Loader2 className="w-6 h-6 animate-spin" />
             </div>
-          ) : seccion === 'citas' ? (
-            <SeccionCitas reservas={citas.data || []} />
-          ) : seccion === 'ventas' ? (
-            <SeccionVentas ventas={ventas.data || []} onVerImagen={setVerImagen} />
-          ) : (
-            <SeccionPagos pagos={pagos.data || []} onVerImagen={setVerImagen} />
-          )}
+          ) : (() => {
+            const citasF = (citas.data || []).filter((r: any) => enRango(r.fechaReserva))
+            const ventasF = (ventas.data || []).filter(v => enRango(v.fechaVenta))
+            const pagosF = (pagos.data || []).filter(p => enRango(p.fechaPago))
+            const total = seccion === 'citas' ? citasF.length : seccion === 'ventas' ? ventasF.length : pagosF.length
+            return (
+              <>
+                {seccion === 'citas'
+                  ? <SeccionCitas reservas={citasF.slice(0, limite)} />
+                  : seccion === 'ventas'
+                    ? <SeccionVentas ventas={ventasF.slice(0, limite)} onVerImagen={setVerImagen} />
+                    : <SeccionPagos pagos={pagosF.slice(0, limite)} onVerImagen={setVerImagen} />}
+                {total > limite && (
+                  <button onClick={() => setLimite(l => l + 10)}
+                    className="mt-3 w-full py-2 rounded-xl border border-gray-200 text-sm font-semibold text-blue-600 hover:bg-blue-50 transition">
+                    Ver más ({total - limite})
+                  </button>
+                )}
+              </>
+            )
+          })()}
         </div>
       </div>
 

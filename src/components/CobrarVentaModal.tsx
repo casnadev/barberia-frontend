@@ -38,6 +38,7 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
   const [evidencia, setEvidencia] = useState('')
   const [subiendo, setSubiendo] = useState(false)
   const [nombreCliente, setNombreCliente] = useState('')
+  const [sinEvidencia, setSinEvidencia] = useState(false)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -91,7 +92,7 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
   const confirmar = async () => {
     if (seleccionadas.length === 0) { toast.error('Selecciona al menos un servicio'); return }
     if (!idTrabajador) { toast.error('Selecciona el profesional'); return }
-    if (!evidencia) { toast.error('Adjunta la evidencia del pago'); return }
+    if (!evidencia && !sinEvidencia) { toast.error('Adjunta la evidencia del pago'); return }
     setSaving(true)
     try {
       await ventasService.registrarWalkIn({
@@ -99,9 +100,13 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
         detalles: seleccionadas.map(s => ({ idServicio: s.idServicio, idTrabajador: idTrabajador!, cantidad: sel[s.idServicio] || 1 })),
         metodoPago: metodo,
         numeroOperacion: operacion.trim() || undefined,
-        rutaImagenEvidencia: evidencia,
-      })
-      toast.success(mode === 'admin' ? 'Venta registrada' : 'Venta registrada · enviada para aprobación')
+        rutaImagenEvidencia: evidencia || undefined,
+        permitirSinEvidencia: sinEvidencia,
+      } as any)
+      toast.success(
+        evidencia
+          ? (mode === 'admin' ? 'Venta registrada' : 'Venta registrada · enviada para aprobación')
+          : (mode === 'admin' ? 'Venta registrada sin evidencia' : 'Venta creada · pendiente de evidencia'))
       onDone()
     } catch (e: any) { toast.error(mensajeError(e, 'No se pudo registrar la venta')) } finally { setSaving(false) }
   }
@@ -109,7 +114,7 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
   const field = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500 outline-none transition'
   const label = 'text-xs font-medium text-gray-500 mb-1 flex items-center gap-1.5'
 
-  const puedeGuardar = !saving && !subiendo && seleccionadas.length > 0 && !!evidencia && !!idTrabajador
+  const puedeGuardar = !saving && !subiendo && seleccionadas.length > 0 && (!!evidencia || sinEvidencia) && !!idTrabajador
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -225,7 +230,7 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
 
               {/* Evidencia */}
               <div>
-                <label className={label}><Camera size={14} weight="duotone" /> Evidencia del pago <span className="text-rose-500 font-semibold">· obligatoria</span></label>
+                <label className={label}><Camera size={14} weight="duotone" /> Evidencia del pago {sinEvidencia ? <span className="text-gray-400 font-normal">· opcional</span> : <span className="text-rose-500 font-semibold">· obligatoria</span>}</label>
                 {evidencia ? (
                   <div className="relative mt-1 inline-block">
                     <img src={evidencia} alt="evidencia" className="rounded-xl max-h-36 border border-gray-200" />
@@ -238,6 +243,18 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
                     <Camera size={22} weight="duotone" className="text-gray-400" />
                     <span className="text-sm text-gray-500">{subiendo ? 'Subiendo…' : 'Toca para adjuntar la foto del cobro'}</span>
                     <input type="file" accept="image/*" onChange={subir} className="hidden" />
+                  </label>
+                )}
+
+                {/* Sin evidencia: trabajador = pendiente; admin = registrar sin evidencia */}
+                {!evidencia && (
+                  <label className="mt-2 flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
+                    <input type="checkbox" checked={sinEvidencia} onChange={e => setSinEvidencia(e.target.checked)} className="mt-0.5 rounded border-gray-300" />
+                    <span>
+                      {mode === 'admin'
+                        ? 'Registrar sin evidencia (queda registrada con fecha y hora).'
+                        : 'Pendiente de evidencia: la subo después. La venta NO cuenta hasta adjuntar la foto.'}
+                    </span>
                   </label>
                 )}
               </div>

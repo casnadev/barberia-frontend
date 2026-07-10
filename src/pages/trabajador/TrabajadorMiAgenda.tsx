@@ -28,10 +28,12 @@ import { TrabajadorMenu } from '@/components/TrabajadorMenu'
 import { HistorialTrabajadorModal } from '@/components/HistorialTrabajadorModal'
 import { fechaPeru, citaYaEmpezo, MSG_CITA_NO_LLEGA } from '@/utils/fecha'
 import { VerificacionContacto } from '@/components/VerificacionContacto'
+import { TimePicker, duracionHoras } from '@/components/TimePicker'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const METODOS = ['Efectivo', 'Yape', 'Plin', 'Tarjeta', 'Transferencia', 'Otro']
-const TIPOS_DESCANSO = ['Vacaciones', 'Permiso', 'Médico', 'Personal', 'Otro']
+const TIPOS_AUSENCIA = ['Vacaciones', 'Permiso', 'Médico', 'Licencia', 'Capacitación', 'Reunión', 'Personal', 'Otro']
+const TIPOS_EXTRA = ['Turno extra', 'Ampliación', 'Campaña', 'Otro']
 const hoyISO = () => new Date().toISOString().slice(0, 10)
 const franjaDeHora = (h?: string): 'manana' | 'tarde' | 'noche' => {
   const n = parseInt((h || '').slice(0, 2), 10) || 0
@@ -49,7 +51,7 @@ const fmtDia = (iso?: string) => iso
   ? new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
   : ''
 
-type Tab = 'inicio' | 'agenda' | 'disponibilidad' | 'comisiones' | 'resenas'
+type Tab = 'inicio' | 'agenda' | 'disponibilidad' | 'comisiones' | 'resenas' | 'configuracion'
 
 export function TrabajadorMiAgenda() {
   const { user } = useAuthStore()
@@ -61,6 +63,7 @@ export function TrabajadorMiAgenda() {
   const [perfil, setPerfil] = useState<MiPerfilTrabajador | null>(null)
   const [comisiones, setComisiones] = useState<MisComisiones | null>(null)
   const [reservas, setReservas] = useState<any[]>([])
+  const [ventasHoy, setVentasHoy] = useState<VentaResumen[]>([])
   const [nombre, setNombre] = useState<string | undefined>(undefined)
   const [foto, setFoto] = useState<string | undefined>(undefined)
   const [loading, setLoading] = useState(true)
@@ -74,23 +77,29 @@ export function TrabajadorMiAgenda() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [historialOpen, setHistorialOpen] = useState(false)
 
-  const showConfig = params.get('config') === '1'
   const cerrarConfig = () => { params.delete('config'); setParams(params, { replace: true }) }
-  const abrirConfig = () => { params.set('config', '1'); setParams(params, { replace: true }) }
+  const abrirConfig = () => setTab('configuracion')
+  // Compatibilidad: enlaces antiguos con ?config=1 abren la pestaña y limpian el query.
+  useEffect(() => {
+    if (params.get('config') === '1') { setTab('configuracion'); cerrarConfig() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => { cargar() }, [])
 
   const cargar = async () => {
     setLoading(true)
     try {
-      const [per, com, res] = await Promise.all([
+      const [per, com, res, ven] = await Promise.all([
         panelTrabajadorService.getMiPerfil(),
         panelTrabajadorService.getMisComisiones(),
         reservasService.getReservas(),
+        ventasService.listarVentas({ desde: hoyISO(), hasta: hoyISO(), tamanoPagina: 200 }).catch(() => []),
       ])
       setComisiones(com)
       const lista = Array.isArray(res) ? res : []
       setReservas(lista)
+      setVentasHoy(Array.isArray(ven) ? ven : [])
       setPerfil(per)
       // Fija el tenant a la sede del trabajador, para que los endpoints resueltos
       // por subdominio (p.ej. /api/Servicios del walk-in) apunten a SU sede.
@@ -106,7 +115,13 @@ export function TrabajadorMiAgenda() {
     const h = hoyISO()
     return reservas.filter(r => ['Pendiente', 'Confirmada', 'Reprogramada'].includes(r.estado) && (r.fechaReserva || '').slice(0, 10) === h).length
   }, [reservas])
-  const atendidasHoy = useMemo(() => reservas.filter(r => r.estado === 'Atendida' && (r.fechaReserva || '').slice(0, 10) === hoyISO()).length, [reservas])
+  const atendidasHoy = useMemo(() => {
+    const h = hoyISO()
+    // Atenciones de hoy = reservas atendidas + ventas a pie (sin reserva) de hoy.
+    const reservasAtendidas = reservas.filter(r => r.estado === 'Atendida' && (r.fechaReserva || '').slice(0, 10) === h).length
+    const ventasAPie = ventasHoy.filter(v => !v.idReserva && (v.fechaVenta || '').slice(0, 10) === h && v.estado === 'Registrada').length
+    return reservasAtendidas + ventasAPie
+  }, [reservas, ventasHoy])
 
   const trabajadorPropio: TrabajadorPropio | undefined = useMemo(
     () => (idT != null ? { idTrabajador: idT, nombreCompleto: nombre, urlFotoPerfil: foto } : undefined),
@@ -191,6 +206,8 @@ export function TrabajadorMiAgenda() {
           <DisponibilidadTab idT={idT} idSede={idSede} />
         ) : tab === 'comisiones' ? (
           <ComisionesTab idT={idT} comisiones={comisiones} />
+        ) : tab === 'configuracion' ? (
+          <ConfigModal asTab perfil={perfil} onClose={() => setTab('inicio')} onSaved={async () => { await cargar() }} />
         ) : (
           <ResenasTab idT={idT} />
         )}
@@ -215,8 +232,6 @@ export function TrabajadorMiAgenda() {
       {historialOpen && idT != null && (
         <HistorialTrabajadorModal idTrabajador={idT} onClose={() => setHistorialOpen(false)} />
       )}
-
-      {showConfig && <ConfigModal perfil={perfil} onClose={cerrarConfig} onSaved={async () => { await cargar() }} />}
     </div>
   )
 }
@@ -543,13 +558,12 @@ function DisponibilidadTab({ idT, idSede }: { idT: number | null; idSede: number
                   <span className="text-sm text-gray-300">—</span>
                 ) : activo ? (
                   <div className="flex items-center gap-2">
-                    <input type="time" min={s.ini} max={s.fin} value={dias[i].horaInicio}
-                      onChange={e => setDias(d => d.map((x, j) => j === i ? { ...x, horaInicio: e.target.value } : x))}
-                      className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <TimePicker value={dias[i].horaInicio} min={s.ini} max={dias[i].horaFin || s.fin}
+                      onChange={v => setDias(d => d.map((x, j) => j === i ? { ...x, horaInicio: v } : x))} ariaLabel={`${DIAS[i]} inicio`} />
                     <span className="text-gray-300">—</span>
-                    <input type="time" min={s.ini} max={s.fin} value={dias[i].horaFin}
-                      onChange={e => setDias(d => d.map((x, j) => j === i ? { ...x, horaFin: e.target.value } : x))}
-                      className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <TimePicker value={dias[i].horaFin} min={dias[i].horaInicio || s.ini} max={s.fin}
+                      onChange={v => setDias(d => d.map((x, j) => j === i ? { ...x, horaFin: v } : x))} ariaLabel={`${DIAS[i]} fin`} />
+                    <span className="text-[11px] text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full whitespace-nowrap">{duracionHoras(dias[i].horaInicio, dias[i].horaFin) || '—'}</span>
                   </div>
                 ) : (
                   <span className="text-sm text-gray-300">No atiendo</span>
@@ -575,12 +589,22 @@ function DisponibilidadTab({ idT, idSede }: { idT: number | null; idSede: number
 /* ---------- No disponibilidad (DescansoTrabajador) ---------- */
 function DescansosSection({ idT, idSede }: { idT: number | null; idSede: number | null }) {
   const [items, setItems] = useState<DescansoTrabajador[]>([])
-  const [tipo, setTipo] = useState(TIPOS_DESCANSO[0])
+  const [efecto, setEfecto] = useState<'Bloqueo' | 'Disponible'>('Bloqueo')
+  const [tipo, setTipo] = useState(TIPOS_AUSENCIA[0])
   const [ini, setIni] = useState('')
   const [fin, setFin] = useState('')
   const [motivo, setMotivo] = useState('')
+  const [parcial, setParcial] = useState(false)
+  const [hIni, setHIni] = useState('09:00')
+  const [hFin, setHFin] = useState('13:00')
   const [saving, setSaving] = useState(false)
   const [calOpen, setCalOpen] = useState<'ini' | 'fin' | null>(null)
+
+  const tipos = efecto === 'Disponible' ? TIPOS_EXTRA : TIPOS_AUSENCIA
+  const cambiarEfecto = (e: 'Bloqueo' | 'Disponible') => {
+    setEfecto(e)
+    setTipo((e === 'Disponible' ? TIPOS_EXTRA : TIPOS_AUSENCIA)[0])
+  }
 
   const cargar = () => { if (idT) panelTrabajadorService.getDescansos(idT).then(setItems) }
   useEffect(() => { cargar() }, [idT])
@@ -589,6 +613,7 @@ function DescansosSection({ idT, idSede }: { idT: number | null; idSede: number 
     if (!idT || !idSede) return toast.error('No se pudo identificar tu sede')
     if (!ini || !fin) return toast.error('Elige la fecha de inicio y de fin')
     if (ini > fin) return toast.error('La fecha de inicio no puede ser mayor a la de fin')
+    if (parcial && hFin <= hIni) return toast.error('La hora fin debe ser mayor a la de inicio')
     setSaving(true)
     try {
       await panelTrabajadorService.solicitarDescanso(idSede, {
@@ -597,9 +622,14 @@ function DescansosSection({ idT, idSede }: { idT: number | null; idSede: number 
         fechaFin: `${fin}T23:59:59`,
         tipo,
         motivo: motivo.trim(),
+        efecto,
+        horaInicio: parcial ? `${hIni}:00` : null,
+        horaFin: parcial ? `${hFin}:00` : null,
       })
-      toast.success('Descanso solicitado · queda pendiente de aprobación')
-      setIni(''); setFin(''); setMotivo(''); setTipo(TIPOS_DESCANSO[0])
+      toast.success(efecto === 'Disponible'
+        ? 'Disponibilidad extra solicitada · queda pendiente de aprobación'
+        : 'Ausencia solicitada · queda pendiente de aprobación')
+      setIni(''); setFin(''); setMotivo(''); setParcial(false); cambiarEfecto('Bloqueo')
       cargar()
     } catch (e: any) { toast.error(mensajeError(e, 'No se pudo solicitar')) } finally { setSaving(false) }
   }
@@ -625,15 +655,23 @@ function DescansosSection({ idT, idSede }: { idT: number | null; idSede: number 
   const triggerBtn = 'w-full flex items-center gap-2 border border-gray-200 rounded-lg px-2.5 py-2 text-sm text-left bg-white hover:border-blue-300 transition'
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-5 max-w-2xl">
-      <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2"><CalendarOff className="w-5 h-5 text-gray-500" /> No disponibilidad</h3>
-      <p className="text-sm text-gray-500 mb-4">Solicita días libres (vacaciones, permiso, etc.). Esto <b>no borra</b> tu horario semanal; solo bloquea esas fechas una vez que el administrador lo apruebe.</p>
+      <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2"><CalendarOff className="w-5 h-5 text-gray-500" /> Excepciones de disponibilidad</h3>
+      <p className="text-sm text-gray-500 mb-4">Registra <b>ausencias</b> (vacaciones, permiso…) o <b>disponibilidad extra</b> (turno adicional, atender un día de descanso). No cambia tu horario semanal; solo aplica a esas fechas una vez que el administrador lo apruebe.</p>
+
+      {/* Efecto */}
+      <div className="inline-flex rounded-xl bg-gray-100 p-1 mb-4">
+        <button type="button" onClick={() => cambiarEfecto('Bloqueo')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${efecto === 'Bloqueo' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}>Ausencia</button>
+        <button type="button" onClick={() => cambiarEfecto('Disponible')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${efecto === 'Disponible' ? 'bg-white shadow text-blue-700' : 'text-gray-500'}`}>Disponibilidad extra</button>
+      </div>
 
       {/* Formulario */}
       <div className="mb-4">
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs text-gray-500 mb-1">Tipo</label>
-            <select className={`${field} w-full`} value={tipo} onChange={e => setTipo(e.target.value)}>{TIPOS_DESCANSO.map(t => <option key={t} value={t}>{t}</option>)}</select>
+            <select className={`${field} w-full`} value={tipo} onChange={e => setTipo(e.target.value)}>{tipos.map(t => <option key={t} value={t}>{t}</option>)}</select>
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Desde</label>
@@ -653,6 +691,20 @@ function DescansosSection({ idT, idSede }: { idT: number | null; idSede: number 
             <label className="block text-xs text-gray-500 mb-1">Motivo (opcional)</label>
             <input className={`${field} w-full`} value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Ej. viaje familiar" />
           </div>
+          <div className="col-span-2 sm:col-span-3">
+            <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input type="checkbox" checked={parcial} onChange={e => setParcial(e.target.checked)} className="rounded border-gray-300" />
+              Solo una franja horaria {efecto === 'Disponible' ? '(en vez de todo el día)' : '(ej. bloquear el almuerzo)'}
+            </label>
+            {parcial && (
+              <div className="flex items-center gap-2 mt-2">
+                <TimePicker value={hIni} max={hFin} onChange={setHIni} ariaLabel="Hora inicio franja" />
+                <span className="text-gray-300">—</span>
+                <TimePicker value={hFin} min={hIni} onChange={setHFin} ariaLabel="Hora fin franja" />
+                <span className="text-[11px] text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">{duracionHoras(hIni, hFin) || '—'}</span>
+              </div>
+            )}
+          </div>
         </div>
         <button onClick={solicitar} disabled={saving} className="mt-3 inline-flex items-center justify-center gap-1.5 w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50">
           <Plus className="w-4 h-4" /> {saving ? 'Enviando…' : 'Solicitar'}
@@ -667,13 +719,24 @@ function DescansosSection({ idT, idSede }: { idT: number | null; idSede: number 
           {items.map(d => (
             <div key={d.idDescanso} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-3">
               <div>
-                <p className="text-sm font-medium text-gray-900">{fmtDia(d.fechaInicio)} – {fmtDia(d.fechaFin)} <span className="text-xs font-normal text-gray-500">· {d.tipo}</span></p>
+                <p className="text-sm font-medium text-gray-900">{fmtDia(d.fechaInicio)} – {fmtDia(d.fechaFin)} <span className="text-xs font-normal text-gray-500">· {d.tipo}</span>
+                  {d.efecto === 'Disponible'
+                    ? <span className="ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">Extra</span>
+                    : <span className="ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Ausencia</span>}
+                  {d.horaInicio && d.horaFin && <span className="text-xs font-normal text-gray-400"> · {String(d.horaInicio).slice(0, 5)}–{String(d.horaFin).slice(0, 5)}</span>}
+                </p>
                 {d.motivo && <p className="text-xs text-gray-400">{d.motivo}</p>}
+                {(d.estado === 'Rechazada') && d.motivoRechazo && <p className="text-xs text-rose-500 mt-0.5">Rechazado: {d.motivoRechazo}</p>}
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${d.estaAprobado ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
-                  {d.estaAprobado ? 'Aprobado' : 'Pendiente'}
-                </span>
+                {(() => {
+                  const est = d.estado || (d.estaAprobado ? 'Aprobada' : 'Pendiente')
+                  const cls = est === 'Aprobada' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : est === 'Rechazada' ? 'bg-rose-50 text-rose-700 border-rose-200'
+                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                  const txt = est === 'Aprobada' ? 'Aprobado' : est === 'Rechazada' ? 'Rechazado' : 'Pendiente'
+                  return <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${cls}`}>{txt}</span>
+                })()}
                 <button onClick={() => eliminar(d.idDescanso)} className="text-gray-400 hover:text-rose-600 transition" aria-label="Eliminar"><Trash2 className="w-4 h-4" /></button>
               </div>
             </div>
@@ -825,7 +888,7 @@ function AtenderModal({ reserva, onClose, onDone }: any) {
 }
 
 /* ---------- Modal Configuración (editar perfil del trabajador) ---------- */
-function ConfigModal({ perfil, onClose, onSaved }: { perfil: MiPerfilTrabajador | null; onClose: () => void; onSaved: () => Promise<void> | void }) {
+function ConfigModal({ perfil, onClose, onSaved, asTab }: { perfil: MiPerfilTrabajador | null; onClose: () => void; onSaved: () => Promise<void> | void; asTab?: boolean }) {
   const [nombre, setNombre] = useState('')
   const [correo, setCorreo] = useState('')
   const [telefono, setTelefono] = useState('')
@@ -880,7 +943,7 @@ function ConfigModal({ perfil, onClose, onSaved }: { perfil: MiPerfilTrabajador 
       if (u) useAuthStore.getState().setUser({ ...u, urlFotoPerfil: foto || null })
       toast.success('Perfil actualizado')
       await onSaved()
-      onClose()
+      if (!asTab) onClose()
     } catch (e: any) { toast.error(mensajeError(e, 'No se pudo guardar')) } finally { setSaving(false) }
   }
 
@@ -903,8 +966,8 @@ function ConfigModal({ perfil, onClose, onSaved }: { perfil: MiPerfilTrabajador 
 
   const field = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none'
   const inicial = (nombre || 'B').trim().charAt(0).toUpperCase()
-  return (
-    <Shell title="Configuración · Mi perfil" onClose={onClose}>
+  const inner = (
+    <>
       <p className="text-xs text-gray-500 -mt-1 mb-3">Estos datos son los que ven tus clientes y se sincronizan con tu cuenta de acceso.</p>
       <div className="space-y-3">
         {/* Foto */}
@@ -925,7 +988,7 @@ function ConfigModal({ perfil, onClose, onSaved }: { perfil: MiPerfilTrabajador 
         <div><label className="text-xs text-gray-500 flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> Teléfono</label><input className={field} value={telefono} onChange={e => setTelefono(e.target.value)} inputMode="numeric" placeholder="9XXXXXXXX" />
           <VerificacionContacto key={telefono} canal="telefono" valor={telefono} guardado={telefonoOriginal} verificado={telefonoConfirmado && telefono.trim() === telefonoOriginal.trim()} onVerificado={() => { setTelefonoConfirmado(true); setTelefonoOriginal(telefono) }} />
         </div>
-        <div><label className="text-xs text-gray-500">Especialidad</label><input className={field} value={especialidad} onChange={e => setEspecialidad(e.target.value)} placeholder="Ej. Fade, barba…" /></div>
+        <div><label className="text-xs text-gray-500">Especialidad <span className="text-gray-400">· la define el administrador</span></label><input className={`${field} bg-gray-50 text-gray-500 cursor-not-allowed`} value={especialidad} readOnly disabled placeholder="Sin especialidad asignada" /></div>
         <div><label className="text-xs text-gray-500">Experiencia</label><input className={field} value={experiencia} onChange={e => setExperiencia(e.target.value)} placeholder="Ej. 3 años" /></div>
         <div><label className="text-xs text-gray-500">Descripción</label><textarea className={field} rows={3} value={descripcion} onChange={e => setDescripcion(e.target.value)} /></div>
         {perfil?.porcentajeComision != null && <p className="text-xs text-gray-400">Tu comisión: <span className="font-semibold text-gray-600">{perfil.porcentajeComision}%</span> (la define el administrador)</p>}
@@ -937,6 +1000,20 @@ function ConfigModal({ perfil, onClose, onSaved }: { perfil: MiPerfilTrabajador 
           </button>
         </div>
       </div>
+    </>
+  )
+
+  if (asTab) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 max-w-xl">
+        <h3 className="font-bold text-gray-900 mb-3">Mi perfil</h3>
+        {inner}
+      </div>
+    )
+  }
+  return (
+    <Shell title="Configuración · Mi perfil" onClose={onClose}>
+      {inner}
     </Shell>
   )
 }

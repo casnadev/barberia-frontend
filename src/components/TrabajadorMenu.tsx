@@ -1,10 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   House, CalendarCheck, Clock, CurrencyDollar, Star,
-  Receipt, Globe, X, ClockCounterClockwise, type Icon,
+  Receipt, Globe, X, ClockCounterClockwise, Gear, type Icon,
 } from '@phosphor-icons/react'
 
-export type TrabajadorTab = 'inicio' | 'agenda' | 'disponibilidad' | 'comisiones' | 'resenas'
+export type TrabajadorTab = 'inicio' | 'agenda' | 'disponibilidad' | 'comisiones' | 'resenas' | 'configuracion'
 
 type ActionId = 'venta' | 'reservar' | 'sitio' | 'historial'
 
@@ -18,6 +18,7 @@ const SECCIONES: Tile[] = [
   { kind: 'tab', key: 'disponibilidad', label: 'Horario', icon: Clock },
   { kind: 'tab', key: 'comisiones', label: 'Comisiones', icon: CurrencyDollar },
   { kind: 'tab', key: 'resenas', label: 'Reseñas', icon: Star },
+  { kind: 'tab', key: 'configuracion', label: 'Configuración', icon: Gear },
 ]
 
 const ACCIONES: Tile[] = [

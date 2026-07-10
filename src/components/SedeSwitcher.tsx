@@ -26,7 +26,7 @@ export function SedeSwitcher() {
     ;(async () => {
       try {
         const [lista, capacidad] = await Promise.all([
-          sedeTenantService.getMisSedes(),
+          sedeTenantService.getMisSedesCached(),
           sedeTenantService.getCapacidad().catch(() => null),
         ])
         if (cancelado) return

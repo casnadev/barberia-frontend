@@ -97,7 +97,13 @@ export const getActiveTenant = (): string => {
   const fromHost = subdominioDesdeHost()
   if (fromHost) return fromHost.toLowerCase()
 
-  // 4. localStorage / 5. .env / 6. 'demo' — igual que antes
+  // 4. Sesión activa SIN sede elegida aún (recién logueado o cambio de cuenta):
+  //    NO caigas a un tenant por defecto de otra empresa; eso dispara el 403
+  //    cross-tenant. Manda vacío: el backend no resuelve sede y el bootstrap
+  //    (TenantGate / login) fija la sede correcta del usuario.
+  if (token) return ''
+
+  // 5. Anónimo / dev: localStorage → .env → 'demo'
   try {
     const stored = localStorage.getItem(TENANT_KEY)
     if (stored && stored.trim()) return stored.trim().toLowerCase()

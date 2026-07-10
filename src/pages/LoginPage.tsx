@@ -9,6 +9,7 @@ import {
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/authService'
 import { setTenant, clearTenant } from '@/services/apiClient'
+import { clearMisSedesCache } from '@/services/sedeTenantService'
 import { sedeTenantService } from '@/services/sedeTenantService'
 
 // Vistas del login. Tras retirar PIN y login-OTP, el ingreso es:
@@ -41,6 +42,9 @@ export function LoginPage() {
 
   // ----------------------------------------------------------- routing
   const entrar = async (token: string, user: any, subdominio?: string) => {
+    // Sesión nueva: descarta cualquier tenant/sedes de una cuenta anterior para
+    // no arrastrar el 403 cross-tenant al cambiar de usuario.
+    clearMisSedesCache()
     setToken(token); setUser(user)
     if (user.rol === 'SuperAdmin') clearTenant()
     else if (subdominio) setTenant(subdominio)
@@ -49,9 +53,10 @@ export function LoginPage() {
       // tiene sede (admin recién creado), no pasa nada: queda sin tenant.
       // Con timeout corto: en móvil lento NO debe colgar el login. Si tarda,
       // redirige igual y la sede se resuelve dentro del panel.
+      clearTenant()   // arranca sin tenant → getMisSedes no viaja con sede ajena
       try {
         const sedes = await Promise.race([
-          sedeTenantService.getMisSedes(),
+          sedeTenantService.getMisSedesCached(),
           new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 4000)),
         ])
         if (sedes[0]?.subdominio) setTenant(sedes[0].subdominio)

@@ -1,10 +1,13 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Edit2, Trash2, AlertCircle, X, Eye, EyeOff, Upload, Image as ImageIcon, KeyRound, SendHorizontal } from 'lucide-react'
+import { Plus, Edit2, Trash2, AlertCircle, X, Eye, EyeOff, Upload, Image as ImageIcon, KeyRound, SendHorizontal, Calendar } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { apiClient, buildImageUrl } from '@/services/apiClient'
 import { verificacionContactoService } from '@/services/verificacionContactoService'
+import { sedesService } from '@/services/sedesService'
+import { descansosAdminService } from '@/services/descansosAdminService'
+import { SolicitudesDescansoModal } from '@/components/SolicitudesDescansoModal'
 import { ComboBox } from '@/components/ComboBox'
 import { ROLES_TRABAJADOR } from '@/data/roles'
 import s from '@/styles/Trabajadores.module.css'
@@ -14,6 +17,8 @@ interface Trabajador {
   nombreCompleto: string
   telefono?: string
   correo?: string
+  correoConfirmado?: boolean
+  telefonoConfirmado?: boolean
   porcentajeComision?: number
   urlFotoPerfil?: string
   descripcion?: string
@@ -21,7 +26,7 @@ interface Trabajador {
   experiencia?: string
   esDestacado?: boolean
   estado?: boolean
-  accesoHabilitado?: boolean
+  accesoHabilitado?: boolean 
   esDuenoAdmin?: boolean
   visibleEnLandingPublico?: boolean
   fechaIngreso?: string
@@ -104,6 +109,22 @@ export function TrabajadoresPage() {
 
   // Histórico de trabajadores dados de baja (solo lectura)
   const [showBaja, setShowBaja] = useState(false)
+  const [idSede, setIdSede] = useState<number | null>(null)
+  const [showSolicitudes, setShowSolicitudes] = useState(false)
+  const [pendientes, setPendientes] = useState(0)
+
+  const cargarPendientes = async (sedeId: number) => {
+    setPendientes(await descansosAdminService.pendientesCount(sedeId))
+  }
+  useEffect(() => {
+    let vivo = true
+    sedesService.getSedeActual().then((s: any) => {
+      if (!vivo || !s?.idSede) return
+      setIdSede(s.idSede)
+      cargarPendientes(s.idSede)
+    }).catch(() => {})
+    return () => { vivo = false }
+  }, [])
   const { data: dadosDeBaja = [] } = useQuery<Trabajador[]>({
     queryKey: ['trabajadores', 'dados-de-baja'],
     queryFn: async () => {
@@ -262,6 +283,8 @@ export function TrabajadoresPage() {
       nombreCompleto: trabajador.nombreCompleto,
       telefono: trabajador.telefono,
       correo: trabajador.correo,
+      correoConfirmado: trabajador.correoConfirmado,
+      telefonoConfirmado: trabajador.telefonoConfirmado,
       porcentajeComision: trabajador.porcentajeComision ?? 0,
       urlFotoPerfil: trabajador.urlFotoPerfil,
       descripcion: trabajador.descripcion,
@@ -383,6 +406,16 @@ export function TrabajadoresPage() {
   return (
     <>
       <div className={s.toolbar}>
+        <button
+          type="button"
+          onClick={() => setShowSolicitudes(true)}
+          className="relative inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+        >
+          <Calendar width={17} height={17} /> Solicitudes de descanso
+          {pendientes > 0 && (
+            <span className="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 rounded-full bg-rose-500 text-white text-[11px] font-bold flex items-center justify-center">{pendientes}</span>
+          )}
+        </button>
         <motion.button
           whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.96 }}
@@ -486,13 +519,22 @@ export function TrabajadoresPage() {
                 </div>
 
                 <div className={s.field}>
-                  <label className={s.label}>Correo (acceso por email)</label>
+                  <label className={s.label}>Correo (acceso por email)
+                    {editingId && form.correo && (form.correoConfirmado
+                      ? <span style={{ marginLeft: 8, fontSize: 11, color: '#059669', fontWeight: 600 }}>✓ Verificado</span>
+                      : <span style={{ marginLeft: 8, fontSize: 11, color: '#d97706' }}>Sin verificar</span>)}
+                  </label>
                   <input className={s.input} type="email" value={form.correo || ''} onChange={e => setForm({ ...form, correo: e.target.value })} />
+                  {editingId && form.correoConfirmado && <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>Cambiarlo quitará la verificación.</div>}
                 </div>
 
                 <div className={s.row2}>
                   <div className={s.field}>
-                    <label className={s.label}>Teléfono</label>
+                    <label className={s.label}>Teléfono
+                      {editingId && form.telefono && (form.telefonoConfirmado
+                        ? <span style={{ marginLeft: 8, fontSize: 11, color: '#059669', fontWeight: 600 }}>✓ Verificado</span>
+                        : <span style={{ marginLeft: 8, fontSize: 11, color: '#d97706' }}>Sin verificar</span>)}
+                    </label>
                     <input className={s.input} type="text" value={form.telefono || ''} onChange={e => setForm({ ...form, telefono: e.target.value })} />
                   </div>
                   <div className={s.field}>
@@ -629,6 +671,13 @@ export function TrabajadoresPage() {
         )}
       </AnimatePresence>
 
+      {showSolicitudes && idSede != null && (
+        <SolicitudesDescansoModal
+          idSede={idSede}
+          onClose={() => setShowSolicitudes(false)}
+          onChange={() => cargarPendientes(idSede)}
+        />
+      )}
     </>
   )
 }

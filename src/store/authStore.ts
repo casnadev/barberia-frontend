@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { clearTenant } from '@/services/apiClient'
+import { clearMisSedesCache } from '@/services/sedeTenantService'
 
 export interface User {
   id: number
@@ -58,6 +59,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Limpieza completa de sesión: tenant + sessionStorage, para que el
       // próximo admin NO herede nada de la sesión anterior.
       clearTenant()
+      clearMisSedesCache()
       sessionStorage.clear()
     } catch (error) {
       console.error('Error en logout:', error)
@@ -76,7 +78,7 @@ if (typeof window !== 'undefined') {
     // Otra pestaña cerró sesión (token eliminado).
     if (e.key === 'token' && e.newValue === null) {
       useAuthStore.setState({ user: null, token: null })
-      try { clearTenant(); sessionStorage.clear() } catch { /* ignore */ }
+      try { clearTenant(); clearMisSedesCache(); sessionStorage.clear() } catch { /* ignore */ }
       const ruta = window.location.pathname
       const esPublica = ruta.startsWith('/login') || ruta.startsWith('/acceso') || ruta === '/'
       if (!esPublica) window.location.href = '/login'

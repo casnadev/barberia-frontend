@@ -13,6 +13,7 @@ import SeccionFila from '@/components/SeccionFila'
 import SeccionSheet from '@/components/SeccionSheet'
 import { Skeleton, SkeletonRows } from '@/components/Skeleton'
 import BrandColorPicker from '@/components/BrandColorPicker'
+import { TimePicker, duracionHoras } from '@/components/TimePicker'
 
 interface Sede {
   idSede?: number
@@ -203,6 +204,14 @@ export function ConfiguracionPage() {
     setHorariosDias((prev) => prev.map((d) => (d.dia === dia ? { ...d, abierto: !d.abierto } : d)))
   const setHora = (dia: number, campo: 'inicio' | 'fin', valor: string) =>
     setHorariosDias((prev) => prev.map((d) => (d.dia === dia ? { ...d, [campo]: valor } : d)))
+
+  // Copia el horario de un día a TODOS los días abiertos (como en Fresha).
+  const aplicarHorarioATodos = (dia: number) =>
+    setHorariosDias((prev) => {
+      const base = prev.find((d) => d.dia === dia)
+      if (!base) return prev
+      return prev.map((d) => (d.abierto ? { ...d, inicio: base.inicio, fin: base.fin } : d))
+    })
 
   const guardarHorarios = async (): Promise<boolean> => {
     if (!idSedeActual) { toast.error('No se pudo resolver la sede activa'); return false }
@@ -919,11 +928,12 @@ export function ConfiguracionPage() {
                 </button>
                 {d.abierto ? (
                   <div className="flex items-center gap-2">
-                    <input type="time" value={d.inicio} onChange={(e) => setHora(d.dia, 'inicio', e.target.value)}
-                      className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <TimePicker value={d.inicio} max={d.fin} onChange={(v) => setHora(d.dia, 'inicio', v)} ariaLabel={`${d.label} inicio`} />
                     <span className="text-gray-300">—</span>
-                    <input type="time" value={d.fin} onChange={(e) => setHora(d.dia, 'fin', e.target.value)}
-                      className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <TimePicker value={d.fin} min={d.inicio} onChange={(v) => setHora(d.dia, 'fin', v)} ariaLabel={`${d.label} fin`} />
+                    <span className="text-[11px] text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full whitespace-nowrap">{duracionHoras(d.inicio, d.fin) || '—'}</span>
+                    <button type="button" onClick={() => aplicarHorarioATodos(d.dia)} title="Aplicar este horario a todos los días abiertos"
+                      className="text-[11px] text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap">Aplicar a todos</button>
                   </div>
                 ) : (
                   <span className="text-sm text-gray-300">Cerrado</span>

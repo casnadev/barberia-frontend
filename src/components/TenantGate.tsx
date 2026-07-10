@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { getActiveTenant, setTenant } from '@/services/apiClient'
-import { sedeTenantService } from '@/services/sedeTenantService'
+import { getActiveTenant, setTenant, clearTenant } from '@/services/apiClient'
+import { sedeTenantService, clearMisSedesCache } from '@/services/sedeTenantService'
 import { useAuthStore } from '@/store/authStore'
 import styles from '@/styles/TenantGate.module.css'
 
@@ -9,15 +9,14 @@ import styles from '@/styles/TenantGate.module.css'
  * (X-Tenant-Subdomain) corresponda a una sede ACTIVA de SU empresa antes de
  * renderizar. Si el negocio está PAUSADO (sin sedes activas), el admin SÍ pudo
  * iniciar sesión, pero en vez del panel ve la pantalla "Tu negocio está pausado".
+ *
+ * Resolución 100% en memoria (sin window.location.reload): al cambiar de cuenta
+ * el tenant se re-fija al instante y se limpia el caché de sedes, evitando el
+ * 403 "No tienes acceso a esta sede" que dejaba el tenant de la sesión anterior.
  */
 
-// Caché de sesión: las sedes del admin no cambian mientras navega.
-let sedesCache: Awaited<ReturnType<typeof sedeTenantService.getMisSedes>> | null = null
-
-/** Limpia la caché de sedes (llámalo en el logout si no haces full reload). */
-export const clearSedesCache = (): void => {
-  sedesCache = null
-}
+/** Limpia el caché de sedes de sesión (llámalo en logout/login). */
+export const clearSedesCache = (): void => clearMisSedesCache()
 
 type Estado = 'cargando' | 'ok' | 'pausado'
 
@@ -27,42 +26,46 @@ export function TenantGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelado = false
     ;(async () => {
-      try {
-        const lista = sedesCache ?? (sedesCache = await sedeTenantService.getMisSedes())
+      const resolver = async (reintento = false): Promise<void> => {
+        const lista = await sedeTenantService.getMisSedesCached()
         if (cancelado) return
-
-        const current = getActiveTenant()
 
         // Sedes ACTIVAS de mi empresa (estado !== false; undefined = activa).
         const activas = lista.filter((s) => s.estado !== false)
+
+        // Caso 1: NINGUNA sede activa → negocio pausado.
+        if (activas.length === 0) { setEstado('pausado'); return }
+
+        const current = getActiveTenant()
         const sedeActual = lista.find((s) => s.subdominio === current)
         const actualEsValida = !!sedeActual && sedeActual.estado !== false
 
-        // Caso 1: NINGUNA sede activa → negocio pausado. No deslogueo: muestro
-        // la pantalla de pausa (el dueño puede contactar soporte / reactivar).
-        if (activas.length === 0) {
-          setEstado('pausado')
-          return
-        }
-
-        // Caso 2: la sede activa no sirve (desactivada/obsoleta) pero tengo otras
-        // activas → cambio a la primera activa y recargo una sola vez.
+        // Caso 2: la sede activa no es mía/está inactiva → fijo la primera activa
+        //   EN MEMORIA (sin recargar la página) y doy por bueno el render.
         if (!actualEsValida) {
           setTenant(activas[0].subdominio)
-          window.location.reload()
-          return
         }
+        setEstado('ok')
+        void reintento
+      }
 
-        // Caso 3: todo en orden.
-        setEstado('ok')
+      try {
+        await resolver()
       } catch {
-        // Ante error de red, no bloqueo el panel.
-        setEstado('ok')
+        // Suele ser el 403 por tenant heredado de la sesión anterior: limpio el
+        // tenant y el caché, y reintento una vez ya con contexto limpio.
+        if (cancelado) return
+        try {
+          clearTenant()
+          clearMisSedesCache()
+          await resolver(true)
+        } catch {
+          // Ante error de red persistente, no bloqueo el panel.
+          if (!cancelado) setEstado('ok')
+        }
       }
     })()
-    return () => {
-      cancelado = true
-    }
+    return () => { cancelado = true }
   }, [])
 
   if (estado === 'cargando') {

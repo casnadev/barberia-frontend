@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { User, LogOut, LogIn, UserPlus, Settings, ExternalLink, LifeBuoy, KeyRound, CreditCard } from 'lucide-react'
+import { User, LogOut, LogIn, UserPlus, ExternalLink, LifeBuoy, KeyRound, CreditCard } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/authService'
 import { urlMarca, buildImageUrl } from '@/services/apiClient'
@@ -200,11 +200,6 @@ export function AccountMenu({ variant = 'floating', siteLink = false, onMiPerfil
                   <button className={s.item} onClick={abrirAcceso}>
                     <KeyRound className={s.itemIcon} width={18} height={18} /> Acceso
                   </button>
-                  {user.rol === 'Trabajador' && (
-                    <button className={s.item} onClick={() => go('/mi-agenda?config=1')}>
-                      <Settings className={s.itemIcon} width={18} height={18} /> Configuración
-                    </button>
-                  )}
                   {user.rol === 'Admin' && (
                     <button className={s.item} onClick={abrirSoporte}>
                       <LifeBuoy className={s.itemIcon} width={18} height={18} /> Ayuda y soporte

@@ -19,6 +19,11 @@ export interface DescansoTrabajador {
   tipo: string
   motivo: string
   estaAprobado: boolean
+  estado?: 'Pendiente' | 'Aprobada' | 'Rechazada'
+  motivoRechazo?: string | null
+  efecto?: 'Bloqueo' | 'Disponible'
+  horaInicio?: string | null
+  horaFin?: string | null
 }
 export interface CrearDescansoTrabajador {
   idTrabajador: number
@@ -26,6 +31,9 @@ export interface CrearDescansoTrabajador {
   fechaFin: string
   tipo: string
   motivo: string
+  efecto?: 'Bloqueo' | 'Disponible'
+  horaInicio?: string | null
+  horaFin?: string | null
 }
 export interface PagoTrabajador {
   idPago: number
