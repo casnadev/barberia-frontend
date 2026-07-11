@@ -537,6 +537,7 @@ export default function LandingPage() {
             <nav className={styles.footLinks}>
               <Link to="/terminos">Términos y condiciones</Link>
               <Link to="/privacidad">Política de privacidad</Link>
+              <Link to="/uso-aceptable">Política de uso aceptable</Link>
               <Link to="/libro-reclamaciones">Libro de reclamaciones</Link>
               <a onClick={() => irA('contacto')}>Contacto</a>
             </nav>

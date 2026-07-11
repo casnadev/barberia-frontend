@@ -6,7 +6,14 @@ import { descansosAdminService, type SolicitudDescanso } from '@/services/descan
 
 const fmt = (s?: string) => {
   if (!s) return ''
-  try { return new Date(s).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) } catch { return s }
+  // Tarea 1: la fecha llega como día de calendario ("yyyy-MM-dd"). `new Date(s)`
+  // lo interpretaría como medianoche UTC y en Lima (UTC-5) mostraría el día
+  // ANTERIOR (25 se veía 24). Se fuerza a medianoche LOCAL tomando solo la fecha,
+  // igual que hace la vista del trabajador, para que Admin y Trabajador coincidan.
+  try {
+    const soloFecha = String(s).slice(0, 10)
+    return new Date(`${soloFecha}T00:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+  } catch { return s }
 }
 
 /**

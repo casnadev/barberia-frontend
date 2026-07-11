@@ -129,6 +129,15 @@ export interface WalkInPayload {
   numeroOperacion?: string
   rutaImagenEvidencia?: string
   observacion?: string
+  /** Trabajador/Admin: crea la venta "pendiente de evidencia" (la sube después). */
+  permitirSinEvidencia?: boolean
+  /**
+   * Tarea 4 — Atribución cuando la registra un Admin:
+   *   true  = "Venta mía" (Admin): se acepta al instante.
+   *   false = "Venta de un profesional": queda pendiente de aprobación del Admin.
+   * El backend la ignora cuando la crea un Trabajador (siempre pendiente).
+   */
+  atribuidaAlAdmin?: boolean
 }
 
 export interface VentaResumen {

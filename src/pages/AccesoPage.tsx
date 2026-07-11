@@ -15,6 +15,10 @@ const comboCls = 'w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white 
 type Tipo = 'Cliente' | 'Profesional'
 type View = 'choose' | 'login' | 'password' | 'code' | 'finalize'
 
+// Tarea 5 — versión del documento de T&C que se registra al aceptar (auditoría).
+// Súbela cuando cambie el contenido de /terminos.
+const TERMINOS_VERSION = '1.0'
+
 /**
  * Acceso unificado. Un solo campo "Correo o Teléfono" (el backend autodetecta el
  * canal). Cliente: OTP/Google directo (sin formulario). Profesional: OTP/Google →
@@ -39,6 +43,10 @@ export function AccesoPage() {
   const [departamento, setDepartamento] = useState('')
   const [distrito, setDistrito] = useState('')
   const [correoVerificado, setCorreoVerificado] = useState('')
+  // Tarea 5 — aceptación obligatoria de Términos y Condiciones en el alta.
+  const [aceptaTerminos, setAceptaTerminos] = useState(false)
+  // Declaración del propietario: consentimiento reforzado, obligatorio para el alta.
+  const [aceptaDeclaracion, setAceptaDeclaracion] = useState(false)
   // Código de referido: función LISTA pero OCULTA por ahora. Si llega ?ref= en la URL
   // se respeta en silencio; no mostramos campo visible (se habilitará más adelante).
   const codigoReferido = (() => {
@@ -179,6 +187,8 @@ export function AccesoPage() {
     if (!nombre.trim()) { toast.error('Ingresa tu nombre.'); return }
     if (!departamento || !distrito) { toast.error('Elige tu departamento y distrito.'); return }
     if (password.length < 8) { toast.error('La contraseña debe tener al menos 8 caracteres.'); return }
+    if (!aceptaTerminos) { toast.error('Debes aceptar los Términos, la Privacidad y el Uso Aceptable para continuar.'); return }
+    if (!aceptaDeclaracion) { toast.error('Debes confirmar la Declaración del propietario para continuar.'); return }
     setLoading(true)
     try {
       let resp
@@ -187,6 +197,7 @@ export function AccesoPage() {
           credential: googleCredential, nombreNegocio: nombreNegocio.trim(),
           nombre: nombre.trim(), password,
           departamento, distrito,
+          aceptaTerminos: true, versionTerminos: TERMINOS_VERSION,
         })
       } else {
         resp = await authService.signupCompletar({
@@ -197,6 +208,7 @@ export function AccesoPage() {
           password,
           departamento, distrito,
           codigoReferido: codigoReferido.trim() || undefined,
+          aceptaTerminos: true, versionTerminos: TERMINOS_VERSION,
         })
       }
       if (!resp) { toast.error('No pudimos crear la cuenta.'); return }
@@ -347,7 +359,44 @@ export function AccesoPage() {
 
               <p className="mt-2 mb-1 text-xs text-gray-400">Códigos de referido: <span className="font-medium text-gray-500">próximamente</span>.</p>
 
-              <button onClick={crearNegocio} disabled={loading} className={btnPrimary + ' mt-1'}>
+              {/* Aceptación legal — casilla única con los 3 documentos */}
+              <label className="flex items-start gap-2 mt-3 text-xs text-gray-600 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={aceptaTerminos}
+                  onChange={(e) => setAceptaTerminos(e.target.checked)}
+                  className="mt-0.5 rounded border-gray-300"
+                />
+                <span>
+                  He leído y acepto los{' '}
+                  <a href="/terminos" target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">Términos y Condiciones</a>,{' '}
+                  la <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">Política de Privacidad</a>{' '}
+                  y la <a href="/uso-aceptable" target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">Política de Uso Aceptable</a> de Barber.pe.
+                </span>
+              </label>
+
+              {/* Declaración del propietario — consentimiento reforzado */}
+              <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                <p className="text-[11px] font-semibold text-gray-700 mb-1.5">Declaración del propietario del negocio</p>
+                <ul className="text-[11px] text-gray-500 leading-relaxed list-disc pl-4 space-y-0.5">
+                  <li>Soy responsable de la información y los servicios que publica mi negocio.</li>
+                  <li>Solo ofreceré servicios permitidos por la ley y cuento con las licencias y autorizaciones que correspondan.</li>
+                  <li>Soy el responsable de los datos de mis clientes finales; Barber.pe actúa como encargado por mi cuenta.</li>
+                  <li>Entiendo que Barber.pe solo provee una plataforma tecnológica.</li>
+                </ul>
+                <a href="/declaracion" target="_blank" rel="noopener noreferrer" className="text-[11px] font-medium text-blue-600 hover:underline">Ver declaración completa</a>
+                <label className="flex items-start gap-2 mt-2 text-xs text-gray-600 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={aceptaDeclaracion}
+                    onChange={(e) => setAceptaDeclaracion(e.target.checked)}
+                    className="mt-0.5 rounded border-gray-300"
+                  />
+                  <span>Declaro que la información anterior es verdadera.</span>
+                </label>
+              </div>
+
+              <button onClick={crearNegocio} disabled={loading || !aceptaTerminos || !aceptaDeclaracion} className={btnPrimary + ' mt-3'}>
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5" />} Aceptar y crear cuenta
               </button>
             </motion.div>

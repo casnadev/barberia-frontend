@@ -40,6 +40,10 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
   const [nombreCliente, setNombreCliente] = useState('')
   const [sinEvidencia, setSinEvidencia] = useState(false)
   const [saving, setSaving] = useState(false)
+  // Tarea 4 — En modo Admin: ¿la venta la hizo el propio Admin ("Venta mía",
+  // se acepta al instante) o un profesional (queda pendiente de su aprobación)?
+  // Default true = venta propia del Admin (comportamiento habitual del dueño).
+  const [ventaMia, setVentaMia] = useState(true)
 
   useEffect(() => {
     let cancel = false
@@ -95,6 +99,9 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
     if (!evidencia && !sinEvidencia) { toast.error('Adjunta la evidencia del pago'); return }
     setSaving(true)
     try {
+      // Tarea 4: el Admin solo auto-aprueba cuando es "Venta mía".
+      // El Trabajador siempre envía false (el backend lo ignora igual → pendiente).
+      const atribuidaAlAdmin = mode === 'admin' ? ventaMia : false
       await ventasService.registrarWalkIn({
         nombreCliente: nombreCliente.trim() || undefined,
         detalles: seleccionadas.map(s => ({ idServicio: s.idServicio, idTrabajador: idTrabajador!, cantidad: sel[s.idServicio] || 1 })),
@@ -102,11 +109,13 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
         numeroOperacion: operacion.trim() || undefined,
         rutaImagenEvidencia: evidencia || undefined,
         permitirSinEvidencia: sinEvidencia,
+        atribuidaAlAdmin,
       } as any)
+      const seAcepta = mode === 'admin' && ventaMia   // única vía de auto-aprobación
       toast.success(
-        evidencia
-          ? (mode === 'admin' ? 'Venta registrada' : 'Venta registrada · enviada para aprobación')
-          : (mode === 'admin' ? 'Venta registrada sin evidencia' : 'Venta creada · pendiente de evidencia'))
+        seAcepta
+          ? (evidencia ? 'Venta registrada' : 'Venta registrada sin evidencia')
+          : (evidencia ? 'Venta enviada para aprobación' : 'Venta creada · pendiente de aprobación'))
       onDone()
     } catch (e: any) { toast.error(mensajeError(e, 'No se pudo registrar la venta')) } finally { setSaving(false) }
   }
@@ -150,16 +159,46 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
             {/* Cuerpo scrolleable */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
               {mode === 'admin' && (
-                <div>
-                  <label className={label}><UserCircle size={14} weight="duotone" /> Profesional</label>
-                  <ComboBox
-                    value={idTrabajador ?? ''}
-                    onChange={(v) => setIdTrabajador(v === '' ? null : Number(v))}
-                    opciones={trabajadores.map(t => ({ valor: t.idTrabajador, etiqueta: t.nombreCompleto }))}
-                    disabled={trabajadores.length === 0}
-                    inputClassName={field}
-                  />
-                </div>
+                <>
+                  {/* Tarea 4 — ¿Quién realizó la venta? Decide si se acepta al instante
+                      (venta propia del Admin) o queda pendiente de su aprobación
+                      (venta de un profesional). */}
+                  <div>
+                    <label className={label}>¿Quién realizó la venta?</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setVentaMia(true)}
+                        className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition ${ventaMia ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-500/30' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                      >
+                        Venta mía (Admin)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVentaMia(false)}
+                        className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition ${!ventaMia ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-500/30' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                      >
+                        Venta de un profesional
+                      </button>
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-gray-400">
+                      {ventaMia
+                        ? 'Se registra como aceptada al instante.'
+                        : 'Quedará pendiente de aprobación: el profesional la verá como pendiente y tú la apruebas o rechazas según la evidencia.'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className={label}><UserCircle size={14} weight="duotone" /> Profesional {ventaMia && <span className="text-gray-400 font-normal">· que atendió</span>}</label>
+                    <ComboBox
+                      value={idTrabajador ?? ''}
+                      onChange={(v) => setIdTrabajador(v === '' ? null : Number(v))}
+                      opciones={trabajadores.map(t => ({ valor: t.idTrabajador, etiqueta: t.nombreCompleto }))}
+                      disabled={trabajadores.length === 0}
+                      inputClassName={field}
+                    />
+                  </div>
+                </>
               )}
 
               {/* Servicios */}
@@ -251,7 +290,7 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
                   <label className="mt-2 flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
                     <input type="checkbox" checked={sinEvidencia} onChange={e => setSinEvidencia(e.target.checked)} className="mt-0.5 rounded border-gray-300" />
                     <span>
-                      {mode === 'admin'
+                      {(mode === 'admin' && ventaMia)
                         ? 'Registrar sin evidencia (queda registrada con fecha y hora).'
                         : 'Pendiente de evidencia: la subo después. La venta NO cuenta hasta adjuntar la foto.'}
                     </span>
@@ -275,7 +314,9 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
                 {saving ? 'Registrando…' : 'Registrar venta'}
               </button>
               <p className="text-[11px] text-gray-400 text-center">
-                {mode === 'admin' ? 'Se registra como venta aceptada.' : 'Quedará pendiente de aprobación del administrador.'}
+                {(mode === 'admin' && ventaMia)
+                  ? 'Se registra como venta aceptada.'
+                  : 'Quedará pendiente de aprobación del administrador.'}
               </p>
             </div>
           </>

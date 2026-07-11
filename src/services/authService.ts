@@ -115,6 +115,7 @@ export const authService = {
   googleCompletarProfesional: async (payload: {
     credential: string; nombreNegocio: string; nombre?: string; apellido?: string; password: string
     departamento?: string; distrito?: string
+    aceptaTerminos?: boolean; versionTerminos?: string   // Tarea 5
   }): Promise<LoginResponse | null> => {
     const r = await apiClient.post('/api/Auth/google/completar-profesional', {
       Credential: payload.credential,
@@ -124,6 +125,8 @@ export const authService = {
       Password: payload.password,
       Departamento: payload.departamento,
       Distrito: payload.distrito,
+      AceptaTerminos: payload.aceptaTerminos,
+      VersionTerminos: payload.versionTerminos,
     })
     return mapLoginResponse(r.data.data || r.data)
   },
@@ -165,6 +168,7 @@ export const authService = {
     apellido?: string; correo?: string; telefono?: string; nombreNegocio?: string; password?: string
     departamento?: string; distrito?: string
     codigoReferido?: string
+    aceptaTerminos?: boolean; versionTerminos?: string   // Tarea 5
   }): Promise<LoginResponse | null> => {
     try {
       const response = await apiClient.post('/api/Auth/signup/completar', {
@@ -173,6 +177,8 @@ export const authService = {
         Telefono: payload.telefono, NombreNegocio: payload.nombreNegocio, Password: payload.password,
         Departamento: payload.departamento, Distrito: payload.distrito,
         CodigoReferido: payload.codigoReferido,
+        AceptaTerminos: payload.aceptaTerminos,
+        VersionTerminos: payload.versionTerminos,
       })
       const responseData = response.data.data || response.data
       return mapLoginResponse(responseData)

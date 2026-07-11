@@ -34,6 +34,8 @@ const NovedadesSedePage = lazy(() => import('@/pages/NovedadesSedePage').then(m 
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })))
 const TerminosPage = lazy(() => import('@/pages/legal/TerminosPage'))
 const PrivacidadPage = lazy(() => import('@/pages/legal/PrivacidadPage'))
+const UsoAceptablePage = lazy(() => import('@/pages/legal/UsoAceptablePage'))
+const DeclaracionNegocioPage = lazy(() => import('@/pages/legal/DeclaracionNegocioPage'))
 const LibroReclamacionesPage = lazy(() => import('@/pages/legal/LibroReclamacionesPage'))
 const TrabajadorMiAgenda = lazy(() => import('@/pages/trabajador/TrabajadorMiAgenda').then(m => ({ default: m.TrabajadorMiAgenda })))
 const CompletarPerfilAdmin = lazy(() => import('@/pages/CompletarPerfilAdmin').then(m => ({ default: m.CompletarPerfilAdmin })))
@@ -384,6 +386,8 @@ export function App() {
             {/* PÁGINAS LEGALES */}
             <Route path="/terminos" element={<TerminosPage />} />
             <Route path="/privacidad" element={<PrivacidadPage />} />
+            <Route path="/uso-aceptable" element={<UsoAceptablePage />} />
+            <Route path="/declaracion" element={<DeclaracionNegocioPage />} />
             <Route path="/libro-reclamaciones" element={<LibroReclamacionesPage />} />
 
             {/* RESERVAR PÚBLICA */}
