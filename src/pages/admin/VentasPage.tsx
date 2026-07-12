@@ -3,13 +3,15 @@ import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Clock, Check, X, CurrencyDollar, CalendarDots, Scissors, User, Image as ImageIcon,
-  Checks, Prohibit, Storefront, CalendarCheck,
+  Checks, Prohibit, Storefront, CalendarCheck, QrCode,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { notificarFidelizacion } from '@/components/NotificacionFidelizacion'
 import { CalendarModal } from '@/pages/cliente/CalendarModal'
 import { buildImageUrl } from '@/services/apiClient'
 import { ventasService, type VentaResumen } from '@/services/ventasService'
 import { CobrarVentaModal } from '@/components/CobrarVentaModal'
+import { EscanearMonederoModal } from '@/components/EscanearMonederoModal'
 import { Fab } from '@/components/Fab'
 import { SkeletonRows } from '@/components/Skeleton'
 import { FiltroTrabajador } from '@/components/FiltroTrabajador'
@@ -67,6 +69,7 @@ export function VentasPage() {
   const [idTrabFiltro, setIdTrabFiltro] = useState<number | null>(null)
   const [detail, setDetail] = useState<VentaResumen | null>(null)
   const [cobrar, setCobrar] = useState(false)
+  const [escanear, setEscanear] = useState(false)
 
   // Equipo de la sede (para la barra de filtro por trabajador).
   const { data: trabajadores = [] } = useQuery({
@@ -124,7 +127,14 @@ export function VentasPage() {
   return (
     <>
       {/* Venta rápida: desktop arriba a la derecha; móvil = barra flotante abajo */}
-      <div className="hidden md:flex justify-end mb-4">
+      <div className="hidden md:flex justify-end gap-2 mb-4">
+        <button
+          onClick={() => setEscanear(true)}
+          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 font-semibold text-gray-700 transition hover:bg-gray-50 active:scale-95"
+          title="Escanear el QR de puntos del cliente"
+        >
+          <QrCode className="w-5 h-5" /> Escanear QR
+        </button>
         <button
           onClick={() => setCobrar(true)}
           className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-5 py-2.5 font-semibold active:scale-95 transition"
@@ -132,8 +142,18 @@ export function VentasPage() {
           <CurrencyDollar className="w-5 h-5" /> Venta rápida
         </button>
       </div>
+      {/* Móvil: escanear QR (el Fab de abajo es la venta rápida) */}
+      <button
+        onClick={() => setEscanear(true)}
+        className="md:hidden fixed right-4 bottom-24 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-lg active:scale-95"
+        aria-label="Escanear QR de puntos"
+        title="Escanear QR de puntos"
+      >
+        <QrCode className="h-5 w-5" />
+      </button>
       <Fab onClick={() => setCobrar(true)} label="Venta rápida" icon={CurrencyDollar} color="green" />
       {cobrar && <CobrarVentaModal mode="admin" onClose={() => setCobrar(false)} onDone={() => setCobrar(false)} />}
+      {escanear && <EscanearMonederoModal onClose={() => setEscanear(false)} />}
 
       {/* Resumen */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
@@ -262,7 +282,13 @@ function DetalleVenta({ venta, onClose, onResuelto }: { venta: VentaResumen; onC
 
   const aceptar = async () => {
     setBusy(true)
-    try { await ventasService.aceptar(venta.idVenta); toast.success('Venta aceptada · ya cuenta en caja'); onResuelto() }
+    try {
+      const res: any = await ventasService.aceptar(venta.idVenta)
+      toast.success('Venta aceptada · ya cuenta en caja')
+      // Al aprobar es cuando la venta del trabajador acredita puntos.
+      notificarFidelizacion(res?.fidelizacion)
+      onResuelto()
+    }
     catch (e: any) { toast.error(mensajeError(e, 'No se pudo aceptar')) } finally { setBusy(false) }
   }
   const rechazar = async () => {

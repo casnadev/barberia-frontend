@@ -11,6 +11,7 @@ import SeccionSheet from '@/components/SeccionSheet'
 import { Skeleton, SkeletonRows } from '@/components/Skeleton'
 import BrandColorPicker from '@/components/BrandColorPicker'
 import { TimePicker, duracionHoras } from '@/components/TimePicker'
+import { ProgramaFidelizacionPanel } from '@/components/ProgramaFidelizacionPanel'
 
 interface Sede {
   idSede?: number
@@ -109,7 +110,7 @@ const COLOR_PRESETS = ['#2855F6', '#2563eb', '#7c3aed', '#db2777', '#ea580c', '#
 const DEFAULT_BRAND = '#2855F6'
 
 // Identificadores de cada editor (sheet) del hub.
-type SheetId = 'info' | 'imagen' | 'contacto' | 'ubicacion' | 'horarios' | 'negocio' | 'galeria' | 'redes' | null
+type SheetId = 'info' | 'imagen' | 'contacto' | 'ubicacion' | 'horarios' | 'negocio' | 'galeria' | 'redes' | 'fidelizacion' | null
 
 export function ConfiguracionPage() {
   const [loading, setLoading] = useState(true)
@@ -696,6 +697,14 @@ export function ConfiguracionPage() {
               ) : undefined
             }
           />
+
+          {/* Programa de puntos: configuración, niveles, recompensas y promociones. */}
+          <SeccionFila
+            icono={<Gift className="w-[18px] h-[18px]" />}
+            titulo="Programa de puntos"
+            preview="Fidelización: niveles, recompensas y promos"
+            onClick={() => setSheet('fidelizacion')}
+          />
         </div>
 
         {/* Aviso: con una sola sede, negocio = sede. */}
@@ -1058,6 +1067,13 @@ export function ConfiguracionPage() {
             })}
           </div>
         )}
+      </SeccionSheet>
+
+      {/* Programa de puntos (fidelización): config, niveles, recompensas y promociones.
+          El panel guarda por su cuenta, por eso no lleva footer de "Guardar". */}
+      <SeccionSheet open={sheet === 'fidelizacion'} onClose={cerrar} titulo="Programa de puntos"
+        subtitulo="Fidelización: niveles, recompensas y promociones">
+        <ProgramaFidelizacionPanel />
       </SeccionSheet>
     </>
   )

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { CircleNotch as Loader2, FloppyDisk as Save, Plus, Trash as Trash2, Medal as Award, Gift, Sparkle as Sparkles } from '@phosphor-icons/react'
+import { CircleNotch as Loader2, FloppyDisk as Save, Plus, Trash as Trash2, Medal as Award, Gift, Sparkle as Sparkles, Lightning } from '@phosphor-icons/react'
+import { PromocionesFidelizacionPanel } from '@/components/PromocionesFidelizacionPanel'
 import {
   fidelizacionService,
   type ProgramaConfig,
@@ -22,7 +23,7 @@ const input =
   'w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500'
 
 export function ProgramaFidelizacionPanel() {
-  const [cfg, setCfg] = useState<ProgramaConfig>({ activo: false, solesPorPunto: 1, puntosExpiranMeses: null, niveles: [], recompensas: [] })
+  const [cfg, setCfg] = useState<ProgramaConfig>({ activo: false, solesPorPunto: 1, multiplicadorBase: 1, puntosExpiranMeses: null, niveles: [], recompensas: [] })
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
 
@@ -49,6 +50,7 @@ export function ProgramaFidelizacionPanel() {
 
   const guardar = async () => {
     if (cfg.solesPorPunto <= 0) { toast.error('Los soles por punto deben ser mayores a 0'); return }
+    if ((cfg.multiplicadorBase ?? 1) < 1) { toast.error('El multiplicador base debe ser 1 o mayor'); return }
     if (cfg.niveles.some((n) => !n.nombre.trim())) { toast.error('Cada nivel necesita un nombre'); return }
     if (cfg.recompensas.some((r) => !r.nombre.trim())) { toast.error('Cada recompensa necesita un nombre'); return }
     setGuardando(true)
@@ -86,7 +88,7 @@ export function ProgramaFidelizacionPanel() {
           </label>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-4 mt-4">
+        <div className="grid sm:grid-cols-3 gap-4 mt-4">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">1 punto por cada (S/)</label>
             <input
@@ -95,6 +97,21 @@ export function ProgramaFidelizacionPanel() {
               className={input}
             />
             <p className="mt-1 text-[11px] text-gray-400">Ej. 1 = 1 punto por cada S/1 gastado.</p>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              <span className="inline-flex items-center gap-1"><Lightning size={12} weight="fill" className="text-amber-500" /> Multiplicador base</span>
+            </label>
+            <select
+              value={String(cfg.multiplicadorBase ?? 1)}
+              onChange={(e) => set({ multiplicadorBase: Number(e.target.value) })}
+              className={input}
+            >
+              <option value="1">Sin multiplicar (x1)</option>
+              <option value="2">x2 — Doble puntaje siempre</option>
+              <option value="3">x3 — Triple puntaje siempre</option>
+            </select>
+            <p className="mt-1 text-[11px] text-gray-400">Aplica todos los días. Para días puntuales usa las promociones.</p>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Vigencia de los puntos</label>
@@ -120,9 +137,18 @@ export function ProgramaFidelizacionPanel() {
         <div className="space-y-2">
           {cfg.niveles.map((n, i) => (
             <div key={i} className="flex items-center gap-2">
-              <input type="color" value={n.color || '#C9A227'} onChange={(e) => setNivel(i, { color: e.target.value })} className="h-9 w-9 rounded border border-gray-200 p-0.5" title="Color" />
-              <input placeholder="Nombre (ej. Oro)" value={n.nombre} onChange={(e) => setNivel(i, { nombre: e.target.value })} className={input + ' flex-1'} />
-              <input type="number" min={0} placeholder="Puntos" value={n.puntosMinimos} onChange={(e) => setNivel(i, { puntosMinimos: Number(e.target.value) })} className={input + ' w-28'} title="Puntos mínimos" />
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-medium text-gray-400">Color</span>
+                <input type="color" value={n.color || '#C9A227'} onChange={(e) => setNivel(i, { color: e.target.value })} className="h-9 w-9 rounded border border-gray-200 p-0.5" title="Color del nivel" />
+              </div>
+              <div className="flex flex-1 flex-col gap-1">
+                <span className="text-[10px] font-medium text-gray-400">Nombre del nivel</span>
+                <input placeholder="Ej. Oro" value={n.nombre} onChange={(e) => setNivel(i, { nombre: e.target.value })} className={input} />
+              </div>
+              <div className="flex w-32 flex-col gap-1">
+                <span className="text-[10px] font-medium text-gray-400">Puntos mínimos</span>
+                <input type="number" min={0} placeholder="0" value={n.puntosMinimos} onChange={(e) => setNivel(i, { puntosMinimos: Number(e.target.value) })} className={input} />
+              </div>
               <button onClick={() => delNivel(i)} className="p-2 text-gray-400 hover:text-red-500" title="Quitar"><Trash2 size={16} /></button>
             </div>
           ))}
@@ -139,8 +165,14 @@ export function ProgramaFidelizacionPanel() {
         <div className="space-y-2">
           {cfg.recompensas.map((r, i) => (
             <div key={i} className="flex items-center gap-2">
-              <input placeholder="Recompensa (ej. Lavado gratis)" value={r.nombre} onChange={(e) => setRec(i, { nombre: e.target.value })} className={input + ' flex-1'} />
-              <input type="number" min={1} placeholder="Puntos" value={r.puntosRequeridos} onChange={(e) => setRec(i, { puntosRequeridos: Number(e.target.value) })} className={input + ' w-28'} title="Puntos requeridos" />
+              <div className="flex flex-1 flex-col gap-1">
+                <span className="text-[10px] font-medium text-gray-400">Recompensa</span>
+                <input placeholder="Ej. Lavado gratis" value={r.nombre} onChange={(e) => setRec(i, { nombre: e.target.value })} className={input} />
+              </div>
+              <div className="flex w-32 flex-col gap-1">
+                <span className="text-[10px] font-medium text-gray-400">Puntos para canjear</span>
+                <input type="number" min={1} placeholder="100" value={r.puntosRequeridos} onChange={(e) => setRec(i, { puntosRequeridos: Number(e.target.value) })} className={input} />
+              </div>
               <label className="inline-flex items-center gap-1 text-xs text-gray-500 select-none whitespace-nowrap">
                 <input type="checkbox" checked={r.activo} onChange={(e) => setRec(i, { activo: e.target.checked })} className="rounded border-gray-300" /> Activa
               </label>
@@ -149,6 +181,9 @@ export function ProgramaFidelizacionPanel() {
           ))}
         </div>
       </section>
+
+      {/* Promociones de puntos (CRUD propio, se guardan al instante) */}
+      <PromocionesFidelizacionPanel multiplicadorBase={cfg.multiplicadorBase ?? 1} />
 
       <div className="flex justify-end">
         <button onClick={guardar} disabled={guardando}

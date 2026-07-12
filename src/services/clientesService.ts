@@ -1,3 +1,17 @@
+/**
+ * Cliente REAL (tabla Clientes). Es la ÚNICA identidad válida para fidelización.
+ *
+ * OJO: `Cliente` (el de getClientes) viene de una vista agregada del CRM
+ * (reservas + importados) y su idCliente NO identifica a nadie — puede ser un id de
+ * bloqueo, 0 o negativo. Para acreditar puntos o abrir un monedero usa SIEMPRE esto.
+ */
+export interface ClienteReal {
+  idCliente: number
+  nombreCompleto?: string | null
+  telefono: string
+  correo?: string | null
+}
+
 import { apiClient } from './apiClient'
 
 export interface Cliente {
@@ -148,5 +162,21 @@ export const clientesService = {
     const res = await apiClient.post('/api/Clientes/importar', { idSede, clientes })
     const data = res.data?.data ?? res.data ?? {}
     return { creados: data.creados ?? 0, omitidos: data.omitidos ?? 0 }
+  },
+  /** Busca clientes REALES por nombre, teléfono o correo (identidad para fidelización). */
+  buscarReales: async (q: string, limite = 8): Promise<ClienteReal[]> => {
+    try {
+      const res = await apiClient.get(`/api/Clientes/buscar?q=${encodeURIComponent(q)}&limite=${limite}`)
+      const d = res.data?.data ?? res.data
+      return Array.isArray(d) ? d : []
+    } catch { return [] }
+  },
+
+  /** Cliente REAL por teléfono exacto (null si no existe). */
+  buscarRealPorTelefono: async (telefono: string): Promise<ClienteReal | null> => {
+    try {
+      const res = await apiClient.get(`/api/Clientes/real-por-telefono?telefono=${encodeURIComponent(telefono)}`)
+      return res.data?.data ?? null
+    } catch { return null }
   },
 }

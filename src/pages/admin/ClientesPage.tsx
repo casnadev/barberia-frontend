@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { clientesService, Cliente } from '@/services/clientesService'
+import { MonederoClienteCard } from '@/components/MonederoClienteCard'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
 import { mensajeError } from '@/utils/apiError'
@@ -507,6 +508,13 @@ export function ClientesPage() {
                   <span className={s.dValue}>{fecha(selectedCliente.ultimaVisita)}</span>
                 </div>
               )}
+            </div>
+
+            {/* Fidelización. OJO: el idCliente de ESTA lista es del CRM agregado y no
+                identifica a nadie (puede ser 0 o negativo). El monedero se abre con el
+                cliente REAL, resuelto por teléfono. */}
+            <div style={{ padding: '0 20px 4px' }}>
+              <MonederoDelCliente telefono={selectedCliente.telefono} />
             </div>
 
             <div className={s.modalActions}>
@@ -1219,4 +1227,41 @@ function ImportarClientesModal({
       </div>
     </div>
   )
+}
+
+/**
+ * Abre el monedero del cliente REAL a partir de su teléfono.
+ *
+ * El listado de Clientes es una vista agregada (reservas + importados): su
+ * `idCliente` NO es un cliente real. La identidad válida para fidelización es el
+ * TELÉFONO, así que lo resolvemos contra la tabla real antes de pintar nada.
+ */
+function MonederoDelCliente({ telefono }: { telefono?: string }) {
+  const [idReal, setIdReal] = useState<number | null>(null)
+  const [cargando, setCargando] = useState(true)
+
+  useEffect(() => {
+    let vivo = true
+    const tel = (telefono || '').trim()
+    if (!tel) { setIdReal(null); setCargando(false); return }
+    setCargando(true)
+    clientesService.buscarRealPorTelefono(tel)
+      .then((c) => { if (vivo) setIdReal(c?.idCliente ?? null) })
+      .finally(() => { if (vivo) setCargando(false) })
+    return () => { vivo = false }
+  }, [telefono])
+
+  if (cargando) return null
+
+  if (!idReal) {
+    return (
+      <p style={{ fontSize: 12, color: '#9ca3af', padding: '8px 0' }}>
+        {telefono?.trim()
+          ? 'Este cliente aún no está en el programa de puntos.'
+          : 'Sin celular registrado: no se le pueden acreditar puntos.'}
+      </p>
+    )
+  }
+
+  return <MonederoClienteCard idCliente={idReal} />
 }

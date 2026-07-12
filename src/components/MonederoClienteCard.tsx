@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
-import { CircleNotch as Loader2, Gift, Star, ClockCounterClockwise as History, Sparkle as Sparkles } from '@phosphor-icons/react'
+import { CircleNotch as Loader2, Gift, Star, ClockCounterClockwise as History, Sparkle as Sparkles, CaretDown } from '@phosphor-icons/react'
 import {
   fidelizacionService,
   type Monedero,
   type RecompensaDisponible,
+  type MovimientoPuntos,
 } from '@/services/fidelizacionService'
 
 const fecha = (s?: string) =>
@@ -20,6 +21,11 @@ export function MonederoClienteCard({ idCliente }: { idCliente: number }) {
   const [cargando, setCargando] = useState(true)
   const [canjeando, setCanjeando] = useState<number | null>(null)
   const [verHistorial, setVerHistorial] = useState(false)
+  // Historial COMPLETO paginado (el monedero solo trae los últimos 50).
+  const [movs, setMovs] = useState<MovimientoPuntos[] | null>(null)
+  const [pagina, setPagina] = useState(1)
+  const [hayMas, setHayMas] = useState(false)
+  const [cargandoMas, setCargandoMas] = useState(false)
 
   const cargar = useCallback(async () => {
     try {
@@ -37,6 +43,26 @@ export function MonederoClienteCard({ idCliente }: { idCliente: number }) {
   }, [idCliente])
 
   useEffect(() => { cargar() }, [cargar])
+
+  /**
+   * Carga el historial COMPLETO paginado desde el servidor. La primera pulsación
+   * reemplaza los últimos 50 que trae el monedero por la página 1 real; las
+   * siguientes van agregando páginas.
+   */
+  const cargarMas = useCallback(async () => {
+    setCargandoMas(true)
+    try {
+      const siguiente = movs === null ? 1 : pagina + 1
+      const p = await fidelizacionService.getMovimientos(idCliente, siguiente, 20)
+      setMovs(prev => (siguiente === 1 ? p.items : [...(prev ?? []), ...p.items]))
+      setPagina(p.pagina)
+      setHayMas(p.hayMas)
+    } catch {
+      toast.error('No se pudo cargar el historial')
+    } finally {
+      setCargandoMas(false)
+    }
+  }, [idCliente, movs, pagina])
 
   const canjear = async (idRecompensa: number, nombre: string) => {
     if (!window.confirm(`¿Canjear "${nombre}"? Se descontarán los puntos.`)) return
@@ -122,7 +148,7 @@ export function MonederoClienteCard({ idCliente }: { idCliente: number }) {
         </div>
       </div>
 
-      {/* Historial */}
+      {/* Historial completo (paginado desde el servidor) */}
       {monedero.movimientos && monedero.movimientos.length > 0 && (
         <div>
           <button onClick={() => setVerHistorial((v) => !v)} className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
@@ -130,7 +156,7 @@ export function MonederoClienteCard({ idCliente }: { idCliente: number }) {
           </button>
           {verHistorial && (
             <div className="mt-2 space-y-1">
-              {monedero.movimientos.map((m, i) => (
+              {(movs ?? monedero.movimientos).map((m, i) => (
                 <div key={i} className="flex items-center justify-between text-xs border-b border-gray-100 py-1">
                   <span className="text-gray-500">{fecha(m.fecha)} · {m.motivo || m.tipo}</span>
                   <span className={m.puntos >= 0 ? 'text-emerald-600 font-medium' : 'text-red-500 font-medium'}>
@@ -138,6 +164,18 @@ export function MonederoClienteCard({ idCliente }: { idCliente: number }) {
                   </span>
                 </div>
               ))}
+
+              {/* La primera carga trae los últimos 50; a partir de ahí paginamos. */}
+              {(hayMas || movs === null) && (
+                <button
+                  onClick={cargarMas}
+                  disabled={cargandoMas}
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-200 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {cargandoMas ? <Loader2 size={13} className="animate-spin" /> : <CaretDown size={13} />}
+                  {cargandoMas ? 'Cargando…' : 'Ver historial completo'}
+                </button>
+              )}
             </div>
           )}
         </div>

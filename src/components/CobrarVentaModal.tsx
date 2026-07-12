@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { X, Check, Plus, Minus, Camera, Scissors, Receipt, CaretDown, UserCircle, Storefront } from '@phosphor-icons/react'
+import { X, Check, Plus, Minus, Camera, Scissors, Receipt, CaretDown, UserCircle, Storefront, Lightning } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { ComboBox } from '@/components/ComboBox'
 import { serviciosService } from '@/services/serviciosService'
 import { trabajadoresService } from '@/services/trabajadoresService'
 import { panelTrabajadorService } from '@/services/panelTrabajadorService'
 import { ventasService } from '@/services/ventasService'
+import { clientesService, type ClienteReal } from '@/services/clientesService'
+import { fidelizacionService, type PreviewPuntos } from '@/services/fidelizacionService'
+import { notificarFidelizacion } from '@/components/NotificacionFidelizacion'
 import { mensajeError } from '@/utils/apiError'
 
 const METODOS = ['Efectivo', 'Yape', 'Plin', 'Tarjeta', 'Transferencia', 'Otro']
@@ -37,7 +40,18 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
   const [operacion, setOperacion] = useState('')
   const [evidencia, setEvidencia] = useState('')
   const [subiendo, setSubiendo] = useState(false)
-  const [nombreCliente, setNombreCliente] = useState('')
+  // Cliente IDENTIFICADO (no texto libre): sin esto NO se acreditan puntos.
+  // Se busca contra la tabla REAL de Clientes (endpoint /buscar), no contra el
+  // listado agregado del CRM, cuyo idCliente no identifica a nadie.
+  const [clienteSel, setClienteSel] = useState<ClienteReal | null>(null)
+  const [buscaCliente, setBuscaCliente] = useState('')
+  const [resultados, setResultados] = useState<ClienteReal[]>([])
+  const [buscandoCliente, setBuscandoCliente] = useState(false)
+  // Alta rápida: si el cliente no existe, se registra con nombre + teléfono.
+  // El backend usa el TELÉFONO como llave: si no existe, crea el Cliente real.
+  const [altaAbierta, setAltaAbierta] = useState(false)
+  const [nomNuevo, setNomNuevo] = useState('')
+  const [telNuevo, setTelNuevo] = useState('')
   const [sinEvidencia, setSinEvidencia] = useState(false)
   const [saving, setSaving] = useState(false)
   // Tarea 4 — En modo Admin: ¿la venta la hizo el propio Admin ("Venta mía",
@@ -84,6 +98,36 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
   const setQty = (id: number, q: number) => setSel(prev => ({ ...prev, [id]: Math.max(1, q) }))
   const seleccionadas = servicios.filter(s => sel[s.idServicio])
   const total = seleccionadas.reduce((a, s) => a + (Number(s.precioBase) || 0) * (sel[s.idServicio] || 1), 0)
+
+  // Aviso de puntos de fidelización: consulta el preview cuando cambia el total
+  // (con un pequeño debounce). Si el programa está inactivo o falla, no se muestra
+  // nada y la venta sigue su curso normal.
+  const [preview, setPreview] = useState<PreviewPuntos | null>(null)
+  useEffect(() => {
+    if (total <= 0) { setPreview(null); return }
+    let vivo = true
+    const t = setTimeout(async () => {
+      const p = await fidelizacionService.preview(total)
+      if (vivo) setPreview(p && p.programaActivo && p.puntos > 0 ? p : null)
+    }, 300)
+    return () => { vivo = false; clearTimeout(t) }
+  }, [total])
+
+  // Búsqueda de clientes (debounce). El backend resuelve por IdCliente/teléfono.
+  useEffect(() => {
+    const q = buscaCliente.trim()
+    if (clienteSel || q.length < 2) { setResultados([]); return }
+    let vivo = true
+    setBuscandoCliente(true)
+    const t = setTimeout(async () => {
+      try {
+        const r = await clientesService.buscarReales(q, 8)
+        if (vivo) setResultados(r)
+      } catch { if (vivo) setResultados([]) }
+      finally { if (vivo) setBuscandoCliente(false) }
+    }, 300)
+    return () => { vivo = false; clearTimeout(t) }
+  }, [buscaCliente, clienteSel])
   const nItems = seleccionadas.reduce((a, s) => a + (sel[s.idServicio] || 1), 0)
 
   const subir = async (e: any) => {
@@ -102,8 +146,13 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
       // Tarea 4: el Admin solo auto-aprueba cuando es "Venta mía".
       // El Trabajador siempre envía false (el backend lo ignora igual → pendiente).
       const atribuidaAlAdmin = mode === 'admin' ? ventaMia : false
-      await ventasService.registrarWalkIn({
-        nombreCliente: nombreCliente.trim() || undefined,
+      const venta: any = await ventasService.registrarWalkIn({
+        // Identificación del cliente. El backend resuelve por IdCliente o por TELÉFONO
+        // (su llave natural: si el teléfono no existe, crea el cliente). Antes solo se
+        // enviaba un nombre suelto → la venta quedaba anónima y NUNCA acumulaba puntos.
+        idCliente: clienteSel?.idCliente || undefined,
+        telefonoCliente: (clienteSel?.telefono || (telNuevo.trim().length === 9 ? telNuevo.trim() : '')) || undefined,
+        nombreCliente: (clienteSel?.nombreCompleto || nomNuevo.trim()) || undefined,
         detalles: seleccionadas.map(s => ({ idServicio: s.idServicio, idTrabajador: idTrabajador!, cantidad: sel[s.idServicio] || 1 })),
         metodoPago: metodo,
         numeroOperacion: operacion.trim() || undefined,
@@ -116,9 +165,18 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
         seAcepta
           ? (evidencia ? 'Venta registrada' : 'Venta registrada sin evidencia')
           : (evidencia ? 'Venta enviada para aprobación' : 'Venta creada · pendiente de aprobación'))
+
+      // Notificación de fidelización: el backend solo devuelve `fidelizacion` cuando
+      // la venta ACREDITÓ puntos (quedó Registrada). En las pendientes viene null y
+      // aquí no se muestra nada — los puntos entrarán al aprobarse.
+      notificarFidelizacion(venta?.fidelizacion)
+
       onDone()
     } catch (e: any) { toast.error(mensajeError(e, 'No se pudo registrar la venta')) } finally { setSaving(false) }
   }
+
+  // Solo hay puntos si la venta identifica al cliente (elegido o con celular válido).
+  const clienteIdentificado = !!clienteSel || telNuevo.trim().length === 9
 
   const field = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500 outline-none transition'
   const label = 'text-xs font-medium text-gray-500 mb-1 flex items-center gap-1.5'
@@ -243,10 +301,100 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
                 </div>
               </div>
 
-              {/* Cliente */}
+              {/* Cliente — SELECTOR REAL (no texto libre).
+                  Es lo que identifica al cliente y permite acreditar los puntos de
+                  fidelización: el backend resuelve por IdCliente o por teléfono, nunca
+                  por nombre suelto. Si no se elige a nadie, la venta es de "cliente a
+                  pie" (anónima) y NO acumula puntos — y así se avisa abajo. */}
               <div>
-                <label className={label}>Cliente <span className="text-gray-400 font-normal">· opcional</span></label>
-                <input className={field} value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} placeholder="Nombre del cliente" />
+                <label className={label}>
+                  <UserCircle size={14} weight="duotone" /> Cliente
+                  <span className="text-gray-400 font-normal">· opcional</span>
+                </label>
+
+                {clienteSel ? (
+                  <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-gray-900">{clienteSel.nombreCompleto || 'Cliente'}</p>
+                      {clienteSel.telefono && <p className="text-xs text-gray-500">{clienteSel.telefono}</p>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setClienteSel(null); setBuscaCliente('') }}
+                      className="shrink-0 rounded-lg p-1 text-gray-400 hover:bg-white hover:text-gray-700"
+                      aria-label="Quitar cliente"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      className={field}
+                      value={buscaCliente}
+                      onChange={e => setBuscaCliente(e.target.value)}
+                      placeholder="Buscar por nombre o teléfono…"
+                      autoComplete="off"
+                    />
+                    {buscaCliente.trim().length >= 2 && (
+                      <div className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+                        {buscandoCliente ? (
+                          <p className="px-3 py-2.5 text-xs text-gray-400">Buscando…</p>
+                        ) : resultados.length === 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => { setAltaAbierta(true); setNomNuevo(buscaCliente.trim()); setBuscaCliente('') }}
+                            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
+                          >
+                            <Plus size={13} weight="bold" /> No está: registrarlo ahora
+                          </button>
+                        ) : (
+                          resultados.map(c => (
+                            <button
+                              key={c.idCliente}
+                              type="button"
+                              onClick={() => { setClienteSel(c); setBuscaCliente('') }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-emerald-50"
+                            >
+                              <div className="min-w-0">
+                                <p className="truncate text-sm text-gray-900">{c.nombreCompleto || 'Sin nombre'}</p>
+                                <p className="text-xs text-gray-500">{c.telefono}</p>
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Alta rápida: nombre + teléfono. Con esto el cliente queda registrado
+                    de verdad y la venta ya le acredita puntos. */}
+                {!clienteSel && altaAbierta && (
+                  <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-xs font-semibold text-gray-700">Registrar cliente nuevo</p>
+                      <button type="button" onClick={() => { setAltaAbierta(false); setNomNuevo(''); setTelNuevo('') }} className="text-gray-400 hover:text-gray-600">
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <input className={field} value={nomNuevo} onChange={e => setNomNuevo(e.target.value)} placeholder="Nombre" />
+                      <input className={field} value={telNuevo} onChange={e => setTelNuevo(e.target.value.replace(/\D/g, '').slice(0, 9))} placeholder="Celular (9 dígitos)" inputMode="numeric" />
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-gray-500">
+                      {telNuevo.length === 9
+                        ? '✓ Se registrará al cerrar la venta y sumará puntos.'
+                        : 'El celular es obligatorio para identificarlo y darle puntos.'}
+                    </p>
+                  </div>
+                )}
+
+                {!clienteSel && !altaAbierta && (
+                  <p className="mt-1 text-[11px] text-gray-400">
+                    Sin cliente, la venta es <strong>a pie</strong> y no suma puntos de fidelización.
+                  </p>
+                )}
               </div>
 
               {/* Método de pago */}
@@ -305,6 +453,20 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
                 <span className="text-sm text-gray-500">{nItems > 0 ? `${nItems} ítem${nItems > 1 ? 's' : ''}` : 'Total'}</span>
                 <span className="text-xl font-bold text-gray-900 tabular-nums">{soles(total)}</span>
               </div>
+
+              {/* Aviso de fidelización: cuántos puntos suma esta venta */}
+              {preview && clienteIdentificado && (
+                <div className="flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                  <Lightning size={14} weight="fill" className="shrink-0 text-amber-500" />
+                  <span>
+                    Suma <strong>{preview.puntos} punto{preview.puntos === 1 ? '' : 's'}</strong> de fidelización
+                    {preview.multiplicador > 1 && (
+                      <> · <strong>x{preview.multiplicador}</strong>
+                        {preview.promocionAplicada ? ` (${preview.promocionAplicada})` : ''}</>
+                    )}
+                  </span>
+                </div>
+              )}
               <button
                 onClick={confirmar}
                 disabled={!puedeGuardar}

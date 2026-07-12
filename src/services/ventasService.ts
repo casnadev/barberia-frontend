@@ -1,3 +1,20 @@
+/** Lo que la CAJA muestra cuando una venta acredita puntos. Solo informativo:
+ *  el saldo real vive en el ledger de Barber.pe (y Wallet será su espejo). */
+export interface ResultadoFidelizacion {
+  idCliente: number
+  nombreCliente?: string | null
+  puntosGanados: number
+  saldoPuntos: number
+  multiplicador: number
+  promocionAplicada?: string | null
+  nivelNombre?: string | null
+  nivelColor?: string | null
+  subioDeNivel: boolean
+  nivelAnterior?: string | null
+  siguienteNivelNombre?: string | null
+  puntosParaSiguienteNivel?: number | null
+}
+
 import { apiClient } from './apiClient'
 
 export interface Venta {
@@ -158,6 +175,8 @@ export interface VentaResumen {
   /** Profesional que ATENDIÓ (a quien se le genera la comisión). Card: "Atendido por X". */
   idTrabajador?: number
   nombreProfesional?: string
+  /** Resultado de fidelización de ESTA venta (solo si acreditó puntos) → notificación en caja. */
+  fidelizacion?: ResultadoFidelizacion | null
   detalles?: Array<{ idServicio: number; nombreServicio: string; idTrabajador: number; nombreTrabajador: string; cantidad: number; precioUnitario: number; subtotal: number }>
 }
 
