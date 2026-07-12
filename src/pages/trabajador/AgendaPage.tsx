@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Calendar, LogOut } from 'lucide-react'
+import { Calendar, SignOut as LogOut } from '@phosphor-icons/react'
 import { useAuthStore } from '@/store/authStore'
 
 export function TrabajadorAgendaPage() {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { Warning as AlertTriangle } from '@phosphor-icons/react'
 import { sedeTenantService, EstadoPublicacion } from '@/services/sedeTenantService'
 import LocalesActivosModal from './LocalesActivosModal'
 

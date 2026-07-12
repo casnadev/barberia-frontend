@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { LifeBuoy, Loader2, Send } from 'lucide-react'
+import { Lifebuoy as LifeBuoy, CircleNotch as Loader2, PaperPlaneRight as Send } from '@phosphor-icons/react'
 import SeccionSheet from '@/components/SeccionSheet'
 import { apiClient } from '@/services/apiClient'
 import { useAuthStore } from '@/store/authStore'

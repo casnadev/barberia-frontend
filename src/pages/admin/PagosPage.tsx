@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Wallet, X, User, Loader2, Camera, Receipt, History } from 'lucide-react'
+import { Wallet, X, User, CircleNotch as Loader2, Camera, Receipt, ClockCounterClockwise as History } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { pagosService, type ResumenComisiones, type PagoTrabajador } from '@/services/pagosService'
 import { buildImageUrl } from '@/services/apiClient'

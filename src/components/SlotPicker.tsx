@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Clock } from 'lucide-react'
+import { CaretLeft as ChevronLeft, CaretRight as ChevronRight, Clock } from '@phosphor-icons/react'
 import { reservasService } from '@/services/reservasService'
 
 interface SlotPickerProps {

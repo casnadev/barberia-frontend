@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { CaretRight as ChevronRight } from '@phosphor-icons/react'
 
 type SeccionFilaProps = {
   /** Ícono (lucide), p. ej. <Clock className="w-[18px] h-[18px]" />. */

@@ -4,10 +4,7 @@ import { reservasService, Reserva } from '@/services/reservasService'
 import { SkeletonRows } from '@/components/Skeleton'
 import { FiltroTrabajador } from '@/components/FiltroTrabajador'
 import { toast } from 'sonner'
-import {
-  Check, CheckCheck, X, Clock, User, Phone, Mail, Calendar, Scissors,
-  Search, CalendarDays, DollarSign, ChevronLeft, ChevronRight,
-} from 'lucide-react'
+import { Check, Checks as CheckCheck, X, Clock, User, Phone, Envelope as Mail, Calendar, Scissors, MagnifyingGlass as Search, CalendarDots as CalendarDays, CurrencyDollar as DollarSign, CaretLeft as ChevronLeft, CaretRight as ChevronRight } from '@phosphor-icons/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { mensajeError } from '@/utils/apiError'
 import { citaYaEmpezo, MSG_CITA_NO_LLEGA } from '@/utils/fecha'

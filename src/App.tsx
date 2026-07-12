@@ -3,6 +3,7 @@ import { setTenantOverride, urlSedeCanonica } from '@/services/apiClient'
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/authService'
+import { useSessionSync } from '@/hooks/useSessionSync'
 import { TenantGate } from '@/components/TenantGate'
 import { SedeActivaGate } from '@/components/Sedeactivagate'
 import { ConfirmHost } from '@/components/ConfirmDialog'
@@ -317,6 +318,10 @@ function RouteFallback() {
 export function App() {
   const { setUser, setToken } = useAuthStore()
   const [isInitialized, setIsInitialized] = useState(false)
+
+  // Tarea 1: refresca los datos de la sesión (nombre/foto) contra el servidor y
+  // avisa sutilmente si el administrador los cambió, sin necesidad de re-login.
+  useSessionSync()
 
   useEffect(() => {
     let cancelado = false

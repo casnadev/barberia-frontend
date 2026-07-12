@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { AlertCircle } from 'lucide-react'
+import { WarningCircle as AlertCircle } from '@phosphor-icons/react'
 
 export function NotFoundPage() {
   const navigate = useNavigate()

@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import {
-  Search, Copy, Check, Loader2, X, ChevronLeft, ChevronRight,
-  Shield, Briefcase, Users, RefreshCw, Mail, Phone, Trash2, AlertTriangle,
-  Plus, Building2,
-} from 'lucide-react'
+import { MagnifyingGlass as Search, Copy, Check, CircleNotch as Loader2, X, CaretLeft as ChevronLeft, CaretRight as ChevronRight, Shield, Briefcase, Users, ArrowsClockwise as RefreshCw, Envelope as Mail, Phone, Trash as Trash2, Warning as AlertTriangle, Plus, Buildings as Building2 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { ComboBox } from '@/components/ComboBox'
 import {

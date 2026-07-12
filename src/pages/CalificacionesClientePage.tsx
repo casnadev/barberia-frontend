@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Star, MessageSquare, User, Scissors, CheckCircle } from 'lucide-react'
+import { Star, ChatText as MessageSquare, User, Scissors, CheckCircle } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import styles from '@/styles/Calificaciones.module.css'
@@ -144,6 +144,7 @@ export function CalificacionesClientePage() {
               {[...Array(5)].map((_, i) => (
                 <Star
                   key={i}
+                  weight={i < rating ? 'fill' : 'regular'}
                   className={`w-8 h-8 ${
                     i < rating ? styles.filled : styles.empty
                   }`}
@@ -210,6 +211,7 @@ export function CalificacionesClientePage() {
                 className={styles.starButton}
               >
                 <Star
+                  weight={star <= (hoveredRating || rating) ? 'fill' : 'regular'}
                   className={`w-12 h-12 ${
                     star <= (hoveredRating || rating)
                       ? styles.starFilled

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft, X, Calendar } from 'lucide-react'
+import { ArrowLeft, X, Calendar } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 
 interface DateTimeModalProps {

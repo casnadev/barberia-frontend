@@ -1,5 +1,9 @@
-import { Plus } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import type { ComponentType } from 'react'
+import { Plus } from '@phosphor-icons/react'
+
+/** Cualquier ícono que acepte className (Phosphor o lucide). Evita acoplar el
+ *  Fab a una sola librería de íconos durante la migración a Phosphor. */
+type IconoGenerico = ComponentType<{ className?: string }>
 
 /**
  * Barra de acción flotante (solo móvil, md:hidden). Fija abajo, a todo el ancho,
@@ -8,7 +12,7 @@ import type { LucideIcon } from 'lucide-react'
  *
  * Uso:
  *   <Fab onClick={goReservar} label="Añadir cita" />
- *   <Fab onClick={() => setCobrar(true)} label="Venta rápida" icon={DollarSign} color="green" />
+ *   <Fab onClick={() => setCobrar(true)} label="Venta rápida" icon={CurrencyDollar} color="green" />
  */
 export function Fab({
   onClick,
@@ -18,7 +22,7 @@ export function Fab({
 }: {
   onClick: () => void
   label?: string
-  icon?: LucideIcon
+  icon?: IconoGenerico
   color?: 'blue' | 'green'
 }) {
   const cls = color === 'green' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'

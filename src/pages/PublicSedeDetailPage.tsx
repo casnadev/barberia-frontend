@@ -1,10 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import {
-  MapPin, Navigation, Phone, Clock, Star, ChevronRight, ChevronLeft, Scissors,
-  Heart, Forward, X, ChevronDown, Instagram, Facebook, Globe, Youtube,
-  Gift,
-} from 'lucide-react'
+import { MapPin, NavigationArrow as Navigation, Phone, Clock, Star, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Scissors, Heart, ArrowBendUpRight as Forward, X, CaretDown as ChevronDown, InstagramLogo as Instagram, FacebookLogo as Facebook, Globe, YoutubeLogo as Youtube, Gift } from '@phosphor-icons/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { sedesService } from '@/services/sedesService'
@@ -40,7 +36,7 @@ const h12 = (t?: string) => {
   return `${h}:${m} ${ap}`
 }
 
-// Íconos que lucide-react no cubre (o cubre desactualizado): inline.
+// Íconos que la librería no cubre (o cubre desactualizado): inline.
 type IcoProps = { className?: string; width?: number | string; height?: number | string }
 const TikTokIcon = ({ className, width = 16, height = 16 }: IcoProps) => (
   <svg viewBox="0 0 24 24" width={width} height={height} className={className} fill="currentColor" aria-hidden="true">
@@ -336,8 +332,9 @@ export function PublicSedeDetailPage() {
       setServicios(serviciosData || [])
       // Oculta del landing público las fichas marcadas como no visibles
       // (p.ej. la ficha-Admin del dueño que no atiende en esta sede).
-      setTrabajadores((trabajadoresData || []).filter(
-        (t: any) => t?.visibleEnLandingPublico !== false))
+      setTrabajadores((trabajadoresData || [])
+        .filter((t: any) => t?.visibleEnLandingPublico !== false)
+        .map((t: any) => ({ ...t, nombreCompleto: t?.nombrePublico || t?.nombreCompleto })))
 
       // La página YA se puede mostrar con lo esencial (sede + servicios + equipo).
       // Quitamos el skeleton aquí, sin esperar a horarios ni reseñas: así el
@@ -651,7 +648,7 @@ export function PublicSedeDetailPage() {
   const Estrellas = ({ n, size = 16 }: { n: number; size?: number }) => (
     <span className={styles.stars}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <Star key={i} width={size} height={size} className={i <= Math.round(n) ? styles.starOn : styles.starOff} />
+        <Star key={i} width={size} height={size} weight={i <= Math.round(n) ? 'fill' : 'regular'} className={i <= Math.round(n) ? styles.starOn : styles.starOff} />
       ))}
     </span>
   )
@@ -672,7 +669,7 @@ export function PublicSedeDetailPage() {
               <div className={styles.mHeaderIcons}>
                 {puedeFavorito && (
                   <button className={styles.plainBtn} onClick={toggleFavorite} aria-label="Favorito">
-                    <Heart width={20} height={20} color={isFavorite ? '#ef4444' : undefined} fill={isFavorite ? '#ef4444' : 'none'} />
+                    <Heart width={20} height={20} weight={isFavorite ? 'fill' : 'regular'} color={isFavorite ? '#ef4444' : undefined} />
                   </button>
                 )}
                 <button className={styles.plainBtn} onClick={handleShare} aria-label="Compartir"><Forward width={20} height={20} /></button>
@@ -735,7 +732,7 @@ export function PublicSedeDetailPage() {
           <div className={styles.heroRight}>
             {puedeFavorito && (
               <button className={styles.heroFloatBtn} onClick={toggleFavorite} aria-label="Favorito">
-                <Heart width={20} height={20} color={isFavorite ? '#ef4444' : undefined} fill={isFavorite ? '#ef4444' : 'none'} />
+                <Heart width={20} height={20} weight={isFavorite ? 'fill' : 'regular'} color={isFavorite ? '#ef4444' : undefined} />
               </button>
             )}
             <button className={styles.heroFloatBtn} onClick={handleShare} aria-label="Compartir"><Forward width={20} height={20} /></button>
@@ -832,7 +829,7 @@ export function PublicSedeDetailPage() {
             )}
             {puedeFavorito && (
               <button className={styles.iconBtn} onClick={toggleFavorite} aria-label="Favorito">
-                <Heart width={18} height={18} color={isFavorite ? '#ef4444' : undefined} fill={isFavorite ? '#ef4444' : 'none'} />
+                <Heart width={18} height={18} weight={isFavorite ? 'fill' : 'regular'} color={isFavorite ? '#ef4444' : undefined} />
               </button>
             )}
             <button className={styles.iconBtn} onClick={handleShare} aria-label="Compartir"><Forward width={18} height={18} /></button>
@@ -977,7 +974,7 @@ export function PublicSedeDetailPage() {
               <section ref={refResenas} className={`${styles.section} ${styles.sectionGap}`}>
                 <div className={styles.h2Row}>
                   <h2 className={styles.h2}>Reseñas</h2>
-                  <span className={styles.ratingWrap}><Star width={16} height={16} className={styles.starOn} /> <span className={styles.ratingVal}>{resenas.promedio.toFixed(1)}</span> <span className={styles.ratingCount}>({resenas.total})</span></span>
+                  <span className={styles.ratingWrap}><Star width={16} height={16} weight="fill" className={styles.starOn} /> <span className={styles.ratingVal}>{resenas.promedio.toFixed(1)}</span> <span className={styles.ratingCount}>({resenas.total})</span></span>
                 </div>
                 <div className={styles.reviewGrid}>
                   {resenas.items.map((r, idx) => (

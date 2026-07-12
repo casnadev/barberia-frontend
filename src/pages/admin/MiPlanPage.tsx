@@ -1,10 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import {
-  CreditCard, Copy, Share2, Users, Building2, MessageCircle,
-  CheckCircle2, Clock, AlertTriangle, ExternalLink, Loader2, Gift, X, Sparkles,
-} from 'lucide-react'
+import { CreditCard, Copy, ShareNetwork as Share2, Users, Buildings as Building2, ChatCircle as MessageCircle, CheckCircle as CheckCircle2, Clock, Warning as AlertTriangle, ArrowSquareOut as ExternalLink, CircleNotch as Loader2, Gift, X, Sparkle as Sparkles } from '@phosphor-icons/react'
 import { billingService, type MiPlan, type Consumo } from '@/services/billingService'
 import { planesService } from '@/services/planesService'
 import { mensajeriaService, type MensajeFila } from '@/services/mensajeriaService'

@@ -7,7 +7,8 @@ import { trabajadoresService, Trabajador } from '@/services/trabajadoresService'
 import { apiClient, buildImageUrl, getActiveTenant, urlSedeCanonica } from '@/services/apiClient'
 import { sedeTenantService } from '@/services/sedeTenantService'
 import { toast } from 'sonner'
-import { ChevronLeft, ChevronRight, X, Check, CheckCheck, Clock, User, Calendar, Scissors, CalendarOff, Maximize2 } from 'lucide-react'
+import { CaretLeft as ChevronLeft, CaretRight as ChevronRight, X, Check, Checks as CheckCheck, Clock, User, Calendar, Scissors, CalendarX as CalendarOff, ArrowsOut as Maximize2 } from '@phosphor-icons/react'
+
 import { motion, AnimatePresence } from 'framer-motion'
 import { CalendarModal } from '@/pages/cliente/CalendarModal'
 import { Fab } from '@/components/Fab'
@@ -105,6 +106,10 @@ export function AgendaBoard({ mode = 'admin', trabajadorPropio, onAtenderTrabaja
   const [busy, setBusy] = useState(false)
   const [calOpen, setCalOpen] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  // Tarea 3: cancelación con advertencia + motivo (el motivo solo lo ven Admin y
+  // el trabajador dueño de la cita; al cliente no se le muestra).
+  const [cancelTarget, setCancelTarget] = useState<Reserva | null>(null)
+  const [cancelMotivo, setCancelMotivo] = useState('')
 
   const areaRef = useRef<HTMLDivElement>(null)
   const dragLblRef = useRef<HTMLDivElement>(null)
@@ -579,6 +584,13 @@ export function AgendaBoard({ mode = 'admin', trabajadorPropio, onAtenderTrabaja
                 )}
                 <div className={s.dRow}><User width={16} height={16} /> {detail.nombreTrabajador || detail.nombreTrabajadorSnap || 'Sin barbero'}</div>
                 <div className={s.dRow}><Calendar width={16} height={16} /> {labelFecha}</div>
+                {/* Tarea 3: motivo de cancelación — visible para Admin y trabajador dueño. */}
+                {(detail.estado || '').toLowerCase() === 'cancelada' && detail.motivoCancelacion && (
+                  <div className={s.dRow} style={{ alignItems: 'flex-start', color: '#b91c1c', background: '#fef2f2', borderRadius: 10, padding: '8px 10px' }}>
+                    <X width={16} height={16} style={{ marginTop: 2, flexShrink: 0 }} />
+                    <span><strong>Motivo:</strong> {detail.motivoCancelacion}</span>
+                  </div>
+                )}
               </div>
               <div className={s.detailActions}>
                 {esTrabajador ? (
@@ -607,10 +619,61 @@ export function AgendaBoard({ mode = 'admin', trabajadorPropio, onAtenderTrabaja
                       <button className={s.actFull} style={{ background: '#16a34a' }} disabled={busy} onClick={() => { if (!citaYaEmpezo(detail.fechaReserva, detail.horaInicio)) { toast.error(MSG_CITA_NO_LLEGA); return } accion(() => reservasService.marcarAtendida((detail.idReserva || detail.id)!), 'Marcada como atendida') }}><CheckCheck width={16} height={16} /> Marcar atendida</button>
                     )}
                     {((detail.estado || '').toLowerCase() === 'pendiente' || (detail.estado || '').toLowerCase() === 'confirmada') && (
-                      <button className={s.actFull} style={{ background: '#ef4444' }} disabled={busy} onClick={() => accion(() => reservasService.cancelarReserva((detail.idReserva || detail.id)!), 'Reserva cancelada')}><X width={16} height={16} /> Cancelar</button>
+                      <button className={s.actFull} style={{ background: '#ef4444' }} disabled={busy} onClick={() => { setCancelMotivo(''); setCancelTarget(detail) }}><X width={16} height={16} /> Cancelar</button>
                     )}
                   </>
                 )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Tarea 3: modal de cancelación con advertencia + motivo (Admin). */}
+      <AnimatePresence>
+        {cancelTarget && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => !busy && setCancelTarget(null)}
+            style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          >
+            <motion.div
+              initial={{ scale: .97, y: 8 }} animate={{ scale: 1, y: 0 }} exit={{ scale: .97, y: 8 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 400, padding: 20, boxShadow: '0 10px 40px rgba(0,0,0,.2)' }}
+            >
+              <h3 style={{ margin: 0, fontWeight: 700, color: '#111827' }}>Cancelar cita</h3>
+              <div style={{ marginTop: 10, fontSize: 13, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '8px 10px' }}>
+                Al cancelar, <strong>el cliente también verá que su cita fue cancelada</strong>. El motivo que escribas es interno: solo lo verán tú y el trabajador de la cita.
+              </div>
+              <label style={{ display: 'block', marginTop: 12, fontSize: 12, color: '#6b7280' }}>Motivo (opcional)</label>
+              <textarea
+                value={cancelMotivo}
+                onChange={(e) => setCancelMotivo(e.target.value)}
+                rows={3}
+                placeholder="Ej.: el cliente pidió reprogramar, no confirmó, etc."
+                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 10, padding: '8px 10px', fontSize: 14, outline: 'none', resize: 'vertical' }}
+              />
+              <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                <button
+                  disabled={busy}
+                  onClick={() => setCancelTarget(null)}
+                  style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid #e5e7eb', background: '#fff', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Volver
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={() => {
+                    const r = cancelTarget
+                    const motivo = cancelMotivo.trim() || undefined
+                    setCancelTarget(null)
+                    accion(() => reservasService.cancelarReserva((r.idReserva || r.id)!, motivo), 'Reserva cancelada')
+                  }}
+                  style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: '#ef4444', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Sí, cancelar
+                </button>
               </div>
             </motion.div>
           </motion.div>

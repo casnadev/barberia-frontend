@@ -1,5 +1,5 @@
 import { buildImageUrl } from '@/services/apiClient'
-import { User } from 'lucide-react'
+import { User } from '@phosphor-icons/react'
 
 export interface TrabajadorFiltro {
   idTrabajador: number

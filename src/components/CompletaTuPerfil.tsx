@@ -1,4 +1,4 @@
-import { Rocket, Check, ArrowRight } from 'lucide-react'
+import { Rocket, Check, ArrowRight } from '@phosphor-icons/react'
 
 export type PasoPerfil = { clave: string; etiqueta: string; hecho: boolean }
 

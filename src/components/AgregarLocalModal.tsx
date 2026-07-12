@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { ExternalLink, Loader2, Store } from 'lucide-react'
+import { ArrowSquareOut as ExternalLink, CircleNotch as Loader2, Storefront as Store } from '@phosphor-icons/react'
 import SeccionSheet from './SeccionSheet'
 import { ComboBox } from './ComboBox'
 import { DEPARTAMENTOS, distritosDe, distritoValido } from '@/data/ubigeo'

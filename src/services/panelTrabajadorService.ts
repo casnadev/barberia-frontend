@@ -65,6 +65,9 @@ export interface MiPerfilTrabajador {
   descripcion?: string
   urlFotoPerfil?: string
   porcentajeComision?: number
+  generaLiquidaciones?: boolean
+  frecuenciaPago?: string
+  metodoPagoPreferido?: string
   correoConfirmado?: boolean
   telefonoConfirmado?: boolean
 }

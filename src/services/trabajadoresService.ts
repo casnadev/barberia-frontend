@@ -3,6 +3,11 @@ import { apiClient } from './apiClient'
 export interface Trabajador {
   idTrabajador: number
   nombreCompleto: string
+  /** Nombre para la landing pública (para el dueño-admin, su nombre real). */
+  nombrePublico?: string
+  generaLiquidaciones?: boolean
+  frecuenciaPago?: string
+  metodoPagoPreferido?: string
   telefono?: string
   correo?: string
   urlFotoPerfil?: string

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Rocket, Check, ArrowRight } from 'lucide-react'
+import { Rocket, Check, ArrowRight } from '@phosphor-icons/react'
 import { apiClient } from '@/services/apiClient'
 
 type Paso = { clave: string; etiqueta: string; hecho: boolean }

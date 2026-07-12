@@ -1,17 +1,4 @@
-import {
-  Scissors,
-  Combine,
-  Layers,
-  Baby,
-  SprayCan,
-  PenTool,
-  Slice,
-  Droplets,
-  Eye,
-  Palette,
-  Sparkles,
-  type LucideIcon,
-} from 'lucide-react'
+import { Scissors, ArrowsMerge as Combine, Stack as Layers, Baby, SprayBottle as SprayCan, PenNib as PenTool, Knife as Slice, Drop as Droplets, Eye, Palette, Sparkle as Sparkles, type Icon as LucideIcon } from '@phosphor-icons/react'
 
 /**
  * Íconos por tipo de servicio (Bloque 3). NO usamos fotos para los servicios

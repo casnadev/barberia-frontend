@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Clock, Check } from 'lucide-react'
+import { Clock, Check } from '@phosphor-icons/react'
 
 const hhmm = (v?: string) => (v || '').slice(0, 5)
 const aMin = (v: string) => { const [h, m] = v.split(':').map(Number); return (h || 0) * 60 + (m || 0) }

@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Check } from 'lucide-react'
+import { Check } from '@phosphor-icons/react'
 import { apiClient } from '@/services/apiClient'
 import LegalShell from './LegalShell'
 import s from './Legal.module.css'
 
 const EMPRESA = 'Computer Solutions L&E E.I.R.L.'
 const RUC = '[RUC de la empresa]'
-const CORREO = 'reclamos@barber.pe'
+const CORREO = 'contacto@barber.pe'
 
 type Tipo = 'reclamo' | 'queja'
 

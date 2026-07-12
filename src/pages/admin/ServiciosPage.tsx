@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, Edit2, Trash2, X, Eye, EyeOff, Upload, Image as ImageIcon, Tag, AlertCircle, ChevronDown, Sparkles, Check, Loader2 } from 'lucide-react'
+import { Plus, PencilSimple as Edit2, Trash as Trash2, X, Eye, EyeSlash as EyeOff, UploadSimple as Upload, Image as ImageIcon, Tag, WarningCircle as AlertCircle, CaretDown as ChevronDown, Sparkle as Sparkles, Check, CircleNotch as Loader2 } from '@phosphor-icons/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ComboBox } from '@/components/ComboBox'
 import { toast } from 'sonner'

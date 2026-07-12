@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Eye, EyeOff, Star, Loader2, Save, Store, MessageSquare } from 'lucide-react'
+import { Eye, EyeSlash as EyeOff, Star, CircleNotch as Loader2, FloppyDisk as Save, Storefront as Store, ChatText as MessageSquare } from '@phosphor-icons/react'
 import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
 import {
   superAdminLandingService as svc,
@@ -117,7 +117,7 @@ function ResenasTab() {
               <div className="min-w-0">
                 <div className="flex items-center gap-1 mb-1">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} size={13} className={i < r.puntuacion ? 'text-amber-400 fill-amber-400' : 'text-gray-300'} />
+                    <Star key={i} size={13} weight={i < r.puntuacion ? 'fill' : 'regular'} className={i < r.puntuacion ? 'text-amber-400' : 'text-gray-300'} />
                   ))}
                 </div>
                 <p className="text-sm text-gray-800">“{r.comentario}”</p>

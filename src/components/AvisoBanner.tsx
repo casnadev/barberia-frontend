@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ImageIcon, ArrowRight } from 'lucide-react'
+import { Image as ImageIcon, ArrowRight } from '@phosphor-icons/react'
 import { apiClient } from '@/services/apiClient'
 
 /**

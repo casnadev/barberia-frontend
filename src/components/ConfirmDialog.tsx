@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertTriangle } from 'lucide-react'
+import { Warning as AlertTriangle } from '@phosphor-icons/react'
 
 /**
  * Diálogo de confirmación reutilizable, azul/blanco, para reemplazar el

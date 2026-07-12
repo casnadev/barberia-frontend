@@ -2,10 +2,7 @@ import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import {
-  ArrowLeft, ShieldCheck, KeyRound, Send, Loader2, LogIn,
-  Eye, EyeOff, MailCheck, MessageCircle,
-} from 'lucide-react'
+import { ArrowLeft, ShieldCheck, Key as KeyRound, PaperPlaneRight as Send, CircleNotch as Loader2, SignIn as LogIn, Eye, EyeSlash as EyeOff, SealCheck as MailCheck, ChatCircle as MessageCircle } from '@phosphor-icons/react'
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/authService'
 import { setTenant, clearTenant } from '@/services/apiClient'

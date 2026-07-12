@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from '@phosphor-icons/react'
 import s from './Legal.module.css'
 
 export default function LegalShell({ children }: { children: React.ReactNode }) {

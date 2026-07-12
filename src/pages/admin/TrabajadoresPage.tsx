@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Edit2, Trash2, AlertCircle, X, Eye, EyeOff, Upload, Image as ImageIcon, KeyRound, SendHorizontal, Calendar } from 'lucide-react'
+import { Plus, PencilSimple as Edit2, Trash as Trash2, WarningCircle as AlertCircle, X, Eye, EyeSlash as EyeOff, UploadSimple as Upload, Image as ImageIcon, Key as KeyRound, PaperPlaneRight as SendHorizontal, Calendar } from '@phosphor-icons/react'
+
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { apiClient, buildImageUrl } from '@/services/apiClient'
@@ -20,6 +21,9 @@ interface Trabajador {
   correoConfirmado?: boolean
   telefonoConfirmado?: boolean
   porcentajeComision?: number
+  generaLiquidaciones?: boolean
+  frecuenciaPago?: string
+  metodoPagoPreferido?: string
   urlFotoPerfil?: string
   descripcion?: string
   especialidad?: string
@@ -70,6 +74,9 @@ export function TrabajadoresPage() {
     telefono: '',
     correo: '',
     porcentajeComision: 0,
+    generaLiquidaciones: true,
+    frecuenciaPago: 'Quincenal',
+    metodoPagoPreferido: 'Efectivo',
     urlFotoPerfil: '',
     descripcion: '',
     especialidad: '',
@@ -209,6 +216,9 @@ export function TrabajadoresPage() {
         telefono: form.telefono,
         correo: form.correo,
         porcentajeComision: form.porcentajeComision ?? 0,
+        generaLiquidaciones: form.generaLiquidaciones ?? true,
+        frecuenciaPago: form.frecuenciaPago || 'Quincenal',
+        metodoPagoPreferido: form.metodoPagoPreferido || 'Efectivo',
         urlFotoPerfil: form.urlFotoPerfil,
         descripcion: form.descripcion,
         especialidad: form.especialidad,
@@ -264,6 +274,21 @@ export function TrabajadoresPage() {
     }
   }
 
+  // Tarea 2: mostrar/ocultar en la LANDING pública. Pensado para el dueño-admin,
+  // cuyo único interruptor es verse/ocultarse (no tiene "acceso" aparte).
+  const toggleVisibleLanding = async (t: Trabajador) => {
+    if (!t.idTrabajador) return
+    const nuevo = !(t.visibleEnLandingPublico ?? true)
+    parchearTrabajador(t.idTrabajador, { visibleEnLandingPublico: nuevo })
+    try {
+      await apiClient.put(`/api/Trabajadores/${t.idTrabajador}/visible-landing`, { visible: nuevo })
+      toast.success(nuevo ? 'Visible en la landing.' : 'Oculto en la landing.')
+    } catch (err: any) {
+      parchearTrabajador(t.idTrabajador, { visibleEnLandingPublico: !nuevo })
+      toast.error(getApiError(err, 'No se pudo cambiar la visibilidad.'))
+    }
+  }
+
   // Llave de Acceso: envía OTP + habilita para que el trabajador cree/recupere su
   // contraseña. Requiere que tenga correo (el backend valida y avisa si falta).
   const enviarAcceso = async (t: Trabajador) => {
@@ -286,12 +311,17 @@ export function TrabajadoresPage() {
       correoConfirmado: trabajador.correoConfirmado,
       telefonoConfirmado: trabajador.telefonoConfirmado,
       porcentajeComision: trabajador.porcentajeComision ?? 0,
+      generaLiquidaciones: trabajador.generaLiquidaciones ?? true,
+      frecuenciaPago: trabajador.frecuenciaPago || 'Quincenal',
+      metodoPagoPreferido: trabajador.metodoPagoPreferido || 'Efectivo',
       urlFotoPerfil: trabajador.urlFotoPerfil,
       descripcion: trabajador.descripcion,
       especialidad: trabajador.especialidad,
       experiencia: trabajador.experiencia,
       esDestacado: trabajador.esDestacado,
       estado: trabajador.estado,
+      esDuenoAdmin: trabajador.esDuenoAdmin,
+      visibleEnLandingPublico: trabajador.visibleEnLandingPublico,
     })
     setPreviewImage(buildImageUrl(trabajador.urlFotoPerfil))
     setEditingId(trabajador.idTrabajador || null)
@@ -325,6 +355,9 @@ export function TrabajadoresPage() {
       telefono: '',
       correo: '',
       porcentajeComision: 0,
+    generaLiquidaciones: true,
+    frecuenciaPago: 'Quincenal',
+    metodoPagoPreferido: 'Efectivo',
       urlFotoPerfil: '',
       descripcion: '',
       especialidad: '',
@@ -348,15 +381,27 @@ export function TrabajadoresPage() {
           ? <img src={buildImageUrl(t.urlFotoPerfil)} alt={t.nombreCompleto} />
           : <div className={s.mediaEmpty}><ImageIcon width={30} height={30} /></div>}
         <div className={s.cardActions}>
-          <button
-            className={s.iconBtn}
-            onClick={() => toggleAcceso(t)}
-            title={t.accesoHabilitado ? 'Acceso habilitado — clic para bloquear' : 'Sin acceso — clic para habilitar'}
-            aria-label={t.accesoHabilitado ? 'Bloquear acceso' : 'Habilitar acceso'}
-            style={{ color: t.accesoHabilitado ? '#059669' : '#9ca3af' }}
-          >
-            <KeyRound width={15} height={15} />
-          </button>
+          {t.esDuenoAdmin ? (
+            <button
+              className={s.iconBtn}
+              onClick={() => toggleVisibleLanding(t)}
+              title={(t.visibleEnLandingPublico ?? true) ? 'Visible en la landing — clic para ocultar' : 'Oculto en la landing — clic para mostrar'}
+              aria-label={(t.visibleEnLandingPublico ?? true) ? 'Ocultar de la landing' : 'Mostrar en la landing'}
+              style={{ color: (t.visibleEnLandingPublico ?? true) ? '#059669' : '#9ca3af' }}
+            >
+              {(t.visibleEnLandingPublico ?? true) ? <Eye width={15} height={15} /> : <EyeOff width={15} height={15} />}
+            </button>
+          ) : (
+            <button
+              className={s.iconBtn}
+              onClick={() => toggleAcceso(t)}
+              title={t.accesoHabilitado ? 'Acceso habilitado — clic para bloquear' : 'Sin acceso — clic para habilitar'}
+              aria-label={t.accesoHabilitado ? 'Bloquear acceso' : 'Habilitar acceso'}
+              style={{ color: t.accesoHabilitado ? '#059669' : '#9ca3af' }}
+            >
+              <KeyRound width={15} height={15} />
+            </button>
+          )}
           {!t.esDuenoAdmin && (
             <button
               className={s.iconBtn}
@@ -515,7 +560,14 @@ export function TrabajadoresPage() {
 
                 <div className={s.field}>
                   <label className={s.label}>Nombre completo *</label>
-                  <input className={s.input} type="text" value={form.nombreCompleto} onChange={e => setForm({ ...form, nombreCompleto: e.target.value })} required />
+                  <input className={s.input} type="text" value={form.nombreCompleto} onChange={e => setForm({ ...form, nombreCompleto: e.target.value })} required
+                    disabled={!!form.esDuenoAdmin}
+                    style={form.esDuenoAdmin ? { background: '#f9fafb', color: '#6b7280', cursor: 'not-allowed' } : undefined} />
+                  {form.esDuenoAdmin && (
+                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+                      Este es tu propio perfil. Tu nombre, correo y teléfono se editan desde “Mi perfil” (menú de tu cuenta).
+                    </div>
+                  )}
                 </div>
 
                 <div className={s.field}>
@@ -524,7 +576,9 @@ export function TrabajadoresPage() {
                       ? <span style={{ marginLeft: 8, fontSize: 11, color: '#059669', fontWeight: 600 }}>✓ Verificado</span>
                       : <span style={{ marginLeft: 8, fontSize: 11, color: '#d97706' }}>Sin verificar</span>)}
                   </label>
-                  <input className={s.input} type="email" value={form.correo || ''} onChange={e => setForm({ ...form, correo: e.target.value })} />
+                  <input className={s.input} type="email" value={form.correo || ''} onChange={e => setForm({ ...form, correo: e.target.value })}
+                    disabled={!!form.esDuenoAdmin}
+                    style={form.esDuenoAdmin ? { background: '#f9fafb', color: '#6b7280', cursor: 'not-allowed' } : undefined} />
                   {editingId && form.correoConfirmado && <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>Cambiarlo quitará la verificación.</div>}
                 </div>
 
@@ -535,13 +589,61 @@ export function TrabajadoresPage() {
                         ? <span style={{ marginLeft: 8, fontSize: 11, color: '#059669', fontWeight: 600 }}>✓ Verificado</span>
                         : <span style={{ marginLeft: 8, fontSize: 11, color: '#d97706' }}>Sin verificar</span>)}
                     </label>
-                    <input className={s.input} type="text" value={form.telefono || ''} onChange={e => setForm({ ...form, telefono: e.target.value })} />
-                  </div>
-                  <div className={s.field}>
-                    <label className={s.label}>% Comisión</label>
-                    <input className={s.input} type="number" value={form.porcentajeComision ?? 0} onChange={e => setForm({ ...form, porcentajeComision: parseFloat(e.target.value) })} min="0" max="100" step="0.01" />
+                    <input className={s.input} type="text" value={form.telefono || ''} onChange={e => setForm({ ...form, telefono: e.target.value })}
+                      disabled={!!form.esDuenoAdmin}
+                      style={form.esDuenoAdmin ? { background: '#f9fafb', color: '#6b7280', cursor: 'not-allowed' } : undefined} />
                   </div>
                 </div>
+
+                {/* Liquidaciones: si NO genera, ocultamos comisión/frecuencia/método
+                    porque sus ingresos van directo a la caja (cierre de caja). */}
+                <label className="flex items-start gap-2 mt-1 text-sm text-gray-700 cursor-pointer select-none" style={{ padding: '4px 0' }}>
+                  <input type="checkbox" checked={form.generaLiquidaciones ?? true}
+                    onChange={e => setForm({ ...form, generaLiquidaciones: e.target.checked })}
+                    style={{ marginTop: 3 }} />
+                  <span>
+                    <strong>Genera liquidaciones</strong> (se le paga su comisión)
+                    <span style={{ display: 'block', fontSize: 11, color: '#9ca3af' }}>
+                      {form.esDuenoAdmin
+                        ? 'Tus ingresos van directo a la caja (cierre de caja). Actívalo solo si quieres pagarte un sueldo/comisión.'
+                        : 'Si lo desactivas, sus ingresos van a la caja y no se le liquida por separado.'}
+                    </span>
+                  </span>
+                </label>
+
+                {(form.generaLiquidaciones ?? true) && (
+                  <>
+                    <div className={s.row2}>
+                      <div className={s.field}>
+                        <label className={s.label}>% Comisión</label>
+                        <input className={s.input} type="number"
+                          value={form.esDuenoAdmin && !(form.generaLiquidaciones ?? true) ? 100 : (form.porcentajeComision ?? 0)}
+                          onChange={e => setForm({ ...form, porcentajeComision: parseFloat(e.target.value) })}
+                          min="0" max="100" step="0.01" />
+                      </div>
+                      <div className={s.field}>
+                        <label className={s.label}>Frecuencia de pago</label>
+                        <select className={s.input} value={form.frecuenciaPago || 'Quincenal'} onChange={e => setForm({ ...form, frecuenciaPago: e.target.value })}>
+                          <option value="Diario">Diario</option>
+                          <option value="Semanal">Semanal</option>
+                          <option value="Quincenal">Quincenal</option>
+                          <option value="Mensual">Mensual</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className={s.row2}>
+                      <div className={s.field}>
+                        <label className={s.label}>Método de pago</label>
+                        <select className={s.input} value={form.metodoPagoPreferido || 'Efectivo'} onChange={e => setForm({ ...form, metodoPagoPreferido: e.target.value })}>
+                          <option value="Efectivo">Efectivo</option>
+                          <option value="Yape">Yape</option>
+                          <option value="Plin">Plin</option>
+                          <option value="Transferencia">Transferencia</option>
+                        </select>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <div className={s.row2}>
                   <div className={s.field}>
@@ -572,7 +674,10 @@ export function TrabajadoresPage() {
                   </div>
                   {editingId && (
                     <div className={s.checkRow}>
-                      <input className={s.checkbox} type="checkbox" id="estado" checked={!!form.estado} onChange={e => setForm({ ...form, estado: e.target.checked })} />
+                      <input className={s.checkbox} type="checkbox" id="estado"
+                        checked={form.esDuenoAdmin ? true : !!form.estado}
+                        onChange={e => setForm({ ...form, estado: e.target.checked })}
+                        disabled={!!form.esDuenoAdmin} />
                       <label htmlFor="estado" className={s.checkLabel}>✓ Activo</label>
                     </div>
                   )}

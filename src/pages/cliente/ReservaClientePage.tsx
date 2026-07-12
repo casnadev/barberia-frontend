@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Calendar, X, Plus, Clock, MapPin, User, Check } from 'lucide-react'
+import { CaretLeft as ChevronLeft, CaretRight as ChevronRight, Calendar, X, Plus, Clock, MapPin, User, Check } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { sedesService } from '@/services/sedesService'

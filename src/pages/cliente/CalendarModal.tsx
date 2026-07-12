@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { CaretLeft as ChevronLeft, CaretRight as ChevronRight, X } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 import styles from '@/styles/ReservaClientePage.module.css'
 

@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Clock, Check, X, DollarSign, CalendarDays, Scissors, User, Image as ImageIcon,
-  CheckCheck, Ban, Store, CalendarCheck,
-} from 'lucide-react'
+  Clock, Check, X, CurrencyDollar, CalendarDots, Scissors, User, Image as ImageIcon,
+  Checks, Prohibit, Storefront, CalendarCheck,
+} from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { CalendarModal } from '@/pages/cliente/CalendarModal'
 import { buildImageUrl } from '@/services/apiClient'
@@ -129,18 +129,18 @@ export function VentasPage() {
           onClick={() => setCobrar(true)}
           className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-5 py-2.5 font-semibold active:scale-95 transition"
         >
-          <DollarSign className="w-5 h-5" /> Venta rápida
+          <CurrencyDollar className="w-5 h-5" /> Venta rápida
         </button>
       </div>
-      <Fab onClick={() => setCobrar(true)} label="Venta rápida" icon={DollarSign} color="green" />
+      <Fab onClick={() => setCobrar(true)} label="Venta rápida" icon={CurrencyDollar} color="green" />
       {cobrar && <CobrarVentaModal mode="admin" onClose={() => setCobrar(false)} onDone={() => setCobrar(false)} />}
 
       {/* Resumen */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <ResumenCard icon={Clock} tone="amber" label="Pendientes" value={String(counts.PendienteAprobacion)} />
-        <ResumenCard icon={CheckCheck} tone="emerald" label="Aceptadas" value={String(counts.Registrada)} />
-        <ResumenCard icon={DollarSign} tone="amber" label="Monto pendiente" value={soles(totalPendiente)} />
-        <ResumenCard icon={DollarSign} tone="emerald" label="Monto aceptado" value={soles(totalAceptado)} />
+        <ResumenCard icon={Checks} tone="emerald" label="Aceptadas" value={String(counts.Registrada)} />
+        <ResumenCard icon={CurrencyDollar} tone="amber" label="Monto pendiente" value={soles(totalPendiente)} />
+        <ResumenCard icon={CurrencyDollar} tone="emerald" label="Monto aceptado" value={soles(totalAceptado)} />
       </div>
 
       {/* Filtros de fecha — mismo estilo que Inicio (segmented + fecha debajo) */}
@@ -155,9 +155,9 @@ export function VentasPage() {
         </div>
         {rango === 'custom' && (
           <div className="flex items-center gap-2 mt-2.5">
-            <button onClick={() => setCalRango('desde')} className="inline-flex items-center gap-1.5 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-900 bg-white whitespace-nowrap"><CalendarDays className="w-3.5 h-3.5 text-blue-600" /> {fmtCorta(desde)}</button>
+            <button onClick={() => setCalRango('desde')} className="inline-flex items-center gap-1.5 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-900 bg-white whitespace-nowrap"><CalendarDots className="w-3.5 h-3.5 text-blue-600" /> {fmtCorta(desde)}</button>
             <span className="text-gray-400">→</span>
-            <button onClick={() => setCalRango('hasta')} className="inline-flex items-center gap-1.5 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-900 bg-white whitespace-nowrap"><CalendarDays className="w-3.5 h-3.5 text-blue-600" /> {fmtCorta(hasta)}</button>
+            <button onClick={() => setCalRango('hasta')} className="inline-flex items-center gap-1.5 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-900 bg-white whitespace-nowrap"><CalendarDots className="w-3.5 h-3.5 text-blue-600" /> {fmtCorta(hasta)}</button>
             <CalendarModal isOpen={calRango === 'desde'} selectedDate={desde} allowPast onSelectDate={(x) => { if (x <= hasta) setDesde(x) }} onClose={() => setCalRango(null)} />
             <CalendarModal isOpen={calRango === 'hasta'} selectedDate={hasta} allowPast onSelectDate={(x) => { if (x >= desde && x <= hoyISO) setHasta(x) }} onClose={() => setCalRango(null)} />
           </div>
@@ -191,7 +191,7 @@ export function VentasPage() {
         <div className="bg-white border border-gray-200 rounded-2xl p-4"><SkeletonRows rows={6} cols={4} /></div>
       ) : visibles.length === 0 ? (
         <div className="bg-white border border-dashed border-gray-300 rounded-2xl p-10 text-center text-gray-500">
-          <span className="inline-flex w-12 h-12 rounded-2xl bg-gray-100 items-center justify-center mb-3"><DollarSign className="w-6 h-6 text-gray-400" /></span>
+          <span className="inline-flex w-12 h-12 rounded-2xl bg-gray-100 items-center justify-center mb-3"><CurrencyDollar className="w-6 h-6 text-gray-400" /></span>
           <p className="font-semibold text-gray-700">No hay ventas en este filtro</p>
           <p className="text-sm mt-1">Cambia el rango de fechas o el estado.</p>
         </div>
@@ -205,11 +205,15 @@ export function VentasPage() {
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${meta.cls}`}>{meta.label}</span>
                   <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-500">
-                    {v.idReserva ? <><CalendarCheck className="w-3.5 h-3.5" /> Cita</> : <><Store className="w-3.5 h-3.5" /> Venta directa</>}
+                    {v.idReserva ? <><CalendarCheck className="w-3.5 h-3.5" /> Cita</> : <><Storefront className="w-3.5 h-3.5" /> Venta directa</>}
                   </span>
                 </div>
-                <p className="font-semibold text-gray-900 truncate">{v.nombreCliente || 'Cliente a pie'}</p>
-                <p className="text-sm text-gray-500 flex items-center gap-1 truncate"><User className="w-3.5 h-3.5" /> {v.nombreUsuarioRegistra || '—'}</p>
+                <p className="font-semibold text-gray-900 truncate">Cliente: {v.nombreCliente || 'Cliente a pie'}</p>
+                {/* Creado por / Atendido por (Tarea 1): quién la registró vs. quién la atendió (comisión). */}
+                <p className="text-xs text-gray-500 flex items-center gap-1 truncate"><User className="w-3.5 h-3.5 shrink-0" /> Creado por {v.nombreUsuarioRegistra || '—'}</p>
+                {v.nombreProfesional && (
+                  <p className="text-xs text-gray-500 flex items-center gap-1 truncate"><Scissors className="w-3.5 h-3.5 shrink-0" /> Atendido por {v.nombreProfesional}</p>
+                )}
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-lg font-bold text-gray-900">{soles(v.total)}</span>
                   <span className="text-xs text-gray-400">{v.metodoPago} · {fmtFechaHora(v.fechaVenta)}</span>
@@ -275,9 +279,9 @@ function DetalleVenta({ venta, onClose, onResuelto }: { venta: VentaResumen; onC
         className="relative bg-white w-full sm:max-w-lg rounded-2xl p-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="font-bold text-gray-900">{venta.nombreCliente || 'Cliente a pie'}</h3>
+            <h3 className="font-bold text-gray-900">Cliente: {venta.nombreCliente || 'Cliente a pie'}</h3>
             <span className="inline-flex items-center gap-1 text-[11px] text-gray-500">
-              {venta.idReserva ? <><CalendarCheck className="w-3.5 h-3.5" /> De una cita</> : <><Store className="w-3.5 h-3.5" /> Venta directa</>}
+              {venta.idReserva ? <><CalendarCheck className="w-3.5 h-3.5" /> De una cita</> : <><Storefront className="w-3.5 h-3.5" /> Venta directa</>}
               · {fmtFechaHora(venta.fechaVenta)}
             </span>
           </div>
@@ -295,9 +299,17 @@ function DetalleVenta({ venta, onClose, onResuelto }: { venta: VentaResumen; onC
             </div>
           )) : <div className="p-2.5 text-sm text-gray-400">Cargando servicios…</div>}
           <div className="flex items-center justify-between p-2.5 text-sm font-semibold">
-            <span className="flex items-center gap-2"><User className="w-3.5 h-3.5 text-gray-400" /> {venta.nombreUsuarioRegistra || '—'}</span>
+            <span className="flex items-center gap-2"><User className="w-3.5 h-3.5 text-gray-400" /> {venta.nombreProfesional || venta.nombreUsuarioRegistra || '—'}</span>
             <span>{soles(venta.total)} · {venta.metodoPago}</span>
           </div>
+        </div>
+
+        {/* Creado por / Atendido por (Tarea 1) */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 mb-3">
+          <span className="inline-flex items-center gap-1"><User className="w-3.5 h-3.5" /> Creado por <b className="font-semibold text-gray-700">{venta.nombreUsuarioRegistra || '—'}</b></span>
+          {venta.nombreProfesional && (
+            <span className="inline-flex items-center gap-1"><Scissors className="w-3.5 h-3.5" /> Atendido por <b className="font-semibold text-gray-700">{venta.nombreProfesional}</b></span>
+          )}
         </div>
 
         {/* Evidencia */}
@@ -315,7 +327,7 @@ function DetalleVenta({ venta, onClose, onResuelto }: { venta: VentaResumen; onC
         {/* Acciones (solo si está pendiente) */}
         {esPendiente && modo === 'ver' && (
           <div className="flex gap-2">
-            <button onClick={() => setModo('rechazar')} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-2 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl py-2.5 font-semibold disabled:opacity-50"><Ban className="w-4 h-4" /> Rechazar</button>
+            <button onClick={() => setModo('rechazar')} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-2 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl py-2.5 font-semibold disabled:opacity-50"><Prohibit className="w-4 h-4" /> Rechazar</button>
             <button onClick={aceptar} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 font-semibold disabled:opacity-50"><Check className="w-4 h-4" /> {busy ? 'Procesando…' : 'Aceptar'}</button>
           </div>
         )}
@@ -325,7 +337,7 @@ function DetalleVenta({ venta, onClose, onResuelto }: { venta: VentaResumen; onC
             <textarea value={motivo} onChange={e => setMotivo(e.target.value)} rows={2} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400 outline-none" />
             <div className="flex gap-2">
               <button onClick={() => setModo('ver')} disabled={busy} className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2.5 font-semibold disabled:opacity-50">Volver</button>
-              <button onClick={rechazar} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl py-2.5 font-semibold disabled:opacity-50"><Ban className="w-4 h-4" /> {busy ? 'Rechazando…' : 'Confirmar rechazo'}</button>
+              <button onClick={rechazar} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl py-2.5 font-semibold disabled:opacity-50"><Prohibit className="w-4 h-4" /> {busy ? 'Rechazando…' : 'Confirmar rechazo'}</button>
             </div>
           </div>
         )}

@@ -2,12 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
-import {
-  Scissors, Plus, Building2, MapPin, KeyRound, Power,
-  X, Check, Mail, Phone, CreditCard,
-  Store, Trash2, Loader2, Pencil, RefreshCw,
-  Search, ExternalLink, MoreHorizontal, CalendarDays, User,
-} from 'lucide-react'
+import { Scissors, Plus, Buildings as Building2, MapPin, Key as KeyRound, Power, X, Check, Envelope as Mail, Phone, CreditCard, Storefront as Store, Trash as Trash2, CircleNotch as Loader2, Pencil, ArrowsClockwise as RefreshCw, MagnifyingGlass as Search, ArrowSquareOut as ExternalLink, DotsThree as MoreHorizontal, CalendarDots as CalendarDays, User } from '@phosphor-icons/react'
 import { useAuthStore } from '@/store/authStore'
 import { AccountMenu } from '@/components/AccountMenu'
 import { DirectorioPanel } from '@/components/DirectorioPanel'

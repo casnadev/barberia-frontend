@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { X, Loader2, CalendarCheck, Receipt, Wallet, Image as ImageIcon, Store } from 'lucide-react'
+import { X, CircleNotch, CalendarCheck, Receipt, Image as ImageIcon, Storefront, UserCircle } from '@phosphor-icons/react'
 import { buildImageUrl } from '@/services/apiClient'
 import { reservasService } from '@/services/reservasService'
 import { ventasService, type VentaResumen } from '@/services/ventasService'
-import { panelTrabajadorService, type PagoTrabajador } from '@/services/panelTrabajadorService'
 import { fechaHoraPeru } from '@/utils/fecha'
 
-type Seccion = 'citas' | 'ventas' | 'pagos'
+type Seccion = 'citas' | 'ventas'
 
 const money = (n?: number) => `S/ ${Number(n || 0).toFixed(2)}`
 
@@ -42,12 +41,24 @@ const estadoVentaCls = (estado?: string): string => {
     default:                    return 'bg-gray-100 text-gray-500'
   }
 }
+const estadoVentaTxt = (estado?: string): string => {
+  switch (estado) {
+    case 'Registrada':          return 'Aceptada'
+    case 'PendienteAprobacion': return 'Pendiente'
+    case 'Rechazada':           return 'Rechazada'
+    case 'Anulada':             return 'Anulada'
+    default:                    return estado || '—'
+  }
+}
 
 /**
- * Historial del trabajador — solo lectura. Tres secciones: sus citas, sus
- * ventas (con y sin cita, con evidencia clickeable) y sus pagos recibidos
- * (con evidencia clickeable). El backend ya restringe cada endpoint al propio
- * trabajador, así que aquí no hay acciones, solo consulta.
+ * Historial del trabajador — solo lectura. Dos secciones: sus citas y sus
+ * ventas (con y sin cita, con evidencia clickeable). Cada venta muestra quién
+ * la creó y quién la atendió.
+ *
+ * Nota (Tarea 1): se retiró la pestaña "Mis pagos"; los pagos/comisiones ya
+ * viven en el botón "Comisiones" del menú, así que aquí sería información
+ * duplicada. El backend ya restringe cada endpoint al propio trabajador.
  */
 export function HistorialTrabajadorModal({
   idTrabajador,
@@ -83,21 +94,14 @@ export function HistorialTrabajadorModal({
     queryFn: () => ventasService.listarVentas({ tamanoPagina: 200 }),
     enabled: seccion === 'ventas',
   })
-  const pagos = useQuery<PagoTrabajador[]>({
-    queryKey: ['historial-trab', 'pagos', idTrabajador],
-    queryFn: () => panelTrabajadorService.getMisPagos(idTrabajador),
-    enabled: seccion === 'pagos',
-  })
 
   const tabs: { key: Seccion; label: string; icon: any }[] = [
     { key: 'citas', label: 'Mis citas', icon: CalendarCheck },
     { key: 'ventas', label: 'Mis ventas', icon: Receipt },
-    { key: 'pagos', label: 'Mis pagos', icon: Wallet },
   ]
 
   const cargando = (seccion === 'citas' && citas.isLoading)
     || (seccion === 'ventas' && ventas.isLoading)
-    || (seccion === 'pagos' && pagos.isLoading)
 
   return (
     <div
@@ -108,7 +112,7 @@ export function HistorialTrabajadorModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h3 className="text-base font-semibold text-gray-900">Mi historial</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X width={20} height={20} /></button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
         </div>
 
         {/* Segmentos */}
@@ -123,7 +127,7 @@ export function HistorialTrabajadorModal({
                   onClick={() => setSeccion(t.key)}
                   className={`flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-sm font-semibold transition ${activo ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-800'}`}
                 >
-                  <Ico width={15} height={15} /> {t.label}
+                  <Ico size={15} weight={activo ? 'fill' : 'regular'} /> {t.label}
                 </button>
               )
             })}
@@ -144,20 +148,17 @@ export function HistorialTrabajadorModal({
         <div className="overflow-y-auto p-4">
           {cargando ? (
             <div className="flex items-center justify-center py-12 text-gray-400">
-              <Loader2 className="w-6 h-6 animate-spin" />
+              <CircleNotch className="animate-spin" size={24} />
             </div>
           ) : (() => {
             const citasF = (citas.data || []).filter((r: any) => enRango(r.fechaReserva))
             const ventasF = (ventas.data || []).filter(v => enRango(v.fechaVenta))
-            const pagosF = (pagos.data || []).filter(p => enRango(p.fechaPago))
-            const total = seccion === 'citas' ? citasF.length : seccion === 'ventas' ? ventasF.length : pagosF.length
+            const total = seccion === 'citas' ? citasF.length : ventasF.length
             return (
               <>
                 {seccion === 'citas'
                   ? <SeccionCitas reservas={citasF.slice(0, limite)} />
-                  : seccion === 'ventas'
-                    ? <SeccionVentas ventas={ventasF.slice(0, limite)} onVerImagen={setVerImagen} />
-                    : <SeccionPagos pagos={pagosF.slice(0, limite)} onVerImagen={setVerImagen} />}
+                  : <SeccionVentas ventas={ventasF.slice(0, limite)} onVerImagen={setVerImagen} />}
                 {total > limite && (
                   <button onClick={() => setLimite(l => l + 10)}
                     className="mt-3 w-full py-2 rounded-xl border border-gray-200 text-sm font-semibold text-blue-600 hover:bg-blue-50 transition">
@@ -214,47 +215,27 @@ function SeccionVentas({ ventas, onVerImagen }: { ventas: VentaResumen[]; onVerI
             </button>
           ) : (
             <div className="w-12 h-12 rounded-lg bg-gray-50 text-gray-300 flex items-center justify-center shrink-0" title="Sin evidencia">
-              <ImageIcon width={20} height={20} />
+              <ImageIcon size={20} />
             </div>
           )}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <p className="text-sm font-semibold text-gray-900">{money(v.total)}</p>
-              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${estadoVentaCls(v.estado)}`}>{v.estado}</span>
+              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${estadoVentaCls(v.estado)}`}>{estadoVentaTxt(v.estado)}</span>
             </div>
             <p className="text-xs text-gray-500">
               {fechaHoraPeru(v.fechaVenta)} · {v.metodoPago}
             </p>
+            {/* Creado por / Atendido por (Tarea 1) */}
             <p className="text-[11px] text-gray-400 inline-flex items-center gap-1 mt-0.5">
-              {v.idReserva ? <><CalendarCheck width={12} height={12} /> De una cita</> : <><Store width={12} height={12} /> Venta directa</>}
+              <UserCircle size={12} weight="duotone" />
+              Creado por {v.nombreUsuarioRegistra || '—'}
+              {v.nombreProfesional ? ` · Atendido por ${v.nombreProfesional}` : ''}
+            </p>
+            <p className="text-[11px] text-gray-400 inline-flex items-center gap-1 mt-0.5">
+              {v.idReserva ? <><CalendarCheck size={12} /> De una cita</> : <><Storefront size={12} /> Venta directa</>}
               {v.nombreCliente ? ` · ${v.nombreCliente}` : ''}
             </p>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function SeccionPagos({ pagos, onVerImagen }: { pagos: PagoTrabajador[]; onVerImagen: (u: string) => void }) {
-  if (pagos.length === 0) return <Vacio texto="Aún no has recibido pagos." />
-  return (
-    <div className="grid gap-2.5">
-      {pagos.map(p => (
-        <div key={p.idPago} className="flex items-center gap-3 border border-gray-100 rounded-xl p-3">
-          {p.rutaImagenEvidencia ? (
-            <button onClick={() => onVerImagen(buildImageUrl(p.rutaImagenEvidencia))} className="shrink-0" title="Ver evidencia">
-              <img src={buildImageUrl(p.rutaImagenEvidencia)} alt="evidencia" className="w-12 h-12 rounded-lg object-cover border border-gray-200 hover:ring-2 hover:ring-blue-400 transition" />
-            </button>
-          ) : (
-            <div className="w-12 h-12 rounded-lg bg-gray-50 text-gray-300 flex items-center justify-center shrink-0" title="Sin evidencia">
-              <Receipt width={20} height={20} />
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-gray-900">{money(p.montoPagado)}</p>
-            <p className="text-xs text-gray-500">{fechaHoraPeru(p.fechaPago)} · {p.metodoPago}</p>
-            {p.observacion && <p className="text-xs text-gray-400 mt-0.5 truncate">{p.observacion}</p>}
           </div>
         </div>
       ))}
@@ -269,7 +250,7 @@ function ImagenViewer({ url, onClose }: { url: string; onClose: () => void }) {
       style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(0,0,0,.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
     >
       <button onClick={onClose} className="absolute top-4 right-4 text-white/80 hover:text-white" aria-label="Cerrar">
-        <X width={28} height={28} />
+        <X size={28} />
       </button>
       <img src={url} alt="Evidencia" onClick={e => e.stopPropagation()} className="max-w-full max-h-full rounded-xl object-contain" />
     </div>

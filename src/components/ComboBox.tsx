@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, Check, X } from 'lucide-react'
+import { CaretDown as ChevronDown, Check, X } from '@phosphor-icons/react'
 
 /** Normaliza para comparar ignorando tildes y mayúsculas: "Áncash" ~ "ancash". */
 const norm = (s: string) =>

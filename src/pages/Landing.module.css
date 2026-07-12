@@ -330,8 +330,15 @@
 }
 /* En móvil: las 4 tarjetas apiladas, sin carrusel (todas visibles). */
 @media (max-width: 760px) {
-  .plansRail { flex-direction: column; overflow-x: visible; scroll-snap-type: none; align-items: stretch; }
-  .plansRail .plan { flex: 1 1 auto; width: 100%; max-width: none; }
+  .plansRail { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; overflow-x: visible; scroll-snap-type: none; align-items: stretch; padding: 16px 0 20px; }
+  .plansRail .plan { flex: initial; width: auto; max-width: none; padding: 18px 14px; border-radius: 16px; }
+  .plansRail .planPop { transform: none; }
+  .planName { font-size: 1.02rem; }
+  .planPrice { margin: 8px 0 2px; }
+}
+@media (max-width: 380px) {
+  .plansRail { gap: 9px; }
+  .plansRail .plan { padding: 14px 11px; }
 }
 .freeBadge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 5px; background: var(--ok); color: #06140d; font-weight: 750; font-size: .76rem; padding: 6px 14px; border-radius: 999px; box-shadow: 0 8px 18px -8px rgba(52, 211, 153, .7); white-space: nowrap; }
 

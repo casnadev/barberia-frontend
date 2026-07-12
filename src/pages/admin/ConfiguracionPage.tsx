@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import {
-  Store, Building2, Phone, Clock, MapPin, Image as ImageIcon, Camera, Share2, Save, Loader2,
-  X, ChevronDown, Upload, Plus, Instagram, Facebook, Globe, Music2, Youtube, Link2, Copy, ExternalLink, Info, Gift,
-} from 'lucide-react'
+import { Storefront as Store, Buildings as Building2, Phone, Clock, MapPin, Image as ImageIcon, Camera, ShareNetwork as Share2, FloppyDisk as Save, CircleNotch as Loader2, X, CaretDown as ChevronDown, UploadSimple as Upload, Plus, InstagramLogo as Instagram, FacebookLogo as Facebook, Globe, MusicNote as Music2, YoutubeLogo as Youtube, LinkSimple as Link2, Copy, ArrowSquareOut as ExternalLink, Info, Gift } from '@phosphor-icons/react'
 import { apiClient, urlSedeCanonica } from '@/services/apiClient'
 import { sedeTenantService } from '@/services/sedeTenantService'
 import { geoService } from '@/services/geoService'

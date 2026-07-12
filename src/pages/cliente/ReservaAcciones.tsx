@@ -1,6 +1,6 @@
 import { useState, useEffect, type CSSProperties } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { X, Clock, MapPin, User, Star, Check, CalendarClock, Scissors, RotateCcw } from 'lucide-react'
+import { X, Clock, MapPin, User, Star, Check, CalendarDots as CalendarClock, Scissors, ArrowCounterClockwise as RotateCcw } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { setTenant, urlSedeCanonica } from '@/services/apiClient'
@@ -333,7 +333,7 @@ export function ReservaAcciones() {
               <div className={styles.blockTitle}>¿Cómo fue tu experiencia?</div>
               <div className={styles.stars}>
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <button key={n} className={`${styles.star} ${calificacion >= n ? styles.starOn : ''}`} onClick={() => setCalificacion(n)} aria-label={`${n} estrellas`}><Star size={28} /></button>
+                  <button key={n} className={`${styles.star} ${calificacion >= n ? styles.starOn : ''}`} onClick={() => setCalificacion(n)} aria-label={`${n} estrellas`}><Star size={28} weight={calificacion >= n ? 'fill' : 'regular'} /></button>
                 ))}
               </div>
               <textarea className={styles.textarea} value={resena} onChange={(e) => setResena(e.target.value)} rows={4} />

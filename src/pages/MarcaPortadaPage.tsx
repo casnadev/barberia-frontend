@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Loader2 } from 'lucide-react'
+import { CircleNotch as Loader2 } from '@phosphor-icons/react'
 import { MapPin, CaretRight } from '@phosphor-icons/react'
 import { getActiveTenant, setTenant, setTenantOverride, urlMicrositio, buildImageUrl } from '@/services/apiClient'
 import { marcaService, MarcaPublica, SedeDeMarca } from '@/services/marcaService'

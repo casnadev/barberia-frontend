@@ -1,11 +1,7 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Gift, MessageCircle, Send, Trash2, ChevronDown, Heart, Share2,
-  Image as ImageIcon, Smile, Flag, CornerDownRight, ShieldCheck, Clock, Tag,
-  MoreVertical, Download, X, Star,
-} from 'lucide-react'
+import { Gift, ChatCircle as MessageCircle, PaperPlaneRight as Send, Trash as Trash2, CaretDown as ChevronDown, Heart, ShareNetwork as Share2, Image as ImageIcon, Smiley as Smile, Flag, ArrowElbowDownRight as CornerDownRight, ShieldCheck, Clock, Tag, DotsThreeVertical as MoreVertical, DownloadSimple as Download, X, Star } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { novedadesService } from '@/services/novedadesService'
 import { useAuthStore } from '@/store/authStore'
@@ -344,7 +340,7 @@ export function FlyerNovedad({ novedad, brand = '#2855F6', idSede }: any) {
           </span>
           {novedad.destacado && (
             <span style={destacadoBadge}>
-              <Star width={12} height={12} fill="currentColor" /> Destacado
+              <Star width={12} height={12} weight="fill" /> Destacado
             </span>
           )}
           {vig && (
@@ -373,7 +369,7 @@ export function FlyerNovedad({ novedad, brand = '#2855F6', idSede }: any) {
         {/* Barra de acciones: corazón · compartir · Lo quiero */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
           <button onClick={toggleCorazon} style={accBtn(yoDiCorazon ? '#ef4444' : '#6b7280')} aria-label="Me gusta">
-            <Heart width={20} height={20} fill={yoDiCorazon ? '#ef4444' : 'none'} />
+            <Heart width={20} height={20} weight={yoDiCorazon ? 'fill' : 'regular'} color={yoDiCorazon ? '#ef4444' : undefined} />
             <span style={{ fontWeight: 700 }}>{corazones}</span>
           </button>
           <button onClick={compartir} style={accBtn('#6b7280')} aria-label="Compartir">

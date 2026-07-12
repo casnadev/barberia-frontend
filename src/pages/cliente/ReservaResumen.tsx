@@ -1,4 +1,4 @@
-import { MapPin, User, Clock, Calendar as CalendarIcon } from 'lucide-react'
+import { MapPin, User, Clock, Calendar as CalendarIcon } from '@phosphor-icons/react'
 import { buildImageUrl } from '@/services/apiClient'
 import styles from '@/styles/ReservaClientePage.module.css'
 

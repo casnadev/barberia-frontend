@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { CheckCircle2, XCircle, Loader2, MailCheck } from 'lucide-react'
+import { CheckCircle as CheckCircle2, XCircle, CircleNotch as Loader2, SealCheck as MailCheck } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { verificacionCorreoService } from '@/services/verificacionCorreoService'
 import { useAuthStore } from '@/store/authStore'

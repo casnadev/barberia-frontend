@@ -5,9 +5,9 @@ import { Fab } from '@/components/Fab'
 import { AgendaBoard, type TrabajadorPropio } from '@/components/AgendaBoard'
 import { CalendarModal } from '@/pages/cliente/CalendarModal'
 import {
-  CalendarCheck, Check, X, DollarSign, Star, Wallet, Camera, AlertTriangle,
-  CalendarDays, CalendarOff, Plus, Trash2, Mail, Phone, Home, Clock, Calendar, MapPin, Menu,
-} from 'lucide-react'
+  CalendarCheck, Check, X, CurrencyDollar, Star, Wallet, Camera, Warning,
+  CalendarDots, CalendarX, Plus, Trash, Envelope, Phone, House, Clock, Calendar, MapPin, List,
+} from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
 import { useAuthStore } from '@/store/authStore'
@@ -46,6 +46,37 @@ const FRANJAS_T = [
   { key: 'noche', label: 'Noche' },
 ]
 const soles = (n?: number) => `S/ ${Number(n || 0).toFixed(2)}`
+
+/**
+ * Estima la fecha del próximo pago según la frecuencia. Anclas sensatas:
+ *  - Diario: día siguiente.  - Semanal: próximo viernes.
+ *  - Quincenal: el 15 o el fin de mes (lo que venga primero).
+ *  - Mensual: fin de mes.
+ * Es una estimación (cada negocio puede pagar en fechas propias).
+ */
+function proximoPago(frecuencia?: string): { fecha: Date; dias: number } | null {
+  const f = (frecuencia || 'Quincenal').toLowerCase()
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+  const addDias = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x }
+  const diff = (d: Date) => Math.round((d.getTime() - hoy.getTime()) / 86400000)
+  const finMes = (y: number, m: number) => new Date(y, m + 1, 0)
+  if (f === 'diario') { const x = addDias(hoy, 1); return { fecha: x, dias: 1 } }
+  if (f === 'semanal') { const delta = (5 - hoy.getDay() + 7) % 7; const x = addDias(hoy, delta); return { fecha: x, dias: diff(x) } }
+  if (f === 'mensual') {
+    const x = finMes(hoy.getFullYear(), hoy.getMonth())
+    if (diff(x) < 0) { const n = finMes(hoy.getFullYear(), hoy.getMonth() + 1); return { fecha: n, dias: diff(n) } }
+    return { fecha: x, dias: diff(x) }
+  }
+  // quincenal
+  const dia15 = new Date(hoy.getFullYear(), hoy.getMonth(), 15)
+  const fin = finMes(hoy.getFullYear(), hoy.getMonth())
+  let cand: Date
+  if (diff(dia15) >= 0) cand = dia15
+  else if (diff(fin) >= 0) cand = fin
+  else cand = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 15)
+  return { fecha: cand, dias: diff(cand) }
+}
+const fechaCorta = (d: Date) => d.toLocaleDateString('es-PE', { day: 'numeric', month: 'long' })
 const rid = (r: any) => r.idReserva ?? r.id
 const fmtDia = (iso?: string) => iso
   ? new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -129,10 +160,10 @@ export function TrabajadorMiAgenda() {
   )
 
   const TABS: { key: Tab; label: string; icon: any }[] = [
-    { key: 'inicio', label: 'Inicio', icon: Home },
+    { key: 'inicio', label: 'Inicio', icon: House },
     { key: 'agenda', label: 'Agenda', icon: CalendarCheck },
-    { key: 'disponibilidad', label: 'Horario', icon: CalendarDays },
-    { key: 'comisiones', label: 'Comisiones', icon: DollarSign },
+    { key: 'disponibilidad', label: 'Horario', icon: CalendarDots },
+    { key: 'comisiones', label: 'Comisiones', icon: CurrencyDollar },
     { key: 'resenas', label: 'Reseñas', icon: Star },
   ]
 
@@ -166,7 +197,7 @@ export function TrabajadorMiAgenda() {
             <button onClick={() => setMenuOpen(true)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 active:scale-95 transition"
               aria-label="Abrir menú">
-              <Menu className="w-4 h-4" /> Menú
+              <List className="w-4 h-4" /> Menú
             </button>
           </div>
           {perfil?.nombreSede && (
@@ -257,41 +288,83 @@ function Kpi({ icon: Icon, tone, label, value }: { icon: any; tone: string; labe
 }
 
 /* ---------- Inicio (mini-dashboard de HOY) ---------- */
-/* ---------- Aviso de ventas rechazadas (el trabajador re-sube evidencia) ---------- */
-function VentasRechazadasAviso() {
+/* ----------------------------------------------------------------------------
+ * Aviso "Ventas por completar" (Tarea 1)
+ * El trabajador ve aquí TODAS las ventas en las que participó que aún no cuentan:
+ *   • Pendientes SIN evidencia  → debe SUBIR la foto del cobro.
+ *   • Rechazadas                → debe REENVIAR una nueva evidencia.
+ *   • Pendientes CON evidencia  → solo informativo ("En revisión", sin acción).
+ * Incluye las ventas que el Admin creó a su nombre ("Venta de un profesional"),
+ * porque el backend ya lista las ventas donde el trabajador participa y ahora le
+ * permite subir evidencia de ellas aunque no las haya registrado él.
+ * -------------------------------------------------------------------------- */
+function VentasPorCompletarAviso() {
   const [ventas, setVentas] = useState<VentaResumen[]>([])
-  const [reenviar, setReenviar] = useState<VentaResumen | null>(null)
+  const [subir, setSubir] = useState<VentaResumen | null>(null)
 
   const iso = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
   const cargar = async () => {
     try {
       const hoy = new Date(); const desde = new Date(hoy); desde.setDate(desde.getDate() - 30)
-      const data = await ventasService.listarVentas({ estado: 'Rechazada', desde: iso(desde), hasta: iso(hoy), tamanoPagina: 50 })
-      setVentas(Array.isArray(data) ? data : [])
+      const rango = { desde: iso(desde), hasta: iso(hoy), tamanoPagina: 50 }
+      const [pend, rech] = await Promise.all([
+        ventasService.listarVentas({ estado: 'PendienteAprobacion', ...rango }).catch(() => []),
+        ventasService.listarVentas({ estado: 'Rechazada', ...rango }).catch(() => []),
+      ])
+      const todas = [...(Array.isArray(pend) ? pend : []), ...(Array.isArray(rech) ? rech : [])]
+      // Orden: primero lo accionable (rechazada / sin evidencia), luego en revisión.
+      todas.sort((a, b) => (b.fechaVenta || '').localeCompare(a.fechaVenta || ''))
+      setVentas(todas)
     } catch { /* silencioso: no romper el inicio */ }
   }
   useEffect(() => { cargar() }, [])
 
+  const necesitaEvidencia = (v: VentaResumen) => v.estado === 'Rechazada' || !v.rutaImagenEvidencia
+  const accionables = ventas.filter(necesitaEvidencia)
+
   if (ventas.length === 0) return null
   return (
-    <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4">
-      <p className="font-semibold text-rose-900 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> Tienes {ventas.length} venta{ventas.length > 1 ? 's' : ''} rechazada{ventas.length > 1 ? 's' : ''}</p>
-      <p className="text-xs text-rose-700 mt-0.5">Revisa el motivo y vuelve a subir la evidencia para que el administrador la apruebe.</p>
+    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+      <p className="font-semibold text-amber-900 flex items-center gap-2">
+        <Warning className="w-4 h-4" weight="fill" /> Tienes {ventas.length} venta{ventas.length > 1 ? 's' : ''} por completar
+      </p>
+      <p className="text-xs text-amber-800 mt-0.5">
+        {accionables.length > 0
+          ? 'Sube la evidencia del cobro para que el administrador la apruebe y cuente tu comisión.'
+          : 'En revisión por el administrador. No necesitas hacer nada más.'}
+      </p>
       <div className="mt-3 space-y-2">
-        {ventas.map(v => (
-          <div key={v.idVenta} className="bg-white border border-rose-100 rounded-xl p-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-medium text-gray-900 truncate">{v.nombreCliente || 'Cliente a pie'}</span>
-              <span className="text-sm text-gray-500 shrink-0">{soles(v.total)} · {v.metodoPago}</span>
+        {ventas.map(v => {
+          const rechazada = v.estado === 'Rechazada'
+          const falta = necesitaEvidencia(v)
+          return (
+            <div key={v.idVenta} className={`bg-white border rounded-xl p-3 ${rechazada ? 'border-rose-100' : 'border-amber-100'}`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium text-gray-900 truncate">Cliente: {v.nombreCliente || 'Cliente a pie'}</span>
+                <span className="text-sm text-gray-500 shrink-0">{soles(v.total)} · {v.metodoPago}</span>
+              </div>
+              {/* Creado por / Atendido por: distingue las ventas que creó el Admin a tu nombre. */}
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                Creado por {v.nombreUsuarioRegistra || '—'}
+                {v.nombreProfesional ? ` · Atendido por ${v.nombreProfesional}` : ''}
+              </p>
+              {rechazada && v.motivoRechazo && <p className="text-xs text-rose-700 mt-1"><strong>Motivo del rechazo:</strong> {v.motivoRechazo}</p>}
+              <div className="mt-2 flex items-center gap-2">
+                {falta ? (
+                  <button onClick={() => setSubir(v)} className={`inline-flex items-center gap-1.5 text-sm font-semibold ${rechazada ? 'text-rose-700 hover:text-rose-800' : 'text-amber-800 hover:text-amber-900'}`}>
+                    <Camera className="w-3.5 h-3.5" /> {rechazada ? 'Reenviar evidencia' : 'Subir evidencia'}
+                  </button>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                    <Clock className="w-3 h-3" /> En revisión
+                  </span>
+                )}
+              </div>
             </div>
-            {v.motivoRechazo && <p className="text-xs text-rose-700 mt-1"><strong>Motivo:</strong> {v.motivoRechazo}</p>}
-            <button onClick={() => setReenviar(v)} className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-rose-700 hover:text-rose-800">
-              <Camera className="w-3.5 h-3.5" /> Reenviar evidencia
-            </button>
-          </div>
-        ))}
+          )
+        })}
       </div>
-      {reenviar && <ReenviarEvidenciaModal venta={reenviar} onClose={() => setReenviar(null)} onDone={async () => { setReenviar(null); await cargar() }} />}
+      {subir && <ReenviarEvidenciaModal venta={subir} onClose={() => setSubir(null)} onDone={async () => { setSubir(null); await cargar() }} />}
     </div>
   )
 }
@@ -301,6 +374,8 @@ function ReenviarEvidenciaModal({ venta, onClose, onDone }: { venta: VentaResume
   const [operacion, setOperacion] = useState(venta.numeroOperacion || '')
   const [subiendo, setSubiendo] = useState(false)
   const [saving, setSaving] = useState(false)
+  // Rechazada → "reenviar"; pendiente sin evidencia → "subir" por primera vez.
+  const esRechazo = venta.estado === 'Rechazada'
 
   const subir = async (e: any) => {
     const file = e.target.files?.[0]; if (!file) return
@@ -309,13 +384,13 @@ function ReenviarEvidenciaModal({ venta, onClose, onDone }: { venta: VentaResume
     catch { toast.error('No se pudo subir la imagen') } finally { setSubiendo(false) }
   }
   const confirmar = async () => {
-    if (!evidencia) { toast.error('Adjunta la nueva evidencia'); return }
+    if (!evidencia) { toast.error('Adjunta la evidencia'); return }
     setSaving(true)
     try {
       await ventasService.reenviarEvidencia(venta.idVenta, evidencia, operacion.trim() || undefined)
-      toast.success('Evidencia reenviada · pendiente de aprobación')
+      toast.success('Evidencia enviada · pendiente de aprobación')
       onDone()
-    } catch (e: any) { toast.error(mensajeError(e, 'No se pudo reenviar')) } finally { setSaving(false) }
+    } catch (e: any) { toast.error(mensajeError(e, 'No se pudo enviar la evidencia')) } finally { setSaving(false) }
   }
 
   return (
@@ -323,19 +398,27 @@ function ReenviarEvidenciaModal({ venta, onClose, onDone }: { venta: VentaResume
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-white w-full sm:max-w-md rounded-2xl p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-gray-900">Reenviar evidencia</h3>
+          <h3 className="font-bold text-gray-900">{esRechazo ? 'Reenviar evidencia' : 'Subir evidencia'}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
         </div>
-        {venta.motivoRechazo && (
+        {esRechazo && venta.motivoRechazo && (
           <p className="text-sm text-rose-700 bg-rose-50 border border-rose-100 rounded-xl p-3 mb-3"><strong>Motivo del rechazo:</strong> {venta.motivoRechazo}</p>
+        )}
+        {!esRechazo && (
+          <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-xl p-3 mb-3">Esta venta quedó pendiente sin evidencia. Adjunta la foto del cobro para que cuente y se genere tu comisión.</p>
         )}
         <div className="space-y-3">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">{venta.nombreCliente || 'Cliente a pie'}</span>
+            <span className="text-gray-500">Cliente: {venta.nombreCliente || 'Cliente a pie'}</span>
             <span className="font-semibold text-gray-900">{soles(venta.total)} · {venta.metodoPago}</span>
           </div>
+          {/* Contexto: quién la creó y quién la atendió */}
+          <p className="text-[11px] text-gray-400">
+            Creado por {venta.nombreUsuarioRegistra || '—'}
+            {venta.nombreProfesional ? ` · Atendido por ${venta.nombreProfesional}` : ''}
+          </p>
           <div>
-            <label className="text-xs text-gray-500 flex items-center gap-1"><Camera className="w-3.5 h-3.5" /> Nueva evidencia del pago <span className="text-rose-500 font-medium">(obligatoria)</span></label>
+            <label className="text-xs text-gray-500 flex items-center gap-1"><Camera className="w-3.5 h-3.5" /> {esRechazo ? 'Nueva evidencia del pago' : 'Evidencia del pago'} <span className="text-rose-500 font-medium">(obligatoria)</span></label>
             <input type="file" accept="image/*" onChange={subir} className="block w-full text-sm text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:px-3 file:py-1.5 file:text-sm file:font-medium" />
             {subiendo && <p className="text-xs text-gray-400 mt-1">Subiendo…</p>}
             {evidencia && <img src={evidencia} alt="evidencia" className="mt-2 rounded-lg max-h-40 border border-gray-200" />}
@@ -345,7 +428,7 @@ function ReenviarEvidenciaModal({ venta, onClose, onDone }: { venta: VentaResume
             <input value={operacion} onChange={e => setOperacion(e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
           </div>
           <button onClick={confirmar} disabled={saving || subiendo || !evidencia} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 font-semibold disabled:opacity-50">
-            {saving ? 'Reenviando…' : 'Reenviar para aprobación'}
+            {saving ? 'Enviando…' : 'Enviar para aprobación'}
           </button>
         </div>
       </div>
@@ -391,16 +474,38 @@ function InicioTab({ nombre, hoyCount, atendidasHoy, comisiones, reservas, perfi
         <p className="text-sm text-gray-500 capitalize">{fechaLarga} · tu resumen de hoy</p>
       </div>
 
-      {/* Aviso: ventas rechazadas por el admin (re-subir evidencia) */}
-      <VentasRechazadasAviso />
+      {/* Aviso: ventas pendientes/rechazadas por completar (subir/reenviar evidencia) */}
+      <VentasPorCompletarAviso />
 
       {/* KPIs de hoy */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Kpi icon={CalendarCheck} tone="blue" label="Citas hoy" value={String(hoyCount)} />
         <Kpi icon={Check} tone="emerald" label="Atendidas hoy" value={String(atendidasHoy)} />
         <Kpi icon={Wallet} tone="violet" label="Comisión pendiente" value={soles(comisiones?.comisionesTotalPendiente)} />
-        <Kpi icon={DollarSign} tone="amber" label="Comisión pagada" value={soles(comisiones?.comisionesTotalPagado)} />
+        <Kpi icon={CurrencyDollar} tone="amber" label="Comisión pagada" value={soles(comisiones?.comisionesTotalPagado)} />
       </div>
+
+      {/* Tarea 5 + liquidaciones: solo si al trabajador SE LE LIQUIDA su comisión.
+          Si no genera liquidaciones (p. ej. el dueño), sus ingresos van a caja. */}
+      {perfil && perfil.generaLiquidaciones !== false && (() => {
+        const pp = proximoPago(perfil.frecuenciaPago)
+        const cuenta = (perfil.frecuenciaPago || '').toLowerCase() !== 'diario' && pp
+        return (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-600 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2">
+            <Wallet className="w-4 h-4 text-gray-400" />
+            Se te paga <strong className="font-semibold text-gray-800">{perfil.frecuenciaPago || 'Quincenal'}</strong>
+            {' '}· método <strong className="font-semibold text-gray-800">{perfil.metodoPagoPreferido || 'Efectivo'}</strong>
+            {cuenta && pp && (
+              <span className="text-gray-400">
+                {' · '}
+                {pp.dias <= 0
+                  ? 'tu pago es hoy'
+                  : `faltan ${pp.dias} día${pp.dias === 1 ? '' : 's'} para tu próximo pago (${fechaCorta(pp.fecha)})`}
+              </span>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Completa tu perfil */}
       {perfil && (
@@ -655,7 +760,7 @@ function DescansosSection({ idT, idSede }: { idT: number | null; idSede: number 
   const triggerBtn = 'w-full flex items-center gap-2 border border-gray-200 rounded-lg px-2.5 py-2 text-sm text-left bg-white hover:border-blue-300 transition'
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-5 max-w-2xl">
-      <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2"><CalendarOff className="w-5 h-5 text-gray-500" /> Excepciones de disponibilidad</h3>
+      <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2"><CalendarX className="w-5 h-5 text-gray-500" /> Excepciones de disponibilidad</h3>
       <p className="text-sm text-gray-500 mb-4">Registra <b>ausencias</b> (vacaciones, permiso…) o <b>disponibilidad extra</b> (turno adicional, atender un día de descanso). No cambia tu horario semanal; solo aplica a esas fechas una vez que el administrador lo apruebe.</p>
 
       {/* Efecto */}
@@ -737,7 +842,7 @@ function DescansosSection({ idT, idSede }: { idT: number | null; idSede: number 
                   const txt = est === 'Aprobada' ? 'Aprobado' : est === 'Rechazada' ? 'Rechazado' : 'Pendiente'
                   return <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${cls}`}>{txt}</span>
                 })()}
-                <button onClick={() => eliminar(d.idDescanso)} className="text-gray-400 hover:text-rose-600 transition" aria-label="Eliminar"><Trash2 className="w-4 h-4" /></button>
+                <button onClick={() => eliminar(d.idDescanso)} className="text-gray-400 hover:text-rose-600 transition" aria-label="Eliminar"><Trash className="w-4 h-4" /></button>
               </div>
             </div>
           ))}
@@ -811,7 +916,7 @@ function ResenasTab({ idT }: { idT: number | null }) {
   return (
     <div className="space-y-4">
       <div className="bg-white border border-gray-200 rounded-2xl p-4 flex items-center gap-3">
-        <Star className="w-8 h-8 fill-amber-400 text-amber-400" />
+        <Star weight="fill" className="w-8 h-8 text-amber-400" />
         <div><p className="text-2xl font-bold text-gray-900">{prom}</p><p className="text-xs text-gray-500">{items.length} {items.length === 1 ? 'reseña' : 'reseñas'}</p></div>
       </div>
       {loaded && items.length === 0 ? <p className="text-sm text-gray-400 bg-white border border-dashed border-gray-300 rounded-2xl p-6 text-center">Aún no tienes reseñas.</p>
@@ -819,7 +924,7 @@ function ResenasTab({ idT }: { idT: number | null }) {
           <div key={r.idCalificacion} className="bg-white border border-gray-200 rounded-2xl p-4">
             <div className="flex items-center justify-between">
               <p className="font-semibold text-gray-900">{r.nombreCliente || 'Cliente'}</p>
-              <span className="inline-flex items-center gap-0.5">{[1, 2, 3, 4, 5].map(n => <Star key={n} className={`w-4 h-4 ${n <= r.puntuacion ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />)}</span>
+              <span className="inline-flex items-center gap-0.5">{[1, 2, 3, 4, 5].map(n => <Star key={n} weight={n <= r.puntuacion ? 'fill' : 'regular'} className={`w-4 h-4 ${n <= r.puntuacion ? 'text-amber-400' : 'text-gray-300'}`} />)}</span>
             </div>
             {r.comentario && <p className="text-sm text-gray-600 mt-1">{r.comentario}</p>}
             <p className="text-xs text-gray-400 mt-1">{fechaPeru(r.fechaCreacion)}</p>
@@ -846,6 +951,7 @@ function AtenderModal({ reserva, onClose, onDone }: any) {
   const [metodo, setMetodo] = useState('Efectivo')
   const [operacion, setOperacion] = useState('')
   const [evidencia, setEvidencia] = useState('')
+  const [sinEvidencia, setSinEvidencia] = useState(false)
   const [subiendo, setSubiendo] = useState(false)
   const [saving, setSaving] = useState(false)
   const total = reserva.precioServicio ?? reserva.precioServicioSnap
@@ -857,11 +963,14 @@ function AtenderModal({ reserva, onClose, onDone }: any) {
     catch { toast.error('No se pudo subir la imagen') } finally { setSubiendo(false) }
   }
   const confirmar = async () => {
-    if (!evidencia) { toast.error('Adjunta la evidencia del pago para atender la cita'); return }
+    // Igual que la venta rápida: si no hay evidencia, se puede dejar PENDIENTE
+    // (marcando el check). Sin foto y sin marcar, no se atiende.
+    if (!evidencia && !sinEvidencia) { toast.error('Adjunta la evidencia del pago o marca "dejar pendiente"'); return }
     setSaving(true)
     try {
-      await panelTrabajadorService.atender(rid(reserva), { metodoPago: metodo, numeroOperacion: operacion, rutaImagenEvidencia: evidencia })
-      toast.success('Cita atendida · venta enviada para aprobación'); onDone()
+      await panelTrabajadorService.atender(rid(reserva), { metodoPago: metodo, numeroOperacion: operacion, rutaImagenEvidencia: evidencia || undefined })
+      toast.success(evidencia ? 'Cita atendida · venta enviada para aprobación' : 'Cita atendida · sube la evidencia luego para que cuente')
+      onDone()
     } catch (e: any) { toast.error(mensajeError(e, 'No se pudo atender la cita')) } finally { setSaving(false) }
   }
   const field = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none'
@@ -874,12 +983,21 @@ function AtenderModal({ reserva, onClose, onDone }: any) {
         </div>
         {metodo !== 'Efectivo' && <div><label className="text-xs text-gray-500">N° de operación (opcional)</label><input className={field} value={operacion} onChange={e => setOperacion(e.target.value)} /></div>}
         <div>
-          <label className="text-xs text-gray-500 flex items-center gap-1"><Camera className="w-3.5 h-3.5" /> Evidencia del pago <span className="text-rose-500 font-medium">(obligatoria)</span></label>
+          <label className="text-xs text-gray-500 flex items-center gap-1">
+            <Camera className="w-3.5 h-3.5" /> Evidencia del pago{' '}
+            {sinEvidencia ? <span className="text-gray-400 font-normal">· opcional</span> : <span className="text-rose-500 font-medium">· obligatoria</span>}
+          </label>
           <input type="file" accept="image/*" onChange={subir} className="block w-full text-sm text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:px-3 file:py-1.5 file:text-sm file:font-medium" />
           {subiendo && <p className="text-xs text-gray-400 mt-1">Subiendo…</p>}
           {evidencia && <img src={evidencia} alt="evidencia" className="mt-2 rounded-lg max-h-32 border border-gray-200" />}
+          {!evidencia && (
+            <label className="mt-2 flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
+              <input type="checkbox" checked={sinEvidencia} onChange={e => setSinEvidencia(e.target.checked)} className="mt-0.5 rounded border-gray-300" />
+              <span>Pendiente de evidencia: la subo después. La venta NO cuenta hasta adjuntar la foto.</span>
+            </label>
+          )}
         </div>
-        <button onClick={confirmar} disabled={saving || subiendo || !evidencia} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 font-semibold disabled:opacity-50">
+        <button onClick={confirmar} disabled={saving || subiendo || (!evidencia && !sinEvidencia)} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 font-semibold disabled:opacity-50">
           {saving ? 'Procesando…' : 'Marcar como atendida'}
         </button>
       </div>
@@ -982,7 +1100,7 @@ function ConfigModal({ perfil, onClose, onSaved, asTab }: { perfil: MiPerfilTrab
           </div>
         </div>
         <div><label className="text-xs text-gray-500">Nombre completo</label><input className={field} value={nombre} onChange={e => setNombre(e.target.value)} /></div>
-        <div><label className="text-xs text-gray-500 flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> Correo</label><input className={field} type="email" value={correo} onChange={e => setCorreo(e.target.value)} />
+        <div><label className="text-xs text-gray-500 flex items-center gap-1"><Envelope className="w-3.5 h-3.5" /> Correo</label><input className={field} type="email" value={correo} onChange={e => setCorreo(e.target.value)} />
           <VerificacionContacto key={correo} canal="correo" valor={correo} guardado={correoOriginal} verificado={correoConfirmado && correo.trim().toLowerCase() === correoOriginal.trim().toLowerCase()} onVerificado={() => { setCorreoConfirmado(true); setCorreoOriginal(correo) }} />
         </div>
         <div><label className="text-xs text-gray-500 flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> Teléfono</label><input className={field} value={telefono} onChange={e => setTelefono(e.target.value)} inputMode="numeric" placeholder="9XXXXXXXX" />

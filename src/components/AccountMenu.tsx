@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { User, LogOut, LogIn, UserPlus, ExternalLink, LifeBuoy, KeyRound, CreditCard } from 'lucide-react'
+import { User, SignOut as LogOut, SignIn as LogIn, UserPlus, ArrowSquareOut as ExternalLink, Lifebuoy as LifeBuoy, Key as KeyRound, CreditCard } from '@phosphor-icons/react'
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/authService'
 import { urlMarca, buildImageUrl } from '@/services/apiClient'

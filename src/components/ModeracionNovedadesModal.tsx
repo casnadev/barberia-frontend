@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { X, ShieldCheck, Check, EyeOff, Trash2, Flag, Clock } from 'lucide-react'
+import { X, ShieldCheck, Check, EyeSlash as EyeOff, Trash as Trash2, Flag, Clock } from '@phosphor-icons/react'
 import { novedadesService, type NovedadComentario, type ComentarioReportado } from '@/services/novedadesService'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://192.168.100.25:55692'

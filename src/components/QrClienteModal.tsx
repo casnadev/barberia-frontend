@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { QRCodeCanvas } from 'qrcode.react'
-import { X, Loader2, QrCode } from 'lucide-react'
+import { X, CircleNotch as Loader2, QrCode } from '@phosphor-icons/react'
 import { fidelizacionService, type Monedero } from '@/services/fidelizacionService'
 
 /**

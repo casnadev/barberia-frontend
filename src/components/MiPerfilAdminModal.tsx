@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Camera } from 'lucide-react'
+import { X, Camera } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { perfilService } from '@/services/perfilService'
 import { authService } from '@/services/authService'

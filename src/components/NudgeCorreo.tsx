@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { MailPlus, X, Loader2, ShieldCheck } from 'lucide-react'
+import { Envelope as MailPlus, X, CircleNotch as Loader2, ShieldCheck } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { perfilService, type MiPerfil } from '@/services/perfilService'
 import { verificacionCorreoService } from '@/services/verificacionCorreoService'

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Html5Qrcode } from 'html5-qrcode'
 import { toast } from 'sonner'
-import { X, Loader2, ScanLine, RotateCcw } from 'lucide-react'
+import { X, CircleNotch as Loader2, Scan as ScanLine, ArrowCounterClockwise as RotateCcw } from '@phosphor-icons/react'
 import { fidelizacionService, type Monedero } from '@/services/fidelizacionService'
 import { MonederoClienteCard } from './MonederoClienteCard'
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Clock, User, Scissors, MapPin, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { Clock, User, Scissors, MapPin, CheckCircle, XCircle, WarningCircle as AlertCircle } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'

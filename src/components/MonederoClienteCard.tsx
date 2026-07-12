@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Loader2, Gift, Star, History, Sparkles } from 'lucide-react'
+import { CircleNotch as Loader2, Gift, Star, ClockCounterClockwise as History, Sparkle as Sparkles } from '@phosphor-icons/react'
 import {
   fidelizacionService,
   type Monedero,
@@ -77,7 +77,7 @@ export function MonederoClienteCard({ idCliente }: { idCliente: number }) {
       <div className="rounded-2xl p-4 text-white" style={{ background: `linear-gradient(135deg, ${nivelColor}, #111827)` }}>
         <div className="flex items-center justify-between">
           <span className="inline-flex items-center gap-1 text-xs font-medium opacity-90">
-            <Star size={13} /> {monedero.nivelNombre || 'Sin nivel'}
+            <Star size={13} weight="fill" /> {monedero.nivelNombre || 'Sin nivel'}
           </span>
           <span className="text-[11px] opacity-70">#{monedero.idCliente}</span>
         </div>

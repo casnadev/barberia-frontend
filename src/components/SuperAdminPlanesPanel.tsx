@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus } from '@phosphor-icons/react'
 import { superAdminPlanesService, type PlanAdmin, type PlanAdminUpsert } from '@/services/superAdminPlanesService'
 
 const vacio: PlanAdminUpsert = {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Gift } from 'lucide-react'
+import { CaretLeft as ChevronLeft, Gift } from '@phosphor-icons/react'
 import { sedesService } from '@/services/sedesService'
 import { getActiveTenant, getTenantOverride } from '@/services/apiClient'
 import { novedadesService } from '@/services/novedadesService'

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { CheckCircle2, ShieldAlert, Loader2, MailCheck } from 'lucide-react'
+import { CheckCircle as CheckCircle2, ShieldWarning as ShieldAlert, CircleNotch as Loader2, SealCheck as MailCheck } from '@phosphor-icons/react'
 import { verificacionContactoService } from '@/services/verificacionContactoService'
 
 type Canal = 'correo' | 'telefono'

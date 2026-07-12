@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Loader2, Save, Plus, Trash2, Award, Gift, Sparkles } from 'lucide-react'
+import { CircleNotch as Loader2, FloppyDisk as Save, Plus, Trash as Trash2, Medal as Award, Gift, Sparkle as Sparkles } from '@phosphor-icons/react'
 import {
   fidelizacionService,
   type ProgramaConfig,

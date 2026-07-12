@@ -153,7 +153,11 @@ export interface VentaResumen {
   idCliente?: number
   nombreCliente?: string
   telefonoCliente?: string
+  /** Quién CREÓ la venta (Admin o Trabajador). Card: "Creado por X". */
   nombreUsuarioRegistra?: string
+  /** Profesional que ATENDIÓ (a quien se le genera la comisión). Card: "Atendido por X". */
+  idTrabajador?: number
+  nombreProfesional?: string
   detalles?: Array<{ idServicio: number; nombreServicio: string; idTrabajador: number; nombreTrabajador: string; cantidad: number; precioUnitario: number; subtotal: number }>
 }
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getActiveTenant, setTenant } from '@/services/apiClient'
 import { sedeTenantService, MiSede, CapacidadSedes } from '@/services/sedeTenantService'
-import { MapPin, ChevronDown, Check, Plus } from 'lucide-react'
+import { MapPin, CaretDown as ChevronDown, Check, Plus } from '@phosphor-icons/react'
 import AgregarLocalModal from './AgregarLocalModal'
 import UpsellSedeModal from './UpsellSedeModal'
 import s from '@/styles/SedeSwitcher.module.css'

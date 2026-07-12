@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import {
-  Scissors, CalendarClock, Wallet, Globe, Star, BarChart3,
-  Check, X, ShieldCheck, ArrowRight, ArrowLeft, Plus, Minus, Menu,
-  Heart, Mail, Phone, Instagram, Facebook, Youtube, MapPin,
-} from 'lucide-react'
+import { Scissors, CalendarDots as CalendarClock, Wallet, Globe, Star, ChartBar as BarChart3, Check, X, ShieldCheck, ArrowRight, ArrowLeft, Plus, Minus, List as Menu, Heart, Envelope as Mail, Phone, InstagramLogo as Instagram, FacebookLogo as Facebook, YoutubeLogo as Youtube, MapPin } from '@phosphor-icons/react'
 import { landingService, type SedeDestacada } from '@/services/landingService'
 import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
 import { planesService, type PlanPublico } from '@/services/planesService'
@@ -62,7 +58,7 @@ const FAQS: [string, string][] = [
 
 /* Señales de confianza bajo los precios (contenido estático). */
 const BADGES = [
-  { icon: <Check size={18} />, t: 'Empieza gratis hoy', d: 'Días de prueba sin tarjeta' },
+  { icon: <Check size={18} />, t: 'Empieza gratis hoy', d: '14 días de prueba, sin tarjeta' },
   { icon: <X size={18} />, t: 'Sin contratos', d: 'Cancela cuando quieras' },
   { icon: <WaIcon size={16} />, t: 'Soporte humano', d: 'Te ayudamos por WhatsApp' },
   { icon: <ShieldCheck size={18} />, t: 'Seguridad garantizada', d: 'Tus datos siempre respaldados' },
@@ -225,7 +221,7 @@ export default function LandingPage() {
                 <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnLg}`} onClick={abrirDemo}>Inicia tu prueba GRATIS <ArrowRight size={18} /></button>
               </div>
             </Reveal>
-            <Reveal delay={0.2}><p className={styles.heroNote}>No requiere tarjeta de crédito.</p></Reveal>
+            <Reveal delay={0.2}><p className={styles.heroNote}>No necesitas tarjeta ni instalar nada. ¿Vienes de otro sistema? Migramos tus datos <strong>gratis</strong>.</p></Reveal>
 
             <Reveal delay={0.25}>
               <div className={styles.proof}>
@@ -306,7 +302,7 @@ export default function LandingPage() {
                   aria-label={favs[s.idSede] ? 'Quitar de favoritos' : 'Añadir a favoritos'}
                   onClick={(e) => { e.stopPropagation(); toggleFav({ idSede: s.idSede, nombre: s.nombre, subdominio: s.subdominio, logoUrl: s.logoUrl, direccion: s.direccion }) }}
                 >
-                  <Heart size={15} fill={favs[s.idSede] ? 'currentColor' : 'none'} />
+                  <Heart size={15} weight={favs[s.idSede] ? 'fill' : 'regular'} />
                 </span>
                 {!s.portadaUrl && <Scissors size={26} className={styles.sedeCoverIcon} />}
               </div>
@@ -437,7 +433,7 @@ export default function LandingPage() {
                 : 0
               return (
               <Reveal key={p.idPlan} className={`${styles.plan} ${p.popular ? styles.planPop : ''}`}>
-                {p.esGratis ? <span className={styles.freeBadge}><Star size={13} /> 14 días gratis</span> : (p.popular && <span className={styles.popBadge}><Star size={13} /> Más popular</span>)}
+                {p.esGratis ? <span className={styles.freeBadge}><Star size={13} weight="fill" /> 14 días gratis</span> : (p.popular && <span className={styles.popBadge}><Star size={13} weight="fill" /> Más popular</span>)}
                 <span className={styles.planName}>{p.nombre}</span>
                 <div className={styles.planPrice}>
                   {p.esGratis ? (
@@ -516,7 +512,7 @@ export default function LandingPage() {
               <button className={`${styles.btn} ${styles.btnLight} ${styles.btnLg}`} onClick={abrirDemo}>Empieza ahora gratis</button>
               
             </div>
-            <p className={styles.ctaFine}>Empieza hoy, tienes 30 días de garantía.</p>
+            <p className={styles.ctaFine}>Empieza hoy con <strong>14 días de prueba gratis</strong>. Sin tarjeta, cancelas cuando quieras.</p>
           </Reveal>
         </div>
       </section>

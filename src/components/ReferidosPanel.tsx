@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { Loader2, Gift, Save, Users, CheckCircle2, Clock, Ban } from 'lucide-react'
+import { CircleNotch as Loader2, Gift, FloppyDisk as Save, Users, CheckCircle as CheckCircle2, Clock, Prohibit as Ban } from '@phosphor-icons/react'
 import { referidosService, type ConfiguracionReferidos, type Referido } from '@/services/referidosService'
 
 /* Metadatos de estado del referido */

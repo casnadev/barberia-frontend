@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Calculator, CheckCircle2, Loader2, CalendarDays, AlertTriangle } from 'lucide-react'
+import { Calculator, CheckCircle as CheckCircle2, CircleNotch as Loader2, CalendarDots as CalendarDays, Warning as AlertTriangle } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { cierreCajaService, type PreviewCierre, type CierreCaja as CierreItem } from '@/services/cierreCajaService'
 import { CalendarModal } from '@/pages/cliente/CalendarModal'

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Loader2, MapPin, AlertTriangle } from 'lucide-react'
+import { CircleNotch as Loader2, MapPin, Warning as AlertTriangle } from '@phosphor-icons/react'
 import SeccionSheet from './SeccionSheet'
 import { sedeTenantService, EstadoPublicacion } from '@/services/sedeTenantService'
 

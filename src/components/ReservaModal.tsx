@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, CheckCircle, Trash2 } from 'lucide-react'
+import { X, CheckCircle, Trash as Trash2 } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'

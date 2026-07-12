@@ -1,6 +1,6 @@
 import { useState, useEffect, useTransition, useCallback, useContext, createContext, useRef, Suspense } from 'react'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
-import { X } from 'lucide-react'
+import { X } from '@phosphor-icons/react'
 import { House, Scissors, Users, Calendar, User, Clock, Gear, Wallet, Calculator, SealCheck, CreditCard, Globe, type Icon } from '@phosphor-icons/react'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { urlMarca } from '@/services/apiClient'

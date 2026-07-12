@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { User, Building2, Save, Loader2, Sparkles } from 'lucide-react'
+import { User, Buildings as Building2, FloppyDisk as Save, CircleNotch as Loader2, Sparkle as Sparkles } from '@phosphor-icons/react'
 import { useAuthStore } from '@/store/authStore'
 import { perfilService } from '@/services/perfilService'
 

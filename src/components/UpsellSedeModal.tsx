@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom'
-import { Sparkles, X } from 'lucide-react'
+import { Sparkle as Sparkles, X } from '@phosphor-icons/react'
 
 /**
  * Modal que aparece cuando el Admin toca "Agregar nueva Sede" pero su plan no se lo
