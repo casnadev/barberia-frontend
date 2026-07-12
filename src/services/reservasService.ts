@@ -13,6 +13,9 @@ export interface Reserva {
   horaInicio?: string
   horaFin?: string
   estado?: string
+  /** Motivo de cancelación (interno: solo Admin y el trabajador dueño de la cita). */
+  motivoCancelacion?: string | null
+  fechaCancelacion?: string | null
   estadoPago?: string   // PendienteAprobacion | Registrada | Rechazada | Anulada | undefined (sin cobrar)
   idTrabajador?: number
   idServicio?: number
