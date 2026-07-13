@@ -10,6 +10,7 @@ import {
   type InscripcionInfo,
   type EvaluacionInscripcion,
 } from '@/services/inscripcionService'
+import { CampoCumpleanos } from '@/components/CampoCumpleanos'
 
 /**
  * LANDING DE ALTA — barber.pe/unirme/:idSede   (PÚBLICA, sin sesión)
@@ -269,6 +270,34 @@ export function UnirmePage() {
               className={`${campo} text-center text-lg font-bold tracking-[0.3em] tabular-nums`}
             />
 
+            {/* T3 — AVISO DE CAMBIO DE NOMBRE.
+                El caso "TelefonoExistente" significa que esa persona YA está en el
+                sistema (probablemente reservó antes con otro nombre: "Pepito XXX").
+                Al verificarse por OTP, el nombre que acaba de escribir pasa a ser el
+                bueno y reemplaza al anterior (`nombreAutoritativo` en el backend).
+
+                ⚠️ NO se le muestra cuál era su nombre anterior, y es a propósito: el
+                endpoint /evaluar no lo devuelve. Si lo hiciera, cualquiera podría
+                teclear un número ajeno y averiguar el nombre de esa persona sin pasar
+                ningún código. Es una fuga de datos disfrazada de comodidad.
+
+                Así que se le avisa de lo que VA A PASAR, sin revelarle nada de nadie.
+                Si no quería cambiarlo, puede volver atrás y escribir el de antes — o
+                corregirlo luego desde su monedero. */}
+            {evaluacion.caso === 'TelefonoExistente' && nombre.trim().length >= 2 && (
+              <p className="mt-3 flex items-start gap-2 rounded-xl border border-gray-100 bg-gray-50 p-3 text-xs leading-relaxed text-gray-600">
+                <ShieldCheck size={15} weight="fill" className="mt-px shrink-0 text-gray-400" />
+                <span>
+                  Al confirmar, tu nombre quedará como{' '}
+                  <strong className="text-gray-800">{nombre.trim()}</strong>.
+                  <span className="mt-0.5 block text-[11px] text-gray-400">
+                    Si antes usaste otro, este lo reemplaza. Podrás cambiarlo cuando quieras
+                    desde tu monedero.
+                  </span>
+                </span>
+              </p>
+            )}
+
             {/* Caso B: vincular o no la reserva antigua. Es SU decisión, no la nuestra.
                 Si dice que no, se le crea una ficha nueva solo con su teléfono. */}
             {evaluacion.caso === 'CorreoExistente' && (
@@ -336,7 +365,7 @@ export function UnirmePage() {
         {!info.programaActivo ? (
           <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-800">
             <WarningCircle size={20} weight="fill" className="mx-auto mb-1" />
-            Este local todavía no ha activado su programa de puntos. Pregunta en el mostrador.
+            Este local todavía no ha activado su Programa de Fidelización. Pregunta en el mostrador.
           </div>
         ) : (
           <>
@@ -429,7 +458,10 @@ export function UnirmePage() {
                   <label className="mb-1 block text-xs font-medium text-gray-500">
                     Tu cumpleaños <span className="font-normal text-gray-400">· opcional</span>
                   </label>
-                  <input type="date" value={cumple} onChange={(e) => setCumple(e.target.value)} className={campo} />
+                  {/* T5 — Era un <input type="date">. En Android eso abre el picker nativo,
+                      que arranca en el mes actual: para llegar a 1987 hay que pulsar la
+                      flecha ~460 veces. Ahora se teclea: 13081987 → 13/08/1987. */}
+                  <CampoCumpleanos id="cumple" value={cumple} onChange={setCumple} className={campo} />
                 </div>
               </div>
 
@@ -449,10 +481,23 @@ export function UnirmePage() {
                 {enviando ? 'Un momento…' : 'Unirme al programa'}
               </button>
 
+              {/* T4 — DOS bugs aquí:
+                  1. Apuntaba a /terminos, que es el contrato B2B con el DUEÑO del negocio
+                     ("Al crear una cuenta…", "Como propietario del negocio, eres responsable
+                     de…"). Nada de eso aplica a alguien que solo quiere puntos por su corte.
+                     Ahora apunta a /privacidad-clientes (B2C).
+                  2. Sin target="_blank": al pulsar el link se navegaba FUERA y se perdía el
+                     formulario a medio llenar. */}
               <p className="mt-3 text-center text-[11px] leading-relaxed text-gray-400">
-                Al unirte aceptas los{' '}
-                <a href="/terminos" className="underline hover:text-gray-600">términos</a> y la{' '}
-                <a href="/privacidad" className="underline hover:text-gray-600">política de privacidad</a>.
+                Al unirte aceptas cómo{' '}
+                <a
+                  href="/privacidad-clientes"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-gray-600"
+                >
+                  tratamos tus datos
+                </a>.
               </p>
             </div>
           </>

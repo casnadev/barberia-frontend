@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Eye, EyeSlash as EyeOff, Star, CircleNotch as Loader2, FloppyDisk as Save, Storefront as Store, ChatText as MessageSquare } from '@phosphor-icons/react'
 import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
+import { fechaResena } from '@/utils/fechaResena'
 import {
   superAdminLandingService as svc,
   type LandingSede, type LandingResena,
@@ -121,7 +122,13 @@ function ResenasTab() {
                   ))}
                 </div>
                 <p className="text-sm text-gray-800">“{r.comentario}”</p>
-                <p className="text-xs text-gray-500 mt-1">{r.nombreCliente || 'Cliente'} · {r.nombreSede}</p>
+                {/* T1 — antes: "Cliente · Miraflores". La identidad es el negocio.
+                    forzarMulti: en el panel maestro SIEMPRE queremos distinguir el
+                    local, aunque la marca tenga una sola sede. */}
+                <p className="text-xs text-gray-500 mt-1">
+                  {r.nombreCliente || 'Cliente'} · {nombreParaMostrar({ nombre: r.nombreSede, nombreComercial: r.nombreComercial }, { forzarMulti: true })}
+                  {fechaResena(r.fecha) && <span className="text-gray-400"> · {fechaResena(r.fecha)}</span>}
+                </p>
               </div>
               <button onClick={() => toggle(r)} disabled={busy === r.idCalificacion}
                 className={`shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold transition ${

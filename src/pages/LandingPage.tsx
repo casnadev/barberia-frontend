@@ -4,6 +4,8 @@ import { motion } from 'framer-motion'
 import { Scissors, CalendarDots as CalendarClock, Wallet, Globe, Star, ChartBar as BarChart3, Check, X, ShieldCheck, ArrowRight, ArrowLeft, Plus, Minus, List as Menu, Heart, Envelope as Mail, Phone, InstagramLogo as Instagram, FacebookLogo as Facebook, YoutubeLogo as Youtube, MapPin, Sun, Moon } from '@phosphor-icons/react'
 import { landingService, type SedeDestacada } from '@/services/landingService'
 import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
+import { avatarColor, iniciales as inicialesAvatar } from '@/utils/avatarColor'
+import { fechaResena, fechaIso } from '@/utils/fechaResena'
 import { planesService, type PlanPublico } from '@/services/planesService'
 import { resenasPublicasService, type ResenaDestacada } from '@/services/resenasPublicasService'
 import { setTenant, buildImageUrl, apiClient, urlSedeCanonica } from '@/services/apiClient'
@@ -402,15 +404,39 @@ export default function LandingPage() {
             <div className={styles.railPad} />
             {resenas.map((r) => {
               const p = Math.max(1, Math.min(5, r.puntuacion))
+
+              // T1 — la identidad es el NEGOCIO, no la sede. Fuente única:
+              // utils/nombreParaMostrar. Antes esto era
+              // `[r.nombreSede, r.ciudadSede].join(' · ')` → "Miraflores · Miraflores".
+              const negocio = nombreParaMostrar(r)
+
+              const autor = r.nombreCliente || 'Cliente de barber.pe'
+              const av = avatarColor(autor)
+              const cuando = fechaResena(r.fecha)
+
               return (
                 <div className={styles.rCard} key={r.idCalificacion}>
                   <div className={styles.rStars}>{'★'.repeat(p)}<span className={styles.rStarsOff}>{'★'.repeat(5 - p)}</span></div>
                   <p className={styles.rQuote}>“{r.comentario}”</p>
                   <div className={styles.rWho}>
-                    <span className={styles.rAv}>{iniciales(r.nombreCliente || r.nombreSede)}</span>
-                    <div>
-                      <span className={styles.rName}>{r.nombreCliente || 'Cliente de barber.pe'}</span>
-                      <span className={styles.rRole}>{[r.nombreSede, r.ciudadSede].filter(Boolean).join(' · ')}</span>
+                    <span
+                      className={styles.rAv}
+                      style={{ background: av.bg, color: av.fg }}
+                      aria-hidden="true"
+                    >
+                      {inicialesAvatar(autor)}
+                    </span>
+                    <div className={styles.rWhoText}>
+                      <span className={styles.rName}>{autor}</span>
+                      <span className={styles.rRole}>
+                        {negocio}
+                        {cuando && (
+                          <>
+                            <span className={styles.rDot} aria-hidden="true"> · </span>
+                            <time className={styles.rDate} dateTime={fechaIso(r.fecha)}>{cuando}</time>
+                          </>
+                        )}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -592,6 +618,12 @@ export default function LandingPage() {
               <Link to="/soporte">Soporte y contacto</Link>
               <Link to="/terminos">Términos y condiciones</Link>
               <Link to="/privacidad">Política de privacidad</Link>
+              {/* T9 — Aquí NO va /privacidad-clientes.
+                  Este footer es el de barber.pe: su audiencia es el DUEÑO del negocio que
+                  contrata el software. El aviso del cliente final pertenece al micrositio
+                  de la sede, que es donde el cliente reserva y deja sus datos.
+                  Sigue siendo alcanzable desde: el footer del micrositio, /unirme, /acceso
+                  y un enlace destacado dentro de /privacidad. */}
               <Link to="/uso-aceptable">Política de uso aceptable</Link>
               <Link to="/libro-reclamaciones">Libro de reclamaciones</Link>
             </nav>

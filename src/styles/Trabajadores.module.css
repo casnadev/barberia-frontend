@@ -139,7 +139,10 @@
 }
 .uploadLabel:hover { background: rgba(40, 85, 246, .12); }
 .uploadInput { display: none; }
+/* T10 — En móvil, dos columnas de 1fr apretaban "Correo" y "Teléfono" hasta hacerlos
+   ilegibles. Se apilan por debajo de 520px. El modal es responsivo de verdad. */
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 520px) { .row2 { grid-template-columns: 1fr; } }
 .mediaRow { display: flex; align-items: center; gap: 12px; }
 .mediaRow .uploadLabel { flex: 1; }
 .thumb { position: relative; width: 56px; height: 56px; border-radius: 10px; overflow: hidden; background: var(--color-border-soft, #f3f4f6); flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--color-text-muted, #9ca3af); }

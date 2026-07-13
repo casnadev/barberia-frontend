@@ -3,6 +3,9 @@
 export const LEGAL_VERSIONS = {
   terminos: '2.0',
   privacidad: '2.0',
+  // T4 — Aviso B2C para el CLIENTE FINAL. Separado del de arriba, que es el B2B
+  // (dirigido al dueño del negocio que contrata el software).
+  privacidadClientes: '1.0',
   usoAceptable: '2.0',
   declaracionNegocio: '2.0',
 } as const

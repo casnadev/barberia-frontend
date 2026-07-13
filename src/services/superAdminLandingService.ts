@@ -19,7 +19,10 @@ export interface LandingResena {
   comentario?: string | null
   fecha: string
   nombreCliente?: string | null
+  /** Zona/distrito del local. */
   nombreSede: string
+  /** T1 - la MARCA. El panel maestro SIEMPRE muestra "Marca - Sede" (forzarMulti). */
+  nombreComercial?: string | null
   mostrarEnLanding: boolean
 }
 

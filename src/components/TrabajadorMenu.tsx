@@ -81,6 +81,7 @@ export function TrabajadorMenu({
               <div>
                 <h3 className="text-lg font-bold text-gray-900 leading-tight">Menú</h3>
                 <p className="text-xs text-gray-400">
+                  {/* T1 — el llamador ya pasa "Marca – Sede" resuelto. */}
                   {nombreSede ? `Sede activa · ${nombreSede}` : 'Todas las opciones'}
                 </p>
               </div>

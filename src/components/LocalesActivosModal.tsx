@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { CircleNotch as Loader2, MapPin, Warning as AlertTriangle } from '@phosphor-icons/react'
 import SeccionSheet from './SeccionSheet'
 import { sedeTenantService, EstadoPublicacion } from '@/services/sedeTenantService'
+import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
 
 /**
  * "Elige qué locales quedan activos": aparece cuando la empresa tiene más locales
@@ -98,7 +99,7 @@ export default function LocalesActivosModal({
                 <MapPin className="w-4 h-4" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block font-semibold text-gray-900 truncate">{s.nombre}</span>
+                <span className="block font-semibold text-gray-900 truncate">{nombreParaMostrar(s as any, { forzarMulti: true }) || s.nombre}</span>
                 <span className="block text-xs text-gray-500 truncate">{s.subdominio}</span>
               </span>
               <input

@@ -542,57 +542,132 @@ export function TrabajadoresPage() {
               <button className={s.modalCloseFloat} onClick={() => setShowModal(false)} aria-label="Cerrar"><X width={18} height={18} /></button>
 
               <form className={s.form} onSubmit={handleSubmit}>
-                {/* Foto */}
-                <div className={s.field}>
-                  <label className={s.label}>Foto de perfil</label>
-                  <div className={s.mediaRow}>
-                    <div className={s.thumb}>
-                      {previewImage ? <img src={previewImage} alt="Preview" /> : <ImageIcon width={22} height={22} />}
-                      {previewImage && <button type="button" className={s.thumbRemove} onClick={handleRemoveImage} aria-label="Quitar imagen"><X width={12} height={12} /></button>}
-                    </div>
-                    <label className={s.uploadLabel}>
-                      <Upload width={16} height={16} />
-                      {uploadingImage ? 'Subiendo...' : (previewImage ? 'Cambiar foto' : 'Seleccionar imagen')}
-                      <input className={s.uploadInput} type="file" accept="image/*" onChange={handleUploadImage} disabled={uploadingImage} />
+                {/* ══ T10 · CABECERA: foto + identidad ══════════════════════════════
+                    ANTES: la foto era una fila con un botón "Cambiar foto" a ancho
+                    completo (`flex:1`), enorme al lado de una miniatura de 56px. Y el
+                    correo iba a ancho completo mientras el teléfono estaba SOLO dentro
+                    de una grid de 2 columnas — así que ocupaba justo la mitad, sin nada
+                    al lado. De ahí que se viera descuadrado.
+
+                    AHORA: la foto y el botón forman un bloque compacto arriba, y correo
+                    y teléfono van EMPAREJADOS en la misma fila. */}
+                <div className="flex items-center gap-3">
+                  <div className={s.thumb} style={{ flexShrink: 0 }}>
+                    {previewImage
+                      ? <img src={previewImage} alt="Preview" />
+                      : <ImageIcon width={22} height={22} />}
+                    {previewImage && (
+                      <button
+                        type="button"
+                        className={s.thumbRemove}
+                        onClick={handleRemoveImage}
+                        aria-label="Quitar imagen"
+                      >
+                        <X width={12} height={12} />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-50">
+                      <Upload width={14} height={14} />
+                      {uploadingImage
+                        ? 'Subiendo…'
+                        : (previewImage ? 'Cambiar foto' : 'Subir foto')}
+                      <input
+                        className={s.uploadInput}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleUploadImage}
+                        disabled={uploadingImage}
+                      />
                     </label>
+                    <p className="mt-1 text-[11px] text-gray-400">JPG o PNG. Se recorta en cuadrado.</p>
                   </div>
                 </div>
 
-                <div className={s.field}>
-                  <label className={s.label}>Nombre completo *</label>
-                  <input className={s.input} type="text" value={form.nombreCompleto} onChange={e => setForm({ ...form, nombreCompleto: e.target.value })} required
-                    disabled={!!form.esDuenoAdmin}
-                    style={form.esDuenoAdmin ? { background: '#f9fafb', color: '#6b7280', cursor: 'not-allowed' } : undefined} />
+                {/* ══ Datos personales ══════════════════════════════════════════════
+                    Para el DUEÑO son de solo lectura: su fuente única es "Mi perfil"
+                    (donde además se verifican por OTP). Se agrupan en un bloque para que
+                    se vea de un vistazo que van juntos y que no se tocan aquí. */}
+                <div
+                  className={form.esDuenoAdmin ? 'rounded-xl border border-gray-200 bg-gray-50/60 p-3.5' : ''}
+                >
                   {form.esDuenoAdmin && (
-                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
-                      Este es tu propio perfil. Tu nombre, correo y teléfono se editan desde “Mi perfil” (menú de tu cuenta).
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                        Tu cuenta
+                      </span>
+                      <span className="text-[11px] text-gray-400">
+                        Se edita en <b className="text-gray-600">Mi perfil</b>
+                      </span>
                     </div>
                   )}
-                </div>
 
-                <div className={s.field}>
-                  <label className={s.label}>Correo (acceso por email)
-                    {editingId && form.correo && (form.correoConfirmado
-                      ? <span style={{ marginLeft: 8, fontSize: 11, color: '#059669', fontWeight: 600 }}>✓ Verificado</span>
-                      : <span style={{ marginLeft: 8, fontSize: 11, color: '#d97706' }}>Sin verificar</span>)}
-                  </label>
-                  <input className={s.input} type="email" value={form.correo || ''} onChange={e => setForm({ ...form, correo: e.target.value })}
-                    disabled={!!form.esDuenoAdmin}
-                    style={form.esDuenoAdmin ? { background: '#f9fafb', color: '#6b7280', cursor: 'not-allowed' } : undefined} />
-                  {editingId && form.correoConfirmado && <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>Cambiarlo quitará la verificación.</div>}
-                </div>
-
-                <div className={s.row2}>
                   <div className={s.field}>
-                    <label className={s.label}>Teléfono
-                      {editingId && form.telefono && (form.telefonoConfirmado
-                        ? <span style={{ marginLeft: 8, fontSize: 11, color: '#059669', fontWeight: 600 }}>✓ Verificado</span>
-                        : <span style={{ marginLeft: 8, fontSize: 11, color: '#d97706' }}>Sin verificar</span>)}
-                    </label>
-                    <input className={s.input} type="text" value={form.telefono || ''} onChange={e => setForm({ ...form, telefono: e.target.value })}
+                    <label className={s.label}>Nombre completo *</label>
+                    <input
+                      className={s.input}
+                      type="text"
+                      value={form.nombreCompleto}
+                      onChange={e => setForm({ ...form, nombreCompleto: e.target.value })}
+                      required
                       disabled={!!form.esDuenoAdmin}
-                      style={form.esDuenoAdmin ? { background: '#f9fafb', color: '#6b7280', cursor: 'not-allowed' } : undefined} />
+                      style={form.esDuenoAdmin
+                        ? { background: '#fff', color: '#6b7280', cursor: 'not-allowed' }
+                        : undefined}
+                    />
                   </div>
+
+                  {/* Correo y teléfono, EMPAREJADOS. Antes el correo iba a ancho completo
+                      y el teléfono a media caja, y quedaba cojo. */}
+                  <div className={s.row2}>
+                    <div className={s.field}>
+                      <label className={s.label}>
+                        Correo
+                        {editingId && form.correo && (form.correoConfirmado
+                          ? <span style={{ marginLeft: 8, fontSize: 11, color: '#059669', fontWeight: 600 }}>✓ Verificado</span>
+                          : <span style={{ marginLeft: 8, fontSize: 11, color: '#d97706' }}>Sin verificar</span>)}
+                      </label>
+                      <input
+                        className={s.input}
+                        type="email"
+                        placeholder="—"
+                        value={form.correo || ''}
+                        onChange={e => setForm({ ...form, correo: e.target.value })}
+                        disabled={!!form.esDuenoAdmin}
+                        style={form.esDuenoAdmin
+                          ? { background: '#fff', color: '#6b7280', cursor: 'not-allowed' }
+                          : undefined}
+                      />
+                    </div>
+
+                    <div className={s.field}>
+                      <label className={s.label}>
+                        Teléfono
+                        {editingId && form.telefono && (form.telefonoConfirmado
+                          ? <span style={{ marginLeft: 8, fontSize: 11, color: '#059669', fontWeight: 600 }}>✓ Verificado</span>
+                          : <span style={{ marginLeft: 8, fontSize: 11, color: '#d97706' }}>Sin verificar</span>)}
+                      </label>
+                      <input
+                        className={s.input}
+                        type="text"
+                        placeholder="—"
+                        value={form.telefono || ''}
+                        onChange={e => setForm({ ...form, telefono: e.target.value })}
+                        disabled={!!form.esDuenoAdmin}
+                        style={form.esDuenoAdmin
+                          ? { background: '#fff', color: '#6b7280', cursor: 'not-allowed' }
+                          : undefined}
+                      />
+                    </div>
+                  </div>
+
+                  {!form.esDuenoAdmin && editingId && form.correoConfirmado && (
+                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+                      Cambiar el correo quitará la verificación.
+                    </div>
+                  )}
                 </div>
 
                 {/* Liquidaciones: si NO genera, ocultamos comisión/frecuencia/método

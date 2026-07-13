@@ -1287,7 +1287,7 @@ function MonederoDelCliente({ telefono, idClienteReal }: { telefono?: string; id
     return (
       <p style={{ fontSize: 12, color: '#9ca3af', padding: '8px 0', lineHeight: 1.5 }}>
         {telefono?.trim()
-          ? 'Este cliente aún no está en el programa de puntos. Se inscribe solo al cobrarle una venta con su celular, o escaneando el QR del local.'
+          ? 'Este cliente aún no está en el Programa de Fidelización. Se inscribe solo al cobrarle una venta con su celular, o escaneando el QR del local.'
           : 'Este cliente reservó sin dejar celular, así que todavía no tiene una ficha real a la que acreditarle puntos. Pídele el celular en su próxima visita y regístralo desde la Venta rápida — o que escanee el QR del local.'}
       </p>
     )

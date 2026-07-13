@@ -8,6 +8,7 @@ import {
   type DirectorioSede,
   type AltaRapidaResponse,
 } from '@/services/directorioService'
+import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
 
 type Tab = 'admins' | 'trabajadores' | 'clientes'
 
@@ -414,7 +415,7 @@ export function DirectorioPanel() {
               <ComboBox
                 value={idSede ?? ''}
                 onChange={(v) => setIdSede(v === '' ? null : Number(v))}
-                opciones={sedes.map((s) => ({ valor: s.idSede, etiqueta: `${s.nombre} · ${s.empresa}` }))}
+                opciones={sedes.map((s) => ({ valor: s.idSede, etiqueta: nombreParaMostrar({ nombre: s.nombre, nombreComercial: s.empresa }, { forzarMulti: true }) }))}
                 inputClassName="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 bg-white"
               />
             </div>

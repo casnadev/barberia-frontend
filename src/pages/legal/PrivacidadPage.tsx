@@ -13,6 +13,22 @@ export default function PrivacidadPage() {
       <p className={s.updated}>Versión {LEGAL_VERSIONS.privacidad} · Vigente desde el {LEGAL_VIGENCIA}</p>
 
       <div className={s.prose}>
+        {/* T9 — Esta página es B2B: habla con el DUEÑO del negocio que contrata el
+            software. El cliente final (el que reserva un corte y junta puntos) tiene la
+            suya. Este enlace es lo que la mantiene alcanzable ahora que ya NO está en el
+            footer de barber.pe — su sitio es el micrositio de la sede, que es donde el
+            cliente deja sus datos. */}
+        <p style={{
+          background: 'var(--surface-2)',
+          border: '1px solid var(--line)',
+          borderRadius: 10,
+          padding: '12px 14px',
+        }}>
+          <strong>¿Eres cliente de una barbería?</strong> Esta página es para los negocios que
+          usan Barber.pe. Si tú reservaste una cita o te uniste a un programa de puntos, lo que
+          te aplica es <a href="/privacidad-clientes">Tus datos en barber.pe</a>.
+        </p>
+
         <p>En Barber.pe cuidamos tus datos y los de tus clientes. Aquí te contamos, sin vueltas, qué información manejamos y para qué. El responsable del tratamiento es <strong>{EMPRESA}</strong>, conforme a la Ley N.° 29733 de Protección de Datos Personales del Perú.</p>
 
         <h2>Qué datos recopilamos</h2>

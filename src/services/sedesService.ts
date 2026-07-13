@@ -21,7 +21,10 @@ export interface Sede {
 
 export interface SedePublica {
   idSede: number
+  /** Zona/distrito del local (ej. "Miraflores"). */
   nombre: string
+  /** T1 — la MARCA (ej. "Shanell Salón"). El backend ya lo enviaba; faltaba declararlo. */
+  nombreComercial?: string
   subdominio: string
   slugMarca?: string
   slug?: string

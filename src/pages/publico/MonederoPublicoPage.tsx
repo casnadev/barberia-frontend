@@ -3,9 +3,12 @@ import { useParams } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import {
   CircleNotch, Star, Gift, WarningCircle, ClockCounterClockwise, Lock,
+  PencilSimple, Check, X,
 } from '@phosphor-icons/react'
+import { toast } from 'sonner'
 import { buildImageUrl } from '@/services/apiClient'
 import { inscripcionService, type MonederoPublico } from '@/services/inscripcionService'
+import { mensajeError } from '@/utils/apiError'
 
 const fechaCorta = (s?: string) => {
   if (!s) return ''
@@ -30,6 +33,45 @@ export function MonederoPublicoPage() {
   const { codigo } = useParams()
   const [m, setM] = useState<MonederoPublico | null>(null)
   const [cargando, setCargando] = useState(true)
+
+  // T3 — EDICIÓN DEL PROPIO NOMBRE.
+  //
+  // El bug: quien reservó una vez como "Pepito XXX" arrastraba ese nombre de por
+  // vida. El resolvedor solo lo pisaba si el anterior era "basura" (vacío, o igual
+  // al teléfono), y "Pepito XXX" no lo es. Ni inscribiéndose al programa con su
+  // nombre real y verificándose por OTP lo cambiaba.
+  //
+  // Ahora, además de que la inscripción sea autoritativa (ver `nombreAutoritativo`
+  // en el backend), el cliente puede corregirse él mismo aquí, en su tarjeta. El
+  // nombre es suyo, no del negocio.
+  const [editando, setEditando] = useState(false)
+  const [nombreBorrador, setNombreBorrador] = useState('')
+  const [guardando, setGuardando] = useState(false)
+
+  const abrirEdicion = () => {
+    setNombreBorrador(m?.nombreCliente || '')
+    setEditando(true)
+  }
+
+  const guardarNombre = async () => {
+    if (!codigo) return
+    const nom = nombreBorrador.trim()
+    if (nom.length < 2) { toast.error('Escribe tu nombre.'); return }
+    if (nom === (m?.nombreCliente || '')) { setEditando(false); return }
+
+    setGuardando(true)
+    try {
+      const nuevo = await inscripcionService.cambiarNombre(codigo, nom)
+      // Actualización local: no hace falta recargar toda la tarjeta por un nombre.
+      setM((prev) => (prev ? { ...prev, nombreCliente: nuevo } : prev))
+      setEditando(false)
+      toast.success('Listo, actualizamos tu nombre.')
+    } catch (e) {
+      toast.error(mensajeError(e, 'No pudimos actualizar tu nombre.'))
+    } finally {
+      setGuardando(false)
+    }
+  }
 
   useEffect(() => {
     if (!codigo) { setCargando(false); return }
@@ -90,8 +132,54 @@ export function MonederoPublicoPage() {
           </div>
 
           <div className="mt-5">
-            {m.nombreCliente && (
-              <p className="truncate text-xs opacity-80">{m.nombreCliente}</p>
+            {/* T3 — El nombre es editable por el propio cliente. */}
+            {editando ? (
+              <div className="flex items-center gap-1">
+                <input
+                  autoFocus
+                  value={nombreBorrador}
+                  onChange={(e) => setNombreBorrador(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') guardarNombre()
+                    if (e.key === 'Escape') setEditando(false)
+                  }}
+                  maxLength={120}
+                  disabled={guardando}
+                  aria-label="Tu nombre"
+                  className="min-w-0 flex-1 rounded-md border border-white/30 bg-white/15 px-2 py-1 text-xs text-white placeholder-white/50 outline-none focus:border-white/60"
+                  placeholder="Tu nombre"
+                />
+                <button
+                  onClick={guardarNombre}
+                  disabled={guardando}
+                  aria-label="Guardar"
+                  className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-white/20 hover:bg-white/30 disabled:opacity-50"
+                >
+                  {guardando ? <CircleNotch size={12} className="animate-spin" /> : <Check size={12} weight="bold" />}
+                </button>
+                <button
+                  onClick={() => setEditando(false)}
+                  disabled={guardando}
+                  aria-label="Cancelar"
+                  className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-50"
+                >
+                  <X size={12} weight="bold" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={abrirEdicion}
+                className="group flex max-w-full items-center gap-1.5 text-left"
+                aria-label="Cambiar mi nombre"
+              >
+                <span className="truncate text-xs opacity-80">
+                  {m.nombreCliente || 'Pon tu nombre'}
+                </span>
+                <PencilSimple
+                  size={11}
+                  className="shrink-0 opacity-50 transition group-hover:opacity-100"
+                />
+              </button>
             )}
             <p className="mt-1 text-[10px] uppercase tracking-wide opacity-70">
               Nivel {m.nivelNombre || '—'}

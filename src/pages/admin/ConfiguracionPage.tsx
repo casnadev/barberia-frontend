@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { Storefront as Store, Buildings as Building2, Phone, Clock, MapPin, Image as ImageIcon, Camera, ShareNetwork as Share2, FloppyDisk as Save, CircleNotch as Loader2, X, CaretDown as ChevronDown, UploadSimple as Upload, Plus, InstagramLogo as Instagram, FacebookLogo as Facebook, Globe, MusicNote as Music2, YoutubeLogo as Youtube, LinkSimple as Link2, Copy, ArrowSquareOut as ExternalLink, Info, Gift } from '@phosphor-icons/react'
+import { Storefront as Store, Buildings as Building2, Phone, Clock, MapPin, Image as ImageIcon, Camera, ShareNetwork as Share2, FloppyDisk as Save, CircleNotch as Loader2, X, CaretDown as ChevronDown, UploadSimple as Upload, Plus, InstagramLogo as Instagram, FacebookLogo as Facebook, Globe, MusicNote as Music2, YoutubeLogo as Youtube, LinkSimple as Link2, Copy, ArrowSquareOut as ExternalLink, Info, Gift, Scales } from '@phosphor-icons/react'
 import { apiClient, urlSedeCanonica } from '@/services/apiClient'
 import { sedeTenantService } from '@/services/sedeTenantService'
 import { geoService } from '@/services/geoService'
@@ -12,6 +12,8 @@ import { Skeleton, SkeletonRows } from '@/components/Skeleton'
 import BrandColorPicker from '@/components/BrandColorPicker'
 import { TimePicker, duracionHoras } from '@/components/TimePicker'
 import { ProgramaFidelizacionPanel } from '@/components/ProgramaFidelizacionPanel'
+import { LibroReclamacionesPanel } from '@/components/LibroReclamacionesPanel'
+import { MiPerfilAdminModal } from '@/components/MiPerfilAdminModal'
 
 interface Sede {
   idSede?: number
@@ -110,7 +112,7 @@ const COLOR_PRESETS = ['#2855F6', '#2563eb', '#7c3aed', '#db2777', '#ea580c', '#
 const DEFAULT_BRAND = '#2855F6'
 
 // Identificadores de cada editor (sheet) del hub.
-type SheetId = 'info' | 'imagen' | 'contacto' | 'ubicacion' | 'horarios' | 'negocio' | 'galeria' | 'redes' | 'fidelizacion' | null
+type SheetId = 'info' | 'imagen' | 'contacto' | 'ubicacion' | 'horarios' | 'negocio' | 'galeria' | 'redes' | 'fidelizacion' | 'reclamaciones' | null
 
 export function ConfiguracionPage() {
   const [loading, setLoading] = useState(true)
@@ -136,6 +138,9 @@ export function ConfiguracionPage() {
 
   // Editor abierto del hub (null = ninguno).
   const [sheet, setSheet] = useState<SheetId>(null)
+  // T9 — El contacto es de solo lectura aquí; se edita en Mi Perfil, que es la
+  // fuente única. Este modal es el mismo componente que abre el AccountMenu.
+  const [perfilAbierto, setPerfilAbierto] = useState(false)
   const [ubicTexto, setUbicTexto] = useState('')
   const [resolviendoUbic, setResolviendoUbic] = useState(false)
   const [comoAbierto, setComoAbierto] = useState(false)
@@ -698,12 +703,24 @@ export function ConfiguracionPage() {
             }
           />
 
-          {/* Programa de puntos: configuración, niveles, recompensas y promociones. */}
+          {/* Programa de Fidelización: configuración, niveles, recompensas y promociones. */}
           <SeccionFila
             icono={<Gift className="w-[18px] h-[18px]" />}
-            titulo="Programa de puntos"
-            preview="Fidelización: niveles, recompensas y promos"
+            titulo="Programa de Fidelización"
+            preview="Niveles, recompensas y promociones"
             onClick={() => setSheet('fidelizacion')}
+          />
+
+          {/* T8 — LIBRO DE RECLAMACIONES.
+              Es del NEGOCIO, no de barber.pe: frente a Indecopi el proveedor es quien
+              presta el servicio. Sin esta bandeja, los reclamos llegarían a la base de
+              datos y nadie los vería — y no responder en plazo es una infracción APARTE
+              de no tener libro. Un libro sin bandeja es peor que no tenerlo. */}
+          <SeccionFila
+            icono={<Scales className="w-[18px] h-[18px]" />}
+            titulo="Libro de Reclamaciones"
+            preview="Reclamos de tus clientes · 15 días hábiles para responder"
+            onClick={() => setSheet('reclamaciones')}
           />
         </div>
 
@@ -962,19 +979,94 @@ export function ConfiguracionPage() {
             <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
             <span>Es el nombre de tu marca y aplica a <b>todas tus Sedes</b>. Cada Sede además tiene su propia zona (ver "Información básica").</span>
           </p>
-          <Field label="Titular / dueño">
-            <input className={inputCls} value={cuenta.nombreCompleto} onChange={(e) => setCuenta((p) => ({ ...p, nombreCompleto: e.target.value }))} placeholder="Ej: Nader Castle" />
-          </Field>
+
           <Field label="Descripción del negocio">
             <textarea className={inputCls + ' resize-none'} rows={3} value={empresa.descripcion} onChange={(e) => handleChangeEmpresa('descripcion', e.target.value)} placeholder="Breve descripción de tu negocio" />
           </Field>
-          <Field label="Correo del negocio">
-            <input type="email" className={inputCls} value={empresa.correoContacto} onChange={(e) => handleChangeEmpresa('correoContacto', e.target.value)} />
-          </Field>
-          <Field label="Teléfono del negocio">
-            <input type="tel" className={inputCls} value={empresa.telefonoContacto} onChange={(e) => handleChangeEmpresa('telefonoContacto', e.target.value)} />
-          </Field>
-          <p className="text-xs text-gray-400">El correo y teléfono se pre-cargan con los de tu cuenta. Solo cámbialos si tu negocio usa otros.</p>
+
+          {/* ══ T9 · IDENTIDAD LEGAL ═══════════════════════════════════════════════
+              Razón social y RUC. NO son decorativos: el Libro de Reclamaciones (T8) los
+              IMPRIME en cada hoja, y una hoja sin proveedor plenamente identificado NO
+              VALE. Sin estos dos datos, el formulario de reclamos de tu sitio se
+              deshabilita solo y le dice al cliente que reclame por otra vía. */}
+          <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-3.5 space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+              Datos legales
+            </p>
+
+            <Field label="Razón social">
+              <input
+                className={inputCls}
+                value={empresa.razonSocial}
+                onChange={(e) => handleChangeEmpresa('razonSocial', e.target.value)}
+                placeholder="Ej: Barbería Kisha S.A.C."
+              />
+            </Field>
+
+            <Field label="RUC">
+              <input
+                className={inputCls}
+                inputMode="numeric"
+                maxLength={11}
+                value={empresa.ruc}
+                onChange={(e) => handleChangeEmpresa('ruc', e.target.value.replace(/\D/g, ''))}
+                placeholder="11 dígitos"
+              />
+            </Field>
+
+            {(!empresa.razonSocial?.trim() || !/^\d{11}$/.test(empresa.ruc ?? '')) && (
+              <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 p-2 text-[11px] leading-relaxed text-amber-800">
+                <Info className="w-3.5 h-3.5 mt-px shrink-0" />
+                <span>
+                  Sin razón social y RUC, <b>tu Libro de Reclamaciones no puede funcionar</b>.
+                  La ley exige que el proveedor esté plenamente identificado en cada hoja.
+                </span>
+              </p>
+            )}
+          </div>
+
+          {/* ══ T9 · CONTACTO · SOLO LECTURA ═══════════════════════════════════════
+              Estos tres datos se editaban aquí Y en "Mi Perfil". Dos pantallas, el mismo
+              dato, desincronizándose.
+
+              Ahora la fuente única es Mi Perfil (que además los VERIFICA por OTP). Aquí
+              solo se muestran, para que el dueño vea a dónde le van a llegar los reclamos
+              y las notificaciones.
+
+              El backend los sincroniza al guardar Mi Perfil, y PUT /mi-empresa ya NO los
+              escribe — si lo hiciera, guardar desde aquí con el campo deshabilitado
+              borraría el correo de la empresa, y con él la dirección a la que van los
+              reclamos del Libro. */}
+          <div className="rounded-xl border border-gray-200 p-3.5 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                Contacto
+              </p>
+              <button
+                type="button"
+                onClick={() => setPerfilAbierto(true)}
+                className="text-xs font-semibold text-blue-600 hover:underline"
+              >
+                Editar en Mi Perfil
+              </button>
+            </div>
+
+            <Field label="Titular / dueño">
+              <input className={inputCls + ' bg-gray-50 text-gray-500'} value={cuenta.nombreCompleto} disabled />
+            </Field>
+            <Field label="Correo del negocio">
+              <input className={inputCls + ' bg-gray-50 text-gray-500'} value={empresa.correoContacto || '—'} disabled />
+            </Field>
+            <Field label="Teléfono del negocio">
+              <input className={inputCls + ' bg-gray-50 text-gray-500'} value={empresa.telefonoContacto || '—'} disabled />
+            </Field>
+
+            <p className="text-[11px] leading-relaxed text-gray-400">
+              Son los de tu cuenta. Se editan (y se verifican) en <b>Mi Perfil</b>, y desde
+              ahí se actualizan aquí solos. Aquí te llegan los reclamos de tu Libro de
+              Reclamaciones.
+            </p>
+          </div>
         </div>
       </SeccionSheet>
 
@@ -1075,10 +1167,26 @@ export function ConfiguracionPage() {
           promociones, simulador y vista previa de la tarjeta. En una hoja de 512 px eso
           es un scroll interminable con media pantalla vacía al lado. */}
       <SeccionSheet open={sheet === 'fidelizacion'} onClose={cerrar} ancho
-        titulo="Programa de fidelización"
+        titulo="Programa de Fidelización"
         subtitulo="Niveles, recompensas, promociones y la tarjeta de tu cliente">
         <ProgramaFidelizacionPanel />
       </SeccionSheet>
+
+      {/* T8 — Bandeja del Libro de Reclamaciones. */}
+      <SeccionSheet open={sheet === 'reclamaciones'} onClose={cerrar} ancho
+        titulo="Libro de Reclamaciones"
+        subtitulo="Los reclamos van dirigidos a TU negocio, no a barber.pe">
+        <LibroReclamacionesPanel />
+      </SeccionSheet>
+
+      {/* T9 — Mi Perfil: la ÚNICA pantalla donde se editan (y verifican) nombre,
+          correo y teléfono. Al cerrarla, recargamos la empresa: el backend acaba de
+          sincronizar su contacto con el del dueño, y si no releyéramos, los campos de
+          arriba seguirían mostrando el valor viejo. */}
+      <MiPerfilAdminModal
+        open={perfilAbierto}
+        onClose={() => { setPerfilAbierto(false); loadNegocio() }}
+      />
     </>
   )
 }

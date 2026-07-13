@@ -185,4 +185,22 @@ export const inscripcionService = {
       return d ?? null
     } catch { return null }
   },
+
+  /**
+   * T3 — El cliente corrige SU PROPIO nombre.
+   *
+   * Cierra el bug de identidad: quien reservó una vez como "Pepito XXX" arrastraba
+   * ese nombre de por vida, porque el resolvedor solo pisaba el nombre si el anterior
+   * era "basura". Esa regla protege al cliente del mostrador, pero no debe atraparlo
+   * a él. El nombre es del cliente, no del negocio.
+   *
+   * Auth = posesión del código del QR, el mismo secreto que ya deja ver el saldo.
+   */
+  cambiarNombre: async (codigo: string, nombreCompleto: string): Promise<string> =>
+    unwrap(
+      await apiClient.put(
+        `/api/Inscripcion/monedero/${encodeURIComponent(codigo)}/nombre`,
+        { nombreCompleto },
+      ),
+    ),
 }

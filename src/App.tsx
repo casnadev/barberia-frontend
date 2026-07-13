@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom'
-import { setTenantOverride, urlSedeCanonica } from '@/services/apiClient'
+import { getTenantOverride, setTenantOverride, urlSedeCanonica } from '@/services/apiClient'
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/authService'
@@ -35,6 +35,8 @@ const NovedadesSedePage = lazy(() => import('@/pages/NovedadesSedePage').then(m 
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })))
 const TerminosPage = lazy(() => import('@/pages/legal/TerminosPage'))
 const PrivacidadPage = lazy(() => import('@/pages/legal/PrivacidadPage'))
+const PrivacidadClientesPage = lazy(() => import('@/pages/legal/PrivacidadClientesPage'))
+const LibroReclamacionesSedePage = lazy(() => import('@/pages/legal/LibroReclamacionesSedePage'))
 const UsoAceptablePage = lazy(() => import('@/pages/legal/UsoAceptablePage'))
 const DeclaracionNegocioPage = lazy(() => import('@/pages/legal/DeclaracionNegocioPage'))
 const LibroReclamacionesPage = lazy(() => import('@/pages/legal/LibroReclamacionesPage'))
@@ -151,6 +153,11 @@ function PanelGuard({ children }: { children: React.ReactNode }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function ProtectedRoute({ children, requiredRole, skipTenant }: any) {
   const { user } = useAuthStore()
+
+  // T2 — mismo candado que en AdminProtected. Cubre /super-admin, /mi-agenda y
+  // /completar-perfil.
+  useTenantLimpio()
+
   if (!user) return <Navigate to="/login" />
 
   if (requiredRole) {
@@ -183,6 +190,19 @@ function ProtectedRoute({ children, requiredRole, skipTenant }: any) {
 // ─────────────────────────────────────────────────────────────────────────────
 function AdminProtected() {
   const { user } = useAuthStore()
+
+  // T2 — CANDADO DE TENANT.
+  //
+  // El tenantOverride lo fija el MICROSITIO público (portada de marca, /:sedeSlug)
+  // para apuntar al negocio que estás viendo. Si entras al panel sin limpiarlo, el
+  // header de tenant sigue apuntando a ESE negocio aunque tu sesión sea de otro (o
+  // SuperAdmin, que no tiene tenant) → el dashboard carga "a medias" y con datos
+  // cruzados. Era el síntoma exacto del bug de la reserva.
+  //
+  // Aquí se corta de raíz: ningún área privada hereda el tenant del micrositio,
+  // pase lo que pase con la navegación.
+  useTenantLimpio()
+
   if (!user) return <Navigate to="/login" replace />
   if (user.rol !== 'Admin' && user.rol !== 'SuperAdmin') return <Navigate to="/login" replace />
 
@@ -206,6 +226,17 @@ function getTenantSlug(): string | null {
     if (fromQuery && fromQuery.trim()) return fromQuery.trim()
   } catch { /* noop */ }
   return getSubdominio()
+}
+
+/**
+ * T2 — Limpia el tenantOverride heredado del micrositio al montar un área privada.
+ * Se ejecuta en un efecto (no durante el render) para no mutar estado global en
+ * mitad del ciclo de React.
+ */
+function useTenantLimpio() {
+  useEffect(() => {
+    if (getTenantOverride()) setTenantOverride(null)
+  }, [])
 }
 
 function HomeRoute() {
@@ -404,9 +435,18 @@ export function App() {
             {/* PÁGINAS LEGALES */}
             <Route path="/terminos" element={<TerminosPage />} />
             <Route path="/privacidad" element={<PrivacidadPage />} />
+            {/* T4 — Aviso B2C. /privacidad y /terminos son el contrato con el DUEÑO
+                del negocio; esto es lo que se le enseña al cliente final. */}
+            <Route path="/privacidad-clientes" element={<PrivacidadClientesPage />} />
             <Route path="/uso-aceptable" element={<UsoAceptablePage />} />
             <Route path="/declaracion" element={<DeclaracionNegocioPage />} />
+            {/* T8 — DOS libros, y no hay que mezclarlos:
+                  /libro-reclamaciones           → reclamos contra BARBER.PE como plataforma
+                                                    (si el software no funciona, el proveedor eres tú).
+                  /libro-reclamaciones/:idSede   → reclamos contra EL NEGOCIO por su servicio.
+                                                    Ese es el que la ley le exige a ÉL, uno por local. */}
             <Route path="/libro-reclamaciones" element={<LibroReclamacionesPage />} />
+            <Route path="/libro-reclamaciones/:idSede" element={<LibroReclamacionesSedePage />} />
             <Route path="/soporte" element={<SoportePage />} />
 
             {/* FIDELIZACIÓN PÚBLICA */}

@@ -366,8 +366,9 @@ export function AccesoPage() {
                 />
                 <span>
                   He leído y acepto los{' '}
-                  <a href="/terminos" target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">Términos y Condiciones</a>{' '}
-                  y la <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">Política de Privacidad</a> de Barber.pe.
+                  {/* T4 — apuntaba al contrato B2B del dueño del negocio. Aquí hay un CLIENTE. */}
+                  <a href="/privacidad-clientes" target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">tratamiento de tus datos</a>{' '}
+                  en Barber.pe.
                 </span>
               </label>
 

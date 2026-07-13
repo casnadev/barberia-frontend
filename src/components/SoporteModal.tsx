@@ -6,6 +6,7 @@ import { apiClient } from '@/services/apiClient'
 import { useAuthStore } from '@/store/authStore'
 import { useSoporteStore } from '@/store/soporteStore'
 import { soporteService } from '@/services/soporteService'
+import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
 
 const MOTIVOS = [
   'Problema técnico',
@@ -95,7 +96,7 @@ export function SoporteModal() {
           <LifeBuoy className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
           <p className="text-xs text-gray-500">
             Enviaremos tu mensaje junto con los datos de tu cuenta y sede
-            {sede.nombre ? <> (<span className="font-medium text-gray-700">{sede.nombre}</span>)</> : null} para
+            {sede.nombre ? <> (<span className="font-medium text-gray-700">{nombreParaMostrar(sede as any, { forzarMulti: true })}</span>)</> : null} para
             identificarte. Te responderemos a <span className="font-medium text-gray-700">{user?.correo || 'tu correo'}</span>.
           </p>
         </div>

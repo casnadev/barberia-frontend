@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
 import { useAuthStore } from '@/store/authStore'
 import { reservasService } from '@/services/reservasService'
+import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
 import { ventasService, type VentaResumen } from '@/services/ventasService'
 import { montoFmt } from '@/utils/kpiMonto'
 import { mensajeError } from '@/utils/apiError'
@@ -92,6 +93,11 @@ export function TrabajadorMiAgenda() {
   const [idT, setIdT] = useState<number | null>(null)
   const [idSede, setIdSede] = useState<number | null>(null)
   const [perfil, setPerfil] = useState<MiPerfilTrabajador | null>(null)
+
+  // T1 — Nombre visible del negocio ("Shanell Salón" o "Shanell Salón – Miraflores").
+  // Fuente única: utils/nombreParaMostrar. Antes se pintaba `perfil.nombreSede`
+  // a pelo y el trabajador veía solo la zona.
+  const negocioVisible = perfil ? nombreParaMostrar(perfil) : ''
   const [comisiones, setComisiones] = useState<MisComisiones | null>(null)
   const [reservas, setReservas] = useState<any[]>([])
   const [ventasHoy, setVentasHoy] = useState<VentaResumen[]>([])
@@ -200,12 +206,14 @@ export function TrabajadorMiAgenda() {
               <List className="w-4 h-4" /> Menú
             </button>
           </div>
-          {perfil?.nombreSede && (
+          {/* T1 — mostraba solo "Miraflores". La identidad es el negocio; la sede
+              solo se añade si la marca tiene varias. Fuente: utils/nombreParaMostrar. */}
+          {negocioVisible && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-white max-w-[55%]">
               <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
               <div className="min-w-0 leading-tight">
                 <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">Sede activa</p>
-                <p className="text-xs font-bold text-gray-900 truncate">{perfil.nombreSede}</p>
+                <p className="text-xs font-bold text-gray-900 truncate">{negocioVisible}</p>
               </div>
             </div>
           )}
@@ -257,7 +265,7 @@ export function TrabajadorMiAgenda() {
         onReservar={irReservar}
         onMiSitio={irMiSitio}
         onHistorial={() => setHistorialOpen(true)}
-        nombreSede={perfil?.nombreSede}
+        nombreSede={negocioVisible}
       />
 
       {historialOpen && idT != null && (

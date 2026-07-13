@@ -3,6 +3,12 @@ import { apiClient } from './apiClient'
 /**
  * Reseña destacada global, tal como la expone GET /api/Resenas/destacadas.
  * Se deriva de las calificaciones reales que dejan los clientes tras su cita.
+ *
+ * T1 — La identidad del autor es el NEGOCIO (la marca), no la sede. Antes este
+ * DTO traía `ciudadSede` y la landing pintaba "nombreSede · ciudadSede", lo que
+ * producía el absurdo "Miraflores · Miraflores" (la sede se llama igual que su
+ * distrito). Ahora viajan `nombreComercial` y `totalSedesPublicasMarca`, y el
+ * texto se compone SIEMPRE con utils/nombreParaMostrar.
  */
 export interface ResenaDestacada {
   idCalificacion: number
@@ -11,9 +17,14 @@ export interface ResenaDestacada {
   fecha: string
   nombreCliente?: string | null
   idSede: number
+  /** Zona/distrito del local (ej. "Miraflores"). */
   nombreSede: string
+  /** La MARCA (ej. "Shanell Salón"). */
+  nombreComercial: string
   subdominio: string
-  ciudadSede?: string | null
+  slug: string
+  /** ≥2 → "Marca – Sede". 1 → solo la marca. */
+  totalSedesPublicasMarca: number
 }
 
 const normalizar = (raw: any): ResenaDestacada | null => {
@@ -27,9 +38,13 @@ const normalizar = (raw: any): ResenaDestacada | null => {
     fecha: r.fecha ?? r.Fecha ?? '',
     nombreCliente: r.nombreCliente ?? r.NombreCliente ?? null,
     idSede: Number(r.idSede ?? r.IdSede ?? 0),
-    nombreSede: r.nombreSede ?? r.NombreSede ?? 'Barbería',
+    nombreSede: r.nombreSede ?? r.NombreSede ?? '',
+    nombreComercial: r.nombreComercial ?? r.NombreComercial ?? '',
     subdominio: r.subdominio ?? r.Subdominio ?? '',
-    ciudadSede: r.ciudadSede ?? r.CiudadSede ?? null,
+    slug: r.slug ?? r.Slug ?? '',
+    totalSedesPublicasMarca: Number(
+      r.totalSedesPublicasMarca ?? r.TotalSedesPublicasMarca ?? 1,
+    ),
   }
 }
 

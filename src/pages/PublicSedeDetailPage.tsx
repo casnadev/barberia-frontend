@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { MapPin, NavigationArrow as Navigation, Phone, Clock, Star, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Scissors, Heart, ArrowBendUpRight as Forward, X, CaretDown as ChevronDown, InstagramLogo as Instagram, FacebookLogo as Facebook, Globe, YoutubeLogo as Youtube, Gift } from '@phosphor-icons/react'
+import { MapPin, NavigationArrow as Navigation, Phone, Clock, Star, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Scissors, Heart, ArrowBendUpRight as Forward, X, CaretDown as ChevronDown, InstagramLogo as Instagram, FacebookLogo as Facebook, Globe, YoutubeLogo as Youtube, Gift, BookOpen, ShieldCheck, ChatCircleText } from '@phosphor-icons/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { sedesService } from '@/services/sedesService'
 import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
+import { avatarColor, iniciales as inicialesAvatar } from '@/utils/avatarColor'
+import { fechaResena, fechaIso } from '@/utils/fechaResena'
 import { apiClient, getActiveTenant, getTenantOverride, urlSedeCanonica } from '@/services/apiClient'
 import { useFavoritosStore } from '@/store/favoritosStore'
 import { novedadesService } from '@/services/novedadesService'
@@ -451,7 +453,19 @@ export function PublicSedeDetailPage() {
     }
   }, [servicios])
 
-  const handleReservar = () => navigate('/reservar-publica')
+  // T2 — El flujo de reserva es una RUTA, no un modal, así que al abrirlo se pierde
+  // la ruta actual (/miraflores, /?s=..., etc). Le pasamos el ORIGEN en el state para
+  // que al cerrar o descartar la cita vuelva EXACTAMENTE aquí — esté el usuario
+  // logueado como sea, o sin loguear. Antes el destino se calculaba por rol y a un
+  // Admin/SuperAdmin lo escupía en /admin/agenda del negocio que estaba visitando.
+  const desdeAqui = () => ({
+    state: { from: window.location.pathname + window.location.search },
+  })
+
+  const irAReservar = (query = '') =>
+    navigate(`/reservar-publica${query}`, desdeAqui())
+
+  const handleReservar = () => irAReservar()
   const handleNovedades = () => navigate('/novedades')
   const handleShare = async () => {
     const url = window.location.href
@@ -909,7 +923,7 @@ export function PublicSedeDetailPage() {
                           </div>
                         </div>
                       </div>
-                      <button className={styles.reservarBtn} onClick={(e) => { e.stopPropagation(); navigate(`/reservar-publica?servicio=${s.idServicio || s.id}`) }}>Reservar</button>
+                      <button className={styles.reservarBtn} onClick={(e) => { e.stopPropagation(); irAReservar(`?servicio=${s.idServicio || s.id}`) }}>Reservar</button>
                     </motion.div>
                   ))}
                 </div>
@@ -977,19 +991,35 @@ export function PublicSedeDetailPage() {
                   <span className={styles.ratingWrap}><Star width={16} height={16} weight="fill" className={styles.starOn} /> <span className={styles.ratingVal}>{resenas.promedio.toFixed(1)}</span> <span className={styles.ratingCount}>({resenas.total})</span></span>
                 </div>
                 <div className={styles.reviewGrid}>
-                  {resenas.items.map((r, idx) => (
-                    <div key={r.idCalificacion || idx} className={styles.reviewCard}>
-                      <div className={styles.reviewHead}>
-                        <span className={styles.reviewName}>{r.nombreCliente || 'Cliente'}</span>
-                        <Estrellas n={r.puntuacion} size={14} />
+                  {resenas.items.map((r, idx) => {
+                    // T1 — mismo avatar de color y mismo formato de fecha que la
+                    // landing. Antes aquí no había avatar y la fecha era
+                    // `toLocaleDateString('es-PE')` → "13/7/2026".
+                    const autor = r.nombreCliente || 'Cliente'
+                    const av = avatarColor(autor)
+                    return (
+                      <div key={r.idCalificacion || idx} className={styles.reviewCard}>
+                        <div className={styles.reviewHead}>
+                          <span className={styles.reviewWho}>
+                            <span
+                              className={styles.reviewAv}
+                              style={{ background: av.bg, color: av.fg }}
+                              aria-hidden="true"
+                            >
+                              {inicialesAvatar(autor)}
+                            </span>
+                            <span className={styles.reviewName}>{autor}</span>
+                          </span>
+                          <Estrellas n={r.puntuacion} size={14} />
+                        </div>
+                        {r.comentario && <p className={styles.reviewText}>{r.comentario}</p>}
+                        <div className={styles.reviewMeta}>
+                          <span>{r.nombreTrabajador ? `con ${r.nombreTrabajador}` : ''}</span>
+                          <time dateTime={fechaIso(r.fecha)}>{fechaResena(r.fecha)}</time>
+                        </div>
                       </div>
-                      {r.comentario && <p className={styles.reviewText}>{r.comentario}</p>}
-                      <div className={styles.reviewMeta}>
-                        <span>{r.nombreTrabajador ? `con ${r.nombreTrabajador}` : ''}</span>
-                        <span>{r.fecha ? new Date(r.fecha).toLocaleDateString('es-PE') : ''}</span>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </section>
             )}
@@ -1077,6 +1107,70 @@ export function PublicSedeDetailPage() {
                   </div>
                 )}
               </div>
+              {/* ══ T8 · FOOTER LEGAL DEL MICROSITIO ═══════════════════════════════
+                  QUÉ CAMBIÓ respecto a la T4 (donde puse tres enlaces sin pensarlo bien):
+
+                  ❌ FUERA "Términos". Son el contrato B2B entre barber.pe y el DUEÑO del
+                     negocio ("Al crear una cuenta…", "Como propietario del negocio, eres
+                     responsable de…"). El cliente que reserva un corte nunca contrató
+                     nada con barber.pe. No pintaba nada aquí.
+
+                  ✅ "Libro de Reclamaciones" AHORA ES DEL NEGOCIO. Apunta a
+                     /libro-reclamaciones/{idSede}, que carga LA RAZÓN SOCIAL Y EL RUC DE
+                     LA BARBERÍA y le manda el reclamo A ELLA. Antes apuntaba al libro de
+                     barber.pe, con el RUC de barber.pe: un cliente que se quejaba de su
+                     corte señalaba a barber.pe como el proveedor reclamado.
+
+                  ✅ "Privacidad" (era "Tus datos"). Este SÍ se queda y es de barber.pe:
+                     nosotros efectivamente tratamos los datos del cliente (guardamos su
+                     nombre, celular, historial), y la Ley 29733 exige que pueda saberlo.
+                     El documento deja claro que el RESPONSABLE es el negocio y barber.pe
+                     el encargado del tratamiento.
+
+                  ✅ SUGERENCIAS separadas del libro. Un reclamo formal obliga al negocio
+                     a responder en 15 días hábiles; una sugerencia no. Mezclarlos haría
+                     que la gente use el libro para todo y le cree al negocio una
+                     obligación legal donde no la había.
+
+                  RESPONSIVE: en móvil los opcionales se quedan solo con el icono. El Libro
+                  de Reclamaciones NO: su aviso tiene formato oficial (Anexo II) y debe ser
+                  VISIBLE, así que conserva su texto siempre. */}
+              <nav className={styles.footLegal} aria-label="Información legal">
+                <a
+                  className={styles.footLegalLink}
+                  href={`/libro-reclamaciones/${sede.idSede}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <BookOpen width={15} height={15} aria-hidden="true" />
+                  <span className={styles.footLegalTxt}>Libro de Reclamaciones</span>
+                </a>
+
+                {/* Sugerencias → al correo DEL NEGOCIO. Solo si lo tiene configurado:
+                    un mailto vacío es peor que ningún enlace. */}
+                {sede.correo && (
+                  <a
+                    className={`${styles.footLegalLink} ${styles.footLegalOpt}`}
+                    href={`mailto:${sede.correo}?subject=${encodeURIComponent(`Sugerencia para ${displayName}`)}`}
+                    aria-label="Sugerencias"
+                  >
+                    <ChatCircleText width={15} height={15} aria-hidden="true" />
+                    <span className={styles.footLegalTxt}>Sugerencias</span>
+                  </a>
+                )}
+
+                <a
+                  className={`${styles.footLegalLink} ${styles.footLegalOpt}`}
+                  href="/privacidad-clientes"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Privacidad"
+                >
+                  <ShieldCheck width={15} height={15} aria-hidden="true" />
+                  <span className={styles.footLegalTxt}>Privacidad</span>
+                </a>
+              </nav>
+
               <p className={styles.copy}>© {new Date().getFullYear()} {displayName}. Reservas con <a className={styles.copyLink} href="https://barber.pe" target="_blank" rel="noreferrer">barber.pe</a>.</p>
             </footer>
           </div>
@@ -1091,7 +1185,10 @@ export function PublicSedeDetailPage() {
                 </>
               ) : (
                 <>
-                  <h2 className={styles.cardTitle}>{sede.nombre}</h2>
+                  {/* T10 — decía solo "Miraflores" (la zona). El título de arriba ya
+                      usaba `displayName` (Marca – Sede); esta card se había quedado
+                      atrás. Mismo dato, misma fuente: utils/nombreParaMostrar. */}
+                  <h2 className={styles.cardTitle}>{displayName}</h2>
                   <div className={styles.cardRating}>
                     {resenas.total > 0 ? (
                       <>
@@ -1187,7 +1284,7 @@ export function PublicSedeDetailPage() {
             onReservar={() => {
               const id = trabajadorSel?.idTrabajador
               setTrabajadorSel(null)
-              navigate(id ? `/reservar-publica?trabajador=${id}` : '/reservar-publica')
+              irAReservar(id ? `?trabajador=${id}` : '')
             }}
             onClose={() => setTrabajadorSel(null)}
           />
@@ -1201,7 +1298,7 @@ export function PublicSedeDetailPage() {
             onReservar={() => {
               const id = servicioSel?.idServicio || servicioSel?.id
               setServicioSel(null)
-              navigate(id ? `/reservar-publica?servicio=${id}` : '/reservar-publica')
+              irAReservar(id ? `?servicio=${id}` : '')
             }}
             onClose={() => setServicioSel(null)}
           />

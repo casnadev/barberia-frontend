@@ -411,7 +411,17 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
                                   className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-emerald-50"
                                 >
                                   <div className="min-w-0">
-                                    <p className="truncate text-sm text-gray-900">{c.nombreCompleto || 'Sin nombre'}</p>
+                                    <p className="truncate text-sm text-gray-900">
+                                      {c.nombreCompleto || 'Sin nombre'}
+                                      {/* T6 — El buscador de caja alcanza a TODA la marca, no solo a esta
+                                          sede: el mismo cliente puede venir de otro local y sus puntos son
+                                          de la marca. Se avisa de dónde viene, pero nunca se le esconde. */}
+                                      {c.deOtraSede && (
+                                        <span className="ml-1.5 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 align-middle">
+                                          otra sede
+                                        </span>
+                                      )}
+                                    </p>
                                     <p className="text-xs text-gray-500">{c.telefono || c.correo || 'sin contacto'}</p>
                                   </div>
                                 </button>

@@ -56,7 +56,12 @@ export interface MiPerfilTrabajador {
   idTrabajador: number
   idSede: number
   subdominio?: string
+  /** Zona/distrito del local. */
   nombreSede?: string
+  /** T1 — la MARCA. La identidad del negocio, no la sede. */
+  nombreComercial?: string | null
+  /** ≥2 → "Marca – Sede". 1 → solo la marca. */
+  totalSedesPublicasMarca?: number
   nombreCompleto?: string
   correo?: string
   telefono?: string

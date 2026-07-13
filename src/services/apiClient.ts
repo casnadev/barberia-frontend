@@ -5,13 +5,42 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.100.25
 // Clave donde se persiste el subdominio del tenant activo.
 const TENANT_KEY = 'tenant_subdomain'
 
-// LINK ÚNICO: sede fijada por la portada de marca para quedarse en el mismo dominio
-// del negocio (kisha.barber.pe) sin redirigir al subdominio de la sede. Runtime-only;
-// se re-establece en cada carga desde la URL (/:sedeSlug). null por defecto = sin efecto.
-let tenantOverride: string | null = null
+// LINK ÚNICO: sede fijada por la portada de marca / la ruta /:sedeSlug para quedarse
+// en el mismo dominio del negocio (kisha.barber.pe) sin redirigir al subdominio de la
+// sede.
+//
+// T2 — Antes esto era SOLO memoria (`let tenantOverride`), y por eso el flujo de
+// reserva se rompía al recargar: en /reservar-publica dentro del dominio de marca,
+// un F5 borraba la sede y la petición salía con el tenant equivocado (o vacío).
+//
+// Ahora se respalda en sessionStorage, que es POR PESTAÑA:
+//   • sobrevive al refresh y a la navegación dentro del flujo;
+//   • NO se comparte con la pestaña del panel del admin (a diferencia de
+//     localStorage), así que no puede contaminar su tenant;
+//   • muere al cerrar la pestaña.
+const OVERRIDE_KEY = 'tenant_override'
+
+const leerOverridePersistido = (): string | null => {
+  try {
+    const v = sessionStorage.getItem(OVERRIDE_KEY)
+    return v && v.trim() ? v.trim().toLowerCase() : null
+  } catch {
+    return null
+  }
+}
+
+let tenantOverride: string | null = leerOverridePersistido()
+
 export const setTenantOverride = (sub: string | null): void => {
   tenantOverride = sub && sub.trim() ? sub.trim().toLowerCase() : null
+  try {
+    if (tenantOverride) sessionStorage.setItem(OVERRIDE_KEY, tenantOverride)
+    else sessionStorage.removeItem(OVERRIDE_KEY)
+  } catch {
+    /* modo privado sin sessionStorage: seguimos con el valor en memoria */
+  }
 }
+
 /** Sede fijada por el link único (o null). Las páginas públicas la priorizan
  *  sobre el subdominio del host, porque en el dominio de marca el host es la
  *  MARCA (kisha), no la sede. */

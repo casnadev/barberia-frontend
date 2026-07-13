@@ -1,6 +1,7 @@
 import { MapPin, User, Clock, Calendar as CalendarIcon } from '@phosphor-icons/react'
 import { buildImageUrl } from '@/services/apiClient'
 import styles from '@/styles/ReservaClientePage.module.css'
+import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
 
 interface ReservaResumenProps {
   sede: any
@@ -46,7 +47,8 @@ export function ReservaResumen({
       {/* Barbería */}
       <div className={styles.sidebarSection}>
         <h3 className={styles.sidebarSectionTitle}>Barbería</h3>
-        <p className={styles.sidebarSectionValue}>{sede?.nombre || 'Barber.PE'}</p>
+        {/* T1 — decía "Miraflores". El cliente reserva en un NEGOCIO, no en un distrito. */}
+        <p className={styles.sidebarSectionValue}>{nombreParaMostrar(sede as any) || 'Barber.PE'}</p>
         <p className={styles.sidebarSectionMeta}>
           <MapPin className="w-4 h-4" />
           {sede?.direccion || 'Lima, Perú'}

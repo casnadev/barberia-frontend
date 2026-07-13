@@ -242,9 +242,17 @@
 .rStarsOff { color: #2c2c32; }
 .rQuote { color: var(--ink); font-size: 1rem; line-height: 1.6; margin: 0; flex: 1; }
 .rWho { display: flex; align-items: center; gap: 12px; }
-.rAv { width: 44px; height: 44px; border-radius: 999px; background: var(--surface-2); color: var(--brand-light); display: grid; place-items: center; font-weight: 800; font-size: .85rem; flex-shrink: 0; }
+/* T1 — El fondo y el color los pone el componente (utils/avatarColor), que los
+   deriva del nombre con un hash. Aquí solo queda la forma. El `background` de
+   var(--surface-2) se mantiene como fallback si por lo que sea no llega color. */
+.rAv { width: 44px; height: 44px; border-radius: 999px; background: var(--surface-2); color: var(--brand-light); display: grid; place-items: center; font-weight: 800; font-size: .85rem; flex-shrink: 0; letter-spacing: .5px; }
+.rWhoText { min-width: 0; }
 .rName { display: block; font-weight: 700; font-size: .94rem; }
-.rRole { display: block; font-size: .8rem; color: var(--muted); }
+/* Negocio (marca – sede) + fecha. Una sola línea, truncada si no cabe: nunca
+   debe empujar la altura de la card y romper el carrusel. */
+.rRole { display: block; font-size: .8rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rDot { opacity: .5; }
+.rDate { font-variant-numeric: tabular-nums; opacity: .75; }
 
 /* ── Precios ────────────────────────────────────────────────────────── */
 .priceHead { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 6px; flex-wrap: wrap; }

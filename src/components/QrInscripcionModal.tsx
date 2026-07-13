@@ -98,7 +98,7 @@ export function QrInscripcionModal({
               {nombreNegocio}
             </p>
             <p className="mt-1 text-xs font-semibold uppercase tracking-widest" style={{ color: color || '#111827' }}>
-              Programa de puntos
+              Programa de Fidelización
             </p>
 
             <div className="my-5 flex justify-center">
@@ -130,9 +130,11 @@ export function QrInscripcionModal({
             >
               <Copy size={16} /> Copiar enlace
             </button>
-            <p className="break-all rounded-lg bg-gray-50 px-3 py-2 text-center text-[11px] text-gray-400">
-              {urlAbsoluta}
-            </p>
+            {/* T10 — Fuera la URL cruda.
+                Mostraba "http://localhost:5173/unirme/2040" a pelo debajo de los botones.
+                No aporta nada: el QR ya la lleva dentro y "Copiar enlace" ya la da. Lo
+                único que hacía era ensuciar el modal y filtrar un id interno de sede.
+                Si alguien la necesita, el botón de copiar está justo encima. */}
           </div>
         </div>
       </div>

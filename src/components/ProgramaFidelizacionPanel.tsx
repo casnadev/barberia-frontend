@@ -3,7 +3,9 @@ import { toast } from 'sonner'
 import {
   CircleNotch, FloppyDisk, Plus, Trash, Medal, Gift, Star, Lightning,
   Coins, Hourglass, QrCode, Sliders, Eye, Wallet, WarningCircle, Confetti,
+  MapPin, Buildings,
 } from '@phosphor-icons/react'
+import { PreviewMultiplicador } from '@/components/PreviewMultiplicador'
 import { PromocionesFidelizacionPanel } from '@/components/PromocionesFidelizacionPanel'
 import { QrInscripcionModal } from '@/components/QrInscripcionModal'
 import { buildImageUrl } from '@/services/apiClient'
@@ -114,7 +116,10 @@ const NIVELES_SUGERIDOS: NivelFidel[] = [
 ]
 
 const RECOMPENSA_VACIA: RecompensaFidel = {
+  // T7 — alcance 'Sede' por defecto, a propósito. Es lo conservador: nadie debe
+  // regalar una recompensa en los tres locales de la marca sin haberlo decidido.
   nombre: '', descripcion: '', icono: '🎁', puntosRequeridos: 100, stock: null, activo: true,
+  alcance: 'Sede',
 }
 const NIVEL_VACIO: NivelFidel = { nombre: '', puntosMinimos: 0, orden: 0, color: '#C9A227' }
 
@@ -125,6 +130,8 @@ const soles = (n: number) => `S/ ${(Number(n) || 0).toFixed(2)}`
 export function ProgramaFidelizacionPanel() {
   const [cfg, setCfg] = useState<ProgramaConfig>({
     activo: false, solesPorPunto: 1, multiplicadorBase: 1, puntosExpiranMeses: null,
+    // T7
+    multiplicadorMaximo: 5, multiplicadorSede: null, sedeActiva: true,
     niveles: [], recompensas: [],
   })
   const [cargando, setCargando] = useState(true)
@@ -174,11 +181,25 @@ export function ProgramaFidelizacionPanel() {
      Misma fórmula que el backend: floor(total / solesPorPunto × multiplicador).
      El multiplicador es el MÁS ALTO entre el base y las promos vigentes hoy
      (no se multiplican entre sí).                                             */
+  // T7 — REGLA C+. Antes esto era `Math.max(multBase, multPromo)`, y tenía un fallo
+  // que se notaba en producción: la promo del martes NO HACÍA NADA en una sede que ya
+  // estuviera en x2. El encargado creaba la campaña, la anunciaba, y el cliente recibía
+  // los mismos puntos de siempre.
+  //
+  // Ahora la marca y la sede son LA MISMA CAPA (la tasa permanente) y compiten por
+  // override; la promo es OTRA capa y se multiplica encima. Todo topado.
+  // Espejo exacto de Services/Fidelizacion/MultiplicadorPuntos.cs.
   const promoHoy = (cfg.promociones ?? []).filter((p) => p.vigenteHoy && p.activo)
   const multPromo = promoHoy.length ? Math.max(...promoHoy.map((p) => p.multiplicador)) : 1
   const multBase = cfg.multiplicadorBase ?? 1
-  const multAplicado = Math.max(multBase, multPromo)
-  const promoGanadora = multPromo > multBase
+  const multSede = cfg.multiplicadorSede ?? null
+  const tope = cfg.multiplicadorMaximo ?? 5
+
+  // La sede SOBRESCRIBE a la marca (no es un MAX: una sede debe poder BAJAR).
+  const multEfectivo = multSede ?? multBase
+  const multAplicado = Math.min(multEfectivo * multPromo, tope)
+
+  const promoGanadora = multPromo > 1
     ? promoHoy.find((p) => p.multiplicador === multPromo)?.nombre
     : null
 
@@ -205,6 +226,9 @@ export function ProgramaFidelizacionPanel() {
   const guardar = async () => {
     if (cfg.solesPorPunto <= 0) { toast.error('Los soles por punto deben ser mayores a 0'); return }
     if ((cfg.multiplicadorBase ?? 1) < 1) { toast.error('El multiplicador base debe ser 1 o mayor'); return }
+    // T7 — un multiplicador < 1 no "abarataría" los puntos: se los COMERÍA.
+    if (cfg.multiplicadorSede != null && cfg.multiplicadorSede < 1) { toast.error('El multiplicador de la sede debe ser 1 o mayor'); return }
+    if ((cfg.multiplicadorMaximo ?? 5) < 1) { toast.error('El tope del multiplicador debe ser 1 o mayor'); return }
     if (cfg.niveles.some((n) => !n.nombre.trim())) { toast.error('Cada nivel necesita un nombre'); return }
     if (cfg.recompensas.some((r) => !r.nombre.trim())) { toast.error('Cada recompensa necesita un nombre'); return }
     if (cfg.recompensas.some((r) => r.puntosRequeridos < 1)) { toast.error('Cada recompensa necesita al menos 1 punto'); return }
@@ -218,6 +242,10 @@ export function ProgramaFidelizacionPanel() {
         solesPorPunto: cfg.solesPorPunto,
         multiplicadorBase: cfg.multiplicadorBase ?? 1,
         puntosExpiranMeses: cfg.puntosExpiranMeses ?? null,
+        // T7 — el tope es de la MARCA; el multiplicador y la pausa son de ESTA sede.
+        multiplicadorMaximo: cfg.multiplicadorMaximo ?? 5,
+        multiplicadorSede: cfg.multiplicadorSede ?? null,
+        sedeActiva: cfg.sedeActiva !== false,
         niveles: nivelesOrdenados.map((n, i) => ({ ...n, orden: i })),
         recompensas: cfg.recompensas,
       }
@@ -376,10 +404,94 @@ export function ProgramaFidelizacionPanel() {
                 <option value="3">x3 — Triple puntaje SIEMPRE</option>
               </select>
               <p className="mt-1 text-[11px] text-gray-400">
-                Aplica todos los días, a todas las ventas. Para días puntuales usa las promociones.
+                Aplica en TODAS las sedes de tu negocio. Cada sede puede sobrescribirlo abajo.
               </p>
+
+              {/* ══ T7 · TOPE DURO (MARCA) ══════════════════════════════════════
+                  La red de seguridad. Con tres capas configurables por gente distinta
+                  (marca, sede, promo), es cuestión de tiempo que alguien acabe en x12
+                  sin darse cuenta: aniversario x2 · sede x2 · finde x3. Nadie quiso
+                  regalar eso; simplemente nadie vio las tres capas a la vez. */}
+              <div className="mt-4">
+                <label className="mb-1 block text-xs font-medium text-gray-500">
+                  Tope del multiplicador
+                </label>
+                <select
+                  className={input}
+                  value={String(cfg.multiplicadorMaximo ?? 5)}
+                  onChange={(e) => set({ multiplicadorMaximo: Number(e.target.value) })}
+                >
+                  <option value="2">x2 — máximo el doble</option>
+                  <option value="3">x3</option>
+                  <option value="5">x5 (recomendado)</option>
+                  <option value="10">x10 — sin casi límite</option>
+                </select>
+                <p className="mt-1 text-[11px] text-gray-400">
+                  Pase lo que pase, ninguna venta multiplicará más que esto. Protege tu caja
+                  de una combinación de campañas que nadie planeó.
+                </p>
+              </div>
             </div>
           )}
+
+          {/* ══════ T7 · ESTA SEDE ═══════════════════════════════════════════════
+              El programa (política de puntos, expiración, niveles, tarjeta, monedero)
+              es de la MARCA. Lo de aquí abajo es SOLO de este local. */}
+          <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50/40 p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <MapPin size={15} weight="fill" className="text-blue-600" />
+              <h4 className="text-sm font-semibold text-gray-900">Solo en esta sede</h4>
+            </div>
+
+            <label className="mb-1 block text-xs font-medium text-gray-500">
+              Multiplicador propio de esta sede
+            </label>
+            <select
+              className={input}
+              value={cfg.multiplicadorSede == null ? '' : String(cfg.multiplicadorSede)}
+              onChange={(e) =>
+                set({ multiplicadorSede: e.target.value === '' ? null : Number(e.target.value) })
+              }
+            >
+              <option value="">Usar el de la marca (x{cfg.multiplicadorBase ?? 1})</option>
+              <option value="1">x1 — normal</option>
+              <option value="2">x2 — doble puntaje en esta sede</option>
+              <option value="3">x3 — triple puntaje en esta sede</option>
+            </select>
+            <p className="mt-1 text-[11px] text-gray-400">
+              Si eliges uno, SUSTITUYE al de la marca aquí (no se suman ni se multiplican
+              entre sí). Puedes ponerlo por debajo del de la marca si este local no puede
+              permitirse la campaña.
+            </p>
+
+            {/* T7 · LA VISTA PREVIA. El motivo de que exista: que nadie configure a ciegas. */}
+            <div className="mt-3">
+              <PreviewMultiplicador
+                multiplicadorMarca={cfg.multiplicadorBase ?? 1}
+                multiplicadorSede={cfg.multiplicadorSede}
+                multiplicadorPromo={multPromo}
+                nombrePromo={promoGanadora}
+                tope={cfg.multiplicadorMaximo ?? 5}
+                solesPorPunto={cfg.solesPorPunto}
+              />
+            </div>
+
+            <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs text-gray-600">
+              <input
+                type="checkbox"
+                checked={cfg.sedeActiva !== false}
+                onChange={(e) => set({ sedeActiva: e.target.checked })}
+                className="mt-0.5 rounded border-gray-300"
+              />
+              <span>
+                <strong className="text-gray-800">Esta sede acumula puntos.</strong>
+                <span className="mt-0.5 block text-[11px] text-gray-400">
+                  Si lo desmarcas, aquí no se suman puntos nuevos. Los que el cliente ya
+                  tiene NO se pierden: los conserva y puede canjearlos en las otras sedes.
+                </span>
+              </span>
+            </label>
+          </div>
         </div>
       </section>
 
@@ -575,6 +687,63 @@ export function ProgramaFidelizacionPanel() {
                       <WarningCircle size={12} weight="fill" /> Agotada
                     </span>
                   )}
+                </div>
+
+                {/* ══ T7 · ALCANCE ═══════════════════════════════════════════════
+                    ¿Vale en toda la marca, o solo aquí?
+
+                    Y el STOCK sale solo de esta decisión, sin lógica extra:
+                      · Empresa → UNA fila, IdSede NULL  → su stock ES compartido.
+                      · Sede    → una fila por sede      → cada una con su stock.
+
+                    Default 'Sede', a propósito: es lo conservador. Nadie debe regalar
+                    su "Corte gratis" en los tres locales sin haberlo decidido. */}
+                <div className="mt-3 border-t border-gray-100 pt-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                      Válida en
+                    </span>
+
+                    <div className="inline-flex rounded-lg border border-gray-200 p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setRec(i, { alcance: 'Sede' })}
+                        className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                          r.alcance !== 'Empresa'
+                            ? 'bg-gray-900 text-white'
+                            : 'text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        <MapPin size={12} weight="fill" /> Solo esta sede
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRec(i, { alcance: 'Empresa' })}
+                        className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                          r.alcance === 'Empresa'
+                            ? 'bg-gray-900 text-white'
+                            : 'text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        <Buildings size={12} weight="fill" /> Cualquier sede
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="mt-1.5 text-[11px] leading-relaxed text-gray-400">
+                    {r.alcance === 'Empresa' ? (
+                      <>
+                        El cliente puede canjearla en <strong>cualquier local de tu negocio</strong>.
+                        {r.stock != null && (
+                          <> El stock de <strong>{r.stock}</strong> se <strong>reparte entre todas las sedes</strong>.</>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        Solo se canjea <strong>aquí</strong>. Cada sede tiene su propio stock.
+                      </>
+                    )}
+                  </p>
                 </div>
               </div>
             ))}

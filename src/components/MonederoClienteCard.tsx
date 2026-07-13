@@ -134,7 +134,21 @@ export function MonederoClienteCard({ idCliente }: { idCliente: number }) {
             <div key={r.idRecompensa} className="flex items-center justify-between rounded-xl border border-gray-200 px-3 py-2">
               <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{r.nombre}</p>
-                <p className="text-[11px] text-gray-400">{r.puntosRequeridos} pts{!r.canjeable && ` · faltan ${r.puntosFaltantes}`}</p>
+                <p className="text-[11px] text-gray-400">
+                  {r.puntosRequeridos} pts{!r.canjeable && ` · faltan ${r.puntosFaltantes}`}
+                  {/* T7 — El cliente tiene UN saldo de marca, pero no todas las recompensas
+                      valen en todos los locales. Si no se le dice cuál es cuál, se planta en
+                      San Isidro a canjear el "Corte gratis" exclusivo de Miraflores. */}
+                  {r.alcance === 'Empresa' ? (
+                    <span className="ml-1 rounded-full bg-emerald-50 px-1.5 py-0.5 font-medium text-emerald-700">
+                      En cualquier sede
+                    </span>
+                  ) : r.nombreSedeExclusiva ? (
+                    <span className="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 font-medium text-gray-600">
+                      Solo en {r.nombreSedeExclusiva}
+                    </span>
+                  ) : null}
+                </p>
               </div>
               <button
                 onClick={() => canjear(r.idRecompensa, r.nombre)}

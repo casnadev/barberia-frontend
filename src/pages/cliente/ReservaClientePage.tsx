@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { CaretLeft as ChevronLeft, CaretRight as ChevronRight, Calendar, X, Plus, Clock, MapPin, User, Check } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
@@ -7,7 +7,7 @@ import { sedesService } from '@/services/sedesService'
 import { reservasService } from '@/services/reservasService'
 import { clientesService } from '@/services/clientesService'
 import { mensajeError } from '@/utils/apiError'
-import { buildImageUrl } from '@/services/apiClient'
+import { buildImageUrl, urlSedeCanonica } from '@/services/apiClient'
 import { confirmDialog } from '@/components/ConfirmDialog'
 import { NegocioNoDisponible } from '@/components/NegocioNoDisponible'
 import { useAuthStore } from '@/store/authStore'
@@ -47,12 +47,32 @@ interface FormData {
 
 export function ReservaClientePage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuthStore()
-  // A dónde volver al cerrar: según el rol logueado; anónimo → landing.
-  const volverA =
-    user?.rol === 'Trabajador' ? '/mi-agenda'
-      : (user?.rol === 'Admin' || user?.rol === 'SuperAdmin') ? '/admin/agenda'
-        : '/'
+
+  // T2 — A DÓNDE SE VUELVE AL CERRAR / DESCARTAR / TERMINAR.
+  //
+  // Antes esto era una constante calculada por el ROL:
+  //     Admin | SuperAdmin -> '/admin/agenda'
+  //     Trabajador         -> '/mi-agenda'
+  //     resto              -> '/'
+  //
+  // Es decir: el destino no dependía de DÓNDE VENÍAS. Un SuperAdmin que entraba al
+  // micrositio de Shanell, empezaba una reserva y le daba a la X, terminaba en el
+  // DASHBOARD DE SHANELL, con el tenant apuntando a un negocio que no es suyo (de ahí
+  // los "datos a medias"). Y en anónimo tampoco volvía bien: '/' en un dominio de marca
+  // con varias sedes es la PORTADA DE MARCA, no el micrositio del que saliste.
+  //
+  // Ahora el destino sale del ORIGEN, con tres niveles de fallback. Ninguna rama puede
+  // apuntar a un área privada, así que el bug no puede reaparecer por otro camino.
+  //
+  //   1. location.state.from  → la ruta exacta desde la que se abrió la reserva.
+  //   2. urlSedeCanonica(sede) → el micrositio de la sede que se está reservando
+  //                              (cubre deep-links, QR y "Reservar de nuevo").
+  //   3. '/'                   → último recurso (sede aún sin cargar).
+  //
+  // El ROL ya no participa en la decisión. Es la sesión de la persona, no su ubicación.
+  const origen = (location.state as { from?: string } | null)?.from
 
 
   const [step, setStep] = useState(1)
@@ -390,13 +410,44 @@ export function ReservaClientePage() {
   const nextDays = getNextDays()
   const desktopWeekDays = getDesktopWeekDays()
 
+  /**
+   * T2 — Salida del flujo. Devuelve SIEMPRE al lugar del que se vino.
+   *
+   * `urlSedeCanonica` puede devolver una URL absoluta (otro subdominio, p. ej. al
+   * llegar por un deep-link `/reservar/:idSede` desde el host equivocado). Por eso se
+   * distingue: ruta interna → navigate(); URL absoluta → location.assign(), porque
+   * react-router no puede cambiar de origen.
+   */
+  const volverAlOrigen = () => {
+    // 1. El origen exacto, si la página que nos abrió lo pasó.
+    if (origen) { navigate(origen); return }
+
+    // 2. El micrositio de la sede que se está reservando.
+    if (sede) {
+      const destino = urlSedeCanonica({
+        slugMarca: (sede as any).slugMarca,
+        slugSede: (sede as any).slug,
+        subdominio: (sede as any).subdominio,
+        esMultisede: ((sede as any).totalSedesPublicasMarca ?? 1) >= 2,
+      })
+      if (destino) {
+        if (/^https?:\/\//i.test(destino)) window.location.assign(destino)
+        else navigate(destino)
+        return
+      }
+    }
+
+    // 3. Último recurso.
+    navigate('/')
+  }
+
   const handleBack = () => {
     if (step === 3 && trabajadorBloqueado) {
       setStep(1)
     } else if (step > 1) {
       setStep(step - 1)
     } else {
-      navigate(volverA)
+      volverAlOrigen()
     }
   }
 
@@ -409,7 +460,7 @@ export function ReservaClientePage() {
       cancelText: 'Seguir aquí',
       tone: 'danger',
     }))) return
-    navigate(volverA)
+    volverAlOrigen()
   }
 
   const handlePreviousWeek = () => {
@@ -487,7 +538,7 @@ export function ReservaClientePage() {
         </div>
 
         <div style={{ marginTop: 28, width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 10, opacity: 0, animation: 'bpFade .4s .95s forwards' }}>
-          <button onClick={() => navigate(volverA)} style={{ background: brand, color: brandOn, border: 'none', borderRadius: 999, padding: '13px', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
+          <button onClick={volverAlOrigen} style={{ background: brand, color: brandOn, border: 'none', borderRadius: 999, padding: '13px', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
             Volver al inicio
           </button>
         </div>

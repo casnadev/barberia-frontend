@@ -10,6 +10,12 @@ export interface ClienteReal {
   nombreCompleto?: string | null
   telefono: string
   correo?: string | null
+  /**
+   * T6 — El cliente es del negocio, pero su historial está en OTRA sede de la marca.
+   * No se oculta (ocultarlo obligaría al barbero a crear una ficha duplicada y a
+   * partir al cliente en dos): se etiqueta.
+   */
+  deOtraSede?: boolean
 }
 
 import { apiClient } from './apiClient'

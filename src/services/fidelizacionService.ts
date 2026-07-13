@@ -21,7 +21,20 @@ export interface RecompensaFidel {
   /** null/undefined = stock ILIMITADO (∞). 0 = agotada. */
   stock?: number | null
   activo: boolean
+
+  /**
+   * T7 — Hasta dónde llega la recompensa.
+   *   'Empresa' → vale en CUALQUIER sede de la marca. Stock COMPARTIDO.
+   *   'Sede'    → solo en esta sede. Stock INDEPENDIENTE.
+   *
+   * El stock sale solo del modelo: una recompensa de marca es UNA fila (un stock);
+   * una de sede es una fila por sede (un stock cada una). Sin lógica extra.
+   */
+  alcance: AlcanceFidel
 }
+
+/** T7 — Alcance de una recompensa. */
+export type AlcanceFidel = 'Empresa' | 'Sede'
 
 export interface PromocionFidel {
   idPromocion: number
@@ -43,9 +56,26 @@ export type GuardarPromocion = Omit<PromocionFidel, 'idPromocion' | 'vigenteHoy'
 export interface ProgramaConfig {
   activo: boolean
   solesPorPunto: number
-  /** Multiplicador permanente del programa (1 = sin multiplicar). */
+  /** Multiplicador permanente de la MARCA (1 = sin multiplicar). */
   multiplicadorBase: number
   puntosExpiranMeses?: number | null
+
+  /**
+   * T7 — TOPE DURO del multiplicador final. Red de seguridad: con tres capas
+   * configurables (marca, sede, promo) es cuestión de tiempo que alguien acabe
+   * en x12 sin darse cuenta. Default 5.
+   */
+  multiplicadorMaximo: number
+
+  /**
+   * T7 — Multiplicador PROPIO de la sede actual. null = hereda el de la marca.
+   * Es un OVERRIDE, no un MAX: una sede puede BAJAR por debajo del de la marca.
+   */
+  multiplicadorSede?: number | null
+
+  /** T7 — false = esta sede tiene la acumulación pausada (no pierde puntos). */
+  sedeActiva: boolean
+
   niveles: NivelFidel[]
   recompensas: RecompensaFidel[]
   /** Solo lectura aquí: las promos tienen su propio CRUD. */
@@ -66,14 +96,34 @@ export interface ProgramaConfig {
 /** Lo que se ENVÍA al guardar (el backend ignora los campos de solo lectura). */
 export type GuardarProgramaConfig = Pick<
   ProgramaConfig,
-  'activo' | 'solesPorPunto' | 'multiplicadorBase' | 'puntosExpiranMeses' | 'niveles' | 'recompensas'
+  | 'activo'
+  | 'solesPorPunto'
+  | 'multiplicadorBase'
+  | 'puntosExpiranMeses'
+  | 'multiplicadorMaximo'   // T7 — tope (marca)
+  | 'multiplicadorSede'     // T7 — override (sede)
+  | 'sedeActiva'            // T7 — pausa local
+  | 'niveles'
+  | 'recompensas'
 >
 
 export interface PreviewPuntos {
   programaActivo: boolean
   puntos: number
+  /** El multiplicador FINAL, ya topado. */
   multiplicador: number
   promocionAplicada?: string | null
+
+  // ── T7 · DESGLOSE (vista previa en vivo) ──
+  // Se devuelve el cálculo entero, no solo el número final, para que el Admin VEA
+  // de dónde sale su multiplicador: "marca x1 · sede x2 · promo x2 = x4".
+  multiplicadorMarca?: number
+  /** Base EFECTIVO: el de la sede si lo tiene, si no el de la marca. */
+  multiplicadorSede?: number
+  multiplicadorPromo?: number
+  multiplicadorMaximo?: number
+  /** true = el cálculo superó el tope y se recortó. Hay que avisarlo. */
+  topado?: boolean
 }
 
 export interface MovimientosPagina {
@@ -121,6 +171,11 @@ export interface RecompensaDisponible {
   puntosFaltantes: number
   /** null = ilimitado. 0 = agotada. */
   stock?: number | null
+
+  /** T7 — 'Empresa' | 'Sede'. */
+  alcance?: AlcanceFidel
+  /** T7 — sede exclusiva ("Solo en San Isidro"). null = vale en toda la marca. */
+  nombreSedeExclusiva?: string | null
 }
 
 /** Resultado de generar el PNG del logo que exige Google Wallet. */
@@ -170,8 +225,16 @@ export const fidelizacionService = {
       solesPorPunto: Number(d?.solesPorPunto ?? 1),
       multiplicadorBase: Number(d?.multiplicadorBase ?? 1),
       puntosExpiranMeses: d?.puntosExpiranMeses ?? null,
+      // T7
+      multiplicadorMaximo: Number(d?.multiplicadorMaximo ?? 5),
+      multiplicadorSede: d?.multiplicadorSede ?? null,
+      sedeActiva: d?.sedeActiva !== false,
       niveles: Array.isArray(d?.niveles) ? d.niveles : [],
-      recompensas: Array.isArray(d?.recompensas) ? d.recompensas : [],
+      // T7 — sin alcance explícito (datos previos a la migración) → 'Sede', que es el
+      // default conservador: nadie regala una recompensa en tres locales por accidente.
+      recompensas: Array.isArray(d?.recompensas)
+        ? d.recompensas.map((r: any) => ({ ...r, alcance: r?.alcance === 'Empresa' ? 'Empresa' : 'Sede' }))
+        : [],
       promociones: Array.isArray(d?.promociones) ? d.promociones : [],
       nombreNegocio: d?.nombreNegocio ?? null,
       logoNegocio: d?.logoNegocio ?? null,
