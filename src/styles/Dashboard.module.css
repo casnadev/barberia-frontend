@@ -197,3 +197,25 @@
 .heroLive { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 800; letter-spacing: .04em; color: #d1fae5; background: rgba(16,185,129,.22); padding: 3px 9px; border-radius: 999px; }
 .heroLiveDot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; animation: livePulse 1.8s ease-out infinite; }
 .heroDate { font-size: 11.5px; opacity: .82; margin-top: 6px; position: relative; text-transform: capitalize; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   T15 — EL DESBORDAMIENTO HORIZONTAL
+
+   Los hijos de un grid tienen `min-width: auto` por defecto: NO pueden encogerse
+   por debajo de su contenido. Basta con un número largo, un nombre largo o un
+   `white-space: nowrap` (que .kpiValue tiene) para que la celda se niegue a
+   estrecharse, el grid se ensanche, y toda la página se salga por la derecha.
+
+   Por eso la tarjeta azul y las pestañas salían cortadas: no era un problema de
+   CENTRADO (el shell centra todas las páginas igual), era la página siendo más
+   ancha que la pantalla.
+
+   `min-width: 0` les devuelve el permiso de encogerse. Es el arreglo estándar.
+   ───────────────────────────────────────────────────────────────────────── */
+.kpiGrid > *,
+.tilesGrid > *,
+.topGrid > *,
+.heroFoot > * { min-width: 0; }
+
+/* Y que nada de dentro pueda empujar más allá de su caja. */
+.kpiGrid, .tilesGrid, .topGrid, .hero { max-width: 100%; }

@@ -15,6 +15,19 @@ export interface Reserva {
   estado?: string
   /** Motivo de cancelación (interno: solo Admin y el trabajador dueño de la cita). */
   motivoCancelacion?: string | null
+
+  /**
+   * AUTORÍA — los mismos datos que ya enseñaba la VENTA.
+   *
+   * `null` significa una de dos cosas:
+   *   • no hubo un usuario del panel detrás (la reservó el CLIENTE desde la web, o
+   *     se confirmó sola), y entonces `origen` lo explica; o
+   *   • es una reserva HISTÓRICA: nadie guardó este dato hasta ahora, y no hay de
+   *     dónde sacarlo.
+   * En ambos casos el modal cae al `origen`, que sí es real.
+   */
+  creadaPor?: string | null
+  confirmadaPor?: string | null
   fechaCancelacion?: string | null
   estadoPago?: string   // PendienteAprobacion | Registrada | Rechazada | Anulada | undefined (sin cobrar)
   idTrabajador?: number

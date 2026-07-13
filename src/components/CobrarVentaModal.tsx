@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { X, Check, Plus, Minus, Camera, Scissors, Receipt, CaretDown, UserCircle, Storefront, Lightning } from '@phosphor-icons/react'
+import { X, Check, Plus, Minus, Camera, Scissors, Receipt, CaretDown, UserCircle, Storefront, Lightning, UserPlus, MagnifyingGlass } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { ComboBox } from '@/components/ComboBox'
 import { serviciosService } from '@/services/serviciosService'
@@ -10,6 +10,8 @@ import { ventasService } from '@/services/ventasService'
 import { clientesService, type ClienteReal } from '@/services/clientesService'
 import { fidelizacionService, type PreviewPuntos } from '@/services/fidelizacionService'
 import { notificarFidelizacion } from '@/components/NotificacionFidelizacion'
+import { InvitacionTarjetaModal } from '@/components/InvitacionTarjetaModal'
+import type { ResultadoFidelizacion } from '@/services/ventasService'
 import { mensajeError } from '@/utils/apiError'
 
 const METODOS = ['Efectivo', 'Yape', 'Plin', 'Tarjeta', 'Transferencia', 'Otro']
@@ -52,6 +54,11 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
   const [altaAbierta, setAltaAbierta] = useState(false)
   const [nomNuevo, setNomNuevo] = useState('')
   const [telNuevo, setTelNuevo] = useState('')
+  // T6 — Tras cobrar, si la venta acreditó puntos, se le ofrece al cliente su
+  // tarjeta con un QR. Es la puerta por la que va a entrar la mayoría: casi nadie
+  // escanea el cartel del local, pero todo el mundo pasa por caja.
+  const [invitacion, setInvitacion] = useState<ResultadoFidelizacion | null>(null)
+
   const [sinEvidencia, setSinEvidencia] = useState(false)
   const [saving, setSaving] = useState(false)
   // Tarea 4 — En modo Admin: ¿la venta la hizo el propio Admin ("Venta mía",
@@ -171,6 +178,16 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
       // aquí no se muestra nada — los puntos entrarán al aprobarse.
       notificarFidelizacion(venta?.fidelizacion)
 
+      // T6 — La invitación solo aparece si la venta acreditó puntos Y el cliente
+      // todavía no tiene su tarjeta guardada. En una venta pendiente de aprobación
+      // no hay `fidelizacion` (los puntos entran al aprobarla), así que tampoco hay
+      // nada que ofrecer: se cierra como siempre.
+      const fid: ResultadoFidelizacion | undefined = venta?.fidelizacion
+      if (fid?.codigoQr && fid.puntosGanados > 0) {
+        setInvitacion(fid)
+        return   // el modal se cierra cuando el barbero cierre la invitación
+      }
+
       onDone()
     } catch (e: any) { toast.error(mensajeError(e, 'No se pudo registrar la venta')) } finally { setSaving(false) }
   }
@@ -181,17 +198,37 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
   const field = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500 outline-none transition'
   const label = 'text-xs font-medium text-gray-500 mb-1 flex items-center gap-1.5'
 
+  /** Abre el alta rápida arrastrando lo que el barbero ya venía escribiendo. */
+  const abrirAlta = () => {
+    setAltaAbierta(true)
+    const q = buscaCliente.trim()
+    if (q) {
+      if (/^\d+$/.test(q)) setTelNuevo(q.slice(0, 9))   // eran dígitos → es su celular
+      else setNomNuevo(q)                                // era texto → es su nombre
+    }
+    setBuscaCliente('')
+  }
+
   const puedeGuardar = !saving && !subiendo && seleccionadas.length > 0 && (!!evidencia || sinEvidencia) && !!idTrabajador
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    /* T13 — El modal deja de ser una ventanita de 448 px.
+       Tenía demasiado dentro (atribución, profesional, catálogo entero, cliente,
+       método de pago, evidencia y total) y en escritorio obligaba a hacer scroll
+       dentro de un rectángulo estrecho, mientras media pantalla se quedaba vacía.
+
+       No lo convertimos en página: es una acción rápida, no merece URL propia ni
+       navegación. Lo que necesita es SITIO:
+         • Móvil    → pantalla completa, sin bordes ni márgenes que roben espacio.
+         • Desktop  → ancho, y el formulario en DOS columnas (ver más abajo). */
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center sm:items-center sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} />
 
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-        className="relative bg-white w-full max-w-md rounded-2xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden"
+        className="relative flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:max-w-3xl sm:rounded-2xl"
       >
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
@@ -215,235 +252,267 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
         ) : (
           <>
             {/* Cuerpo scrolleable */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-              {mode === 'admin' && (
-                <>
-                  {/* Tarea 4 — ¿Quién realizó la venta? Decide si se acepta al instante
-                      (venta propia del Admin) o queda pendiente de su aprobación
-                      (venta de un profesional). */}
-                  <div>
-                    <label className={label}>¿Quién realizó la venta?</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setVentaMia(true)}
-                        className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition ${ventaMia ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-500/30' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
-                      >
-                        Venta mía (Admin)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setVentaMia(false)}
-                        className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition ${!ventaMia ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-500/30' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
-                      >
-                        Venta de un profesional
-                      </button>
-                    </div>
-                    <p className="mt-1.5 text-[11px] text-gray-400">
-                      {ventaMia
-                        ? 'Se registra como aceptada al instante.'
-                        : 'Quedará pendiente de aprobación: el profesional la verá como pendiente y tú la apruebas o rechazas según la evidencia.'}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className={label}><UserCircle size={14} weight="duotone" /> Profesional {ventaMia && <span className="text-gray-400 font-normal">· que atendió</span>}</label>
-                    <ComboBox
-                      value={idTrabajador ?? ''}
-                      onChange={(v) => setIdTrabajador(v === '' ? null : Number(v))}
-                      opciones={trabajadores.map(t => ({ valor: t.idTrabajador, etiqueta: t.nombreCompleto }))}
-                      disabled={trabajadores.length === 0}
-                      inputClassName={field}
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Servicios */}
-              <div>
-                <label className={label}><Scissors size={14} weight="duotone" /> Servicios <span className="text-gray-400 font-normal">· puedes elegir varios</span></label>
-                <div className="mt-1 max-h-64 overflow-y-auto border border-gray-200 rounded-xl divide-y divide-gray-100">
-                  {servicios.length === 0 && (
-                    <p className="text-sm text-gray-400 p-4 flex items-center gap-2"><Storefront size={16} weight="duotone" /> No hay servicios en esta sede.</p>
-                  )}
-                  {grupos.map(([cat, items]) => (
-                    <div key={cat}>
-                      <div className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur px-3 py-1.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">{cat}</div>
-                      <div className="divide-y divide-gray-100">
-                        {items.map(s => {
-                          const on = !!sel[s.idServicio]
-                          return (
-                            <div key={s.idServicio} className={`flex items-center gap-2.5 p-2.5 transition-colors ${on ? 'bg-emerald-50/40' : ''}`}>
-                              <button
-                                onClick={() => toggle(s.idServicio)}
-                                aria-label={on ? 'Quitar' : 'Agregar'}
-                                className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition ${on ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-gray-300 hover:border-emerald-400'}`}
-                              >
-                                {on && <Check size={13} weight="bold" />}
-                              </button>
-                              <button onClick={() => toggle(s.idServicio)} className="flex-1 min-w-0 text-left">
-                                <span className="block text-sm font-medium text-gray-900 truncate">{s.nombre}</span>
-                                <span className="block text-xs text-gray-500">{soles(Number(s.precioBase) || 0)}</span>
-                              </button>
-                              {on && (
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <button onClick={() => setQty(s.idServicio, (sel[s.idServicio] || 1) - 1)} className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 active:scale-95 transition"><Minus size={13} weight="bold" /></button>
-                                  <span className="w-6 text-center text-sm font-semibold tabular-nums">{sel[s.idServicio]}</span>
-                                  <button onClick={() => setQty(s.idServicio, (sel[s.idServicio] || 1) + 1)} className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 active:scale-95 transition"><Plus size={13} weight="bold" /></button>
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
+            {/* T13 — DOS COLUMNAS en escritorio, UNA en móvil.
+                Izquierda: qué se vendió (atribución, profesional, catálogo).
+                Derecha:   a quién y cómo se cobra (cliente, pago, evidencia).
+                Así el catálogo deja de ser una lista de 6 filas dentro de una
+                ventanita, y el barbero ve la venta entera de un vistazo. */}
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+                <div className="space-y-4">
+                {mode === 'admin' && (
+                  <>
+                    {/* Tarea 4 — ¿Quién realizó la venta? Decide si se acepta al instante
+                        (venta propia del Admin) o queda pendiente de su aprobación
+                        (venta de un profesional). */}
+                    <div>
+                      <label className={label}>¿Quién realizó la venta?</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setVentaMia(true)}
+                          className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition ${ventaMia ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-500/30' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                        >
+                          Venta mía (Admin)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setVentaMia(false)}
+                          className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition ${!ventaMia ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-500/30' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                        >
+                          Venta de un profesional
+                        </button>
                       </div>
+                      <p className="mt-1.5 text-[11px] text-gray-400">
+                        {ventaMia
+                          ? 'Se registra como aceptada al instante.'
+                          : 'Quedará pendiente de aprobación: el profesional la verá como pendiente y tú la apruebas o rechazas según la evidencia.'}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              {/* Cliente — SELECTOR REAL (no texto libre).
-                  Es lo que identifica al cliente y permite acreditar los puntos de
-                  fidelización: el backend resuelve por IdCliente o por teléfono, nunca
-                  por nombre suelto. Si no se elige a nadie, la venta es de "cliente a
-                  pie" (anónima) y NO acumula puntos — y así se avisa abajo. */}
-              <div>
-                <label className={label}>
-                  <UserCircle size={14} weight="duotone" /> Cliente
-                  <span className="text-gray-400 font-normal">· opcional</span>
-                </label>
-
-                {clienteSel ? (
-                  <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-gray-900">{clienteSel.nombreCompleto || 'Cliente'}</p>
-                      {clienteSel.telefono && <p className="text-xs text-gray-500">{clienteSel.telefono}</p>}
+                    <div>
+                      <label className={label}><UserCircle size={14} weight="duotone" /> Profesional {ventaMia && <span className="text-gray-400 font-normal">· que atendió</span>}</label>
+                      <ComboBox
+                        value={idTrabajador ?? ''}
+                        onChange={(v) => setIdTrabajador(v === '' ? null : Number(v))}
+                        opciones={trabajadores.map(t => ({ valor: t.idTrabajador, etiqueta: t.nombreCompleto }))}
+                        disabled={trabajadores.length === 0}
+                        inputClassName={field}
+                      />
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => { setClienteSel(null); setBuscaCliente('') }}
-                      className="shrink-0 rounded-lg p-1 text-gray-400 hover:bg-white hover:text-gray-700"
-                      aria-label="Quitar cliente"
-                    >
-                      <X size={15} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <input
-                      className={field}
-                      value={buscaCliente}
-                      onChange={e => setBuscaCliente(e.target.value)}
-                      placeholder="Buscar por nombre o teléfono…"
-                      autoComplete="off"
-                    />
-                    {buscaCliente.trim().length >= 2 && (
-                      <div className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
-                        {buscandoCliente ? (
-                          <p className="px-3 py-2.5 text-xs text-gray-400">Buscando…</p>
-                        ) : resultados.length === 0 ? (
-                          <button
-                            type="button"
-                            onClick={() => { setAltaAbierta(true); setNomNuevo(buscaCliente.trim()); setBuscaCliente('') }}
-                            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
-                          >
-                            <Plus size={13} weight="bold" /> No está: registrarlo ahora
-                          </button>
-                        ) : (
-                          resultados.map(c => (
-                            <button
-                              key={c.idCliente}
-                              type="button"
-                              onClick={() => { setClienteSel(c); setBuscaCliente('') }}
-                              className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-emerald-50"
-                            >
-                              <div className="min-w-0">
-                                <p className="truncate text-sm text-gray-900">{c.nombreCompleto || 'Sin nombre'}</p>
-                                <p className="text-xs text-gray-500">{c.telefono}</p>
+                  </>
+                )}
+
+                {/* Servicios */}
+                <div>
+                  <label className={label}><Scissors size={14} weight="duotone" /> Servicios <span className="text-gray-400 font-normal">· puedes elegir varios</span></label>
+                  <div className="mt-1 max-h-64 overflow-y-auto border border-gray-200 rounded-xl divide-y divide-gray-100">
+                    {servicios.length === 0 && (
+                      <p className="text-sm text-gray-400 p-4 flex items-center gap-2"><Storefront size={16} weight="duotone" /> No hay servicios en esta sede.</p>
+                    )}
+                    {grupos.map(([cat, items]) => (
+                      <div key={cat}>
+                        <div className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur px-3 py-1.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">{cat}</div>
+                        <div className="divide-y divide-gray-100">
+                          {items.map(s => {
+                            const on = !!sel[s.idServicio]
+                            return (
+                              <div key={s.idServicio} className={`flex items-center gap-2.5 p-2.5 transition-colors ${on ? 'bg-emerald-50/40' : ''}`}>
+                                <button
+                                  onClick={() => toggle(s.idServicio)}
+                                  aria-label={on ? 'Quitar' : 'Agregar'}
+                                  className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition ${on ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-gray-300 hover:border-emerald-400'}`}
+                                >
+                                  {on && <Check size={13} weight="bold" />}
+                                </button>
+                                <button onClick={() => toggle(s.idServicio)} className="flex-1 min-w-0 text-left">
+                                  <span className="block text-sm font-medium text-gray-900 truncate">{s.nombre}</span>
+                                  <span className="block text-xs text-gray-500">{soles(Number(s.precioBase) || 0)}</span>
+                                </button>
+                                {on && (
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button onClick={() => setQty(s.idServicio, (sel[s.idServicio] || 1) - 1)} className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 active:scale-95 transition"><Minus size={13} weight="bold" /></button>
+                                    <span className="w-6 text-center text-sm font-semibold tabular-nums">{sel[s.idServicio]}</span>
+                                    <button onClick={() => setQty(s.idServicio, (sel[s.idServicio] || 1) + 1)} className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 active:scale-95 transition"><Plus size={13} weight="bold" /></button>
+                                  </div>
+                                )}
                               </div>
-                            </button>
-                          ))
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                </div>
+
+                <div className="space-y-4">
+                {/* Cliente — SELECTOR REAL (no texto libre).
+                    Es lo que identifica al cliente y permite acreditar los puntos de
+                    fidelización: el backend resuelve por IdCliente o por teléfono, nunca
+                    por nombre suelto. Si no se elige a nadie, la venta es de "cliente a
+                    pie" (anónima) y NO acumula puntos — y así se avisa abajo. */}
+                <div>
+                  <label className={label}>
+                    <UserCircle size={14} weight="duotone" /> Cliente
+                    <span className="text-gray-400 font-normal">· opcional</span>
+                  </label>
+
+                  {clienteSel ? (
+                    <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-gray-900">{clienteSel.nombreCompleto || 'Cliente'}</p>
+                        {clienteSel.telefono && <p className="text-xs text-gray-500">{clienteSel.telefono}</p>}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setClienteSel(null); setBuscaCliente('') }}
+                        className="shrink-0 rounded-lg p-1 text-gray-400 hover:bg-white hover:text-gray-700"
+                        aria-label="Quitar cliente"
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+                  ) : (
+                    /* T11 — El botón "Nuevo" está SIEMPRE a la vista.
+                       Antes, la única forma de dar de alta a alguien era buscarlo…
+                       y NO encontrarlo: la opción vivía dentro del desplegable y solo
+                       aparecía cuando la búsqueda fallaba. Había que fracasar para poder
+                       registrar. Ahora es un botón fijo al lado del buscador. */
+                    <div className="flex gap-2">
+                      <div className="relative min-w-0 flex-1">
+                        <MagnifyingGlass size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          className={`${field} pl-9`}
+                          value={buscaCliente}
+                          onChange={e => setBuscaCliente(e.target.value)}
+                          placeholder="Buscar por nombre, teléfono o correo…"
+                          autoComplete="off"
+                        />
+                        {buscaCliente.trim().length >= 2 && (
+                          <div className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+                            {buscandoCliente ? (
+                              <p className="px-3 py-2.5 text-xs text-gray-400">Buscando…</p>
+                            ) : resultados.length === 0 ? (
+                              <button
+                                type="button"
+                                onClick={abrirAlta}
+                                className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
+                              >
+                                <Plus size={13} weight="bold" /> No está: registrarlo ahora
+                              </button>
+                            ) : (
+                              resultados.map(c => (
+                                <button
+                                  key={c.idCliente}
+                                  type="button"
+                                  onClick={() => { setClienteSel(c); setBuscaCliente('') }}
+                                  className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-emerald-50"
+                                >
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm text-gray-900">{c.nombreCompleto || 'Sin nombre'}</p>
+                                    <p className="text-xs text-gray-500">{c.telefono || c.correo || 'sin contacto'}</p>
+                                  </div>
+                                </button>
+                              ))
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
+
+                      {!altaAbierta && (
+                        <button
+                          type="button"
+                          onClick={abrirAlta}
+                          title="Registrar un cliente nuevo"
+                          className="flex shrink-0 items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                        >
+                          <UserPlus size={16} weight="bold" />
+                          <span className="hidden sm:inline">Nuevo</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Alta rápida: nombre + teléfono. Con esto el cliente queda registrado
+                      de verdad y la venta ya le acredita puntos. */}
+                  {!clienteSel && altaAbierta && (
+                    <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <p className="text-xs font-semibold text-gray-700">Registrar cliente nuevo</p>
+                        <button type="button" onClick={() => { setAltaAbierta(false); setNomNuevo(''); setTelNuevo('') }} className="text-gray-400 hover:text-gray-600">
+                          <X size={14} />
+                        </button>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <input className={field} value={nomNuevo} onChange={e => setNomNuevo(e.target.value)} placeholder="Nombre" />
+                        <input className={field} value={telNuevo} onChange={e => setTelNuevo(e.target.value.replace(/\D/g, '').slice(0, 9))} placeholder="Celular (9 dígitos)" inputMode="numeric" />
+                      </div>
+                      <p className="mt-1.5 text-[11px] text-gray-500">
+                        {telNuevo.length === 9
+                          ? '✓ Se registrará al cerrar la venta y sumará puntos.'
+                          : 'El celular es obligatorio para identificarlo y darle puntos.'}
+                      </p>
+                    </div>
+                  )}
+
+                  {!clienteSel && !altaAbierta && (
+                    <p className="mt-1 text-[11px] text-gray-400">
+                      Sin cliente, la venta es <strong>a pie</strong> y no suma puntos de fidelización.
+                    </p>
+                  )}
+                </div>
+
+                {/* Método de pago */}
+                <div>
+                  <label className={label}>Método de pago</label>
+                  <div className="relative">
+                    <select className={`${field} appearance-none pr-9`} value={metodo} onChange={e => setMetodo(e.target.value)}>
+                      {METODOS.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                    <CaretDown size={16} weight="bold" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  </div>
+                </div>
+
+                {metodo !== 'Efectivo' && (
+                  <div>
+                    <label className={label}>N° de operación <span className="text-gray-400 font-normal">· opcional</span></label>
+                    <input className={field} value={operacion} onChange={e => setOperacion(e.target.value)} placeholder="Código de la transacción" />
                   </div>
                 )}
 
-                {/* Alta rápida: nombre + teléfono. Con esto el cliente queda registrado
-                    de verdad y la venta ya le acredita puntos. */}
-                {!clienteSel && altaAbierta && (
-                  <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
-                    <div className="mb-2 flex items-center justify-between">
-                      <p className="text-xs font-semibold text-gray-700">Registrar cliente nuevo</p>
-                      <button type="button" onClick={() => { setAltaAbierta(false); setNomNuevo(''); setTelNuevo('') }} className="text-gray-400 hover:text-gray-600">
-                        <X size={14} />
+                {/* Evidencia */}
+                <div>
+                  <label className={label}><Camera size={14} weight="duotone" /> Evidencia del pago {sinEvidencia ? <span className="text-gray-400 font-normal">· opcional</span> : <span className="text-rose-500 font-semibold">· obligatoria</span>}</label>
+                  {evidencia ? (
+                    <div className="relative mt-1 inline-block">
+                      <img src={evidencia} alt="evidencia" className="rounded-xl max-h-36 border border-gray-200" />
+                      <button onClick={() => setEvidencia('')} aria-label="Quitar" className="absolute -top-2 -right-2 grid place-items-center w-6 h-6 rounded-full bg-white shadow border border-gray-200 text-gray-500 hover:text-rose-500">
+                        <X size={12} weight="bold" />
                       </button>
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <input className={field} value={nomNuevo} onChange={e => setNomNuevo(e.target.value)} placeholder="Nombre" />
-                      <input className={field} value={telNuevo} onChange={e => setTelNuevo(e.target.value.replace(/\D/g, '').slice(0, 9))} placeholder="Celular (9 dígitos)" inputMode="numeric" />
-                    </div>
-                    <p className="mt-1.5 text-[11px] text-gray-500">
-                      {telNuevo.length === 9
-                        ? '✓ Se registrará al cerrar la venta y sumará puntos.'
-                        : 'El celular es obligatorio para identificarlo y darle puntos.'}
-                    </p>
-                  </div>
-                )}
+                  ) : (
+                    <label className="mt-1 flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-gray-200 rounded-xl py-6 text-center cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/30 transition">
+                      <Camera size={22} weight="duotone" className="text-gray-400" />
+                      <span className="text-sm text-gray-500">{subiendo ? 'Subiendo…' : 'Toca para adjuntar la foto del cobro'}</span>
+                      <input type="file" accept="image/*" onChange={subir} className="hidden" />
+                    </label>
+                  )}
 
-                {!clienteSel && !altaAbierta && (
-                  <p className="mt-1 text-[11px] text-gray-400">
-                    Sin cliente, la venta es <strong>a pie</strong> y no suma puntos de fidelización.
-                  </p>
-                )}
-              </div>
-
-              {/* Método de pago */}
-              <div>
-                <label className={label}>Método de pago</label>
-                <div className="relative">
-                  <select className={`${field} appearance-none pr-9`} value={metodo} onChange={e => setMetodo(e.target.value)}>
-                    {METODOS.map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                  <CaretDown size={16} weight="bold" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  {/* Sin evidencia: trabajador = pendiente; admin = registrar sin evidencia */}
+                  {!evidencia && (
+                    <label className="mt-2 flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
+                      <input type="checkbox" checked={sinEvidencia} onChange={e => setSinEvidencia(e.target.checked)} className="mt-0.5 rounded border-gray-300" />
+                      <span>
+                        {(mode === 'admin' && ventaMia)
+                          ? 'Registrar sin evidencia (queda registrada con fecha y hora).'
+                          : 'Pendiente de evidencia: la subo después. La venta NO cuenta hasta adjuntar la foto.'}
+                      </span>
+                    </label>
+                  )}
                 </div>
-              </div>
-
-              {metodo !== 'Efectivo' && (
-                <div>
-                  <label className={label}>N° de operación <span className="text-gray-400 font-normal">· opcional</span></label>
-                  <input className={field} value={operacion} onChange={e => setOperacion(e.target.value)} placeholder="Código de la transacción" />
                 </div>
-              )}
-
-              {/* Evidencia */}
-              <div>
-                <label className={label}><Camera size={14} weight="duotone" /> Evidencia del pago {sinEvidencia ? <span className="text-gray-400 font-normal">· opcional</span> : <span className="text-rose-500 font-semibold">· obligatoria</span>}</label>
-                {evidencia ? (
-                  <div className="relative mt-1 inline-block">
-                    <img src={evidencia} alt="evidencia" className="rounded-xl max-h-36 border border-gray-200" />
-                    <button onClick={() => setEvidencia('')} aria-label="Quitar" className="absolute -top-2 -right-2 grid place-items-center w-6 h-6 rounded-full bg-white shadow border border-gray-200 text-gray-500 hover:text-rose-500">
-                      <X size={12} weight="bold" />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="mt-1 flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-gray-200 rounded-xl py-6 text-center cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/30 transition">
-                    <Camera size={22} weight="duotone" className="text-gray-400" />
-                    <span className="text-sm text-gray-500">{subiendo ? 'Subiendo…' : 'Toca para adjuntar la foto del cobro'}</span>
-                    <input type="file" accept="image/*" onChange={subir} className="hidden" />
-                  </label>
-                )}
-
-                {/* Sin evidencia: trabajador = pendiente; admin = registrar sin evidencia */}
-                {!evidencia && (
-                  <label className="mt-2 flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
-                    <input type="checkbox" checked={sinEvidencia} onChange={e => setSinEvidencia(e.target.checked)} className="mt-0.5 rounded border-gray-300" />
-                    <span>
-                      {(mode === 'admin' && ventaMia)
-                        ? 'Registrar sin evidencia (queda registrada con fecha y hora).'
-                        : 'Pendiente de evidencia: la subo después. La venta NO cuenta hasta adjuntar la foto.'}
-                    </span>
-                  </label>
-                )}
               </div>
             </div>
 
@@ -484,6 +553,16 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
           </>
         )}
       </motion.div>
+
+      {/* T6 — La invitación se pinta ENCIMA de la venta ya cobrada. Al cerrarla,
+          se cierra también la venta. Así el barbero tiene la pantalla lista para
+          enseñársela al cliente, que sigue delante del mostrador. */}
+      {invitacion && (
+        <InvitacionTarjetaModal
+          fidelizacion={invitacion}
+          onClose={() => { setInvitacion(null); onDone() }}
+        />
+      )}
     </div>
   )
 }

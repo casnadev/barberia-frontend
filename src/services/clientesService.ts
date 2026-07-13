@@ -16,6 +16,18 @@ import { apiClient } from './apiClient'
 
 export interface Cliente {
   idCliente?: number
+
+  /**
+   * Id REAL en la tabla Clientes (la identidad válida para fidelización), o null
+   * si esta persona solo aparece por reservas o por importación.
+   *
+   * `idCliente` (arriba) NO identifica a nadie en este listado: es una vista
+   * AGREGADA (reservas + importados + clientes reales) y ese campo lleva el id del
+   * registro de BLOQUEO (o 0, o un negativo). Para abrir el monedero o acreditar
+   * puntos se usa SIEMPRE `idClienteReal`.
+   */
+  idClienteReal?: number | null
+
   telefono: string
   nombreCompleto: string
   correo?: string
@@ -178,5 +190,63 @@ export const clientesService = {
       const res = await apiClient.get(`/api/Clientes/real-por-telefono?telefono=${encodeURIComponent(telefono)}`)
       return res.data?.data ?? null
     } catch { return null }
+  },
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// T4 — POSIBLES DUPLICADOS
+//
+// El sistema SUGIERE. El ADMIN decide. Nunca se fusiona solo.
+// No es prudencia excesiva: "Juan Pérez / 999111222 / juan@gmail" y
+// "Juan Pérez / 999333444 / juan@gmail" pueden ser dos hermanos que comparten
+// el correo de casa. Fusionarlos movería PUNTOS —que valen dinero— entre dos
+// personas distintas, y eso no se deshace.
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface CandidatoDuplicado {
+  idCliente: number
+  nombreCompleto?: string | null
+  telefono?: string | null
+  correo?: string | null
+  fechaCreacion: string
+  /** Lo que se PERDERÍA si esta ficha se descarta. */
+  reservas: number
+  ventas: number
+  saldoPuntos: number
+  puntosAcumHistorico: number
+  tieneTarjetaWallet: boolean
+  /** El cliente cerró su cuenta. */
+  dadoDeBaja: boolean
+}
+
+export interface GrupoDuplicado {
+  /** "Mismo teléfono" | "Mismo correo" | "Mismo nombre, contactos distintos" */
+  motivo: string
+  coincidencia: string
+  /** "Alto" = las dos fichas tienen puntos o ventas → una fusión mal hecha es irreversible. */
+  riesgo: string
+  fichas: CandidatoDuplicado[]
+}
+
+export interface ResultadoFusion {
+  idPrincipal: number
+  reservasMovidas: number
+  ventasMovidas: number
+  monederosMovidos: number
+  puntosSumados: number
+  mensaje: string
+}
+
+export const duplicadosService = {
+  listar: async (): Promise<GrupoDuplicado[]> => {
+    const res = await apiClient.get('/api/Clientes/duplicados')
+    const d = res?.data?.data ?? res?.data
+    return Array.isArray(d) ? d : []
+  },
+
+  /** El Admin elige cuál sobrevive. Irreversible. */
+  fusionar: async (idPrincipal: number, idDuplicado: number): Promise<ResultadoFusion> => {
+    const res = await apiClient.post('/api/Clientes/fusionar', { idPrincipal, idDuplicado })
+    return res?.data?.data ?? res?.data
   },
 }

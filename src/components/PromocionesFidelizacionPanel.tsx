@@ -137,7 +137,7 @@ export function PromocionesFidelizacionPanel({ multiplicadorBase = 1 }: { multip
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Confetti size={18} weight="duotone" className="text-emerald-600" />
-          <h3 className="font-semibold text-gray-900">Promociones de puntos</h3>
+          <h3 className="font-semibold text-gray-900">Días de puntos extra</h3>
         </div>
         <button
           onClick={abrirNueva}
@@ -158,9 +158,13 @@ export function PromocionesFidelizacionPanel({ multiplicadorBase = 1 }: { multip
           <CircleNotch size={22} className="animate-spin" />
         </div>
       ) : promos.length === 0 && editando === null ? (
-        <p className="py-8 text-center text-sm text-gray-500">
-          Aún no tienes promociones. Crea una para dar puntos dobles en tus días flojos.
-        </p>
+        <div className="py-8 text-center">
+          <p className="text-sm font-medium text-gray-700">No hay promociones programadas.</p>
+          <p className="mx-auto mt-1 max-w-xs text-xs text-gray-500">
+            Crea promociones para aumentar visitas en tus días de baja demanda
+            (ej. “Martes doble puntaje”).
+          </p>
+        </div>
       ) : (
         <div className="mt-4 space-y-2">
           {promos.map(p => (

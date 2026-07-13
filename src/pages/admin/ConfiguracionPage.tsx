@@ -1071,8 +1071,12 @@ export function ConfiguracionPage() {
 
       {/* Programa de puntos (fidelización): config, niveles, recompensas y promociones.
           El panel guarda por su cuenta, por eso no lleva footer de "Guardar". */}
-      <SeccionSheet open={sheet === 'fidelizacion'} onClose={cerrar} titulo="Programa de puntos"
-        subtitulo="Fidelización: niveles, recompensas y promociones">
+      {/* `ancho`: el programa de fidelización tiene acumulación, niveles, recompensas,
+          promociones, simulador y vista previa de la tarjeta. En una hoja de 512 px eso
+          es un scroll interminable con media pantalla vacía al lado. */}
+      <SeccionSheet open={sheet === 'fidelizacion'} onClose={cerrar} ancho
+        titulo="Programa de fidelización"
+        subtitulo="Niveles, recompensas, promociones y la tarjeta de tu cliente">
         <ProgramaFidelizacionPanel />
       </SeccionSheet>
     </>

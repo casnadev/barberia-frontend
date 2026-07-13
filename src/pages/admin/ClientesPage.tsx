@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { DuplicadosModal } from '@/components/DuplicadosModal'
 import { clientesService, Cliente } from '@/services/clientesService'
 import { MonederoClienteCard } from '@/components/MonederoClienteCard'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/ConfirmDialog'
 import { mensajeError } from '@/utils/apiError'
-import { Eye, LockOpen as Unlock, MagnifyingGlass as Search, Phone, Envelope as Mail, Calendar, Users, Info, X, Gift, Plus, Trash as Trash2, ImageSquare as ImagePlus, ShieldCheck, Pencil, EyeSlash as EyeOff, DownloadSimple as Download, FileXls as FileSpreadsheet, FileText, CircleNotch as Loader2, PaperPlaneRight as Send, UploadSimple as Upload, UserPlus, CheckCircle as CheckCircle2, WarningCircle as AlertCircle, MapPin, CaretDown as ChevronDown } from '@phosphor-icons/react'
+import { Eye, LockOpen as Unlock, MagnifyingGlass as Search, Phone, Envelope as Mail, Calendar, Users, Info, X, Gift, Plus, Trash as Trash2, ImageSquare as ImagePlus, ShieldCheck, Pencil, EyeSlash as EyeOff, DownloadSimple as Download, FileXls as FileSpreadsheet, FileText, CircleNotch as Loader2, PaperPlaneRight as Send, UploadSimple as Upload, UserPlus, CheckCircle as CheckCircle2, WarningCircle as AlertCircle, MapPin, CaretDown as ChevronDown, ArrowsMerge } from '@phosphor-icons/react'
 import { novedadesService, type Novedad } from '@/services/novedadesService'
 import { campanasService, type CoberturaCampana } from '@/services/campanasService'
 import { buildImageUrl, getActiveTenant } from '@/services/apiClient'
@@ -26,6 +27,8 @@ export function ClientesPage() {
   const [visibleMobile, setVisibleMobile] = useState(8)   // "Ver más" solo en móvil
   const [novedadOpen, setNovedadOpen] = useState(false)   // modal "Nueva novedad"
   const [moderacionOpen, setModeracionOpen] = useState(false) // modal "Moderación"
+  // T4 — Posibles duplicados. El sistema sugiere, el Admin decide.
+  const [duplicadosOpen, setDuplicadosOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)     // modal "Importar clientes"
 
   // Búsqueda con debounce (500ms) que alimenta la query-key.
@@ -259,7 +262,10 @@ export function ClientesPage() {
           <button onClick={() => setImportOpen(true)} className="sm:order-2 w-full sm:w-auto inline-flex items-center justify-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl px-3 py-2 text-sm font-semibold transition">
             <Upload width={16} height={16} /> <span className="truncate">Importar</span>
           </button>
-          <button onClick={() => setModeracionOpen(true)} className="sm:order-3 w-full sm:w-auto inline-flex items-center justify-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl px-3 py-2 text-sm font-semibold transition">
+          <button onClick={() => setDuplicadosOpen(true)} className="sm:order-3 w-full sm:w-auto inline-flex items-center justify-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl px-3 py-2 text-sm font-semibold transition" title="Fichas que podrían ser la misma persona">
+            <ArrowsMerge width={16} height={16} /> <span className="truncate">Duplicados</span>
+          </button>
+          <button onClick={() => setModeracionOpen(true)} className="sm:order-4 w-full sm:w-auto inline-flex items-center justify-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl px-3 py-2 text-sm font-semibold transition">
             <ShieldCheck width={16} height={16} /> <span className="truncate">Moderación</span>
           </button>
           {/* Nueva promoción: en móvil ocupa todo el ancho debajo; en desktop va en la fila */}
@@ -514,7 +520,7 @@ export function ClientesPage() {
                 identifica a nadie (puede ser 0 o negativo). El monedero se abre con el
                 cliente REAL, resuelto por teléfono. */}
             <div style={{ padding: '0 20px 4px' }}>
-              <MonederoDelCliente telefono={selectedCliente.telefono} />
+              <MonederoDelCliente telefono={selectedCliente.telefono} idClienteReal={selectedCliente.idClienteReal} />
             </div>
 
             <div className={s.modalActions}>
@@ -580,6 +586,14 @@ export function ClientesPage() {
       })()}
       {novedadOpen && <NovedadModal onClose={() => setNovedadOpen(false)} />}
       {moderacionOpen && <ModeracionNovedadesModal onClose={() => setModeracionOpen(false)} />}
+
+      {/* T4 — Al fusionar, el listado cambia: hay que recargarlo. */}
+      {duplicadosOpen && (
+        <DuplicadosModal
+          onClose={() => setDuplicadosOpen(false)}
+          onFusionado={() => { loadClientes() }}
+        />
+      )}
       {importOpen && (
         <ImportarClientesModal
           sedeActual={sedeFiltro && sedeFiltro > 0 ? sedeFiltro : (sedes[0]?.idSede ?? 0)}
@@ -1236,12 +1250,19 @@ function ImportarClientesModal({
  * `idCliente` NO es un cliente real. La identidad válida para fidelización es el
  * TELÉFONO, así que lo resolvemos contra la tabla real antes de pintar nada.
  */
-function MonederoDelCliente({ telefono }: { telefono?: string }) {
-  const [idReal, setIdReal] = useState<number | null>(null)
-  const [cargando, setCargando] = useState(true)
+function MonederoDelCliente({ telefono, idClienteReal }: { telefono?: string; idClienteReal?: number | null }) {
+  const [idReal, setIdReal] = useState<number | null>(idClienteReal ?? null)
+  const [cargando, setCargando] = useState(!idClienteReal)
 
   useEffect(() => {
     let vivo = true
+
+    // El listado YA trae la identidad REAL (la resuelve el backend a partir de las
+    // ventas y los monederos del negocio). Si viene, no hay que preguntar nada:
+    // abrimos su monedero directamente.
+    if (idClienteReal) { setIdReal(idClienteReal); setCargando(false); return }
+
+    // Fallback: resolver por TELÉFONO (la llave natural del cliente).
     const tel = (telefono || '').trim()
     if (!tel) { setIdReal(null); setCargando(false); return }
     setCargando(true)
@@ -1249,16 +1270,25 @@ function MonederoDelCliente({ telefono }: { telefono?: string }) {
       .then((c) => { if (vivo) setIdReal(c?.idCliente ?? null) })
       .finally(() => { if (vivo) setCargando(false) })
     return () => { vivo = false }
-  }, [telefono])
+  }, [telefono, idClienteReal])
 
   if (cargando) return null
 
   if (!idReal) {
+    // OJO con el mensaje: lo que falta NO es "el celular", es un Cliente REAL.
+    // El monedero cuelga de IdCliente, no del teléfono. Pasa que una reserva
+    // anónima NO crea Cliente (ReservaService: `IdCliente = idClienteAutenticado`,
+    // anónimo → null): solo deja snapshots de nombre/teléfono/correo. Por eso
+    // alguien puede tener 11 reservas y ningún registro real detrás.
+    //
+    // Y el celular sí es la llave para darle de alta: en el mostrador el barbero
+    // no puede identificarlo por correo, y Google Wallet nunca nos entrega ni el
+    // correo ni el teléfono del usuario. Por eso pedimos el celular.
     return (
-      <p style={{ fontSize: 12, color: '#9ca3af', padding: '8px 0' }}>
+      <p style={{ fontSize: 12, color: '#9ca3af', padding: '8px 0', lineHeight: 1.5 }}>
         {telefono?.trim()
-          ? 'Este cliente aún no está en el programa de puntos.'
-          : 'Sin celular registrado: no se le pueden acreditar puntos.'}
+          ? 'Este cliente aún no está en el programa de puntos. Se inscribe solo al cobrarle una venta con su celular, o escaneando el QR del local.'
+          : 'Este cliente reservó sin dejar celular, así que todavía no tiene una ficha real a la que acreditarle puntos. Pídele el celular en su próxima visita y regístralo desde la Venta rápida — o que escanee el QR del local.'}
       </p>
     )
   }

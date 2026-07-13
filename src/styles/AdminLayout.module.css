@@ -27,7 +27,13 @@
 
 /* ===== Columna principal ===== */
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.content { flex: 1; width: 100%; max-width: var(--page-max, 1380px); margin: 0 auto; padding: 28px 24px 64px; }
+/* `overflow-x: clip` es la RED DE SEGURIDAD: si algún día otra página vuelve a
+   desbordarse, se recorta ella sola en vez de desplazar toda la app y dejar el
+   header medio fuera de la pantalla. No sustituye a arreglar la causa (ver
+   Dashboard.module.css), pero evita que un fallo local rompa el marco entero.
+   Se usa `clip` y no `hidden` porque `hidden` crearía un contexto de scroll y
+   rompería los `position: sticky` de dentro. */
+.content { flex: 1; width: 100%; min-width: 0; max-width: var(--page-max, 1380px); margin: 0 auto; padding: 28px 24px 64px; overflow-x: clip; }
 
 /* ===== Barra inferior (mobile) ===== */
 .bottomBar { display: none; }

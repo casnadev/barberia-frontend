@@ -43,6 +43,29 @@ const estadoMeta = (estado: string): { label: string; cls: string } => {
   }
 }
 
+/**
+ * COLOR DE LA TARJETA según el estado.
+ *
+ * Antes todas las ventas eran una tarjeta blanca idéntica y el único indicio del
+ * estado era un badge pequeño arriba. En una rejilla de 12 ventas eso obliga a
+ * LEER cada una para saber cuál está pendiente. El color se ve sin leer: barra
+ * lateral + fondo tenue + borde a juego.
+ */
+const estadoTarjeta = (estado: string): string => {
+  switch (estado) {
+    case 'PendienteAprobacion':
+      return 'border-amber-200 bg-amber-50/40 hover:border-amber-300 border-l-4 border-l-amber-400'
+    case 'Registrada':
+      return 'border-emerald-200 bg-emerald-50/30 hover:border-emerald-300 border-l-4 border-l-emerald-500'
+    case 'Rechazada':
+      return 'border-rose-200 bg-rose-50/30 hover:border-rose-300 border-l-4 border-l-rose-400'
+    case 'Anulada':
+      return 'border-gray-200 bg-gray-50 opacity-70 hover:opacity-100 border-l-4 border-l-gray-300'
+    default:
+      return 'border-gray-200 bg-white hover:border-blue-200'
+  }
+}
+
 const RANGOS = [
   { key: 'hoy', label: 'Hoy' },
   { key: 'semana', label: 'Semana' },
@@ -221,7 +244,7 @@ export function VentasPage() {
             const meta = estadoMeta(v.estado)
             return (
               <button key={v.idVenta} onClick={() => abrirDetalle(v)}
-                className="text-left bg-white border border-gray-200 rounded-2xl p-4 hover:shadow-md hover:border-blue-200 transition">
+                className={`text-left border rounded-2xl p-4 hover:shadow-md transition ${estadoTarjeta(v.estado)}`}>
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${meta.cls}`}>{meta.label}</span>
                   <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-500">

@@ -591,6 +591,31 @@ export function AgendaBoard({ mode = 'admin', trabajadorPropio, onAtenderTrabaja
                     <span><strong>Motivo:</strong> {detail.motivoCancelacion}</span>
                   </div>
                 )}
+
+                {/* AUTORÍA — los mismos datos que ya enseñaba la VENTA: quién la creó
+                    y quién la aceptó. Antes no se podían mostrar porque el dato NO
+                    EXISTÍA en la tabla Reservas.
+
+                    Si `creadaPor` viene vacío, no hubo un usuario del panel detrás (la
+                    reservó el cliente), o es una reserva HISTÓRICA. El `origen` sí es
+                    real y dice lo que importa. */}
+                <div className={s.dRow} style={{ alignItems: 'flex-start', paddingTop: 8, borderTop: '1px solid #f1f2f4' }}>
+                  <User width={16} height={16} style={{ marginTop: 2, flexShrink: 0 }} />
+                  <span>
+                    <strong>Creada por:</strong>{' '}
+                    {(detail as any).creadaPor
+                      || (['web', 'micrositio'].includes(((detail as any).origen || '').toLowerCase())
+                        ? 'El cliente (reserva online)'
+                        : 'Sin registro')}
+                  </span>
+                </div>
+
+                {(detail as any).confirmadaPor && (
+                  <div className={s.dRow} style={{ alignItems: 'flex-start' }}>
+                    <Check width={16} height={16} style={{ marginTop: 2, flexShrink: 0 }} />
+                    <span><strong>Confirmada por:</strong> {(detail as any).confirmadaPor}</span>
+                  </div>
+                )}
               </div>
               <div className={s.detailActions}>
                 {esTrabajador ? (

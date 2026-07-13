@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Scissors, CalendarDots as CalendarClock, Wallet, Globe, Star, ChartBar as BarChart3, Check, X, ShieldCheck, ArrowRight, ArrowLeft, Plus, Minus, List as Menu, Heart, Envelope as Mail, Phone, InstagramLogo as Instagram, FacebookLogo as Facebook, YoutubeLogo as Youtube, MapPin } from '@phosphor-icons/react'
+import { Scissors, CalendarDots as CalendarClock, Wallet, Globe, Star, ChartBar as BarChart3, Check, X, ShieldCheck, ArrowRight, ArrowLeft, Plus, Minus, List as Menu, Heart, Envelope as Mail, Phone, InstagramLogo as Instagram, FacebookLogo as Facebook, YoutubeLogo as Youtube, MapPin, Sun, Moon } from '@phosphor-icons/react'
 import { landingService, type SedeDestacada } from '@/services/landingService'
 import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
 import { planesService, type PlanPublico } from '@/services/planesService'
@@ -75,6 +75,33 @@ export default function LandingPage() {
   const [faq, setFaq] = useState<number | null>(0)
 
   const [sedes, setSedes] = useState<SedeDestacada[]>([])
+  // TEMA de la landing (claro / oscuro), elegible por el visitante y recordado.
+  // Se arranca con la preferencia del SISTEMA: si tiene el móvil en modo oscuro,
+  // la landing sale oscura. Preguntar antes de imponer.
+  const [tema, setTema] = useState<'dark' | 'light'>(() => {
+    try {
+      const guardado = localStorage.getItem('barberpe:landing-tema')
+      if (guardado === 'light' || guardado === 'dark') return guardado
+    } catch { /* storage bloqueado: seguimos */ }
+    return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+  })
+
+  /**
+   * El logo de barber.pe es BLANCO: sobre el tema claro desaparecía (se veía un
+   * hueco donde debía estar la marca). Ya existía `barber-logo-black.png` en
+   * /public, así que se cambia el archivo, no el color con un filtro — un filtro
+   * también invertiría el punto azul de la marca.
+   */
+  const logoSrc = tema === 'light' ? '/barber-logo-black.png' : '/barber-logo.png'
+
+  const alternarTema = () => {
+    setTema((t) => {
+      const nuevo = t === 'dark' ? 'light' : 'dark'
+      try { localStorage.setItem('barberpe:landing-tema', nuevo) } catch { /* ignorar */ }
+      return nuevo
+    })
+  }
+
   const [planes, setPlanes] = useState<PlanPublico[]>([])
   const [resenas, setResenas] = useState<ResenaDestacada[]>([])
   const [intervalo, setIntervalo] = useState<'mensual' | 'anual'>('mensual')
@@ -167,24 +194,36 @@ export default function LandingPage() {
   const navLinks: [string, string][] = [['Características', 'ventajas'], ['Planes/Precios', 'precios'], ['Contacto', 'contacto']]
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-theme={tema}>
       {/* ══════════ NAV ══════════ */}
       <header className={`${styles.nav} ${scrolled ? styles.navOn : ''}`}>
         <div className={styles.navIn}>
           <span className={styles.logo} onClick={() => irA('top')}>
-            <img src="/barber-logo.png" alt="Barber.PE" className={styles.logoImg} />
+            <img src={logoSrc} alt="Barber.PE" className={styles.logoImg} />
           </span>
           <nav className={styles.navLinks}>
             {navLinks.map(([n, id]) => <a key={id} onClick={() => irA(id)}>{n}</a>)}
           </nav>
           <div className={styles.navCta}>
+            {/* Tema claro / oscuro. Discreto, a la izquierda del acceso. */}
+            <button
+              className={styles.themeBtn}
+              onClick={alternarTema}
+              aria-label={tema === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+              title={tema === 'dark' ? 'Tema claro' : 'Tema oscuro'}
+            >
+              {tema === 'dark' ? <Sun size={17} weight="fill" /> : <Moon size={17} weight="fill" />}
+            </button>
+
             {user ? (
               <AccountMenu variant="plain" />
             ) : (
-              <>
-                <Link to="/login" className={styles.linkLogin}>Iniciar sesión</Link>
-                <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={abrirDemo}>Registrarse</button>
-              </>
+              /* Antes había DOS accesos: un enlace "Iniciar sesión" (que en móvil ni se
+                 veía) y un botón azul relleno "Registrarse" que competía con el logo y
+                 era lo más llamativo de la pantalla — cuando la acción que de verdad
+                 queremos es el "Inicia tu prueba GRATIS" del hero.
+                 Ahora: UN solo acceso, sutil, con borde en vez de relleno. */
+              <Link to="/login" className={styles.btnLogin}>Iniciar sesión</Link>
             )}
             {!user && (
               <button className={styles.hamb} aria-label="Menú" onClick={() => setMenuOpen((v) => !v)}>{menuOpen ? <X size={22} /> : <Menu size={22} />}</button>
@@ -211,10 +250,10 @@ export default function LandingPage() {
             )}
             <Reveal><span className={styles.pill}>🇵🇪 Software para barberías · hecho en Perú</span></Reveal>
             <Reveal delay={0.05}>
-              <h1>Más clientes en tu barbería <span className={styles.hl}>automatizando las citas por WhatsApp</span></h1>
+              <h1>Más clientes en tu barbería, <span className={styles.hl}>tu agenda llena con citas automáticas, recordatorios y fidelización</span></h1>
             </Reveal>
             <Reveal delay={0.1}>
-              <p className={styles.heroSub}>Tus clientes reservan, confirman y reprograman solos las 24 horas. Tú recibes la cita en tu agenda sin mover un dedo — en soles y sin comisiones.</p>
+              <p className={styles.heroSub}>Tus clientes reservan, confirman y reprograman las 24 horas, y tú recibes la cita en tu agenda sin mover un dedo.</p>
             </Reveal>
             <Reveal delay={0.15}>
               <div className={styles.heroCta}>
@@ -397,7 +436,7 @@ export default function LandingPage() {
           {tarjetas.some((p) => p.precioAnualPEN > 0) && (
             <Reveal delay={0.08}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ display: 'inline-flex', gap: 4, padding: 5, background: '#141416', border: '1px solid #27272c', borderRadius: 999, boxShadow: 'inset 0 1px 3px rgba(0,0,0,.45)' }}>
+                <div style={{ display: 'inline-flex', gap: 4, padding: 5, background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 999 }}>
                   {(['mensual', 'anual'] as const).map((modo) => {
                     const activo = intervalo === modo
                     return (
@@ -409,7 +448,7 @@ export default function LandingPage() {
                           fontWeight: 650, fontSize: '.92rem', letterSpacing: '.01em', transition: 'all .2s ease',
                           ...(activo
                             ? { background: 'linear-gradient(135deg,#6f9bff 0%,#2f6bff 52%,#1f57e6 100%)', color: '#fff', boxShadow: '0 8px 22px -8px rgba(47,107,255,.7), inset 0 1px 0 rgba(255,255,255,.28)' }
-                            : { background: 'transparent', color: '#b2b5bc' }),
+                            : { background: 'transparent', color: 'var(--ink-2)' }),
                         }}
                       >
                         {modo === 'mensual' ? 'Mensual' : 'Anual'}
@@ -522,7 +561,7 @@ export default function LandingPage() {
         <div className={styles.wrap}>
           <div className={styles.footTop}>
             <div className={styles.footBrand}>
-              <span className={styles.logo}><img src="/barber-logo.png" alt="Barber.PE" className={styles.logoImg} /></span>
+              <span className={styles.logo}><img src={logoSrc} alt="Barber.PE" className={styles.logoImg} /></span>
               <p>Automatiza tus reservas en WhatsApp, sin complicaciones.</p>
               <div className={styles.social}>
                 <a href="#" aria-label="Facebook"><Facebook size={18} /></a>
@@ -530,17 +569,43 @@ export default function LandingPage() {
                 <a href="#" aria-label="YouTube"><Youtube size={18} /></a>
               </div>
             </div>
+            {/* ── FOOTER LEGAL ──────────────────────────────────────────────────
+                NO se puede reducir a un solo enlace. En Perú, estos TRES son
+                obligatorios y deben estar visibles en todas las páginas:
+
+                  • Libro de Reclamaciones  → Ley 29571 + DS 011-2011-PCM.
+                    INDECOPI fiscaliza que esté a MENOS DE 2 CLICS de la portada.
+                    No tenerlo es infracción GRAVE (multas desde 1 UIT).
+                  • Términos y Condiciones  → contrato de adhesión (DS 006-2014-PCM).
+                  • Política de Privacidad  → Ley 29733 de Protección de Datos.
+
+                "Política de uso aceptable" NO es obligatoria, pero es sana: es lo que
+                te permite echar a quien abuse del servicio.
+
+                "Soporte" tampoco es obligatoria por ley — pero SÍ la exige Google
+                Wallet como "URL de soporte al cliente".
+
+                El "Contacto" que había aquí era un ANCLA MUERTA (#contacto): hacía
+                scroll a la banda de "lleva tu barbería al siguiente nivel", donde no
+                hay ni un dato de contacto. Ahora apunta a /soporte, que es real. */}
             <nav className={styles.footLinks}>
+              <Link to="/soporte">Soporte y contacto</Link>
               <Link to="/terminos">Términos y condiciones</Link>
               <Link to="/privacidad">Política de privacidad</Link>
               <Link to="/uso-aceptable">Política de uso aceptable</Link>
               <Link to="/libro-reclamaciones">Libro de reclamaciones</Link>
-              <a onClick={() => irA('contacto')}>Contacto</a>
             </nav>
           </div>
           <div className={styles.footBottom}>
             <span>© {new Date().getFullYear()} Barber.pe — Todos los derechos reservados.</span>
-            <span>Computer Solutions L&amp;E E.I.R.L.</span>
+            {/* Fuera el marcador del RUC (lo pediste). Ojo: la Ley 29571 art. 4 exige
+                que el proveedor esté PLENAMENTE IDENTIFICADO (razón social, RUC,
+                domicilio y contacto). Como mínimo, eso tiene que estar en los Términos
+                y en el Libro de Reclamaciones — que sí están enlazados aquí arriba. */}
+            <span>
+              Computer Solutions L&amp;E E.I.R.L. ·{' '}
+              <a href="mailto:contacto@barber.pe" style={{ color: 'inherit' }}>contacto@barber.pe</a>
+            </span>
           </div>
         </div>
       </footer>

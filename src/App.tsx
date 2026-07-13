@@ -38,10 +38,23 @@ const PrivacidadPage = lazy(() => import('@/pages/legal/PrivacidadPage'))
 const UsoAceptablePage = lazy(() => import('@/pages/legal/UsoAceptablePage'))
 const DeclaracionNegocioPage = lazy(() => import('@/pages/legal/DeclaracionNegocioPage'))
 const LibroReclamacionesPage = lazy(() => import('@/pages/legal/LibroReclamacionesPage'))
+// Página de SOPORTE. La exige la consola de Google Pay & Wallet ("URL de soporte al
+// cliente"): un sitio real y público donde el usuario de la tarjeta pide ayuda.
+// El "Contacto" de la landing NO vale: es un ancla (#contacto) a un formulario de
+// captación de leads, y una URL con # puede que Google ni la acepte.
+const SoportePage = lazy(() => import('@/pages/legal/SoportePage'))
 const TrabajadorMiAgenda = lazy(() => import('@/pages/trabajador/TrabajadorMiAgenda').then(m => ({ default: m.TrabajadorMiAgenda })))
 const CompletarPerfilAdmin = lazy(() => import('@/pages/CompletarPerfilAdmin').then(m => ({ default: m.CompletarPerfilAdmin })))
 const VerificarCorreoPage = lazy(() => import('@/pages/VerificarCorreoPage').then(m => ({ default: m.VerificarCorreoPage })))
 const LandingPage = lazy(() => import('@/pages/LandingPage'))
+// Fidelización PÚBLICA (sin sesión; funciona también en el subdominio de la sede):
+//   /unirme/:idSede    → landing de alta. A donde apunta el QR del CARTEL del local
+//                        (el mismo QR para todos: no puede llevar una tarjeta hecha).
+//   /monedero/:codigo  → tarjeta del cliente. Cualquier teléfono, sin app y sin
+//                        Google Wallet (cubre también a los iPhone).
+// NO están en RUTAS_PANEL, así que no se redirigen al host del panel.
+const UnirmePage = lazy(() => import('@/pages/publico/UnirmePage').then(m => ({ default: m.UnirmePage })))
+const MonederoPublicoPage = lazy(() => import('@/pages/publico/MonederoPublicoPage').then(m => ({ default: m.MonederoPublicoPage })))
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURACIÓN DE HOSTS
@@ -394,6 +407,11 @@ export function App() {
             <Route path="/uso-aceptable" element={<UsoAceptablePage />} />
             <Route path="/declaracion" element={<DeclaracionNegocioPage />} />
             <Route path="/libro-reclamaciones" element={<LibroReclamacionesPage />} />
+            <Route path="/soporte" element={<SoportePage />} />
+
+            {/* FIDELIZACIÓN PÚBLICA */}
+            <Route path="/unirme/:idSede" element={<UnirmePage />} />
+            <Route path="/monedero/:codigo" element={<MonederoPublicoPage />} />
 
             {/* RESERVAR PÚBLICA */}
             <Route path="/reservar/:idSede" element={<ReservaClientePage />} />

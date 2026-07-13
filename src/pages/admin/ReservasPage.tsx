@@ -4,7 +4,7 @@ import { reservasService, Reserva } from '@/services/reservasService'
 import { SkeletonRows } from '@/components/Skeleton'
 import { FiltroTrabajador } from '@/components/FiltroTrabajador'
 import { toast } from 'sonner'
-import { Check, Checks as CheckCheck, X, Clock, User, Phone, Envelope as Mail, Calendar, Scissors, MagnifyingGlass as Search, CalendarDots as CalendarDays, CurrencyDollar as DollarSign, CaretLeft as ChevronLeft, CaretRight as ChevronRight } from '@phosphor-icons/react'
+import { Check, Checks as CheckCheck, X, Clock, User, Phone, Envelope as Mail, Calendar, Scissors, MagnifyingGlass as Search, CalendarDots as CalendarDays, CurrencyDollar as DollarSign, CaretLeft as ChevronLeft, CaretRight as ChevronRight, UserPlus as UserPlusIcon } from '@phosphor-icons/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { mensajeError } from '@/utils/apiError'
 import { citaYaEmpezo, MSG_CITA_NO_LLEGA } from '@/utils/fecha'
@@ -64,7 +64,29 @@ const datos = (reserva: Reserva) => {
     estadoRaw: reserva.estado || 'Desconocido',
     est: (reserva.estado || '').toLowerCase(),
     estadoPago: (reserva as any).estadoPago as string | undefined,
+
+    // AUTORÍA — los mismos datos que ya enseñaba la VENTA.
+    creadaPor: x.creadaPor as string | undefined,
+    confirmadaPor: x.confirmadaPor as string | undefined,
+    origen: (x.origen || '') as string,
   }
+}
+
+/**
+ * Quién creó la reserva, en texto.
+ *
+ * Si `creadaPor` viene vacío es porque NO hubo un usuario del panel detrás: la
+ * reservó el propio cliente desde la web. O porque es una reserva HISTÓRICA —
+ * nadie guardó ese dato hasta ahora y no hay de dónde sacarlo.
+ *
+ * En los dos casos, el `origen` sí es un dato real y dice lo importante.
+ */
+const textoCreadaPor = (creadaPor?: string, origen?: string) => {
+  if (creadaPor) return creadaPor
+  const o = (origen || '').toLowerCase()
+  if (o === 'web' || o === 'micrositio') return 'El cliente (reserva online)'
+  if (o === 'whatsapp') return 'El cliente (WhatsApp)'
+  return 'Sin registro'
 }
 
 // Estado del pago (venta enlazada) → etiqueta + estilo del pill. null = aún no se cobró.
@@ -422,6 +444,20 @@ export function ReservasPage() {
                   {x.telefono && <Row icon={<Phone width={15} height={15} />} label="Teléfono" value={x.telefono} />}
                   {x.correo && <Row icon={<Mail width={15} height={15} />} label="Correo" value={x.correo} />}
                   {x.precio != null && <Row icon={<DollarSign width={15} height={15} />} label="Precio" value={soles(x.precio)} />}
+
+                  {/* AUTORÍA — lo mismo que ya se ve en una Venta: quién la creó y
+                      quién la aceptó. Antes esto no se podía enseñar porque el dato
+                      NO EXISTÍA en la tabla Reservas. */}
+                  <div className="pt-2 mt-1 border-t border-gray-100 space-y-2">
+                    <Row
+                      icon={<UserPlusIcon width={15} height={15} />}
+                      label="Creada por"
+                      value={textoCreadaPor(x.creadaPor, x.origen)}
+                    />
+                    {x.confirmadaPor && (
+                      <Row icon={<Check width={15} height={15} />} label="Confirmada por" value={x.confirmadaPor} />
+                    )}
+                  </div>
                 </div>
 
                 {/* Acciones */}

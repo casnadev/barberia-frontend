@@ -11,6 +11,17 @@ type SeccionSheetProps = {
   children: ReactNode
   /** Pie fijo de la hoja (p. ej. el botón Guardar). Si se omite, no hay pie. */
   footer?: ReactNode
+  /**
+   * Hoja ANCHA en escritorio (max-w-3xl en vez de max-w-lg).
+   *
+   * Para secciones que tienen mucho dentro y no caben en una columna estrecha:
+   * el Programa de fidelización, por ejemplo, tiene acumulación, niveles,
+   * recompensas, promociones, simulador y vista previa de la tarjeta. En una hoja
+   * de 512 px eso es un scroll interminable con media pantalla vacía al lado.
+   *
+   * En MÓVIL da igual: todas las hojas van a pantalla completa.
+   */
+  ancho?: boolean
 }
 
 /**
@@ -27,6 +38,7 @@ export default function SeccionSheet({
   subtitulo,
   children,
   footer,
+  ancho = false,
 }: SeccionSheetProps) {
   useEffect(() => {
     if (!open) return
@@ -43,7 +55,7 @@ export default function SeccionSheet({
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-stretch justify-center sm:items-center sm:p-4">
           <motion.div
             className="absolute inset-0 bg-black/40"
             onClick={onClose}
@@ -55,7 +67,7 @@ export default function SeccionSheet({
             role="dialog"
             aria-modal="true"
             aria-label={titulo}
-            className="relative bg-white w-full sm:max-w-lg rounded-2xl shadow-xl flex flex-col max-h-[90vh] overflow-hidden"
+            className={`relative flex h-full w-full flex-col overflow-hidden bg-white shadow-xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl ${ancho ? 'sm:max-w-3xl' : 'sm:max-w-lg'}`}
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 40, opacity: 0 }}

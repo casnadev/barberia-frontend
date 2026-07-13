@@ -182,3 +182,25 @@
 .modal { position: relative; }
 .modalCloseFloat { position: absolute; top: 10px; right: 10px; z-index: 5; width: 32px; height: 32px; border-radius: 999px; border: none; cursor: pointer; background: #eef0f3; color: #374151; display: grid; place-items: center; transition: background .15s; }
 .modalCloseFloat:hover { background: #e2e5ea; color: #111827; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   MODAL RESPONSIVE (mismo criterio que la Venta rápida)
+
+     • Móvil    → PANTALLA COMPLETA. Sin bordes ni márgenes que roben espacio:
+                  en un teléfono, una tarjeta flotante de 440px con padding a los
+                  lados desperdicia justo el ancho que hace falta.
+     • Desktop  → más ANCHA. Con 440px, el contenido queda en una columna
+                  larguísima mientras media pantalla se queda vacía.
+   ───────────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .overlay { padding: 0; align-items: stretch; }
+  .modal {
+    max-width: none;
+    max-height: none;
+    height: 100%;
+    border-radius: 0;
+  }
+}
+@media (min-width: 641px) {
+  .modal { max-width: 720px; }
+}

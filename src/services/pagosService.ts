@@ -36,7 +36,24 @@ export interface RegistrarPagoBody {
 }
 
 /** Desempaqueta la respuesta estándar { data } de la API. */
-const unwrap = (res: any) => res?.data?.data ?? res?.data
+/**
+ * Desenvuelve la respuesta de la API.
+ *
+ * Antes:  `res?.data?.data ?? res?.data`
+ *
+ * Cuando el backend responde { exito: true, data: null }, el `??` veía
+ * `data === null` y caía al fallback… devolviendo EL SOBRE ENTERO. El llamador
+ * recibía `{exito:true, data:null}` —que es TRUTHY— en vez de `null`, y pintaba
+ * la pantalla con todos los campos vacíos.
+ *
+ * Ahora: si el cuerpo TIENE la clave `data`, se devuelve su valor aunque sea null.
+ * El fallback solo actúa con respuestas sin sobre.
+ */
+const unwrap = (res: any) => {
+  const body = res?.data
+  if (body && typeof body === 'object' && 'data' in body) return body.data
+  return body
+}
 
 export const pagosService = {
   /** Comisiones por trabajador: calculado / pagado / pendiente. */

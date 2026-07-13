@@ -8,6 +8,9 @@ import { ventasService } from '@/services/ventasService'
 import { sedeTenantService } from '@/services/sedeTenantService'
 import { AdminHeader } from '@/components/AdminHeader'
 import AvisoLocalesActivos from '@/components/AvisoLocalesActivos'
+// Aviso "👤 Fulano se unió al programa": no pinta nada, solo dispara el toast
+// cuando alguien se inscribe escaneando el cartel del local (Entrega 1).
+import { AvisoInscripciones } from '@/components/AvisoInscripciones'
 import { prefetchAdminPages } from '@/router/adminPages'
 import { prefetchRouteData } from '@/lib/prefetch'
 import s from '@/styles/AdminLayout.module.css'
@@ -256,6 +259,7 @@ export function AdminShell() {
           {/* Header PERSISTENTE: SedeSwitcher + AccountMenu nunca se desmontan */}
           <AdminHeader onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />
           <AvisoLocalesActivos />
+          <AvisoInscripciones />
           <main className={s.content}>
             {/* Solo el contenido (la página activa) se suspende/cambia */}
             <Suspense fallback={<ContentFallback />}>

@@ -15,7 +15,11 @@ export interface RecompensaFidel {
   idRecompensa?: number
   nombre: string
   descripcion?: string
+  /** Emoji corto: 🎁 💈 🥤 🎂 🎟 */
+  icono?: string
   puntosRequeridos: number
+  /** null/undefined = stock ILIMITADO (∞). 0 = agotada. */
+  stock?: number | null
   activo: boolean
 }
 
@@ -46,7 +50,24 @@ export interface ProgramaConfig {
   recompensas: RecompensaFidel[]
   /** Solo lectura aquí: las promos tienen su propio CRUD. */
   promociones?: PromocionFidel[]
+
+  // ── Marca (solo lectura). Alimenta la vista previa de la tarjeta y el cartel del QR. ──
+  nombreNegocio?: string | null
+  logoNegocio?: string | null
+  colorNegocio?: string | null
+  /** PNG derivado que consume Google Wallet. null = aún no generado. */
+  walletLogoUrl?: string | null
+  /** Id de la LoyaltyClass de esta barbería. null = Wallet aún no activado. */
+  walletClassId?: string | null
+  /** Ruta pública del QR de inscripción del local: /unirme/{idSede}. */
+  urlInscripcion?: string | null
 }
+
+/** Lo que se ENVÍA al guardar (el backend ignora los campos de solo lectura). */
+export type GuardarProgramaConfig = Pick<
+  ProgramaConfig,
+  'activo' | 'solesPorPunto' | 'multiplicadorBase' | 'puntosExpiranMeses' | 'niveles' | 'recompensas'
+>
 
 export interface PreviewPuntos {
   programaActivo: boolean
@@ -94,12 +115,51 @@ export interface RecompensaDisponible {
   idRecompensa: number
   nombre: string
   descripcion?: string
+  icono?: string
   puntosRequeridos: number
   canjeable: boolean
   puntosFaltantes: number
+  /** null = ilimitado. 0 = agotada. */
+  stock?: number | null
 }
 
-const unwrap = (res: any) => res?.data?.data ?? res?.data
+/** Resultado de generar el PNG del logo que exige Google Wallet. */
+export interface WalletLogo {
+  ok: boolean
+  walletLogoUrl?: string | null
+  motivo?: string | null
+}
+
+/** Alguien se acaba de inscribir escaneando el cartel del local. */
+export interface InscripcionReciente {
+  idCliente: number
+  nombreCliente?: string | null
+  telefono: string
+  fechaInscripcion: string
+}
+
+/**
+ * Desenvuelve la respuesta de la API.
+ *
+ * BUG QUE ESTO ARREGLA:
+ *   antes era  `res?.data?.data ?? res?.data`
+ *
+ * Cuando el backend responde  { exito: true, data: null, mensaje: "..." }  —que es
+ * lo que devuelve, por ejemplo, un cliente que TODAVÍA NO TIENE MONEDERO—, el
+ * `??` veía `data === null` y caía al fallback… devolviendo EL SOBRE ENTERO.
+ *
+ * Así que `monedero` no era `null`: era `{ exito: true, data: null }`, que es
+ * TRUTHY. El `if (!monedero)` no saltaba y la tarjeta se pintaba con todos los
+ * campos vacíos: "Sin nivel", "· puntos disponibles", "Acumulado histórico: pts".
+ *
+ * Ahora se mira si el cuerpo TIENE la clave `data`. Si la tiene, se devuelve su
+ * valor — aunque sea null. El fallback solo actúa con respuestas sin sobre.
+ */
+const unwrap = (res: any) => {
+  const body = res?.data
+  if (body && typeof body === 'object' && 'data' in body) return body.data
+  return body
+}
 
 export const fidelizacionService = {
   // --- Configuración (Admin) ---
@@ -113,10 +173,34 @@ export const fidelizacionService = {
       niveles: Array.isArray(d?.niveles) ? d.niveles : [],
       recompensas: Array.isArray(d?.recompensas) ? d.recompensas : [],
       promociones: Array.isArray(d?.promociones) ? d.promociones : [],
+      nombreNegocio: d?.nombreNegocio ?? null,
+      logoNegocio: d?.logoNegocio ?? null,
+      colorNegocio: d?.colorNegocio ?? null,
+      walletLogoUrl: d?.walletLogoUrl ?? null,
+      walletClassId: d?.walletClassId ?? null,
+      urlInscripcion: d?.urlInscripcion ?? null,
     }
   },
-  guardarConfig: async (cfg: ProgramaConfig): Promise<void> => {
+  guardarConfig: async (cfg: GuardarProgramaConfig): Promise<void> => {
     await apiClient.put('/api/Fidelizacion/config', cfg)
+  },
+
+  /**
+   * Genera el PNG cuadrado derivado del logo (Google Wallet exige PNG; el logo
+   * que sube el Admin se guarda en WebP). El original NO se toca.
+   * Devuelve ok=false + motivo si el negocio todavía no tiene logo.
+   */
+  regenerarLogoWallet: async (): Promise<WalletLogo> => {
+    const d = unwrap(await apiClient.post('/api/Fidelizacion/wallet/logo', {}))
+    return { ok: !!d?.ok, walletLogoUrl: d?.walletLogoUrl ?? null, motivo: d?.motivo ?? null }
+  },
+
+  /** Inscripciones por QR del local en los últimos N minutos (aviso del panel). */
+  inscripcionesRecientes: async (minutos = 60): Promise<InscripcionReciente[]> => {
+    try {
+      const d = unwrap(await apiClient.get(`/api/Fidelizacion/inscripciones-recientes?minutos=${minutos}`))
+      return Array.isArray(d) ? d : []
+    } catch { return [] }   // el aviso jamás puede romper el panel
   },
 
   // --- Monedero del cliente ---

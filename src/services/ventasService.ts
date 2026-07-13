@@ -13,6 +13,13 @@ export interface ResultadoFidelizacion {
   nivelAnterior?: string | null
   siguienteNivelNombre?: string | null
   puntosParaSiguienteNivel?: number | null
+
+  /**
+   * T6 — Código del monedero del cliente. Con él, la caja le muestra un QR justo
+   * después de cobrar para que se guarde su tarjeta. Es null en las ventas
+   * anónimas (sin cliente identificado no hay monedero al que apuntar).
+   */
+  codigoQr?: string | null
 }
 
 import { apiClient } from './apiClient'

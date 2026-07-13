@@ -18,15 +18,71 @@
   --surface: #141416;
   --surface-2: #1a1a1d;
   --ok: #34d399;
+  /* La banda inferior (CTA + footer). Estaba HARDCODEADA en #050506, por eso
+     ignoraba el tema y se quedaba negra sobre fondo blanco. */
+  --band: #050506;
+  --band-ink: #ffffff;
 
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   color: var(--ink);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   TEMA CLARO
+
+   La landing ya estaba montada sobre variables CSS, así que el tema claro NO
+   es reescribirla: es sobreescribir estas 13 variables. Todo lo demás (layout,
+   sombras, gradientes) se recolorea solo.
+
+   El azul de marca se oscurece un punto: sobre blanco, el #6f9bff del tema
+   oscuro no tiene contraste suficiente para leerse.
+   ════════════════════════════════════════════════════════════════════════ */
+.page[data-theme='light'] {
+  --brand: #2855f6;
+  --brand-dark: #1c43cf;
+  --brand-light: #1f4fe0;          /* sobre blanco, el claro no contrasta */
+  --brand-soft: rgba(40, 85, 246, .08);
+  --ink: #0f172a;
+  --ink-2: #52586a;
+  --muted: #8b90a0;
+  --line: #e5e7eb;
+  --line-soft: #f1f2f4;
+  --bg: #ffffff;
+  --soft: #f7f8fa;
+  --surface: #ffffff;
+  --surface-2: #f3f4f6;
+  --ok: #059669;
+  --band: #f7f8fa;      /* en claro, la banda es gris muy suave, no negra */
+  --band-ink: #0f172a;
+}
+
+/* Los pocos colores que estaban HARDCODEADOS y romperían el tema claro. */
+.page[data-theme='light'] .navOn {
+  background: rgba(255, 255, 255, .85);
+  box-shadow: 0 1px 0 rgba(17, 24, 39, .06);
+}
+.page[data-theme='light'] .fci { color: #fff; }
+.page[data-theme='light'] .plan { box-shadow: 0 1px 3px rgba(17, 24, 39, .06); }
+.page[data-theme='light'] .planPop { box-shadow: 0 20px 44px -28px rgba(40, 85, 246, .45); }
+
 .page *,
 .page *::before,
 .page *::after { box-sizing: border-box; }
+
+/* ── Botón de tema (sol / luna) ── */
+.themeBtn {
+  display: grid; place-items: center;
+  width: 36px; height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.themeBtn:hover { color: var(--ink); border-color: var(--ink-2); background: var(--surface-2); }
 
 .wrap { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 24px; }
 
@@ -71,16 +127,26 @@
 .mobileMenu { display: none; }
 
 /* ── HERO ───────────────────────────────────────────────────────────── */
-.hero { position: relative; padding: 28px 0 72px; overflow: hidden; }
+/* El padding-top se va: dejaba un hueco raro entre el header y la píldora
+   ("Software para barberías · hecho en Perú"). Ahora el hero arranca pegado. */
+.hero { position: relative; padding: 0 0 72px; overflow: hidden; }
 .heroBg { position: absolute; inset: 0; z-index: 0; background:
   radial-gradient(680px 320px at 12% -10%, rgba(47, 107, 255, .10), transparent 60%); }
-.heroIn { position: relative; z-index: 1; display: grid; grid-template-columns: 1.05fr .95fr; gap: 54px; align-items: center; }
+/* HERO CENTRADO — una sola columna, en desktop y en móvil.
+   Antes era una rejilla de 2 columnas con el texto pegado a la izquierda: en
+   móvil se veía descuadrado y en desktop el bloque de texto quedaba corriendo
+   contra el borde. Ahora el mensaje va centrado y la visual debajo, que es lo
+   que hacen los SaaS modernos y lo que se lee mejor de un vistazo. */
+/* padding-top: 0. Ese hueco entre el header y la píldora era lo que marcabas con
+   la línea verde. El hero arranca pegado al header. */
+.heroIn { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 40px; padding-top: 0; }
+.heroCopy { text-align: center; display: flex; flex-direction: column; align-items: center; }
 .heroCopy h1 { font-size: clamp(2.1rem, 4.6vw, 3.35rem); line-height: 1.06; letter-spacing: -.025em; font-weight: 820; margin: 16px 0 0; }
 .hl { color: var(--brand-light); }
 .pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 999px; background: var(--brand-soft); color: var(--brand-light); font-weight: 650; font-size: .82rem; border: 1px solid rgba(47, 107, 255, .28); }
 .heroNav { display: none; }
-.heroSub { color: var(--ink-2); font-size: 1.12rem; line-height: 1.6; margin: 18px 0 0; max-width: 540px; }
-.heroCta { margin-top: 26px; display: flex; gap: 14px; flex-wrap: wrap; }
+.heroSub { color: var(--ink-2); font-size: 1.12rem; line-height: 1.6; margin: 18px auto 0; max-width: 600px; }
+.heroCta { margin-top: 26px; display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
 .heroNote { color: var(--muted); font-size: .9rem; margin: 12px 0 0; }
 .proof { display: flex; align-items: center; gap: 14px; margin-top: 30px; }
 .avs { display: flex; }
@@ -93,7 +159,7 @@
 .stars { color: #f5b740; letter-spacing: 1px; font-size: .85rem; }
 
 /* Panel visual del hero */
-.heroVisual { position: relative; }
+.heroVisual { position: relative; width: 100%; max-width: 780px; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 30px 70px -36px rgba(0, 0, 0, .85); overflow: hidden; }
 .panelTop { padding: 16px 20px; border-bottom: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 2px; background: var(--surface-2); }
 .panelEye { font-size: .72rem; text-transform: uppercase; letter-spacing: .12em; color: var(--brand-light); font-weight: 700; }
@@ -222,7 +288,7 @@
 .qaAns p { margin: 0; padding: 0 20px 20px 48px; color: var(--ink-2); font-size: .96rem; line-height: 1.6; }
 
 /* ── CTA banda ──────────────────────────────────────────────────────── */
-.ctaBand { background: #050506; color: #fff; padding: 88px 0; position: relative; overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.ctaBand { background: var(--band); color: var(--band-ink); padding: 88px 0; position: relative; overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .ctaBand::before { content: ''; position: absolute; inset: 0; background: radial-gradient(620px 320px at 50% -10%, rgba(47, 107, 255, .22), transparent 60%); }
 .ctaInner { position: relative; text-align: center; max-width: 760px; margin: 0 auto; }
 .ctaInner h2 { font-size: clamp(1.8rem, 4vw, 2.7rem); font-weight: 820; letter-spacing: -.025em; line-height: 1.12; margin: 0; }
@@ -232,17 +298,17 @@
 .ctaFine { color: var(--muted); font-size: .88rem; margin-top: 18px; }
 
 /* ── Footer ─────────────────────────────────────────────────────────── */
-.footer { background: #050506; color: var(--ink-2); padding: 56px 0 30px; border-top: 1px solid var(--line); }
-.footTop { display: flex; justify-content: space-between; gap: 40px; flex-wrap: wrap; padding-bottom: 34px; border-bottom: 1px solid rgba(255, 255, 255, .07); }
+.footer { background: var(--band); color: var(--ink-2); padding: 56px 0 30px; border-top: 1px solid var(--line); }
+.footTop { display: flex; justify-content: space-between; gap: 40px; flex-wrap: wrap; padding-bottom: 34px; border-bottom: 1px solid var(--line); }
 .footBrand { max-width: 360px; }
-.footBrand .logo { color: #fff; }
+.footBrand .logo { color: var(--band-ink); }
 .footBrand p { color: var(--muted); font-size: .95rem; line-height: 1.55; margin: 14px 0 16px; }
 .social { display: flex; gap: 10px; }
 .social a { width: 38px; height: 38px; border-radius: 11px; background: rgba(255, 255, 255, .05); color: var(--ink-2); display: grid; place-items: center; transition: all .15s; }
 .social a:hover { background: var(--brand); color: #fff; }
 .footLinks { display: flex; flex-wrap: wrap; gap: 14px 28px; align-content: flex-start; }
 .footLinks a { color: var(--ink-2); font-size: .92rem; cursor: pointer; text-decoration: none; transition: color .15s; }
-.footLinks a:hover { color: #fff; }
+.footLinks a:hover { color: var(--ink); }
 .footBottom { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding-top: 22px; color: var(--muted); font-size: .85rem; }
 
 /* ── Modal solicitar acceso ─────────────────────────────────────────── */
@@ -319,10 +385,22 @@
 
 /* ── Planes en carrusel (cicleable, como las sedes) ───────────────────── */
 .priceHeadRight { display: flex; align-items: center; gap: 14px; }
-.plansRail { display: flex; gap: 22px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 18px 4px 22px; margin-top: 26px; scrollbar-width: none; }
-.plansRail::-webkit-scrollbar { display: none; }
-.plansRail .plan { flex: 0 0 320px; scroll-snap-align: start; }
+/* PLANES — rejilla, no carrusel.
+   Antes era un carrusel horizontal con scroll-snap: en móvil solo se veía UN plan
+   y había que adivinar que se deslizaba. Ahora es una rejilla 2x2, igual que en el
+   panel del Admin: los cuatro planes de un vistazo y se comparan solos. */
+.plansRail { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 26px; padding: 0; }
+.plansRail .plan { padding: 18px 16px; border-radius: 16px; }
 .plansRail .planPop { transform: none; }
+.plansRail .planName { font-size: 1rem; }
+.plansRail .planTag { min-height: 0; font-size: .8rem; margin-bottom: 12px; }
+.plansRail .planList { margin-top: 14px; padding-top: 14px; gap: 8px; }
+.plansRail .planList li { font-size: .78rem; }
+.plansRail .ck { width: 16px; height: 16px; }
+
+@media (min-width: 900px) {
+  .plansRail { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+}
 /* En pantallas anchas: las 4 tarjetas entran en grid, sin scroll ni corte. */
 @media (min-width: 1080px) {
   .plansRail { display: grid; grid-template-columns: repeat(4, 1fr); overflow: visible; gap: 18px; }
@@ -343,3 +421,77 @@
 .freeBadge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 5px; background: var(--ok); color: #06140d; font-weight: 750; font-size: .76rem; padding: 6px 14px; border-radius: 999px; box-shadow: 0 8px 18px -8px rgba(52, 211, 153, .7); white-space: nowrap; }
 
 .logoImg { height: 30px; width: auto; display: block; }
+/* ── Acceso del header: sutil, con borde, NUNCA más grande que el logo ── */
+.btnLogin {
+  display: inline-flex; align-items: center;
+  padding: 7px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: .88rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.btnLogin:hover { color: var(--ink); border-color: var(--ink-2); background: var(--surface-2); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   PLANES — que las 4 tarjetas se vean IGUALES
+
+   El problema: cada plan tiene un número distinto de características, así que las
+   tarjetas quedaban de alturas distintas y los botones "Contratar" bailaban a
+   media altura. En una rejilla 2x2 eso se ve fatal: parece roto.
+
+   Solución: la tarjeta es una columna flex, la lista de características se estira
+   (flex:1) y el BOTÓN SE ANCLA ABAJO (margin-top:auto). Todas iguales, botones
+   alineados.
+   ───────────────────────────────────────────────────────────────────────── */
+.plansRail .plan { height: 100%; display: flex; flex-direction: column; }
+.plansRail .planList { flex: 1 1 auto; }
+.plansRail .plan > :last-child { margin-top: auto; }
+.plansRail .planList li { align-items: flex-start; }
+.plansRail .ck { flex: 0 0 auto; margin-top: 1px; }
+
+/* Que un precio largo no rompa la tarjeta. */
+.plansRail .planPrice { flex-wrap: wrap; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   EL PRECIO QUE ROMPÍA LA TARJETA
+
+   `.amount` es de 2.6rem. En una tarjeta de la rejilla 2x2 (unos 170px de ancho
+   en un móvil), "S/199.00" a ese tamaño NO CABE: el texto empuja, el hijo del
+   grid no puede encogerse (min-width: auto por defecto) y la tarjeta se sale de
+   su borde. Por eso al pulsar "Anual" —que mete decimales, "S/49.17"— reventaba.
+
+   Se arregla en dos frentes: el número se escala al ancho real disponible, y a
+   los hijos del grid se les devuelve el permiso de encogerse.
+   ───────────────────────────────────────────────────────────────────────── */
+.plansRail > * { min-width: 0; }
+
+/* ⚠️ NADA de `overflow: hidden` en la tarjeta.
+   Las etiquetas ".popBadge" y ".freeBadge" son `position: absolute; top: -13px`:
+   SOBRESALEN por encima del borde a propósito. Un `overflow: hidden` (que es lo
+   que puse antes para contener el precio) las decapita.
+   El precio se contiene por otra vía: escalándolo (ver .amount, abajo). */
+.plansRail .plan { overflow: visible; }
+
+/* Y sitio arriba para que la etiqueta no se salga del contenedor de la rejilla. */
+.plansRail { padding-top: 14px; }
+.plansRail .popBadge,
+.plansRail .freeBadge { max-width: calc(100% - 16px); }
+
+.plansRail .amount {
+  font-size: clamp(1.35rem, 7vw, 2rem);   /* se adapta al ancho de verdad */
+  letter-spacing: -.02em;
+  line-height: 1.1;
+  overflow-wrap: anywhere;                /* último recurso: parte antes que desbordar */
+}
+.plansRail .per { font-size: .82rem; }
+.plansRail .planPrice { flex-wrap: wrap; gap: 2px 5px; align-items: baseline; }
+
+@media (min-width: 900px) {
+  .plansRail .amount { font-size: 2rem; }
+}
+
+
