@@ -16,6 +16,8 @@ export interface Sede {
   urlLogo?: string
   urlBanner?: string
   colorPrimarioHex?: string
+  /** T14 — "Arriba" | "Centro" | "Abajo". Qué parte de la portada se conserva al recortar. */
+  recortePortada?: string
   mostrarTelefonoEnLanding?: boolean
 }
 

@@ -14,6 +14,7 @@ import { TimePicker, duracionHoras } from '@/components/TimePicker'
 import { ProgramaFidelizacionPanel } from '@/components/ProgramaFidelizacionPanel'
 import { LibroReclamacionesPanel } from '@/components/LibroReclamacionesPanel'
 import { MiPerfilAdminModal } from '@/components/MiPerfilAdminModal'
+import { ImagenYColorPanel } from '@/components/ImagenYColorPanel'
 
 interface Sede {
   idSede?: number
@@ -29,6 +30,8 @@ interface Sede {
   horarioCierre?: string
   urlLogo?: string
   urlBanner?: string
+  /** T14 — "Arriba" | "Centro" | "Abajo". Qué parte de la portada se conserva. */
+  recortePortada?: string
   latitud?: number
   longitud?: number
   departamento?: string
@@ -472,6 +475,10 @@ export function ConfiguracionPage() {
         urlLogo: sede.urlLogo && !sede.urlLogo.startsWith('data:') ? sede.urlLogo : undefined,
         urlBanner: sede.urlBanner && !sede.urlBanner.startsWith('data:') ? sede.urlBanner : undefined,
         colorPrimarioHex: sede.colorPrimarioHex?.trim() || undefined,
+        // T14 — el recorte de la portada. Al cambiarlo, el backend regenera los
+        // derivados (con hash nuevo, para que Google no sirva el viejo de su caché)
+        // y hace PATCH de la clase en Wallet.
+        recortePortada: sede.recortePortada || undefined,
         mostrarTelefonoEnLanding: sede.mostrarTelefonoEnLanding ?? true,
       }
       if (telRaw !== '' && !telValido) {
@@ -760,43 +767,36 @@ export function ConfiguracionPage() {
         </div>
       </SeccionSheet>
 
-      {/* Imagen y color */}
-      <SeccionSheet open={sheet === 'imagen'} onClose={cerrar} titulo="Imagen y color"
+      {/* ══ T14 · IMAGEN Y COLOR ══════════════════════════════════════════════
+          Antes: una columna larga con logo, portada y color apilados, que en móvil
+          obligaba a bajar hasta el final para pulsar Guardar. Y no había forma de
+          saber cómo iba a quedar la portada recortada: se descubría cuando un
+          cliente te enseñaba su tarjeta.
+
+          Ahora: dos columnas en desktop (lo que subes | cómo queda), y el recorte
+          con vista previa EN VIVO. */}
+      <SeccionSheet open={sheet === 'imagen'} onClose={cerrar} ancho titulo="Imagen y color"
         subtitulo="Tu marca en la página pública"
         footer={<BotonGuardar onClick={guardarYcerrar} cargando={submitting} />}>
-        <div className="space-y-5">
-          <ImgUpload label="Logo" preview={logoPreview} onUpload={handleLogoUpload} onRemove={removeLogo}
-            subiendo={subiendoLogo} hint="Cuadrado · PNG/JPG/HEIC" heightCls="h-40" />
-          <ImgUpload label="Banner / portada" preview={bannerPreview} onUpload={handleBannerUpload} onRemove={removeBanner}
-            subiendo={subiendoBanner} hint="Horizontal · PNG/JPG/HEIC" heightCls="h-44" />
+        <ImagenYColorPanel
+          logoPreview={logoPreview}
+          onLogoUpload={handleLogoUpload}
+          onLogoRemove={removeLogo}
+          subiendoLogo={subiendoLogo}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Color de tema</label>
+          bannerPreview={bannerPreview}
+          onBannerUpload={handleBannerUpload}
+          onBannerRemove={removeBanner}
+          subiendoBanner={subiendoBanner}
 
-            {/* Picker propio (cuadro 2D + tono + hex + cuentagotas). Reemplaza al
-                <input type="color"> nativo, que en móvil abre la UI cruda del SO
-                (cuadros de colores primarios + sliders Tono/Saturación/Valor). */}
-            <BrandColorPicker
-              value={(sede.colorPrimarioHex || DEFAULT_BRAND).slice(0, 7)}
-              onChange={(hex) => handleChange('colorPrimarioHex', hex)}
-            />
+          recorte={(sede.recortePortada as any) || 'Centro'}
+          onRecorte={(r) => setSede((p) => ({ ...p, recortePortada: r }))}
 
-            {/* Presets rápidos: un toque aplica un color de marca ya elegido. */}
-            <div className="mt-3">
-              <span className="block text-xs text-gray-400 mb-1.5">Sugeridos</span>
-              <div className="flex flex-wrap gap-2">
-                {COLOR_PRESETS.map((c) => {
-                  const active = (sede.colorPrimarioHex || '').toLowerCase() === c.toLowerCase()
-                  return (
-                    <button key={c} type="button" onClick={() => handleChange('colorPrimarioHex', c)} aria-label={c}
-                      className={`w-8 h-8 rounded-lg transition ${active ? 'ring-2 ring-offset-2 ring-gray-900 scale-110' : 'shadow hover:scale-110'}`}
-                      style={{ background: c }} />
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
+          color={sede.colorPrimarioHex || DEFAULT_BRAND}
+          onColor={(c) => setSede((p) => ({ ...p, colorPrimarioHex: c }))}
+
+          nombreNegocio={empresa.nombreComercial || sede.nombre}
+        />
       </SeccionSheet>
 
       {/* Contacto */}

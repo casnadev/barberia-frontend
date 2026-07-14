@@ -133,6 +133,8 @@ export function ProgramaFidelizacionPanel() {
     activo: false, solesPorPunto: 1, multiplicadorBase: 1, puntosExpiranMeses: null,
     // T7
     multiplicadorMaximo: 5, multiplicadorSede: null, sedeActiva: true,
+    // T13
+    nombrePrograma: null,
     niveles: [], recompensas: [],
   })
   const [cargando, setCargando] = useState(true)
@@ -247,6 +249,8 @@ export function ProgramaFidelizacionPanel() {
         multiplicadorMaximo: cfg.multiplicadorMaximo ?? 5,
         multiplicadorSede: cfg.multiplicadorSede ?? null,
         sedeActiva: cfg.sedeActiva !== false,
+        // T13 — título de la tarjeta
+        nombrePrograma: cfg.nombrePrograma?.trim() || null,
         niveles: nivelesOrdenados.map((n, i) => ({ ...n, orden: i })),
         recompensas: cfg.recompensas,
       }
@@ -780,6 +784,43 @@ export function ProgramaFidelizacionPanel() {
           Con TU marca, no la de Barber.pe. Funciona en cualquier teléfono desde{' '}
           <strong className="text-gray-600">barber.pe/monedero</strong>, con o sin Google Wallet.
         </p>
+
+        {/* ══ T13 · TÍTULO DE LA TARJETA ═══════════════════════════════════════
+            Antes iba hardcodeado a "Programa de fidelización" — igual para las 8
+            barberías. En las tarjetas de referencia de Google ahí pone "Recompensas
+            por café" o "Club del Libro": el NOMBRE del programa, no la palabra
+            "programa". Es el texto grande, lo primero que lee el cliente. */}
+        <div className="mb-4">
+          <label className="mb-1 block text-xs font-medium text-gray-500">
+            Título de la tarjeta
+          </label>
+          <input
+            className={input}
+            maxLength={60}
+            value={cfg.nombrePrograma ?? ''}
+            onChange={(e) => set({ nombrePrograma: e.target.value })}
+            placeholder={`Puntos de ${cfg.nombreNegocio || 'tu negocio'}`}
+          />
+          <p className="mt-1 text-[11px] text-gray-400">
+            Lo primero que lee tu cliente. Si lo dejas vacío, ponemos{' '}
+            <strong className="text-gray-600">
+              «Puntos de {cfg.nombreNegocio || 'tu negocio'}»
+            </strong>.
+          </p>
+        </div>
+
+        {/* La FOTO de la tarjeta sale de tu portada. Se recorta a 3:1 (mucho más
+            apaisada que la de compartir), y la vista previa de ese recorte vive en
+            Configuración → Imagen y color, que es donde se sube. */}
+        {!cfg.walletHeroUrl && (
+          <p className="mb-4 flex items-start gap-1.5 rounded-lg bg-amber-50 p-2.5 text-[11px] leading-relaxed text-amber-800">
+            <WarningCircle size={14} weight="fill" className="mt-px shrink-0" />
+            <span>
+              Tu tarjeta va <strong>sin foto</strong>. Sube una portada en{' '}
+              <strong>Configuración → Imagen y color</strong> y aparecerá sola.
+            </span>
+          </p>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-[minmax(0,300px)_1fr]">
           {/* Tarjeta (vista previa, con datos del simulador) */}

@@ -76,6 +76,16 @@ export interface ProgramaConfig {
   /** T7 — false = esta sede tiene la acumulación pausada (no pierde puntos). */
   sedeActiva: boolean
 
+  /**
+   * T13 — Título GRANDE de la tarjeta de Google Wallet.
+   * Vacío → "Puntos de {marca}". En las tarjetas de referencia de Google ahí pone
+   * "Recompensas por café" o "Club del Libro", no la palabra "programa".
+   */
+  nombrePrograma?: string | null
+
+  /** T13 — JPG 1032×336 derivado de la portada. Solo lectura. */
+  walletHeroUrl?: string | null
+
   niveles: NivelFidel[]
   recompensas: RecompensaFidel[]
   /** Solo lectura aquí: las promos tienen su propio CRUD. */
@@ -103,6 +113,7 @@ export type GuardarProgramaConfig = Pick<
   | 'multiplicadorMaximo'   // T7 — tope (marca)
   | 'multiplicadorSede'     // T7 — override (sede)
   | 'sedeActiva'            // T7 — pausa local
+  | 'nombrePrograma'       // T13 — título de la tarjeta
   | 'niveles'
   | 'recompensas'
 >
@@ -229,6 +240,9 @@ export const fidelizacionService = {
       multiplicadorMaximo: Number(d?.multiplicadorMaximo ?? 5),
       multiplicadorSede: d?.multiplicadorSede ?? null,
       sedeActiva: d?.sedeActiva !== false,
+      // T13
+      nombrePrograma: d?.nombrePrograma ?? null,
+      walletHeroUrl: d?.walletHeroUrl ?? null,
       niveles: Array.isArray(d?.niveles) ? d.niveles : [],
       // T7 — sin alcance explícito (datos previos a la migración) → 'Sede', que es el
       // default conservador: nadie regala una recompensa en tres locales por accidente.
