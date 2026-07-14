@@ -178,3 +178,66 @@
 .modalCloseFloat { position: absolute; top: 10px; right: 10px; z-index: 5; width: 32px; height: 32px; border-radius: 999px; border: none; cursor: pointer; background: #eef0f3; color: #374151; display: grid; place-items: center; transition: background .15s; }
 .modalCloseFloat:hover { background: #e2e5ea; color: #111827; }
 .catCount { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   T11 · SHELL DE MODAL — header · body scrollable · FOOTER FIJO
+   ══════════════════════════════════════════════════════════════════════════════
+   ANTES:  .modal { max-height: 90vh; overflow-y: auto; }
+           Scrolleaba el modal ENTERO, botones incluidos. En móvil había que bajar
+           el formulario completo para llegar a "Guardar".
+
+   AHORA:  .modal es una COLUMNA FLEX que no crece más que la pantalla.
+           .form  se queda con lo que sobre y scrollea SOLO ÉL.
+           .actions se pega abajo (sticky) → los botones SIEMPRE se ven.
+
+   No hace falta tocar el JSX: .actions ya vive dentro de .form, así que un
+   `position: sticky; bottom: 0` lo ancla al fondo del contenedor que scrollea.
+   Reescribir cinco formularios que funcionan para conseguir lo mismo habría sido
+   cambiar riesgo por nada.
+
+   ⚠️ dvh Y NO vh.
+   100vh en móvil NO descuenta la barra de direcciones de Safari: el footer
+   quedaría DEBAJO de ella, invisible. Que es exactamente el bug que estamos
+   matando. dvh (dynamic viewport height) sí la descuenta.
+   El `max-height: 90vh` de la línea anterior es el fallback para navegadores
+   viejos: si no entienden dvh, se quedan con vh y al menos no rompen.
+   ══════════════════════════════════════════════════════════════════════════════ */
+.modal {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow: hidden;
+}
+
+/* min-height: 0 es OBLIGATORIO. Sin él, un hijo de flex tiene min-height:auto y se
+   NIEGA a encogerse por debajo de su contenido: empuja el footer fuera del modal y
+   el scroll no aparece. Es el fallo clásico de flexbox, y no da ningún error —
+   simplemente no funciona. */
+.form {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.actions {
+  position: sticky;
+  bottom: 0;
+  margin: 8px -20px -20px;
+  padding: 14px 20px;
+  /* safe-area: en iPhone, la barra de gestos se come el botón si no la respetas. */
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 1px solid #f3f4f6;
+}
+
+/* En móvil el modal se pega ABAJO (bottom-sheet) y solo redondea arriba: el pulgar
+   llega al footer sin estirarse. En escritorio se centra, como siempre. */
+@media (max-width: 640px) {
+  .overlay { align-items: flex-end; padding: 0; }
+  .modal {
+    max-width: 100%;
+    max-height: 92dvh;
+    border-radius: 20px 20px 0 0;
+  }
+}

@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useSoporteStore } from '@/store/soporteStore'
 import { soporteService } from '@/services/soporteService'
 import { nombreParaMostrar } from '@/utils/nombreParaMostrar'
+import { ComboBox } from '@/components/ComboBox'
 
 const MOTIVOS = [
   'Problema técnico',
@@ -103,9 +104,7 @@ export function SoporteModal() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Motivo</label>
-          <select value={motivo} onChange={(e) => setMotivo(e.target.value)} className={inputCls}>
-            {MOTIVOS.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
+          <ComboBox value={motivo} onChange={(v) => setMotivo(String(v))} opciones={MOTIVOS} inputClassName={inputCls} />
         </div>
 
         <div>

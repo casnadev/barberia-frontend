@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { X, Check, Plus, Minus, Camera, Scissors, Receipt, CaretDown, UserCircle, Storefront, Lightning, UserPlus, MagnifyingGlass } from '@phosphor-icons/react'
+import { X, Check, Plus, Minus, Camera, Scissors, Receipt, CaretDown, CaretRight, UserCircle, Storefront, Lightning, UserPlus, MagnifyingGlass } from '@phosphor-icons/react'
 import { toast } from 'sonner'
-import { ComboBox } from '@/components/ComboBox'
 import { serviciosService } from '@/services/serviciosService'
 import { trabajadoresService } from '@/services/trabajadoresService'
 import { panelTrabajadorService } from '@/services/panelTrabajadorService'
@@ -13,6 +12,8 @@ import { notificarFidelizacion } from '@/components/NotificacionFidelizacion'
 import { InvitacionTarjetaModal } from '@/components/InvitacionTarjetaModal'
 import type { ResultadoFidelizacion } from '@/services/ventasService'
 import { mensajeError } from '@/utils/apiError'
+import { ComboBox } from '@/components/ComboBox'
+import { OptionGroup } from '@/components/ui/Controles'
 
 const METODOS = ['Efectivo', 'Yape', 'Plin', 'Tarjeta', 'Transferencia', 'Otro']
 const soles = (n?: number) => `S/ ${(Number(n) || 0).toFixed(2)}`
@@ -27,6 +28,13 @@ const soles = (n?: number) => `S/ ${(Number(n) || 0).toFixed(2)}`
  * jerarquía visual más limpia y footer fijo con total. La LÓGICA (estado,
  * handlers, llamadas a servicios y props) es idéntica a la versión anterior.
  */
+/** T11 — Títulos de cada paso (solo se usan en móvil). */
+const PASOS: Record<1 | 2 | 3, { titulo: string }> = {
+  1: { titulo: 'Paso 1 de 3 · Servicios' },
+  2: { titulo: 'Paso 2 de 3 · Cliente' },
+  3: { titulo: 'Paso 3 de 3 · Pago' },
+}
+
 export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
   mode: 'admin' | 'trabajador'
   lockTrabajadorId?: number
@@ -65,6 +73,37 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
   // se acepta al instante) o un profesional (queda pendiente de su aprobación)?
   // Default true = venta propia del Admin (comportamiento habitual del dueño).
   const [ventaMia, setVentaMia] = useState(true)
+
+  // ══ T11 · PASOS EN MÓVIL, PANEL ÚNICO EN DESKTOP ═══════════════════════════
+  //
+  // El escritorio YA tenía dos columnas y funcionaba: el cajero ve la venta entera
+  // y cobra de un click. Meterle pasos ahí sería una regresión — son 2 taps más por
+  // venta, y esto se usa 30 veces al día.
+  //
+  // El problema era el MÓVIL: una columna larguísima donde había que scrollear hasta
+  // abajo para ver el total y el botón. Ahí sí van pasos.
+  //
+  // Mismo estado, misma lógica, mismos endpoints. Solo cambia QUÉ SE PINTA:
+  //   móvil   → un paso a la vez  (`verPaso` filtra)
+  //   desktop → todo, en 2 columnas (`verPaso` siempre true)
+  //
+  // matchMedia y no un simple `window.innerWidth`: hay que REACCIONAR al giro de
+  // pantalla. Si el barbero rota el móvil a horizontal a mitad de venta y nos
+  // quedamos en modo pasos, ve una columna estrecha en una pantalla ancha.
+  const [esMovil, setEsMovil] = useState(
+    () => typeof window !== 'undefined' && !window.matchMedia('(min-width: 640px)').matches,
+  )
+  const [paso, setPaso] = useState<1 | 2 | 3>(1)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 640px)')
+    const onChange = () => setEsMovil(!mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  /** En desktop siempre TRUE: se pinta todo. En móvil, solo el paso actual. */
+  const verPaso = (n: 1 | 2 | 3) => !esMovil || paso === n
 
   useEffect(() => {
     let cancel = false
@@ -237,12 +276,29 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-gray-900 leading-tight">Venta rápida</h3>
-            <p className="text-xs text-gray-400 leading-tight">Cobro sin reserva previa</p>
+            <p className="text-xs text-gray-400 leading-tight">
+              {esMovil ? PASOS[paso].titulo : 'Cobro sin reserva previa'}
+            </p>
           </div>
           <button onClick={onClose} aria-label="Cerrar" className="grid place-items-center w-8 h-8 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition">
             <X size={18} weight="bold" />
           </button>
         </div>
+
+        {/* Barra de pasos. Solo en móvil: en desktop no hay pasos que marcar.
+            Mismo patrón visual que el flujo de reserva pública. */}
+        {esMovil && !loading && (
+          <div className="flex gap-1.5 px-5 pb-3" aria-hidden="true">
+            {[1, 2, 3].map((i) => (
+              <span
+                key={i}
+                className={`h-[3px] flex-1 rounded-full transition-colors ${
+                  i <= paso ? 'bg-emerald-600' : 'bg-gray-200'
+                }`}
+              />
+            ))}
+          </div>
+        )}
 
         {loading ? (
           <div className="py-16 text-center text-gray-400">
@@ -259,7 +315,8 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
                 ventanita, y el barbero ve la venta entera de un vistazo. */}
             <div className="flex-1 overflow-y-auto px-5 py-4">
               <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-                <div className="space-y-4">
+                {/* ── PASO 1 · Qué se vendió (y quién) ── */}
+                <div className={`space-y-4 ${verPaso(1) ? '' : 'hidden'}`}>
                 {mode === 'admin' && (
                   <>
                     {/* Tarea 4 — ¿Quién realizó la venta? Decide si se acepta al instante
@@ -347,7 +404,10 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
 
                 </div>
 
+                {/* ── PASOS 2 y 3 · A quién y cómo se cobra ──
+                     En desktop es UNA columna con todo; en móvil son dos pasos. */}
                 <div className="space-y-4">
+                <div className={verPaso(2) ? '' : 'hidden'}>
                 {/* Cliente — SELECTOR REAL (no texto libre).
                     Es lo que identifica al cliente y permite acreditar los puntos de
                     fidelización: el backend resuelve por IdCliente o por teléfono, nunca
@@ -474,13 +534,20 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
                   )}
                 </div>
 
+                </div>
+
+                {/* ── PASO 3 · Pago ── */}
+                <div className={`space-y-4 ${verPaso(3) ? '' : 'hidden'}`}>
                 {/* Método de pago */}
                 <div>
                   <label className={label}>Método de pago</label>
                   <div className="relative">
-                    <select className={`${field} appearance-none pr-9`} value={metodo} onChange={e => setMetodo(e.target.value)}>
-                      {METODOS.map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
+                    <OptionGroup
+                      valor={metodo}
+                      onChange={setMetodo}
+                      cols={3}
+                      opciones={METODOS.map((mp) => ({ valor: mp, etiqueta: mp }))}
+                    />
                     <CaretDown size={16} weight="bold" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   </div>
                 </div>
@@ -523,6 +590,7 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
                   )}
                 </div>
                 </div>
+                </div>
               </div>
             </div>
 
@@ -546,14 +614,57 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
                   </span>
                 </div>
               )}
-              <button
-                onClick={confirmar}
-                disabled={!puedeGuardar}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-3 font-semibold flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[.99] transition"
-              >
-                <Receipt size={18} weight="fill" />
-                {saving ? 'Registrando…' : 'Registrar venta'}
-              </button>
+              {/* En móvil, los pasos 1 y 2 avanzan; solo el 3 cobra.
+                  En desktop no hay pasos: el botón cobra siempre.
+
+                  Ojo con el paso 1: se exige al menos UN servicio antes de dejar
+                  avanzar. Si no, el barbero llega al paso 3, pulsa Cobrar, y le sale
+                  un error por algo que eligió (o no) dos pantallas atrás. El error hay
+                  que darlo DONDE se comete. */}
+              {esMovil && paso < 3 ? (
+                <div className="flex gap-2">
+                  {paso > 1 && (
+                    <button
+                      onClick={() => setPaso((p) => (p - 1) as 1 | 2 | 3)}
+                      className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
+                    >
+                      Atrás
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (paso === 1 && nItems === 0) {
+                        toast.error('Elige al menos un servicio')
+                        return
+                      }
+                      setPaso((p) => (p + 1) as 1 | 2 | 3)
+                    }}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 font-semibold text-white transition hover:bg-emerald-700 active:scale-[.99]"
+                  >
+                    Continuar
+                    <CaretRight size={16} weight="bold" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  {esMovil && (
+                    <button
+                      onClick={() => setPaso(2)}
+                      className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
+                    >
+                      Atrás
+                    </button>
+                  )}
+                  <button
+                    onClick={confirmar}
+                    disabled={!puedeGuardar}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40 active:scale-[.99]"
+                  >
+                    <Receipt size={18} weight="fill" />
+                    {saving ? 'Registrando…' : 'Registrar venta'}
+                  </button>
+                </div>
+              )}
               <p className="text-[11px] text-gray-400 text-center">
                 {(mode === 'admin' && ventaMia)
                   ? 'Se registra como venta aceptada.'

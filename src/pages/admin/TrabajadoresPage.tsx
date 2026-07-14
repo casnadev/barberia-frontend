@@ -9,9 +9,10 @@ import { verificacionContactoService } from '@/services/verificacionContactoServ
 import { sedesService } from '@/services/sedesService'
 import { descansosAdminService } from '@/services/descansosAdminService'
 import { SolicitudesDescansoModal } from '@/components/SolicitudesDescansoModal'
-import { ComboBox } from '@/components/ComboBox'
 import { ROLES_TRABAJADOR } from '@/data/roles'
 import s from '@/styles/Trabajadores.module.css'
+import { ComboBox } from '@/components/ComboBox'
+import { Check, CheckPill } from '@/components/ui/Controles'
 
 interface Trabajador {
   idTrabajador?: number
@@ -673,9 +674,17 @@ export function TrabajadoresPage() {
                 {/* Liquidaciones: si NO genera, ocultamos comisión/frecuencia/método
                     porque sus ingresos van directo a la caja (cierre de caja). */}
                 <label className="flex items-start gap-2 mt-1 text-sm text-gray-700 cursor-pointer select-none" style={{ padding: '4px 0' }}>
-                  <input type="checkbox" checked={form.generaLiquidaciones ?? true}
+                  {/* T11 — el <input> sigue ahí (accesibilidad), pero oculto: lo que
+                      se ve es nuestro Check verde. */}
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={form.generaLiquidaciones ?? true}
                     onChange={e => setForm({ ...form, generaLiquidaciones: e.target.checked })}
-                    style={{ marginTop: 3 }} />
+                  />
+                  <span style={{ marginTop: 2 }}>
+                    <Check marcado={form.generaLiquidaciones ?? true} size={16} />
+                  </span>
                   <span>
                     <strong>Genera liquidaciones</strong> (se le paga su comisión)
                     <span style={{ display: 'block', fontSize: 11, color: '#9ca3af' }}>
@@ -698,23 +707,13 @@ export function TrabajadoresPage() {
                       </div>
                       <div className={s.field}>
                         <label className={s.label}>Frecuencia de pago</label>
-                        <select className={s.input} value={form.frecuenciaPago || 'Quincenal'} onChange={e => setForm({ ...form, frecuenciaPago: e.target.value })}>
-                          <option value="Diario">Diario</option>
-                          <option value="Semanal">Semanal</option>
-                          <option value="Quincenal">Quincenal</option>
-                          <option value="Mensual">Mensual</option>
-                        </select>
+                        <ComboBox value={form.frecuenciaPago || 'Quincenal'} onChange={(v) => setForm({ ...form, frecuenciaPago: String(v) })} opciones={['Diario', 'Semanal', 'Quincenal', 'Mensual']} inputClassName={s.input} />
                       </div>
                     </div>
                     <div className={s.row2}>
                       <div className={s.field}>
                         <label className={s.label}>Método de pago</label>
-                        <select className={s.input} value={form.metodoPagoPreferido || 'Efectivo'} onChange={e => setForm({ ...form, metodoPagoPreferido: e.target.value })}>
-                          <option value="Efectivo">Efectivo</option>
-                          <option value="Yape">Yape</option>
-                          <option value="Plin">Plin</option>
-                          <option value="Transferencia">Transferencia</option>
-                        </select>
+                        <ComboBox value={form.metodoPagoPreferido || 'Efectivo'} onChange={(v) => setForm({ ...form, metodoPagoPreferido: String(v) })} opciones={['Efectivo', 'Yape', 'Plin', 'Transferencia']} inputClassName={s.input} />
                       </div>
                     </div>
                   </>
@@ -742,19 +741,29 @@ export function TrabajadoresPage() {
                   <textarea className={s.textarea} value={form.descripcion || ''} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={2} />
                 </div>
 
-                <div className={s.row2}>
-                  <div className={s.checkRow}>
-                    <input className={s.checkbox} type="checkbox" id="esDestacado" checked={!!form.esDestacado} onChange={e => setForm({ ...form, esDestacado: e.target.checked })} />
-                    <label htmlFor="esDestacado" className={s.checkLabel}>⭐ Destacado</label>
-                  </div>
+                {/* T11 — CheckPill: verde, nuestro, y con el <input> real oculto
+                    debajo (sr-only) para no perder teclado ni lectores de pantalla.
+
+                    El Admin no puede desactivarse a sí mismo: la pastilla sale
+                    deshabilitada. Antes el checkbox también lo estaba, pero se veía
+                    igual que uno normal y confundía. */}
+                <div className="flex gap-2">
+                  <CheckPill
+                    marcado={!!form.esDestacado}
+                    onChange={(v) => setForm({ ...form, esDestacado: v })}
+                    className="flex-1"
+                  >
+                    ⭐ Destacado
+                  </CheckPill>
                   {editingId && (
-                    <div className={s.checkRow}>
-                      <input className={s.checkbox} type="checkbox" id="estado"
-                        checked={form.esDuenoAdmin ? true : !!form.estado}
-                        onChange={e => setForm({ ...form, estado: e.target.checked })}
-                        disabled={!!form.esDuenoAdmin} />
-                      <label htmlFor="estado" className={s.checkLabel}>✓ Activo</label>
-                    </div>
+                    <CheckPill
+                      marcado={form.esDuenoAdmin ? true : !!form.estado}
+                      onChange={(v) => setForm({ ...form, estado: v })}
+                      disabled={!!form.esDuenoAdmin}
+                      className="flex-1"
+                    >
+                      Activo
+                    </CheckPill>
                   )}
                 </div>
 

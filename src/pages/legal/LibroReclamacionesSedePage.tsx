@@ -10,6 +10,8 @@ import {
   type HojaCreada,
 } from '@/services/libroReclamacionesService'
 import { mensajeError } from '@/utils/apiError'
+import { ComboBox } from '@/components/ComboBox'
+import { OptionGroup } from '@/components/ui/Controles'
 
 /**
  * T8 — LIBRO DE RECLAMACIONES **DE UNA SEDE**.  /libro-reclamaciones/:idSede
@@ -228,9 +230,7 @@ export default function LibroReclamacionesSedePage() {
         <div className={s.grid2}>
           <div className={s.field}>
             <label>Documento</label>
-            <select value={f.tipoDoc} onChange={(e) => set('tipoDoc')(e.target.value)}>
-              {DOCS.map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
+            <ComboBox value={f.tipoDoc} onChange={(v) => set('tipoDoc')(String(v))} opciones={DOCS} />
           </div>
           <div className={s.field}>
             <label>Número</label>
@@ -286,13 +286,15 @@ export default function LibroReclamacionesSedePage() {
         <div className={s.grid2}>
           <div className={s.field}>
             <label>Fue por un</label>
-            <select
-              value={f.bien}
-              onChange={(e) => set('bien')(e.target.value as 'Producto' | 'Servicio')}
-            >
-              <option value="Servicio">Servicio</option>
-              <option value="Producto">Producto</option>
-            </select>
+            <OptionGroup
+              valor={f.bien}
+              onChange={(v) => set('bien')(v)}
+              cols={2}
+              opciones={[
+                { valor: 'Servicio' as const, etiqueta: 'Servicio' },
+                { valor: 'Producto' as const, etiqueta: 'Producto' },
+              ]}
+            />
           </div>
           <div className={s.field}>
             <label>Monto reclamado (S/) · opcional</label>

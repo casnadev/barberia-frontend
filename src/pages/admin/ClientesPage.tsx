@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useAuthStore } from '@/store/authStore'
 import { DuplicadosModal } from '@/components/DuplicadosModal'
 import { clientesService, Cliente } from '@/services/clientesService'
 import { MonederoClienteCard } from '@/components/MonederoClienteCard'
@@ -14,6 +15,10 @@ import { sedeTenantService } from '@/services/sedeTenantService'
 import s from '@/styles/Clientes.module.css'
 import { serviciosService } from '@/services/serviciosService'
 import { ModeracionNovedadesModal } from '@/components/ModeracionNovedadesModal'
+import { ComboBox } from '@/components/ComboBox'
+import { OptionGroup, CheckPill } from '@/components/ui/Controles'
+import { CalendarModal } from '@/pages/cliente/CalendarModal'
+import { CalendarBlank } from '@phosphor-icons/react'
 
 export function ClientesPage() {
   // clientesRaw y loading vienen ahora de useQuery (más abajo).
@@ -281,16 +286,11 @@ export function ClientesPage() {
           <div className="mb-2.5">
             <div className="relative inline-flex items-center w-full sm:w-auto">
               <MapPin width={16} height={16} className="absolute left-3 text-blue-600 pointer-events-none" />
-              <select
+              <ComboBox
                 value={sedeFiltro ?? 0}
-                onChange={(e) => setSedeFiltro(Number(e.target.value))}
-                className="w-full sm:w-auto appearance-none bg-white border border-gray-200 rounded-xl pl-9 pr-9 py-2.5 text-sm font-semibold text-gray-800 cursor-pointer hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition"
-              >
-                <option value={0}>Todas las sedes</option>
-                {sedes.map((sd) => (
-                  <option key={sd.idSede} value={sd.idSede}>{sd.nombre}</option>
-                ))}
-              </select>
+                onChange={(v) => setSedeFiltro(Number(v))}
+                opciones={[{ valor: 0, etiqueta: 'Todas las sedes' }, ...sedes.map((sd) => ({ valor: sd.idSede, etiqueta: sd.nombre }))]}
+              />
               <ChevronDown width={16} height={16} className="absolute right-3 text-gray-400 pointer-events-none" />
             </div>
           </div>
@@ -620,9 +620,24 @@ function NovedadModal({ onClose }: { onClose: () => void }) {
   const [destacado, setDestacado] = useState(false)
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaExpiracion, setFechaExpiracion] = useState('')
+
+  // T11 — qué calendario está abierto ('inicio' | 'fin' | null).
+  const [calAbierto, setCalAbierto] = useState<'inicio' | 'fin' | null>(null)
   const [tipoAccion, setTipoAccion] = useState('Ninguna')   // Ninguna | Reservar | Enlace
   const [textoBoton, setTextoBoton] = useState('Lo quiero')
   const [urlAccion, setUrlAccion] = useState('')
+
+  // T11 — Teléfono del dueño, normalizado a formato wa.me (código de país + número,
+  // sin espacios ni '+'). Perú = 51. Si no tiene teléfono, es null y el atajo no se
+  // pinta: un enlace de WhatsApp a medias publicaría una promo rota.
+  // T11 — el dueño logueado. Su teléfono alimenta el atajo de WhatsApp.
+  const { user } = useAuthStore()
+
+  const telefonoWhatsApp = useMemo(() => {
+    const t = (user?.telefono ?? '').replace(/\D/g, '')
+    if (t.length < 9) return null
+    return t.startsWith('51') ? t : `51${t}`
+  }, [user?.telefono])
   const [precioPromo, setPrecioPromo] = useState('')
   const [descuento, setDescuento] = useState('')
   const [serviciosSede, setServiciosSede] = useState<any[]>([])
@@ -638,6 +653,14 @@ function NovedadModal({ onClose }: { onClose: () => void }) {
 
   const toggleServicio = (id: number) =>
     setIdServicios((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
+
+  // T11 — "2026-07-20T23:59" → "20 jul". El día es lo único que importa en una
+  // promo; la hora ya no se elige (Desde = 00:00, Caduca = 23:59).
+  const fmtFechaCorta = (iso: string) => {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return iso
+    return d.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' })
+  }
 
   // ISO ("2026-06-10T18:00:00") -> valor de <input datetime-local> ("2026-06-10T18:00")
   const toInputDate = (s?: string | null) => (s ? String(s).slice(0, 16) : '')
@@ -736,28 +759,48 @@ function NovedadModal({ onClose }: { onClose: () => void }) {
   const field = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none'
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center sm:p-4">
+    {/* ══ T11 · SHELL DE 3 PIEZAS ═══════════════════════════════════════════════
+        Antes: `max-h-[90vh] overflow-y-auto p-5` sobre el modal ENTERO → scrolleaba
+        todo, botón "Publicar" incluido. En móvil había que bajar el formulario
+        completo para publicar.
+
+        Ahora: columna flex. El cuerpo scrollea; el header y el footer se quedan.
+        `dvh` y no `vh`: 100vh en móvil no descuenta la barra de Safari y el footer
+        quedaría debajo de ella, invisible — el mismo bug con otra cara.
+        Y en móvil se pega abajo (bottom-sheet): el pulgar llega al botón. */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div data-novedad-modal className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-5 max-h-[90vh] overflow-y-auto">
+      <div data-novedad-modal className="relative flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:max-h-[90dvh] sm:rounded-2xl">
+        <div className="shrink-0 px-5 pt-5">
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2"><Gift width={18} height={18} className="text-blue-600" /> {editandoId ? 'Editar novedad' : 'Nueva novedad'}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Cerrar"><X width={18} height={18} /></button>
         </div>
         <p className="text-xs text-gray-500 mb-4">La verán <strong>todos los clientes</strong> de tu sede en su muro de Promociones.</p>
+        </div>
 
+        {/* ── CUERPO: lo ÚNICO que scrollea. min-h-0 es obligatorio: sin él, un hijo
+             de flex se niega a encogerse por debajo de su contenido y empuja el
+             footer fuera. Es el fallo clásico de flexbox, y no da ningún error. ── */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
         <div className="space-y-3">
           {/* Tipo + destacado */}
           <div className="flex items-center gap-2">
             <div className="flex-1">
               <label className="text-xs text-gray-500">Tipo</label>
-              <select className={field} value={tipo} onChange={e => setTipo(e.target.value)}>
-                <option value="Promo">Promo</option>
-                <option value="Evento">Evento</option>
-                <option value="Aviso">Aviso</option>
-              </select>
+              <OptionGroup
+              valor={tipo}
+              onChange={setTipo}
+              cols={3}
+              opciones={[
+                { valor: 'Promo', etiqueta: 'Promo' },
+                { valor: 'Evento', etiqueta: 'Evento' },
+                { valor: 'Aviso', etiqueta: 'Aviso' },
+              ]}
+            />
             </div>
             <label className="flex items-center gap-2 text-sm text-gray-700 mt-5 whitespace-nowrap">
-              <input type="checkbox" checked={destacado} onChange={e => setDestacado(e.target.checked)} /> Destacar
+              <CheckPill marcado={destacado} onChange={setDestacado}>Destacar</CheckPill>
             </label>
           </div>
 
@@ -766,8 +809,60 @@ function NovedadModal({ onClose }: { onClose: () => void }) {
 
           {/* Vigencia */}
           <div className="flex gap-2">
-            <div className="flex-1"><label className="text-xs text-gray-500">Desde (opcional)</label><input type="datetime-local" className={field} value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} /></div>
-            <div className="flex-1"><label className="text-xs text-gray-500">Caduca (opcional)</label><input type="datetime-local" className={field} value={fechaExpiracion} onChange={e => setFechaExpiracion(e.target.value)} /></div>
+            {/* ══ T11 · VIGENCIA ═══════════════════════════════════════════════════
+                Eran <input type="datetime-local">: en Android abren el reloj+calendario
+                del sistema, feos y fuera del diseño. Ahora usan el MISMO CalendarModal
+                del flujo de reserva, que ya estaba construido.
+
+                Y de paso se arregla un bug semántico que nadie había visto:
+
+                  Con datetime-local, "Caduca: 20/07" se guardaba como 20/07 a las 00:00.
+                  Es decir, la promo MORÍA en el instante en que empezaba el día 20.
+                  El dueño creía que valía "hasta el 20" y valía "hasta el 19".
+
+                Ahora: Desde → 00:00 (empieza el día entero) · Caduca → 23:59 (vale el día
+                entero). Que es lo que cualquiera entiende al leer esas palabras. */}
+            <div className="flex-1">
+              <label className="text-xs text-gray-500">Desde (opcional)</label>
+              <button
+                type="button"
+                onClick={() => setCalAbierto('inicio')}
+                className={`${field} flex items-center gap-2 text-left`}
+              >
+                <CalendarBlank size={15} className="shrink-0 text-gray-400" />
+                <span className={fechaInicio ? '' : 'text-gray-400'}>
+                  {fechaInicio ? fmtFechaCorta(fechaInicio) : 'Hoy'}
+                </span>
+              </button>
+            </div>
+            <div className="flex-1">
+              <label className="text-xs text-gray-500">Caduca (opcional)</label>
+              <button
+                type="button"
+                onClick={() => setCalAbierto('fin')}
+                className={`${field} flex items-center gap-2 text-left`}
+              >
+                <CalendarBlank size={15} className="shrink-0 text-gray-400" />
+                <span className={fechaExpiracion ? '' : 'text-gray-400'}>
+                  {fechaExpiracion ? fmtFechaCorta(fechaExpiracion) : 'Sin fecha'}
+                </span>
+              </button>
+            </div>
+
+            <CalendarModal
+              isOpen={calAbierto !== null}
+              selectedDate={
+                (calAbierto === 'inicio' ? fechaInicio : fechaExpiracion).slice(0, 10)
+              }
+              onSelectDate={(d) => {
+                // Desde = principio del día. Caduca = FINAL del día (ver comentario).
+                if (calAbierto === 'inicio') setFechaInicio(`${d}T00:00`)
+                else setFechaExpiracion(`${d}T23:59`)
+                setCalAbierto(null)
+              }}
+              onClose={() => setCalAbierto(null)}
+              allowPast
+            />
           </div>
 
           {/* Imagen */}
@@ -790,11 +885,16 @@ function NovedadModal({ onClose }: { onClose: () => void }) {
           {/* Botón / acción */}
           <div>
             <label className="text-xs text-gray-500">Botón de acción</label>
-            <select className={field} value={tipoAccion} onChange={e => setTipoAccion(e.target.value)}>
-              <option value="Ninguna">Sin botón (solo informativa)</option>
-              <option value="Reservar">Reservar (promo sobre servicios)</option>
-              <option value="Enlace">Enlace externo (WhatsApp, web…)</option>
-            </select>
+            <OptionGroup
+              valor={tipoAccion}
+              onChange={setTipoAccion}
+              cols={3}
+              opciones={[
+                { valor: 'Ninguna', etiqueta: 'Sin botón', nota: 'Informativa' },
+                { valor: 'Reservar', etiqueta: 'Reservar', nota: 'Promo' },
+                { valor: 'Enlace', etiqueta: 'Enlace', nota: 'WhatsApp, web' },
+              ]}
+            />
           </div>
 
           {tipoAccion !== 'Ninguna' && (
@@ -802,7 +902,44 @@ function NovedadModal({ onClose }: { onClose: () => void }) {
           )}
 
           {tipoAccion === 'Enlace' && (
-            <div><label className="text-xs text-gray-500">URL del enlace</label><input className={field} value={urlAccion} onChange={e => setUrlAccion(e.target.value)} maxLength={300} /></div>
+            <div>
+              <div className="flex items-baseline justify-between gap-2">
+                <label className="text-xs text-gray-500">URL del enlace</label>
+
+                {/* ══ T11 · WHATSAPP PRECARGADO ═══════════════════════════════════
+                    El caso más común de "Enlace externo" es el WhatsApp del negocio,
+                    y hasta ahora había que construir la URL a mano
+                    (https://wa.me/51XXXXXXXXX) — que casi nadie sabe.
+
+                    Ahora sale del teléfono del dueño (Mi Perfil, que desde la T9 es la
+                    fuente única y sincroniza con Empresa.TelefonoContacto).
+
+                    Si no tiene teléfono, el atajo NO aparece. Poner un botón que genera
+                    "https://wa.me/51" a medias sería peor que no tenerlo: publicaría una
+                    promo con un enlace roto. */}
+                {telefonoWhatsApp && (
+                  <button
+                    type="button"
+                    onClick={() => setUrlAccion(`https://wa.me/${telefonoWhatsApp}`)}
+                    className="text-[11px] font-semibold text-emerald-600 hover:underline"
+                  >
+                    Usar mi WhatsApp
+                  </button>
+                )}
+              </div>
+              <input
+                className={field}
+                value={urlAccion}
+                onChange={e => setUrlAccion(e.target.value)}
+                placeholder="https://wa.me/51999888777"
+                maxLength={300}
+              />
+              {!telefonoWhatsApp && (
+                <p className="mt-1 text-[11px] text-gray-400">
+                  Añade tu teléfono en <b>Mi Perfil</b> y podrás poner tu WhatsApp con un click.
+                </p>
+              )}
+            </div>
           )}
 
           {tipoAccion === 'Reservar' && (
@@ -830,19 +967,10 @@ function NovedadModal({ onClose }: { onClose: () => void }) {
             </>
           )}
 
-          <div className="flex gap-2">
-            {editandoId && (
-              <button onClick={limpiar} disabled={saving} className="inline-flex items-center justify-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl py-2.5 px-4 font-semibold disabled:opacity-50">
-                Cancelar
-              </button>
-            )}
-            <button onClick={guardar} disabled={saving || subiendo} className="flex-1 inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2.5 font-semibold disabled:opacity-50">
-              {editandoId ? <Pencil width={16} height={16} /> : <Plus width={16} height={16} />}
-              {saving ? 'Guardando…' : (editandoId ? 'Guardar cambios' : 'Publicar novedad')}
-            </button>
-          </div>
         </div>
 
+        {/* "Promociones publicadas" se queda DENTRO del cuerpo scrollable, tal cual
+             estaba. Es la lista de lo ya publicado y no debe competir con el footer. */}
         {lista.length > 0 && (
           <div className="mt-5 border-t border-gray-100 pt-4">
             <p className="text-xs font-semibold text-gray-500 mb-2">Promociones publicadas</p>
@@ -877,6 +1005,27 @@ function NovedadModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
         )}
+        </div>
+
+        {/* ── FOOTER FIJO ──
+             Los botones salen del cuerpo scrollable y se anclan aquí. Ya no hay que
+             bajar el formulario entero (ni la lista de promociones publicadas, que
+             puede tener 20 filas) para llegar a "Publicar".
+
+             pb con safe-area: en iPhone, la barra de gestos se come el botón. */}
+        <div className="shrink-0 border-t border-gray-100 bg-white px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="flex gap-2">
+            {editandoId && (
+              <button onClick={limpiar} disabled={saving} className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gray-100 px-4 py-2.5 font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-50">
+                Cancelar
+              </button>
+            )}
+            <button onClick={guardar} disabled={saving || subiendo} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-blue-600 py-2.5 font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+              {editandoId ? <Pencil width={16} height={16} /> : <Plus width={16} height={16} />}
+              {saving ? 'Guardando…' : (editandoId ? 'Guardar cambios' : 'Publicar novedad')}
+            </button>
+          </div>
+        </div>
       </div>
       {campanaTarget && <CampanaModal novedad={campanaTarget} onClose={() => setCampanaTarget(null)} />}
     </div>

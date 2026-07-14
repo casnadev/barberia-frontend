@@ -9,6 +9,8 @@ import { sedeTenantService } from '@/services/sedeTenantService'
 import { serviciosService, type CategoriaPredeterminada } from '@/services/serviciosService'
 import { resolverIconoServicio } from '@/utils/iconosServicio'
 import s from '@/styles/Servicios.module.css'
+import { CategoriaPicker } from '@/components/CategoriaPicker'
+import { CheckPill, InputAfijo } from '@/components/ui/Controles'
 
 interface Servicio {
   idServicio?: number
@@ -437,19 +439,41 @@ export function ServiciosPage() {
 
       {/* Barra de categorías: desplegable (limpio) + gestionar */}
       <div className="flex items-center gap-2 mb-6 flex-wrap">
-        <div className="relative inline-flex items-center flex-1 min-w-[180px] sm:flex-initial sm:min-w-[220px]">
-          <Tag width={15} height={15} className="absolute left-3 text-blue-600 pointer-events-none" />
-          <select
-            value={filterCat ?? ''}
-            onChange={(e) => setFilterCat(e.target.value === '' ? null : Number(e.target.value))}
-            className="w-full appearance-none bg-white border border-gray-200 rounded-xl pl-9 pr-9 py-2.5 text-sm font-semibold text-gray-800 cursor-pointer hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition"
+        {/* ══ T11 · FILTRO DE CATEGORÍAS · PÍLDORAS ═════════════════════════════
+            Era un <select> ("Todas las categorías"). Dos problemas:
+              · En Android abría la lista gris del sistema, fuera del diseño.
+              · Escondía las categorías detrás de un click: el dueño no veía cuántas
+                tenía ni cómo se llamaban sin abrirlo — por eso las tenía abandonadas.
+
+            Ahora se ven todas de un vistazo, igual que en el micrositio público,
+            que ya lo hacía bien. Scroll horizontal si no caben: nunca envuelven a
+            dos filas empujando la rejilla de servicios hacia abajo. */}
+        <div className="-mx-1 flex w-full gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <button
+            type="button"
+            onClick={() => setFilterCat(null)}
+            className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
+              filterCat === null
+                ? 'bg-gray-900 text-white'
+                : 'border border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+            }`}
           >
-            <option value="">Todas las categorías</option>
-            {categorias.map((cat) => (
-              <option key={cat.idCategoria} value={cat.idCategoria}>{cat.nombre}</option>
-            ))}
-          </select>
-          <ChevronDown width={16} height={16} className="absolute right-3 text-gray-400 pointer-events-none" />
+            Todos
+          </button>
+          {categorias.map((cat) => (
+            <button
+              key={cat.idCategoria}
+              type="button"
+              onClick={() => setFilterCat(cat.idCategoria)}
+              className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition ${
+                filterCat === cat.idCategoria
+                  ? 'bg-gray-900 text-white'
+                  : 'border border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              {cat.nombre}
+            </button>
+          ))}
         </div>
         <button className={s.manageCatsBtn} onClick={() => { resetCatForm(); setCatModalOpen(true) }}>
           <Tag width={15} height={15} /> Gestionar categorías
@@ -514,43 +538,76 @@ export function ServiciosPage() {
                 <div className={s.field}>
                   <label className={s.label}>Descripción corta</label>
                   <textarea className={s.textarea} value={form.descripcionCorta || ''} onChange={(e) => setForm({ ...form, descripcionCorta: e.target.value })} rows={2} />
-                  <p className={s.hint}>Personalízala con tu estilo y zona para mejorar tu SEO (evita el mismo texto en todos tus servicios).</p>
                 </div>
 
                 <div className={s.row2}>
+                  {/* T11 — El "S/" y el "min" YA NO son parte de la etiqueta: van DENTRO
+                      de la caja. El usuario escribe 55 y 60, nada más.
+
+                      Antes la etiqueta decía "Precio (S/)" y el input era type="number":
+                      unos escribían "55" y otros "S/ 55" (que type="number" descarta en
+                      silencio, dejando el campo vacío sin decir por qué). La unidad
+                      pintada dentro quita esa duda de raíz. */}
                   <div className={s.field}>
-                    <label className={s.label}>Precio (S/) *</label>
-                    <input className={s.input} type="number" value={form.precioBase || ''} onChange={(e) => setForm({ ...form, precioBase: parseFloat(e.target.value) })} min="0" step="0.01" />
+                    <label className={s.label}>Precio *</label>
+                    <InputAfijo
+                      prefijo="S/"
+                      valor={form.precioBase || ''}
+                      onChange={(v) => setForm({ ...form, precioBase: v === '' ? 0 : parseFloat(v) })}
+                      placeholder="55"
+                    />
                   </div>
                   <div className={s.field}>
-                    <label className={s.label}>Duración (min)</label>
-                    <input className={s.input} type="number" value={form.duracionMinutos} onChange={(e) => setForm({ ...form, duracionMinutos: parseInt(e.target.value) })} min="5" step="5" />
+                    <label className={s.label}>Duración</label>
+                    <InputAfijo
+                      sufijo="min"
+                      valor={form.duracionMinutos || ''}
+                      onChange={(v) => setForm({ ...form, duracionMinutos: v === '' ? 0 : parseInt(v) })}
+                      placeholder="60"
+                    />
                   </div>
                 </div>
 
                 <div className={s.field}>
                   <label className={s.label}>Categoría *</label>
-                  <ComboBox
-                    value={form.idCategoria || ''}
-                    onChange={(v) => setForm({ ...form, idCategoria: v === '' ? 0 : Number(v) })}
-                    opciones={categorias.map((cat) => ({ valor: cat.idCategoria, etiqueta: cat.nombre }))}
-                    inputClassName={s.select}
+                  {/* T11 — Antes: un <select> aquí, y un modal "Gestionar categorías"
+                      aparte. Si la categoría que querías no existía, el camino era:
+                      cerrar este modal → abrir Gestionar → crear → cerrar → reabrir el
+                      servicio → rellenarlo TODO otra vez → elegirla. Seis pasos.
+
+                      Por eso el dueño tenía 7 categorías vacías y sin usar: el sistema
+                      le cobraba un peaje por organizarse.
+
+                      Ahora escribes el nombre y pulsas Enter: se crea y se asigna. */}
+                  <CategoriaPicker
+                    valor={form.idCategoria}
+                    onChange={(id) => setForm({ ...form, idCategoria: id })}
+                    categorias={categorias}
+                    contarServicios={countServicios}
+                    idSede={idSede}
+                    onRecargar={() => loadCategorias(idSede)}
                   />
-                  {categorias.length === 0 && (
-                    <p className={s.hint}>No hay categorías. Crea una desde "Gestionar categorías".</p>
-                  )}
                 </div>
 
-                <div className={s.row2}>
-                  <div className={s.checkRow}>
-                    <input className={s.checkbox} type="checkbox" id="esDestacado" checked={!!form.esDestacado} onChange={(e) => setForm({ ...form, esDestacado: e.target.checked })} />
-                    <label htmlFor="esDestacado" className={s.checkLabel}>⭐ Destacado</label>
-                  </div>
+                {/* T11 — CheckPill: el checkbox nativo (azul de Android) pasa a ser
+                    nuestro. El <input> real sigue debajo, oculto con sr-only: teclado y
+                    lectores de pantalla intactos. */}
+                <div className="flex gap-2">
+                  <CheckPill
+                    marcado={!!form.esDestacado}
+                    onChange={(v) => setForm({ ...form, esDestacado: v })}
+                    className="flex-1"
+                  >
+                    ⭐ Destacado
+                  </CheckPill>
                   {editingId && (
-                    <div className={s.checkRow}>
-                      <input className={s.checkbox} type="checkbox" id="estado" checked={!!form.estado} onChange={(e) => setForm({ ...form, estado: e.target.checked })} />
-                      <label htmlFor="estado" className={s.checkLabel}>✓ Activo</label>
-                    </div>
+                    <CheckPill
+                      marcado={!!form.estado}
+                      onChange={(v) => setForm({ ...form, estado: v })}
+                      className="flex-1"
+                    >
+                      Activo
+                    </CheckPill>
                   )}
                 </div>
 

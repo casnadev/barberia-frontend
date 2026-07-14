@@ -6,6 +6,8 @@ import { toast } from 'sonner'
 import { setTenant, urlSedeCanonica } from '@/services/apiClient'
 import { reservasService } from '@/services/reservasService' // ← endpoints reales
 import styles from '@/styles/ReservaAcciones.module.css'
+import { CalendarModal } from '@/pages/cliente/CalendarModal'
+import { CalendarBlank } from '@phosphor-icons/react'
 
 interface Reserva {
   idReserva: number
@@ -52,6 +54,7 @@ export function ReservaAcciones() {
   const [resena, setResena] = useState('')
   const [showReprog, setShowReprog] = useState(false)
   const [fechaReprog, setFechaReprog] = useState('')
+  const [calAbierto, setCalAbierto] = useState(false)
   const [slots, setSlots] = useState<Slot[]>([])
   const [slotSel, setSlotSel] = useState('')
   const [loadingSlots, setLoadingSlots] = useState(false)
@@ -400,13 +403,28 @@ export function ReservaAcciones() {
             </div>
             <p style={{ margin: '6px 0 16px', color: '#6b7280', fontSize: 13.5 }}>Elige una nueva fecha y un horario disponible.</p>
 
-            <input
-              type="date"
+            {/* T11 — Era un <input type="date">. En Android abría el picker del sistema.
+                Ahora el MISMO CalendarModal que el cliente ya vio al reservar: reconoce
+                la pantalla, no aprende una segunda forma de elegir día.
+
+                `allowPast` va en false a propósito: no se puede reprogramar al pasado. */}
+            <button
+              type="button"
+              onClick={() => setCalAbierto(true)}
               className={styles.input}
-              min={hoy}
-              value={fechaReprog}
-              onChange={(e) => { const v = e.target.value; setFechaReprog(v); cargarSlots(v) }}
-              style={{ width: '100%' }}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, textAlign: 'left' }}
+            >
+              <CalendarBlank size={16} style={{ flexShrink: 0, color: '#9ca3af' }} />
+              <span style={{ color: fechaReprog ? undefined : '#9ca3af' }}>
+                {fechaReprog || 'Elige una fecha'}
+              </span>
+            </button>
+
+            <CalendarModal
+              isOpen={calAbierto}
+              selectedDate={fechaReprog}
+              onSelectDate={(d) => { setFechaReprog(d); cargarSlots(d); setCalAbierto(false) }}
+              onClose={() => setCalAbierto(false)}
             />
 
             {/* Horarios disponibles (mismo cálculo que el step 3) */}

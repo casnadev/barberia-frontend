@@ -30,6 +30,7 @@ import { HistorialTrabajadorModal } from '@/components/HistorialTrabajadorModal'
 import { fechaPeru, citaYaEmpezo, MSG_CITA_NO_LLEGA } from '@/utils/fecha'
 import { VerificacionContacto } from '@/components/VerificacionContacto'
 import { TimePicker, duracionHoras } from '@/components/TimePicker'
+import { ComboBox } from '@/components/ComboBox'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const METODOS = ['Efectivo', 'Yape', 'Plin', 'Tarjeta', 'Transferencia', 'Otro']
@@ -784,7 +785,7 @@ function DescansosSection({ idT, idSede }: { idT: number | null; idSede: number 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs text-gray-500 mb-1">Tipo</label>
-            <select className={`${field} w-full`} value={tipo} onChange={e => setTipo(e.target.value)}>{tipos.map(t => <option key={t} value={t}>{t}</option>)}</select>
+            <ComboBox value={tipo} onChange={(v) => setTipo(String(v))} opciones={tipos} inputClassName={`${field} w-full`} />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Desde</label>
@@ -987,7 +988,7 @@ function AtenderModal({ reserva, onClose, onDone }: any) {
       <p className="text-sm text-gray-500 mb-3">{reserva.nombreClienteSnap || reserva.nombreCliente} · {soles(total)}</p>
       <div className="space-y-3">
         <div><label className="text-xs text-gray-500">Método de pago</label>
-          <select className={field} value={metodo} onChange={e => setMetodo(e.target.value)}>{METODOS.map(m => <option key={m} value={m}>{m}</option>)}</select>
+          <ComboBox value={metodo} onChange={(v) => setMetodo(String(v))} opciones={METODOS} inputClassName={field} />
         </div>
         {metodo !== 'Efectivo' && <div><label className="text-xs text-gray-500">N° de operación (opcional)</label><input className={field} value={operacion} onChange={e => setOperacion(e.target.value)} /></div>}
         <div>

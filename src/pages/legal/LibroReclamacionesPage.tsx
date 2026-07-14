@@ -3,6 +3,7 @@ import { Check } from '@phosphor-icons/react'
 import { apiClient } from '@/services/apiClient'
 import LegalShell from './LegalShell'
 import s from './Legal.module.css'
+import { ComboBox } from '@/components/ComboBox'
 
 const EMPRESA = 'Computer Solutions L&E E.I.R.L.'
 const RUC = '[RUC de la empresa]'
@@ -68,7 +69,7 @@ export default function LibroReclamacionesPage() {
             <div className={s.field}><label>Nombre y apellidos</label><input required value={f.nombre} onChange={set('nombre')} /></div>
             <div className={s.grid2}>
               <div className={s.field}><label>Tipo de documento</label>
-                <select value={f.tipoDoc} onChange={set('tipoDoc')}><option>DNI</option><option>Carné de extranjería</option><option>Pasaporte</option><option>RUC</option></select>
+                <ComboBox value={f.tipoDoc} onChange={(v) => setF((x) => ({ ...x, tipoDoc: String(v) }))} opciones={['DNI', 'Carné de extranjería', 'Pasaporte', 'RUC']} />
               </div>
               <div className={s.field}><label>N° de documento</label><input required value={f.numDoc} onChange={set('numDoc')} /></div>
             </div>
@@ -81,7 +82,7 @@ export default function LibroReclamacionesPage() {
             <div className={s.prose}><h3 style={{ margin: '8px 0 0' }}>2. Identificación del bien contratado</h3></div>
             <div className={s.grid2}>
               <div className={s.field}><label>Tipo</label>
-                <select value={bien} onChange={(e) => setBien(e.target.value as any)}><option value="servicio">Servicio</option><option value="producto">Producto</option></select>
+                <ComboBox value={bien} onChange={(v) => setBien(String(v) as any)} opciones={[{ valor: 'servicio', etiqueta: 'Servicio' }, { valor: 'producto', etiqueta: 'Producto' }]} />
               </div>
               <div className={s.field}><label>Monto reclamado (S/)</label><input value={f.monto} onChange={set('monto')} /></div>
             </div>

@@ -16,6 +16,7 @@ import {
   type NivelFidel,
   type RecompensaFidel,
 } from '@/services/fidelizacionService'
+import { ComboBox } from '@/components/ComboBox'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    NumberField — arregla EL BUG DEL "0" EN MÓVIL.
@@ -363,13 +364,7 @@ export function ProgramaFidelizacionPanel() {
           <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-gray-500">
             <Hourglass size={13} weight="fill" className="text-gray-400" /> Vigencia de los puntos
           </label>
-          <select
-            value={cfg.puntosExpiranMeses ?? ''}
-            onChange={(e) => set({ puntosExpiranMeses: e.target.value ? Number(e.target.value) : null })}
-            className={input}
-          >
-            {VENCIMIENTOS.map((o) => <option key={o.v} value={o.v}>{o.label}</option>)}
-          </select>
+          <ComboBox value={cfg.puntosExpiranMeses ?? ''} onChange={(v) => set({ puntosExpiranMeses: v === '' ? null : Number(v) })} opciones={VENCIMIENTOS.map((o) => ({ valor: o.v, etiqueta: o.label }))} inputClassName={input} />
         </div>
 
         {/* Multiplicador base: fuera del camino. El 95% no lo toca nunca; las
@@ -394,15 +389,7 @@ export function ProgramaFidelizacionPanel() {
               <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                 <Lightning size={13} weight="fill" className="text-amber-500" /> Multiplicador permanente
               </label>
-              <select
-                value={String(cfg.multiplicadorBase ?? 1)}
-                onChange={(e) => set({ multiplicadorBase: Number(e.target.value) })}
-                className={input}
-              >
-                <option value="1">Multiplicador normal (x1)</option>
-                <option value="2">x2 — Doble puntaje SIEMPRE</option>
-                <option value="3">x3 — Triple puntaje SIEMPRE</option>
-              </select>
+              <ComboBox value={String(cfg.multiplicadorBase ?? 1)} onChange={(v) => set({ multiplicadorBase: Number(v) })} opciones={[{ valor: '1', etiqueta: 'Multiplicador normal (x1)' }, { valor: '2', etiqueta: 'x2 — Doble puntaje SIEMPRE' }, { valor: '3', etiqueta: 'x3 — Triple puntaje SIEMPRE' }]} inputClassName={input} />
               <p className="mt-1 text-[11px] text-gray-400">
                 Aplica en TODAS las sedes de tu negocio. Cada sede puede sobrescribirlo abajo.
               </p>
@@ -416,16 +403,7 @@ export function ProgramaFidelizacionPanel() {
                 <label className="mb-1 block text-xs font-medium text-gray-500">
                   Tope del multiplicador
                 </label>
-                <select
-                  className={input}
-                  value={String(cfg.multiplicadorMaximo ?? 5)}
-                  onChange={(e) => set({ multiplicadorMaximo: Number(e.target.value) })}
-                >
-                  <option value="2">x2 — máximo el doble</option>
-                  <option value="3">x3</option>
-                  <option value="5">x5 (recomendado)</option>
-                  <option value="10">x10 — sin casi límite</option>
-                </select>
+                <ComboBox value={String(cfg.multiplicadorMaximo ?? 5)} onChange={(v) => set({ multiplicadorMaximo: Number(v) })} opciones={[{ valor: '2', etiqueta: 'x2 — máximo el doble' }, { valor: '3', etiqueta: 'x3' }, { valor: '5', etiqueta: 'x5 (recomendado)' }, { valor: '10', etiqueta: 'x10 — sin casi límite' }]} inputClassName={input} />
                 <p className="mt-1 text-[11px] text-gray-400">
                   Pase lo que pase, ninguna venta multiplicará más que esto. Protege tu caja
                   de una combinación de campañas que nadie planeó.
@@ -446,18 +424,7 @@ export function ProgramaFidelizacionPanel() {
             <label className="mb-1 block text-xs font-medium text-gray-500">
               Multiplicador propio de esta sede
             </label>
-            <select
-              className={input}
-              value={cfg.multiplicadorSede == null ? '' : String(cfg.multiplicadorSede)}
-              onChange={(e) =>
-                set({ multiplicadorSede: e.target.value === '' ? null : Number(e.target.value) })
-              }
-            >
-              <option value="">Usar el de la marca (x{cfg.multiplicadorBase ?? 1})</option>
-              <option value="1">x1 — normal</option>
-              <option value="2">x2 — doble puntaje en esta sede</option>
-              <option value="3">x3 — triple puntaje en esta sede</option>
-            </select>
+            <ComboBox value={cfg.multiplicadorSede == null ? '' : String(cfg.multiplicadorSede)} onChange={(v) => set({ multiplicadorSede: v === '' ? null : Number(v) })} opciones={[{ valor: '', etiqueta: `Usar el de la marca (x${cfg.multiplicadorBase ?? 1})` }, { valor: '1', etiqueta: 'x1 — normal' }, { valor: '2', etiqueta: 'x2 — doble puntaje en esta sede' }, { valor: '3', etiqueta: 'x3 — triple puntaje en esta sede' }]} inputClassName={input} />
             <p className="mt-1 text-[11px] text-gray-400">
               Si eliges uno, SUSTITUYE al de la marca aquí (no se suman ni se multiplican
               entre sí). Puedes ponerlo por debajo del de la marca si este local no puede
@@ -597,15 +564,11 @@ export function ProgramaFidelizacionPanel() {
                 <div className="flex items-start gap-2">
                   {/* Icono: hace mucha diferencia visual en la tarjeta del cliente. */}
                   <div className="shrink-0">
-                    <select
-                      value={r.icono || ''}
-                      onChange={(e) => setRec(i, { icono: e.target.value || undefined })}
-                      className="h-9 w-14 rounded-lg border border-gray-200 text-center text-lg outline-none focus:border-emerald-500"
-                      aria-label="Icono de la recompensa"
-                    >
-                      <option value="">–</option>
-                      {ICONOS.map((ic) => <option key={ic} value={ic}>{ic}</option>)}
-                    </select>
+                    <IconoPicker
+                      valor={r.icono}
+                      onChange={(ic) => setRec(i, { icono: ic })}
+                      opciones={ICONOS}
+                    />
                   </div>
 
                   <div className="min-w-0 flex-1 space-y-2">
@@ -957,6 +920,54 @@ function Fila({ etiqueta, valor, extra, fuerte }: {
         {valor}
         {extra && <span className="ml-1.5 text-[11px] font-normal text-amber-600">{extra}</span>}
       </span>
+    </div>
+  )
+}
+
+/**
+ * T11 — Selector de icono de recompensa.
+ *
+ * Era un <select> de emojis. En Android eso abre la lista gris del sistema y los
+ * emojis salen con la fuente del SO, no con la de la app — se ven distintos a los
+ * de la propia lista. Aquí es una rejilla nuestra: lo que eliges es lo que ves.
+ */
+function IconoPicker({
+  valor, onChange, opciones,
+}: { valor?: string; onChange: (v: string) => void; opciones: string[] }) {
+  const [abierto, setAbierto] = useState(false)
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setAbierto((a) => !a)}
+        aria-label="Icono de la recompensa"
+        className="grid h-9 w-14 place-items-center rounded-lg border border-gray-200 text-lg transition hover:border-gray-300"
+      >
+        {valor || '🎁'}
+      </button>
+
+      {abierto && (
+        <>
+          {/* Capa para cerrar al pulsar fuera. Sin ella, en móvil el popover se
+              queda abierto y tapa el formulario. */}
+          <div className="fixed inset-0 z-10" onClick={() => setAbierto(false)} />
+          <div className="absolute left-0 top-11 z-20 grid grid-cols-4 gap-1 rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
+            {opciones.map((ic) => (
+              <button
+                key={ic}
+                type="button"
+                onClick={() => { onChange(ic); setAbierto(false) }}
+                className={`grid h-9 w-9 place-items-center rounded-lg text-lg transition ${
+                  ic === valor ? 'bg-emerald-50 ring-1 ring-emerald-300' : 'hover:bg-gray-50'
+                }`}
+              >
+                {ic}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }

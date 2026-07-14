@@ -6,6 +6,7 @@ import { pagosService, type ResumenComisiones, type PagoTrabajador } from '@/ser
 import { buildImageUrl } from '@/services/apiClient'
 import { fechaHoraPeru } from '@/utils/fecha'
 import { FiltroTrabajador } from '@/components/FiltroTrabajador'
+import { ComboBox } from '@/components/ComboBox'
 
 const METODOS = ['Efectivo', 'Yape', 'Plin', 'Tarjeta', 'Transferencia', 'Otro']
 const money = (n?: number) => `S/ ${Number(n || 0).toFixed(2)}`
@@ -227,9 +228,7 @@ function PagoModal({ trabajador, onClose, onDone }: { trabajador: ResumenComisio
           </div>
           <div>
             <label className="text-xs text-gray-500">Método</label>
-            <select className={field} value={metodo} onChange={e => setMetodo(e.target.value)}>
-              {METODOS.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
+            <ComboBox value={metodo} onChange={(v) => setMetodo(String(v))} opciones={METODOS} inputClassName={field} />
           </div>
           <div>
             <label className="text-xs text-gray-500">Observación (opcional)</label>

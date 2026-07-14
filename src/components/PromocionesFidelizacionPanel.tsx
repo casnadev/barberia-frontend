@@ -9,6 +9,9 @@ import {
   type PromocionFidel,
   type GuardarPromocion,
 } from '@/services/fidelizacionService'
+import { ComboBox } from '@/components/ComboBox'
+import { CalendarModal } from '@/pages/cliente/CalendarModal'
+import { CalendarBlank } from '@phosphor-icons/react'
 
 const DIAS = [
   { v: '', label: 'Todos los días' },
@@ -59,6 +62,9 @@ export function PromocionesFidelizacionPanel({ multiplicadorBase = 1 }: { multip
   const [cargando, setCargando] = useState(true)
   const [editando, setEditando] = useState<number | 'nueva' | null>(null)
   const [form, setForm] = useState<GuardarPromocion>({ ...VACIA })
+
+  // T11 — qué calendario está abierto.
+  const [cal, setCal] = useState<'inicio' | 'fin' | null>(null)
   const [guardando, setGuardando] = useState(false)
 
   const cargar = () =>
@@ -232,46 +238,54 @@ export function PromocionesFidelizacionPanel({ multiplicadorBase = 1 }: { multip
 
             <div>
               <label className="mb-1 block text-xs text-gray-500">Multiplicador</label>
-              <select
-                className={input}
-                value={String(form.multiplicador)}
-                onChange={e => setForm({ ...form, multiplicador: Number(e.target.value) })}
-              >
-                <option value="2">x2 — Doble puntaje</option>
-                <option value="3">x3 — Triple puntaje</option>
-                <option value="4">x4 — Cuádruple puntaje</option>
-                <option value="1.5">x1.5</option>
-              </select>
+              <ComboBox value={String(form.multiplicador)} onChange={(v) => setForm({ ...form, multiplicador: Number(v) })} opciones={[{ valor: '2', etiqueta: 'x2 — Doble puntaje' }, { valor: '3', etiqueta: 'x3 — Triple puntaje' }, { valor: '4', etiqueta: 'x4' }, { valor: '5', etiqueta: 'x5' }]} inputClassName={input} />
             </div>
 
             <div>
               <label className="mb-1 block text-xs text-gray-500">Día de la semana</label>
-              <select
-                className={input}
-                value={form.diaSemana === null || form.diaSemana === undefined ? '' : String(form.diaSemana)}
-                onChange={e => setForm({ ...form, diaSemana: e.target.value === '' ? null : Number(e.target.value) })}
-              >
-                {DIAS.map(d => <option key={d.v} value={d.v}>{d.label}</option>)}
-              </select>
+              <ComboBox value={form.diaSemana === null || form.diaSemana === undefined ? '' : String(form.diaSemana)} onChange={(v) => setForm({ ...form, diaSemana: v === '' ? null : Number(v) })} opciones={DIAS.map((d) => ({ valor: String(d.v ?? ''), etiqueta: d.label }))} inputClassName={input} />
             </div>
 
+            {/* T11 — Eran <input type="date">: en Android abren el picker del sistema,
+                fuera del diseño. Ahora el mismo CalendarModal del flujo de reserva. */}
             <div>
               <label className="mb-1 block text-xs text-gray-500">Desde (opcional)</label>
-              <input
-                type="date" className={input}
-                value={form.fechaInicio ?? ''}
-                onChange={e => setForm({ ...form, fechaInicio: e.target.value || null })}
-              />
+              <button
+                type="button"
+                onClick={() => setCal('inicio')}
+                className={`${input} flex items-center gap-2 text-left`}
+              >
+                <CalendarBlank size={15} className="shrink-0 text-gray-400" />
+                <span className={form.fechaInicio ? '' : 'text-gray-400'}>
+                  {form.fechaInicio || 'Sin fecha'}
+                </span>
+              </button>
             </div>
 
             <div>
               <label className="mb-1 block text-xs text-gray-500">Hasta (opcional)</label>
-              <input
-                type="date" className={input}
-                value={form.fechaFin ?? ''}
-                onChange={e => setForm({ ...form, fechaFin: e.target.value || null })}
-              />
+              <button
+                type="button"
+                onClick={() => setCal('fin')}
+                className={`${input} flex items-center gap-2 text-left`}
+              >
+                <CalendarBlank size={15} className="shrink-0 text-gray-400" />
+                <span className={form.fechaFin ? '' : 'text-gray-400'}>
+                  {form.fechaFin || 'Sin fecha'}
+                </span>
+              </button>
             </div>
+
+            <CalendarModal
+              isOpen={cal !== null}
+              selectedDate={(cal === 'inicio' ? form.fechaInicio : form.fechaFin) ?? ''}
+              onSelectDate={(d) => {
+                setForm({ ...form, [cal === 'inicio' ? 'fechaInicio' : 'fechaFin']: d })
+                setCal(null)
+              }}
+              onClose={() => setCal(null)}
+              allowPast
+            />
           </div>
 
           <label className="mt-3 inline-flex cursor-pointer select-none items-center gap-2 text-sm text-gray-600">
