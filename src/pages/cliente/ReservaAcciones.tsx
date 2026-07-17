@@ -22,6 +22,7 @@ interface Reserva {
   idTrabajador: number
   idServicio: number
   logoSede?: string
+  nombreNegocio?: string
   colorPrimario?: string | null
   subdominio?: string
   slugMarca?: string
@@ -100,6 +101,7 @@ export function ReservaAcciones() {
         idTrabajador: data.idTrabajador,
         idServicio: data.idServicio,
         logoSede: data.urlLogo,
+        nombreNegocio: data.nombreComercial,
         colorPrimario: data.colorPrimarioHex,
         subdominio: data.subdominio,
         slugMarca: data.slugMarca,
@@ -286,19 +288,21 @@ export function ReservaAcciones() {
   return (
     <div className={styles.page} style={brandVar(reserva.colorPrimario)}>
       <header className={styles.topbar}>
-        {reserva.logoSede ? (
-          <img
-            src={reserva.logoSede}
-            alt={reserva.sede}
-            style={{ height: 28, maxWidth: 150, objectFit: 'contain' }}
-          />
-        ) : (
+        <div className={styles.topbarInner}>
+          {reserva.logoSede && (
+            <img
+              src={reserva.logoSede}
+              alt={reserva.nombreNegocio || reserva.sede}
+              className={styles.brandLogo}
+            />
+          )}
           <span className={styles.brand}>
-            <span className={styles.brandMark}><Scissors size={15} /></span>
-            {reserva.sede}
+            {!reserva.logoSede && (
+              <span className={styles.brandMark}><Scissors size={15} /></span>
+            )}
+            {reserva.nombreNegocio || reserva.sede}
           </span>
-        )}
-        
+        </div>
       </header>
 
       <main className={styles.wrap}>

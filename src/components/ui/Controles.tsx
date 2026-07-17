@@ -97,15 +97,19 @@ export interface Opcion<T extends string> {
  * cortan y dejas de saber qué estás pulsando.
  */
 export function OptionGroup<T extends string>({
-  valor, onChange, opciones, cols = 3, label,
+  valor, onChange, opciones, cols = 3, label, variant = 'soft',
 }: {
   valor: T
   onChange: (v: T) => void
   opciones: Opcion<T>[]
   cols?: 2 | 3 | 4
   label?: string
+  /** 'soft' (por defecto): pastilla clara con acento. 'solid': botón de color
+   *  relleno con letra blanca (método de pago). */
+  variant?: 'soft' | 'solid'
 }) {
   const grid = { 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-4' }[cols]
+  const esSolido = variant === 'solid'
 
   return (
     <div>
@@ -125,23 +129,29 @@ export function OptionGroup<T extends string>({
               title={o.disabled ? o.motivoDisabled : undefined}
               onClick={() => !o.disabled && onChange(o.valor)}
               className={`flex flex-col items-center justify-center gap-0.5 rounded-lg border px-1.5 py-2 transition ${
-                activo
-                  ? 'border-emerald-300 bg-emerald-50'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
+                esSolido
+                  ? (activo
+                      ? 'border-emerald-700 bg-emerald-700 text-white shadow-sm ring-2 ring-emerald-500/40'
+                      : 'border-transparent bg-emerald-500 text-white hover:bg-emerald-600')
+                  : (activo
+                      ? 'border-emerald-300 bg-emerald-50'
+                      : 'border-gray-200 bg-white hover:border-gray-300')
               } ${o.disabled ? 'cursor-not-allowed opacity-45' : ''}`}
             >
               {o.icono && (
-                <span className={activo ? 'text-emerald-700' : 'text-gray-400'}>{o.icono}</span>
+                <span className={esSolido ? 'text-white' : (activo ? 'text-emerald-700' : 'text-gray-400')}>{o.icono}</span>
               )}
               <span
                 className={`text-[11px] leading-tight ${
-                  activo ? 'font-semibold text-emerald-800' : 'text-gray-600'
+                  esSolido
+                    ? (activo ? 'font-bold text-white' : 'font-medium text-white')
+                    : (activo ? 'font-semibold text-emerald-800' : 'text-gray-600')
                 }`}
               >
                 {o.etiqueta}
               </span>
               {o.nota && (
-                <span className="text-[10px] leading-tight text-gray-400">{o.nota}</span>
+                <span className={`text-[10px] leading-tight ${esSolido ? 'text-white/80' : 'text-gray-400'}`}>{o.nota}</span>
               )}
             </button>
           )

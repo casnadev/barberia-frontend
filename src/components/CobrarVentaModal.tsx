@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { X, Check, Plus, Minus, Camera, Scissors, Receipt, CaretDown, CaretRight, UserCircle, Storefront, Lightning, UserPlus, MagnifyingGlass } from '@phosphor-icons/react'
+import { X, Check, Plus, Minus, Camera, Scissors, Receipt, CaretRight, UserCircle, Storefront, Lightning, UserPlus, MagnifyingGlass } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { serviciosService } from '@/services/serviciosService'
 import { trabajadoresService } from '@/services/trabajadoresService'
@@ -121,6 +121,27 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
     }).catch(() => { if (!cancel) setLoading(false) })
     return () => { cancel = true }
   }, [mode])
+
+  // Tarea 2 — El profesional se resuelve según QUIÉN hizo la venta:
+  //  • "Venta mía (Admin)"      → el propio dueño-admin (ficha esDuenoAdmin).
+  //    No se muestra dropdown: la venta es del Admin.
+  //  • "Venta de un profesional" → se elige en el dropdown, que solo aparece
+  //    cuando hay 2+ trabajadores (con 1, se autoselecciona).
+  useEffect(() => {
+    if (mode !== 'admin' || trabajadores.length === 0) return
+    const admin = trabajadores.find((t: any) => t.esDuenoAdmin)
+    if (ventaMia) {
+      if (admin) setIdTrabajador(admin.idTrabajador)
+    } else {
+      setIdTrabajador(prev => {
+        // Si venía seleccionado el Admin (o nada), pasa al primer profesional real.
+        const eraAdminOVacio = prev == null || (admin && prev === admin.idTrabajador)
+        if (!eraAdminOVacio) return prev
+        const primerPro = trabajadores.find((t: any) => !t.esDuenoAdmin) ?? trabajadores[0]
+        return primerPro?.idTrabajador ?? null
+      })
+    }
+  }, [ventaMia, trabajadores, mode])
 
   // Cerrar con Escape
   useEffect(() => {
@@ -347,16 +368,20 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
                       </p>
                     </div>
 
-                    <div>
-                      <label className={label}><UserCircle size={14} weight="duotone" /> Profesional {ventaMia && <span className="text-gray-400 font-normal">· que atendió</span>}</label>
-                      <ComboBox
-                        value={idTrabajador ?? ''}
-                        onChange={(v) => setIdTrabajador(v === '' ? null : Number(v))}
-                        opciones={trabajadores.map(t => ({ valor: t.idTrabajador, etiqueta: t.nombreCompleto }))}
-                        disabled={trabajadores.length === 0}
-                        inputClassName={field}
-                      />
-                    </div>
+                    {/* El dropdown de profesional SOLO aparece cuando la venta es
+                        de un profesional Y hay 2+ trabajadores para elegir. En
+                        "Venta mía (Admin)" el profesional es el propio Admin. */}
+                    {!ventaMia && trabajadores.length >= 2 && (
+                      <div>
+                        <label className={label}><UserCircle size={14} weight="duotone" /> Profesional</label>
+                        <ComboBox
+                          value={idTrabajador ?? ''}
+                          onChange={(v) => setIdTrabajador(v === '' ? null : Number(v))}
+                          opciones={trabajadores.map(t => ({ valor: t.idTrabajador, etiqueta: t.nombreCompleto }))}
+                          inputClassName={field}
+                        />
+                      </div>
+                    )}
                   </>
                 )}
 
@@ -541,15 +566,13 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
                 {/* Método de pago */}
                 <div>
                   <label className={label}>Método de pago</label>
-                  <div className="relative">
-                    <OptionGroup
-                      valor={metodo}
-                      onChange={setMetodo}
-                      cols={3}
-                      opciones={METODOS.map((mp) => ({ valor: mp, etiqueta: mp }))}
-                    />
-                    <CaretDown size={16} weight="bold" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  </div>
+                  <OptionGroup
+                    valor={metodo}
+                    onChange={setMetodo}
+                    cols={3}
+                    variant="solid"
+                    opciones={METODOS.map((mp) => ({ valor: mp, etiqueta: mp }))}
+                  />
                 </div>
 
                 {metodo !== 'Efectivo' && (

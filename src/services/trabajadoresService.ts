@@ -15,6 +15,8 @@ export interface Trabajador {
   urlFotoPerfil?: string
   especializacion?: string
   estado: boolean
+  /** TRUE = ficha del dueño (Admin). Usado para resolver "Venta mía". */
+  esDuenoAdmin?: boolean
   accesoHabilitado?: boolean
   idSede?: number
   idEmpresa?: number

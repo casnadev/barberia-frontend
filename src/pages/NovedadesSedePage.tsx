@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CaretLeft as ChevronLeft, Gift } from '@phosphor-icons/react'
 import { sedesService } from '@/services/sedesService'
-import { getActiveTenant, getTenantOverride } from '@/services/apiClient'
+import { getActiveTenant, getTenantOverride, buildImageUrl } from '@/services/apiClient'
 import { novedadesService } from '@/services/novedadesService'
 import { AccountMenu } from '@/components/AccountMenu'
 import { FlyerNovedad } from '@/components/FlyerNovedad'
@@ -45,17 +45,23 @@ export function NovedadesSedePage() {
   return (
     <div className={`${styles.page} ${styles.npPage}`} style={{ ['--brand' as any]: brand }}>
       <header className={styles.npBar}>
-        <button className={styles.npBack} onClick={() => navigate(-1)} aria-label="Volver">
-          <ChevronLeft width={22} height={22} />
-        </button>
-        <div className={styles.npBarTitle}>
-          <span className={styles.npBarIcon} style={{ background: `${brand}14`, color: brand }}><Gift width={18} height={18} /></span>
-          <div>
-            <div className={styles.npBarH}>Promociones</div>
-            {sede?.nombre && <div className={styles.npBarSub}>{sede.nombre}</div>}
+        <div className={styles.npBarInner}>
+          <button className={styles.npBack} onClick={() => navigate(-1)} aria-label="Volver">
+            <ChevronLeft width={22} height={22} />
+          </button>
+          <div className={styles.npBarTitle}>
+            {sede?.urlLogo ? (
+              <img className={styles.npBarLogo} src={buildImageUrl(sede.urlLogo)} alt={sede?.nombreComercial || ''} />
+            ) : (
+              <span className={styles.npBarIcon} style={{ background: `${brand}14`, color: brand }}><Gift width={18} height={18} /></span>
+            )}
+            <div style={{ minWidth: 0 }}>
+              <div className={styles.npBarH}>{sede?.nombreComercial || sede?.nombre || 'Promociones'}</div>
+              <div className={styles.npBarSub}>Promociones</div>
+            </div>
           </div>
+          <AccountMenu variant="plain" />
         </div>
-        <AccountMenu variant="plain" />
       </header>
 
       <div className={styles.npBody}>
