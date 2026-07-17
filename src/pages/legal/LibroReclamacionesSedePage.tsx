@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Check, WarningCircle, CircleNotch } from '@phosphor-icons/react'
 import LegalShell from './LegalShell'
+import { TextareaContador } from '@/components/ui/TextareaContador'
 import s from './Legal.module.css'
 import {
   libroReclamacionesService,
@@ -318,20 +319,18 @@ export default function LibroReclamacionesSedePage() {
 
         <div className={s.field}>
           <label>Cuéntanos qué pasó</label>
-          <textarea
-            required rows={5}
+          <TextareaContador className="" required rows={5} limite={2000}
             value={f.detalle}
-            onChange={(e) => set('detalle')(e.target.value)}
+            onChange={(v) => set('detalle')(v)}
           />
         </div>
 
         <div className={s.field}>
           <label>¿Qué pides?</label>
-          <textarea
-            rows={3}
+          <TextareaContador className="" rows={3} limite={1000}
             placeholder="Ej: que me devuelvan el importe, que lo repitan…"
             value={f.pedido}
-            onChange={(e) => set('pedido')(e.target.value)}
+            onChange={(v) => set('pedido')(v)}
           />
         </div>
 

@@ -6,6 +6,7 @@ import { sedeTenantService } from '@/services/sedeTenantService'
 import { geoService } from '@/services/geoService'
 import { DEPARTAMENTOS, distritosDe, distritoValido } from '@/data/ubigeo'
 import { ComboBox } from '@/components/ComboBox'
+import { TextareaContador } from '@/components/ui/TextareaContador'
 import SeccionFila from '@/components/SeccionFila'
 import SeccionSheet from '@/components/SeccionSheet'
 import { Skeleton, SkeletonRows } from '@/components/Skeleton'
@@ -762,7 +763,7 @@ export function ConfiguracionPage() {
             </p>
           )}
           <Field label="Descripción">
-            <textarea className={inputCls + ' resize-none'} rows={4} value={sede.descripcion || ''} onChange={(e) => handleChange('descripcion', e.target.value)} />
+            <TextareaContador className={inputCls + ' resize-none'} rows={4} value={sede.descripcion || ''} onChange={(v) => handleChange('descripcion', v)} limite={500} />
           </Field>
         </div>
       </SeccionSheet>
@@ -981,7 +982,7 @@ export function ConfiguracionPage() {
           </p>
 
           <Field label="Descripción del negocio">
-            <textarea className={inputCls + ' resize-none'} rows={3} value={empresa.descripcion} onChange={(e) => handleChangeEmpresa('descripcion', e.target.value)} placeholder="Breve descripción de tu negocio" />
+            <TextareaContador className={inputCls + ' resize-none'} rows={3} value={empresa.descripcion} onChange={(v) => handleChangeEmpresa('descripcion', v)} limite={500} placeholder="Breve descripción de tu negocio" />
           </Field>
 
           {/* ══ T9 · IDENTIDAD LEGAL ═══════════════════════════════════════════════

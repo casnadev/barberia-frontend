@@ -73,6 +73,8 @@ export interface MiPerfilTrabajador {
   generaLiquidaciones?: boolean
   frecuenciaPago?: string
   metodoPagoPreferido?: string
+  tipoRemuneracion?: string
+  montoPagoFijo?: number | null
   correoConfirmado?: boolean
   telefonoConfirmado?: boolean
 }

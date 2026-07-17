@@ -178,6 +178,16 @@ export const inscripcionService = {
       vincularCorreo: datos.vincularCorreo ?? true,
     })),
 
+  /** "Ya estás registrado → ver mi tarjeta": teléfono + OTP, sin re-registro. */
+  recuperar: async (
+    idSede: number,
+    datos: { telefono: string; codigo: string },
+  ): Promise<InscripcionResultado> =>
+    unwrap(await apiClient.post(`/api/Inscripcion/${idSede}/recuperar`, {
+      telefono: datos.telefono,
+      codigo: datos.codigo,
+    })),
+
   /** Monedero web del cliente: funciona en cualquier teléfono, sin app y sin Wallet. */
   getMonedero: async (codigo: string): Promise<MonederoPublico | null> => {
     try {

@@ -102,8 +102,11 @@ const VENCIMIENTOS = [
   { v: '24', label: '24 meses' },
 ]
 
-/** Iconos sugeridos para las recompensas. El Admin puede dejarla sin icono. */
-const ICONOS = ['🎁', '💈', '✂️', '🧴', '🥤', '🎂', '🎟️', '⭐']
+/** Iconos sugeridos para las recompensas. Emoji a propósito: el mismo valor se
+ *  muestra en la tarjeta de Google Wallet, el monedero web y el cartel IMPRESO
+ *  (contextos que no son React), donde un ícono SVG no renderiza. El Admin puede
+ *  dejarla sin icono. */
+const ICONOS = ['🎁', '💈', '✂️', '🪒', '🧔', '🧴', '🧢', '☕', '🥤', '🎂', '🎟️', '⭐', '🔥', '👑', '💯', '🏆']
 
 /**
  * Sugerencia precargada al crear un programa nuevo. Casi todos los SaaS lo hacen:
@@ -915,12 +918,12 @@ export function ProgramaFidelizacionPanel() {
         </div>
       </section>
 
-      {/* ══════════════ GUARDAR ══════════════ */}
-      <div className="flex justify-end">
+      {/* ══════════════ GUARDAR — barra flotante, siempre visible ══════════════ */}
+      <div className="sticky bottom-0 z-30 flex justify-end gap-2 rounded-t-2xl border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-white/80">
         <button
           onClick={guardar}
           disabled={guardando}
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 sm:w-auto"
         >
           {guardando ? <CircleNotch size={16} className="animate-spin" /> : <FloppyDisk size={16} weight="fill" />}
           Guardar programa
@@ -993,19 +996,21 @@ function IconoPicker({
           {/* Capa para cerrar al pulsar fuera. Sin ella, en móvil el popover se
               queda abierto y tapa el formulario. */}
           <div className="fixed inset-0 z-10" onClick={() => setAbierto(false)} />
-          <div className="absolute left-0 top-11 z-20 grid grid-cols-4 gap-1 rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
-            {opciones.map((ic) => (
-              <button
-                key={ic}
-                type="button"
-                onClick={() => { onChange(ic); setAbierto(false) }}
-                className={`grid h-9 w-9 place-items-center rounded-lg text-lg transition ${
-                  ic === valor ? 'bg-emerald-50 ring-1 ring-emerald-300' : 'hover:bg-gray-50'
-                }`}
-              >
-                {ic}
-              </button>
-            ))}
+          <div className="absolute left-0 top-11 z-20 w-max rounded-xl border border-gray-200 bg-white p-2.5 shadow-lg">
+            <div className="grid grid-cols-6 gap-1.5">
+              {opciones.map((ic) => (
+                <button
+                  key={ic}
+                  type="button"
+                  onClick={() => { onChange(ic); setAbierto(false) }}
+                  className={`flex h-10 w-10 items-center justify-center rounded-lg text-xl leading-none transition ${
+                    ic === valor ? 'bg-emerald-50 ring-1 ring-emerald-300' : 'hover:bg-gray-100'
+                  }`}
+                >
+                  {ic}
+                </button>
+              ))}
+            </div>
           </div>
         </>
       )}

@@ -47,6 +47,9 @@ export function UnirmePage() {
   const [cargando, setCargando] = useState(true)
 
   const [paso, setPaso] = useState<Paso>('datos')
+  // "alta" = inscribirse (formulario completo). "recuperar" = ya estás registrado,
+  // solo teléfono + OTP → tu tarjeta (imagen 1).
+  const [modo, setModo] = useState<'alta' | 'recuperar'>('alta')
   const [nombre, setNombre] = useState('')
   const [telefono, setTelefono] = useState('')
   const [correo, setCorreo] = useState('')
@@ -66,26 +69,46 @@ export function UnirmePage() {
     inscripcionService.getInfo(sedeId).then(setInfo).finally(() => setCargando(false))
   }, [sedeId])
 
+  // Imagen 5 — recién inscrito: llevarlo DIRECTO a su monedero (sus puntos, su QR,
+  // sus premios) en vez de dejarlo en una pantalla intermedia. Se deja un instante
+  // el "¡Listo!" para que registre que se unió, y luego se abre su página de puntos.
+  useEffect(() => {
+    if (!listo?.codigo) return
+    const t = setTimeout(() => navigate(`/monedero/${listo.codigo}`), 1400)
+    return () => clearTimeout(t)
+  }, [listo, navigate])
+
   const msgError = (e: any, fallback: string) =>
     e?.response?.data?.detail || e?.response?.data?.mensaje || fallback
 
   /* ── PASO 1 → evaluar ────────────────────────────────────────────────── */
   const continuar = async () => {
     setError(null)
-    if (nombre.trim().length < 2) { setError('Escribe tu nombre.'); return }
+    if (modo === 'alta' && nombre.trim().length < 2) { setError('Escribe tu nombre.'); return }
     if (telefono.trim().length !== 9) { setError('Tu celular debe tener 9 dígitos.'); return }
-    if (correo.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo.trim())) {
+    if (modo === 'alta' && correo.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo.trim())) {
       setError('Ese correo no parece válido.'); return
     }
 
     setEnviando(true)
     try {
       const ev = await inscripcionService.evaluar(sedeId, {
-        nombreCompleto: nombre.trim(),
+        nombreCompleto: nombre.trim() || 'Cliente',
         telefono: telefono.trim(),
-        correo: correo.trim() || null,
+        correo: modo === 'alta' ? (correo.trim() || null) : null,
       })
       setEvaluacion(ev)
+
+      // ── Modo RECUPERAR: solo vale un teléfono YA registrado. ──
+      if (modo === 'recuperar') {
+        if (ev.caso !== 'TelefonoExistente' || !ev.requiereOtp) {
+          setError('No encontramos una tarjeta con ese número. Toca “¿Primera vez? Inscríbete”.')
+          return
+        }
+        await inscripcionService.enviarOtp(sedeId, { telefono: telefono.trim(), correo: null, caso: ev.caso })
+        setPaso('codigo')
+        return
+      }
 
       if (!ev.requiereOtp) {
         // Caso C: nadie con esos datos. Nada que robar → entra directo.
@@ -122,15 +145,20 @@ export function UnirmePage() {
 
     setEnviando(true)
     try {
-      const r = await inscripcionService.confirmar(sedeId, {
-        nombreCompleto: nombre.trim(),
-        telefono: telefono.trim(),
-        correo: correo.trim() || null,
-        fechaNacimiento: cumple || null,
-        caso: evaluacion.caso,
-        codigo: codigo.trim(),
-        vincularCorreo: vincular,
-      })
+      const r = modo === 'recuperar'
+        ? await inscripcionService.recuperar(sedeId, {
+            telefono: telefono.trim(),
+            codigo: codigo.trim(),
+          })
+        : await inscripcionService.confirmar(sedeId, {
+            nombreCompleto: nombre.trim(),
+            telefono: telefono.trim(),
+            correo: correo.trim() || null,
+            fechaNacimiento: cumple || null,
+            caso: evaluacion.caso,
+            codigo: codigo.trim(),
+            vincularCorreo: vincular,
+          })
       setListo({ codigo: r.codigoQr, yaExistia: r.yaExistia, wallet: r.enlaceWallet })
       setPaso('listo')
     } catch (e: any) {
@@ -408,16 +436,40 @@ export function UnirmePage() {
             {/* Formulario */}
             <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4">
               <div className="space-y-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-500">Tu nombre</label>
-                  <input
-                    value={nombre}
-                    onChange={(e) => setNombre(e.target.value)}
-                    placeholder="Ej. Carlos Ramos"
-                    autoComplete="name"
-                    className={campo}
-                  />
+                {/* Imagen 1 — atajo para el que YA está registrado. */}
+                <div className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2">
+                  <span className="text-xs text-gray-500">
+                    {modo === 'alta' ? '¿Ya te inscribiste?' : '¿Primera vez?'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => { setModo((m) => (m === 'alta' ? 'recuperar' : 'alta')); setError(null) }}
+                    className="text-xs font-semibold"
+                    style={{ color }}
+                  >
+                    {modo === 'alta' ? 'Ver mi tarjeta' : 'Inscríbete'}
+                  </button>
                 </div>
+
+                {modo === 'recuperar' && (
+                  <p className="rounded-lg bg-gray-50 px-3 py-2 text-[11px] leading-relaxed text-gray-500">
+                    Pon tu celular y te enviamos un código por WhatsApp para confirmar que
+                    eres tú. Luego abrimos tu tarjeta con todos tus puntos.
+                  </p>
+                )}
+
+                {modo === 'alta' && (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-500">Tu nombre</label>
+                    <input
+                      value={nombre}
+                      onChange={(e) => setNombre(e.target.value)}
+                      placeholder="Ej. Carlos Ramos"
+                      autoComplete="name"
+                      className={campo}
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-500">Tu celular</label>
@@ -434,6 +486,7 @@ export function UnirmePage() {
                   </p>
                 </div>
 
+                {modo === 'alta' && (<>
                 {/* El correo es OPCIONAL pero vale oro: es lo que engancha, solo, la
                     reserva que hizo hace meses dejando únicamente el correo. Sin él,
                     esa historia se pierde y empieza de cero. */}
@@ -463,6 +516,7 @@ export function UnirmePage() {
                       flecha ~460 veces. Ahora se teclea: 13081987 → 13/08/1987. */}
                   <CampoCumpleanos id="cumple" value={cumple} onChange={setCumple} className={campo} />
                 </div>
+                </>)}
               </div>
 
               {error && (
@@ -478,7 +532,7 @@ export function UnirmePage() {
                 style={{ background: color }}
               >
                 {enviando ? <CircleNotch size={16} className="animate-spin" /> : <Star size={16} weight="fill" />}
-                {enviando ? 'Un momento…' : 'Unirme al programa'}
+                {enviando ? 'Un momento…' : (modo === 'recuperar' ? 'Ver mi tarjeta' : 'Unirme al programa')}
               </button>
 
               {/* T4 — DOS bugs aquí:

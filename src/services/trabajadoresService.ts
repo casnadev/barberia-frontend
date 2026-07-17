@@ -8,6 +8,8 @@ export interface Trabajador {
   generaLiquidaciones?: boolean
   frecuenciaPago?: string
   metodoPagoPreferido?: string
+  tipoRemuneracion?: string
+  montoPagoFijo?: number | null
   telefono?: string
   correo?: string
   urlFotoPerfil?: string

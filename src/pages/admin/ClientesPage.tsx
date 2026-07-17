@@ -430,104 +430,95 @@ export function ClientesPage() {
         )}
       </div>
 
-      {/* Modal de detalle */}
+      {/* Modal de detalle — rediseño: cabecera con color de marca, datos compactos
+          en grid y footer fijo (igual en mobile y desktop, sin tanto scroll). */}
       {showDetailModal && selectedCliente && (
         <div className={s.overlay} onClick={() => setShowDetailModal(false)}>
-          <div className={s.modal} onClick={(e) => e.stopPropagation()}>
-            <div className={s.modalHead}>
-              <h2 className={s.modalTitle}><Users width={20} height={20} color="var(--brand, #2855F6)" /> Detalles del cliente</h2>
-              <button className={s.modalClose} onClick={() => setShowDetailModal(false)} aria-label="Cerrar"><X width={18} height={18} /></button>
+          <div
+            className={s.modal}
+            onClick={(e) => e.stopPropagation()}
+            style={{ display: 'flex', flexDirection: 'column', maxHeight: '90vh', padding: 0, overflow: 'hidden' }}
+          >
+            {/* Cabecera con color de marca */}
+            <div style={{ background: 'linear-gradient(135deg, var(--brand, #2855F6), #1f2937)', color: '#fff', padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+              <div style={{ width: 46, height: 46, borderRadius: 12, background: 'rgba(255,255,255,.18)', display: 'grid', placeItems: 'center', fontSize: 18, fontWeight: 700, flexShrink: 0 }}>
+                {(selectedCliente.nombreCompleto || 'C').slice(0, 1).toUpperCase()}
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedCliente.nombreCompleto}</p>
+                <p style={{ margin: '2px 0 0', fontSize: 12, opacity: .85, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Phone width={12} height={12} /> {selectedCliente.telefono}
+                  <span style={{ padding: '1px 8px', borderRadius: 999, fontSize: 11, background: selectedCliente.bloqueadoWeb ? 'rgba(239,68,68,.25)' : 'rgba(16,185,129,.28)' }}>
+                    {selectedCliente.bloqueadoWeb ? 'Bloqueado' : 'Activo'}
+                  </span>
+                </p>
+              </div>
+              <button className={s.modalClose} onClick={() => setShowDetailModal(false)} aria-label="Cerrar" style={{ color: '#fff' }}><X width={18} height={18} /></button>
             </div>
 
-            <div className={s.detail}>
-              <div className={s.dField}>
-                <span className={s.dLabel}>Nombre</span>
-                <span className={s.dValue} style={{ fontSize: '1.05rem' }}>{selectedCliente.nombreCompleto}</span>
-              </div>
-              <div className={s.dField}>
-                <span className={s.dLabel}>Teléfono</span>
-                <span className={s.dValue}><Phone width={15} height={15} /> {selectedCliente.telefono}</span>
-              </div>
-              <div className={s.dField}>
-                <span className={s.dLabel}>Email</span>
-                <span className={s.dValue}>{selectedCliente.correo || 'No registrado'}</span>
-              </div>
-              <div className={s.dField}>
-                <span className={s.dLabel}>Género</span>
-                <span className={s.dValue}>
-                  {selectedCliente.genero === 'M' ? '👨 Masculino' : selectedCliente.genero === 'F' ? '👩 Femenino' : selectedCliente.genero || 'No especificado'}
-                </span>
-              </div>
+            {/* Cuerpo desplazable */}
+            <div style={{ overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-              <div className={s.statsBox}>
-                <span className={s.dLabel}>Historial de reservas</span>
-                <div className={s.statsGrid}>
-                  <div>
-                    <div className={s.statNum}>{selectedCliente.totalReservas || 0}</div>
-                    <div className={s.statLabel}>Total de reservas</div>
-                  </div>
-                  <div>
-                    <div className={`${s.statNum} ${s.statNumGreen}`}>{selectedCliente.reservasAtendidas || 0}</div>
-                    <div className={s.statLabel}>Atendidas</div>
+              {/* Datos en grid de 2 columnas: compacto, sin espacios muertos */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>Email</div>
+                  <div style={{ fontSize: 14, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedCliente.correo || 'No registrado'}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>Género</div>
+                  <div style={{ fontSize: 14, color: '#111827' }}>
+                    {selectedCliente.genero === 'M' ? 'Masculino' : selectedCliente.genero === 'F' ? 'Femenino' : selectedCliente.genero || 'No especificado'}
                   </div>
                 </div>
+                <div>
+                  <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>Registrado</div>
+                  <div style={{ fontSize: 14, color: '#111827', display: 'flex', alignItems: 'center', gap: 4 }}><Calendar width={13} height={13} /> {fecha(selectedCliente.fechaCreacion, true)}</div>
+                </div>
+                {selectedCliente.ultimaVisita && (
+                  <div>
+                    <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>Última visita</div>
+                    <div style={{ fontSize: 14, color: '#111827' }}>{fecha(selectedCliente.ultimaVisita)}</div>
+                  </div>
+                )}
               </div>
 
-              <div className={s.dField}>
-                <span className={s.dLabel}>No-shows</span>
-                <span className={s.dValue}>
-                  {selectedCliente.contadorNoShows || 0} inasistencias
-                  {(selectedCliente.contadorNoShows || 0) >= 3 && <span className={s.warn}>⚠️ Riesgo de bloqueo</span>}
-                </span>
-              </div>
-
-              <div className={s.dField}>
-                <span className={s.dLabel}>Estado de acceso</span>
-                <span>
-                  <span className={`${s.badge} ${selectedCliente.bloqueadoWeb ? s.badgeBlocked : s.badgeActive}`}>
-                    {selectedCliente.bloqueadoWeb ? '🚫 Bloqueado' : '✅ Activo'}
-                  </span>
-                </span>
+              {/* Métricas compactas: reservas, atendidas, no-shows */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                <div style={{ background: '#f9fafb', borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#111827' }}>{selectedCliente.totalReservas || 0}</div>
+                  <div style={{ fontSize: 11, color: '#9ca3af' }}>Reservas</div>
+                </div>
+                <div style={{ background: '#f9fafb', borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#059669' }}>{selectedCliente.reservasAtendidas || 0}</div>
+                  <div style={{ fontSize: 11, color: '#9ca3af' }}>Atendidas</div>
+                </div>
+                <div style={{ background: (selectedCliente.contadorNoShows || 0) >= 3 ? '#fef2f2' : '#f9fafb', borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: (selectedCliente.contadorNoShows || 0) >= 3 ? '#dc2626' : '#111827' }}>{selectedCliente.contadorNoShows || 0}</div>
+                  <div style={{ fontSize: 11, color: '#9ca3af' }}>No-shows</div>
+                </div>
               </div>
 
               {selectedCliente.bloqueadoWeb && selectedCliente.fechaSolicitudDesbloqueo && (
-                <div className={s.dField}>
-                  <span className={s.dLabel}>🙋 Solicitó desbloqueo</span>
-                  <span className={s.dValue} style={{ display: 'block' }}>
-                    <span style={{ fontStyle: 'italic', color: '#b45309' }}>
-                      “{selectedCliente.motivoSolicitudDesbloqueo}”
-                    </span>
-                    <br />
-                    <small style={{ color: '#9ca3af' }}>{fecha(selectedCliente.fechaSolicitudDesbloqueo, true)}</small>
-                  </span>
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 12px' }}>
+                  <div style={{ fontSize: 11, color: '#b45309', marginBottom: 2 }}>Solicitó desbloqueo</div>
+                  <div style={{ fontStyle: 'italic', color: '#b45309', fontSize: 13 }}>“{selectedCliente.motivoSolicitudDesbloqueo}”</div>
+                  <div style={{ color: '#9ca3af', fontSize: 11, marginTop: 2 }}>{fecha(selectedCliente.fechaSolicitudDesbloqueo, true)}</div>
                 </div>
               )}
 
-              <div className={s.dField}>
-                <span className={s.dLabel}>Registrado desde</span>
-                <span className={s.dValue}><Calendar width={15} height={15} /> {fecha(selectedCliente.fechaCreacion, true)}</span>
-              </div>
-
-              {selectedCliente.ultimaVisita && (
-                <div className={s.dField}>
-                  <span className={s.dLabel}>Última visita</span>
-                  <span className={s.dValue}>{fecha(selectedCliente.ultimaVisita)}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Fidelización. OJO: el idCliente de ESTA lista es del CRM agregado y no
-                identifica a nadie (puede ser 0 o negativo). El monedero se abre con el
-                cliente REAL, resuelto por teléfono. */}
-            <div style={{ padding: '0 20px 4px' }}>
+              {/* Fidelización. OJO: el idCliente de ESTA lista es del CRM agregado y no
+                  identifica a nadie (puede ser 0 o negativo). El monedero se abre con el
+                  cliente REAL, resuelto por teléfono. */}
               <MonederoDelCliente telefono={selectedCliente.telefono} idClienteReal={selectedCliente.idClienteReal} />
             </div>
 
-            <div className={s.modalActions}>
+            {/* Footer fijo */}
+            <div style={{ borderTop: '1px solid #eef0f2', padding: '12px 20px', display: 'flex', gap: 10, background: '#fff', flexShrink: 0 }}>
               {selectedCliente.bloqueadoWeb && (
-                <button className={s.btnUnlock} onClick={() => { handleDesbloquear(selectedCliente.idCliente!); setShowDetailModal(false) }}><Unlock width={16} height={16} /> Desbloquear cliente</button>
+                <button className={s.btnUnlock} onClick={() => { handleDesbloquear(selectedCliente.idCliente!); setShowDetailModal(false) }} style={{ flex: 1 }}><Unlock width={16} height={16} /> Desbloquear</button>
               )}
-              <button className={s.btnClose} onClick={() => setShowDetailModal(false)}>Cerrar</button>
+              <button className={s.btnClose} onClick={() => setShowDetailModal(false)} style={{ flex: 1 }}>Cerrar</button>
             </div>
           </div>
         </div>

@@ -100,7 +100,10 @@ export function MonederoPublicoPage() {
     )
   }
 
-  const color = m.nivelColor || m.color || '#111827'
+  // Imagen 6 — el fondo es el COLOR DE MARCA que eligió el negocio, no el del nivel
+  // (antes el nivel pintaba la tarjeta y dejaba de verse la marca). El nivel se
+  // sigue mostrando como badge más abajo. Fallback: nivel, y luego oscuro neutro.
+  const color = m.color || m.nivelColor || '#111827'
   const prox = m.proximaRecompensa
   const pct = prox
     ? Math.min(100, Math.round((m.saldoPuntos / Math.max(1, prox.puntosRequeridos)) * 100))
@@ -290,7 +293,7 @@ export function MonederoPublicoPage() {
               {m.movimientos.map((mov, i) => (
                 <div key={i} className="flex items-center justify-between gap-2 border-b border-gray-50 py-1.5 text-xs last:border-0">
                   <span className="min-w-0 truncate text-gray-500">
-                    {fechaCorta(mov.fecha)} · {mov.motivo || mov.tipo}
+                    {fechaCorta(mov.fecha)} · {mov.motivo || mov.tipo}{mov.nombreSede ? ` · ${mov.nombreSede}` : ''}
                   </span>
                   <span className={`shrink-0 font-semibold ${mov.puntos >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
                     {mov.puntos >= 0 ? `+${mov.puntos}` : mov.puntos}

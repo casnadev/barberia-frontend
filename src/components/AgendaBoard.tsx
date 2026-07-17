@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { sedesService } from '@/services/sedesService'
 import { reservasService, Reserva } from '@/services/reservasService'
+import { notificarFidelizacion } from '@/components/NotificacionFidelizacion'
 import { trabajadoresService, Trabajador } from '@/services/trabajadoresService'
 import { apiClient, buildImageUrl, getActiveTenant, urlSedeCanonica } from '@/services/apiClient'
 import { sedeTenantService } from '@/services/sedeTenantService'
@@ -325,7 +326,15 @@ export function AgendaBoard({ mode = 'admin', trabajadorPropio, onAtenderTrabaja
 
   // ===== Acciones =====
   const accion = async (fn: () => Promise<any>, ok: string) => {
-    try { setBusy(true); await fn(); toast.success(ok); setDetail(null); loadData() }
+    try {
+      setBusy(true)
+      const res = await fn()
+      toast.success(ok)
+      // Tarea 1 — si la acción devolvió acumulación de puntos (atender cita), avisa
+      // en caja igual que la venta rápida. No-op para el resto de acciones.
+      notificarFidelizacion(res?.fidelizacion)
+      setDetail(null); loadData()
+    }
     catch { toast.error('No se pudo completar la acción') } finally { setBusy(false) }
   }
 

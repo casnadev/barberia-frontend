@@ -11,6 +11,7 @@ import { resolverIconoServicio } from '@/utils/iconosServicio'
 import s from '@/styles/Servicios.module.css'
 import { CategoriaPicker } from '@/components/CategoriaPicker'
 import { CheckPill, InputAfijo } from '@/components/ui/Controles'
+import { TextareaContador } from '@/components/ui/TextareaContador'
 
 interface Servicio {
   idServicio?: number
@@ -537,7 +538,7 @@ export function ServiciosPage() {
 
                 <div className={s.field}>
                   <label className={s.label}>Descripción corta</label>
-                  <textarea className={s.textarea} value={form.descripcionCorta || ''} onChange={(e) => setForm({ ...form, descripcionCorta: e.target.value })} rows={2} />
+                  <TextareaContador className={s.textarea} value={form.descripcionCorta || ''} onChange={(v) => setForm({ ...form, descripcionCorta: v })} limite={300} rows={2} />
                 </div>
 
                 <div className={s.row2}>

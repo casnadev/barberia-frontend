@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Check, Checks as CheckCheck, X, Clock, User, Phone, Envelope as Mail, Calendar, Scissors, MagnifyingGlass as Search, CalendarDots as CalendarDays, CurrencyDollar as DollarSign, CaretLeft as ChevronLeft, CaretRight as ChevronRight, UserPlus as UserPlusIcon } from '@phosphor-icons/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { mensajeError } from '@/utils/apiError'
+import { notificarFidelizacion } from '@/components/NotificacionFidelizacion'
 import { citaYaEmpezo, MSG_CITA_NO_LLEGA } from '@/utils/fecha'
 import s from '@/styles/Reservas.module.css'
 import d from '@/styles/Dashboard.module.css'
@@ -197,8 +198,11 @@ export function ReservasPage() {
 
   const doAtender = async (id: number) => {
     try {
-      await reservasService.marcarAtendida(id)
+      const r = await reservasService.marcarAtendida(id)
       toast.success('Reserva marcada como atendida')
+      // Tarea 1 — mismo aviso de puntos que en la venta rápida. Solo aparece si la
+      // venta de la cita quedó aprobada en el acto y el cliente estaba identificado.
+      notificarFidelizacion((r as any)?.fidelizacion)
       setSelected(null)
       loadReservas()
     } catch (e) { toast.error(mensajeError(e, 'No se pudo marcar como atendida')) }

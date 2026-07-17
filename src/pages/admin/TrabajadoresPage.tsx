@@ -13,6 +13,7 @@ import { ROLES_TRABAJADOR } from '@/data/roles'
 import s from '@/styles/Trabajadores.module.css'
 import { ComboBox } from '@/components/ComboBox'
 import { Check, CheckPill } from '@/components/ui/Controles'
+import { TextareaContador } from '@/components/ui/TextareaContador'
 
 interface Trabajador {
   idTrabajador?: number
@@ -25,6 +26,8 @@ interface Trabajador {
   generaLiquidaciones?: boolean
   frecuenciaPago?: string
   metodoPagoPreferido?: string
+  tipoRemuneracion?: string
+  montoPagoFijo?: number
   urlFotoPerfil?: string
   descripcion?: string
   especialidad?: string
@@ -78,6 +81,7 @@ export function TrabajadoresPage() {
     generaLiquidaciones: true,
     frecuenciaPago: 'Quincenal',
     metodoPagoPreferido: 'Efectivo',
+    tipoRemuneracion: 'Comision',
     urlFotoPerfil: '',
     descripcion: '',
     especialidad: '',
@@ -220,6 +224,8 @@ export function TrabajadoresPage() {
         generaLiquidaciones: form.generaLiquidaciones ?? true,
         frecuenciaPago: form.frecuenciaPago || 'Quincenal',
         metodoPagoPreferido: form.metodoPagoPreferido || 'Efectivo',
+        tipoRemuneracion: form.tipoRemuneracion || 'Comision',
+        montoPagoFijo: form.tipoRemuneracion === 'Fijo' ? (form.montoPagoFijo ?? 0) : null,
         urlFotoPerfil: form.urlFotoPerfil,
         descripcion: form.descripcion,
         especialidad: form.especialidad,
@@ -315,6 +321,8 @@ export function TrabajadoresPage() {
       generaLiquidaciones: trabajador.generaLiquidaciones ?? true,
       frecuenciaPago: trabajador.frecuenciaPago || 'Quincenal',
       metodoPagoPreferido: trabajador.metodoPagoPreferido || 'Efectivo',
+      tipoRemuneracion: trabajador.tipoRemuneracion || 'Comision',
+      montoPagoFijo: trabajador.montoPagoFijo ?? undefined,
       urlFotoPerfil: trabajador.urlFotoPerfil,
       descripcion: trabajador.descripcion,
       especialidad: trabajador.especialidad,
@@ -359,6 +367,7 @@ export function TrabajadoresPage() {
     generaLiquidaciones: true,
     frecuenciaPago: 'Quincenal',
     metodoPagoPreferido: 'Efectivo',
+    tipoRemuneracion: 'Comision',
       urlFotoPerfil: '',
       descripcion: '',
       especialidad: '',
@@ -699,6 +708,37 @@ export function TrabajadoresPage() {
                   <>
                     <div className={s.row2}>
                       <div className={s.field}>
+                        <label className={s.label}>Tipo de pago</label>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          {([['Comision', 'Por comisión'], ['Fijo', 'Monto fijo']] as const).map(([val, lbl]) => {
+                            const sel = (form.tipoRemuneracion || 'Comision') === val
+                            return (
+                              <button key={val} type="button"
+                                onClick={() => setForm({ ...form, tipoRemuneracion: val })}
+                                style={{ flex: 1, padding: '8px 10px', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', border: sel ? '1px solid #059669' : '1px solid #e5e7eb', background: sel ? '#ecfdf5' : '#fff', color: sel ? '#047857' : '#6b7280' }}>
+                                {lbl}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                      {form.tipoRemuneracion === 'Fijo' && (
+                        <div className={s.field}>
+                          <label className={s.label}>Monto fijo por período (S/)</label>
+                          <input className={s.input} type="number" min="0" step="0.01"
+                            value={form.montoPagoFijo ?? ''}
+                            onChange={e => setForm({ ...form, montoPagoFijo: e.target.value === '' ? undefined : parseFloat(e.target.value) })}
+                            placeholder="Ej. 1500" />
+                        </div>
+                      )}
+                    </div>
+                    {form.tipoRemuneracion === 'Fijo' && (
+                      <p className="text-[11px] leading-relaxed text-gray-400" style={{ marginTop: -6, marginBottom: 2 }}>
+                        Se le paga este monto cada {(form.frecuenciaPago || 'quincena').toLowerCase()}. Sus ventas y comisión se siguen registrando como referencia, pero el pago no se tope contra la comisión.
+                      </p>
+                    )}
+                    <div className={s.row2}>
+                      <div className={s.field}>
                         <label className={s.label}>% Comisión</label>
                         <input className={s.input} type="number"
                           value={form.esDuenoAdmin && !(form.generaLiquidaciones ?? true) ? 100 : (form.porcentajeComision ?? 0)}
@@ -738,7 +778,7 @@ export function TrabajadoresPage() {
 
                 <div className={s.field}>
                   <label className={s.label}>Descripción</label>
-                  <textarea className={s.textarea} value={form.descripcion || ''} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={2} />
+                  <TextareaContador className={s.textarea} value={form.descripcion || ''} onChange={(v) => setForm({ ...form, descripcion: v })} limite={400} rows={2} />
                 </div>
 
                 {/* T11 — CheckPill: verde, nuestro, y con el <input> real oculto

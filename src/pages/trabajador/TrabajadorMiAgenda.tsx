@@ -502,7 +502,11 @@ function InicioTab({ nombre, hoyCount, atendidasHoy, comisiones, reservas, perfi
         return (
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-600 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2">
             <Wallet className="w-4 h-4 text-gray-400" />
-            Se te paga <strong className="font-semibold text-gray-800">{perfil.frecuenciaPago || 'Quincenal'}</strong>
+            {perfil.tipoRemuneracion === 'Fijo' && perfil.montoPagoFijo != null ? (
+              <>Se te paga <strong className="font-semibold text-gray-800">{soles(perfil.montoPagoFijo)}</strong> (fijo) cada <strong className="font-semibold text-gray-800">{(perfil.frecuenciaPago || 'Quincenal').toLowerCase()}</strong></>
+            ) : (
+              <>Se te paga <strong className="font-semibold text-gray-800">{perfil.frecuenciaPago || 'Quincenal'}</strong></>
+            )}
             {' '}· método <strong className="font-semibold text-gray-800">{perfil.metodoPagoPreferido || 'Efectivo'}</strong>
             {cuenta && pp && (
               <span className="text-gray-400">

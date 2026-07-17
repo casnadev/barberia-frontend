@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { X, Printer, Copy, QrCode } from '@phosphor-icons/react'
+import { X, Printer, Copy, QrCode, Star } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { buildImageUrl } from '@/services/apiClient'
 
@@ -87,33 +87,41 @@ export function QrInscripcionModal({
           <div
             ref={cartelRef}
             id="cartel-qr-barberpe"
-            className="rounded-2xl border-2 border-gray-900 p-6 text-center"
-            style={{ borderColor: color || '#111827' }}
+            className="overflow-hidden rounded-2xl border border-gray-200 text-center"
           >
-            {logo ? (
-              <img src={buildImageUrl(logo)} alt="" className="mx-auto mb-2 h-14 w-14 rounded-xl object-contain" />
-            ) : null}
-
-            <p className="text-lg font-black uppercase leading-tight tracking-wide text-gray-900">
-              {nombreNegocio}
-            </p>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-widest" style={{ color: color || '#111827' }}>
-              Programa de Fidelización
-            </p>
-
-            <div className="my-5 flex justify-center">
-              <div className="rounded-xl border border-gray-200 bg-white p-3">
-                <QRCodeSVG value={urlAbsoluta} size={188} level="M" marginSize={0} />
-              </div>
+            {/* Cabecera con el color de la marca */}
+            <div className="px-6 pt-6 pb-5" style={{ background: color || '#111827' }}>
+              {logo ? (
+                <img src={buildImageUrl(logo)} alt="" className="mx-auto mb-3 h-16 w-16 rounded-xl bg-white/95 object-contain p-1" />
+              ) : (
+                <div className="mx-auto mb-3 grid h-16 w-16 place-items-center rounded-xl bg-white/25 text-2xl font-black text-white">
+                  {(nombreNegocio || 'B').slice(0, 1).toUpperCase()}
+                </div>
+              )}
+              <p className="text-xl font-black uppercase leading-tight tracking-wide text-white">
+                {nombreNegocio}
+              </p>
+              <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-white">
+                <Star size={11} weight="fill" /> Programa de fidelización
+              </p>
             </div>
 
-            <p className="text-base font-bold text-gray-900">Escanea y acumula puntos</p>
-            <p className="mx-auto mt-1 max-w-[16rem] text-xs leading-relaxed text-gray-500">
-              Apunta con la cámara de tu celular. Te inscribes una sola vez, en 10 segundos.
-              Sin apps, sin descargar nada.
-            </p>
+            {/* Cuerpo */}
+            <div className="bg-white px-6 pb-6 pt-5">
+              <div className="flex justify-center">
+                <div className="rounded-xl border border-gray-200 bg-white p-3">
+                  <QRCodeSVG value={urlAbsoluta} size={188} level="M" marginSize={0} />
+                </div>
+              </div>
 
-            <p className="mt-4 border-t border-gray-100 pt-3 text-[10px] text-gray-300">barber.pe</p>
+              <p className="mt-4 text-lg font-black" style={{ color: color || '#111827' }}>Escanea y acumula puntos</p>
+              <p className="mx-auto mt-1 max-w-[16rem] text-xs leading-relaxed text-gray-500">
+                Apunta con la cámara de tu celular. Te inscribes una sola vez, en 10 segundos.
+                Sin apps, sin descargar nada.
+              </p>
+
+              <p className="mt-4 border-t border-gray-100 pt-3 text-[10px] tracking-wide text-gray-300">barber.pe</p>
+            </div>
           </div>
 
           {/* Acciones (no se imprimen) */}
@@ -143,13 +151,16 @@ export function QrInscripcionModal({
       <style>{`
         @media print {
           body * { visibility: hidden !important; }
-          #cartel-qr-barberpe, #cartel-qr-barberpe * { visibility: visible !important; }
+          #cartel-qr-barberpe, #cartel-qr-barberpe * {
+            visibility: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           #cartel-qr-barberpe {
             position: absolute;
             top: 0; left: 0; right: 0;
             margin: 24px auto;
             width: 480px;
-            border-width: 3px;
           }
         }
       `}</style>

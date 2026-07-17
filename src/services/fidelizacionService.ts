@@ -151,6 +151,7 @@ export interface MovimientoPuntos {
   puntos: number
   saldoResultante: number
   motivo?: string
+  nombreSede?: string | null
 }
 
 export interface ProximaRecompensa {

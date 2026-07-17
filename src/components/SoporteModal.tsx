@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { Lifebuoy as LifeBuoy, CircleNotch as Loader2, PaperPlaneRight as Send } from '@phosphor-icons/react'
 import SeccionSheet from '@/components/SeccionSheet'
 import { apiClient } from '@/services/apiClient'
+import { TextareaContador } from '@/components/ui/TextareaContador'
 import { useAuthStore } from '@/store/authStore'
 import { useSoporteStore } from '@/store/soporteStore'
 import { soporteService } from '@/services/soporteService'
@@ -109,8 +110,7 @@ export function SoporteModal() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">¿Qué necesitas?</label>
-          <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} rows={5}
-            className={inputCls + ' resize-none'} />
+          <TextareaContador value={descripcion} onChange={setDescripcion} limite={2000} rows={5} className={inputCls + ' resize-none'} />
         </div>
       </div>
     </SeccionSheet>
