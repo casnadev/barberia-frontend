@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { X, Check, Plus, Minus, Camera, Scissors, Receipt, CaretRight, UserCircle, Storefront, Lightning, UserPlus, MagnifyingGlass } from '@phosphor-icons/react'
+import { X, Check, Plus, Minus, Camera, Scissors, Receipt, CaretRight, UserCircle, Storefront, Lightning, UserPlus, MagnifyingGlass, Gift } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { serviciosService } from '@/services/serviciosService'
 import { trabajadoresService } from '@/services/trabajadoresService'
 import { panelTrabajadorService } from '@/services/panelTrabajadorService'
 import { ventasService } from '@/services/ventasService'
 import { clientesService, type ClienteReal } from '@/services/clientesService'
-import { fidelizacionService, type PreviewPuntos } from '@/services/fidelizacionService'
+import { fidelizacionService, type PreviewPuntos, type RecompensaDisponible } from '@/services/fidelizacionService'
 import { notificarFidelizacion } from '@/components/NotificacionFidelizacion'
 import { InvitacionTarjetaModal } from '@/components/InvitacionTarjetaModal'
 import type { ResultadoFidelizacion } from '@/services/ventasService'
@@ -68,6 +68,12 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
   const [invitacion, setInvitacion] = useState<ResultadoFidelizacion | null>(null)
 
   const [sinEvidencia, setSinEvidencia] = useState(false)
+
+  // ── Canje de fidelización: premios que el cliente puede usar en ESTA venta ──
+  // Se cargan al identificar al cliente. Solo los canjeables y con efecto
+  // automático (no 'Manual'). El premio se aplica como DESCUENTO sobre una línea.
+  const [canjes, setCanjes] = useState<RecompensaDisponible[]>([])
+  const [canjeSel, setCanjeSel] = useState<RecompensaDisponible | null>(null)
   const [saving, setSaving] = useState(false)
   // Tarea 4 — En modo Admin: ¿la venta la hizo el propio Admin ("Venta mía",
   // se acepta al instante) o un profesional (queda pendiente de su aprobación)?
@@ -195,6 +201,59 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
     }, 300)
     return () => { vivo = false; clearTimeout(t) }
   }, [buscaCliente, clienteSel])
+
+  // ── Canje: cargar los premios canjeables al identificar al cliente ──────────
+  useEffect(() => {
+    if (!clienteSel?.idCliente) { setCanjes([]); setCanjeSel(null); return }
+    let vivo = true
+    fidelizacionService.getRecompensas(clienteSel.idCliente)
+      .then(rs => { if (vivo) setCanjes(rs.filter(r => r.canjeable && r.tipo && r.tipo !== 'Manual')) })
+      .catch(() => { if (vivo) setCanjes([]) })
+    return () => { vivo = false }
+  }, [clienteSel])
+
+  // Línea a la que se pega el canje: el servicio gratis, o la 1ra línea (para % / S/).
+  const canjeServicioId = canjeSel
+    ? (canjeSel.tipo === 'ServicioGratis' ? (canjeSel.idServicio ?? null) : (seleccionadas[0]?.idServicio ?? null))
+    : null
+
+  // Descuento del canje — SOLO para mostrar en caja. El backend es el que manda
+  // (valida saldo/stock y recalcula). Refleja la misma regla: servicio gratis =
+  // subtotal; % = subtotal·valor/100; monto = min(valor, subtotal).
+  const descuentoCanje = (() => {
+    if (!canjeSel || canjeServicioId == null) return 0
+    const linea = servicios.find(s => s.idServicio === canjeServicioId)
+    if (!linea) return 0
+    const subtotal = (Number(linea.precioBase) || 0) * (sel[canjeServicioId] || 1)
+    let d = 0
+    if (canjeSel.tipo === 'ServicioGratis') d = subtotal
+    else if (canjeSel.tipo === 'DescuentoPorcentaje') d = subtotal * ((canjeSel.valor ?? 0) / 100)
+    else if (canjeSel.tipo === 'DescuentoMonto') d = Math.min(canjeSel.valor ?? 0, subtotal)
+    return Math.round(Math.max(0, Math.min(d, subtotal)) * 100) / 100
+  })()
+  const totalNeto = Math.max(0, Math.round((total - descuentoCanje) * 100) / 100)
+
+  // Si el premio deja de ser aplicable (quitaron el servicio), se limpia solo.
+  useEffect(() => {
+    if (!canjeSel) return
+    const ok = canjeSel.tipo === 'ServicioGratis'
+      ? (canjeSel.idServicio != null && !!sel[canjeSel.idServicio])
+      : seleccionadas.length > 0
+    if (!ok) setCanjeSel(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canjeSel, sel, seleccionadas.length])
+
+  const aplicarCanje = (r: RecompensaDisponible) => {
+    if (canjeSel?.idRecompensa === r.idRecompensa) { setCanjeSel(null); return } // toggle off
+    if (r.tipo === 'ServicioGratis') {
+      if (!r.idServicio) { toast.error('Este premio no tiene un servicio configurado'); return }
+      setSel(prev => (prev[r.idServicio!] ? prev : { ...prev, [r.idServicio!]: 1 }))
+    } else if (seleccionadas.length === 0) {
+      toast.error('Agrega un servicio para aplicar el descuento'); return
+    }
+    setCanjeSel(r)
+  }
+
   const nItems = seleccionadas.reduce((a, s) => a + (sel[s.idServicio] || 1), 0)
 
   const subir = async (e: any) => {
@@ -207,7 +266,8 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
   const confirmar = async () => {
     if (seleccionadas.length === 0) { toast.error('Selecciona al menos un servicio'); return }
     if (!idTrabajador) { toast.error('Selecciona el profesional'); return }
-    if (!evidencia && !sinEvidencia) { toast.error('Adjunta la evidencia del pago'); return }
+    // Con un canje que deja el total en S/0 no hubo cobro → no se exige evidencia.
+    if (totalNeto > 0 && !evidencia && !sinEvidencia) { toast.error('Adjunta la evidencia del pago'); return }
     setSaving(true)
     try {
       // Tarea 4: el Admin solo auto-aprueba cuando es "Venta mía".
@@ -220,11 +280,17 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
         idCliente: clienteSel?.idCliente || undefined,
         telefonoCliente: (clienteSel?.telefono || (telNuevo.trim().length === 9 ? telNuevo.trim() : '')) || undefined,
         nombreCliente: (clienteSel?.nombreCompleto || nomNuevo.trim()) || undefined,
-        detalles: seleccionadas.map(s => ({ idServicio: s.idServicio, idTrabajador: idTrabajador!, cantidad: sel[s.idServicio] || 1 })),
+        detalles: seleccionadas.map(s => ({
+          idServicio: s.idServicio,
+          idTrabajador: idTrabajador!,
+          cantidad: sel[s.idServicio] || 1,
+          // El canje se pega a UNA línea; el backend valida y aplica el descuento.
+          idRecompensaCanje: (canjeSel && s.idServicio === canjeServicioId) ? canjeSel.idRecompensa : undefined,
+        })),
         metodoPago: metodo,
         numeroOperacion: operacion.trim() || undefined,
         rutaImagenEvidencia: evidencia || undefined,
-        permitirSinEvidencia: sinEvidencia,
+        permitirSinEvidencia: sinEvidencia || totalNeto <= 0,
         atribuidaAlAdmin,
       } as any)
       const seAcepta = mode === 'admin' && ventaMia   // única vía de auto-aprobación
@@ -269,7 +335,7 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
     setBuscaCliente('')
   }
 
-  const puedeGuardar = !saving && !subiendo && seleccionadas.length > 0 && (!!evidencia || sinEvidencia) && !!idTrabajador
+  const puedeGuardar = !saving && !subiendo && seleccionadas.length > 0 && (totalNeto <= 0 || !!evidencia || sinEvidencia) && !!idTrabajador
 
   return (
     /* T13 — El modal deja de ser una ventanita de 448 px.
@@ -445,6 +511,7 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
                   </label>
 
                   {clienteSel ? (
+                    <>
                     <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5">
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-gray-900">{clienteSel.nombreCompleto || 'Cliente'}</p>
@@ -459,6 +526,37 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
                         <X size={15} />
                       </button>
                     </div>
+
+                    {/* Premios disponibles del cliente. Canje = descuento en la venta. */}
+                    {canjes.length > 0 && (
+                      <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50/60 p-2.5">
+                        <p className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                          <Gift size={12} weight="fill" /> Premios disponibles
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {canjes.map(r => {
+                            const on = canjeSel?.idRecompensa === r.idRecompensa
+                            return (
+                              <button
+                                key={r.idRecompensa}
+                                type="button"
+                                onClick={() => aplicarCanje(r)}
+                                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition ${on ? 'border-amber-500 bg-amber-500 text-white' : 'border-amber-200 bg-white text-amber-800 hover:border-amber-400'}`}
+                              >
+                                {r.icono ? `${r.icono} ` : ''}{r.nombre}
+                                <span className={on ? 'text-amber-100' : 'text-amber-500'}>· {r.puntosRequeridos} pts</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                        {canjeSel && (
+                          <p className="mt-1.5 text-[11px] text-amber-700">
+                            Se aplica como descuento en la venta · usa <strong>{canjeSel.puntosRequeridos} pts</strong>.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    </>
                   ) : (
                     /* T11 — El botón "Nuevo" está SIEMPRE a la vista.
                        Antes, la única forma de dar de alta a alguien era buscarlo…
@@ -584,7 +682,7 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
 
                 {/* Evidencia */}
                 <div>
-                  <label className={label}><Camera size={14} weight="duotone" /> Evidencia del pago {sinEvidencia ? <span className="text-gray-400 font-normal">· opcional</span> : <span className="text-rose-500 font-semibold">· obligatoria</span>}</label>
+                  <label className={label}><Camera size={14} weight="duotone" /> Evidencia del pago {(sinEvidencia || totalNeto <= 0) ? <span className="text-gray-400 font-normal">· opcional</span> : <span className="text-rose-500 font-semibold">· obligatoria</span>}</label>
                   {evidencia ? (
                     <div className="relative mt-1 inline-block">
                       <img src={evidencia} alt="evidencia" className="rounded-xl max-h-36 border border-gray-200" />
@@ -619,10 +717,27 @@ export function CobrarVentaModal({ mode, lockTrabajadorId, onClose, onDone }: {
 
             {/* Footer fijo */}
             <div className="border-t border-gray-100 px-5 py-4 space-y-3 bg-white">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">{nItems > 0 ? `${nItems} ítem${nItems > 1 ? 's' : ''}` : 'Total'}</span>
-                <span className="text-xl font-bold text-gray-900 tabular-nums">{soles(total)}</span>
-              </div>
+              {descuentoCanje > 0 ? (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-sm text-gray-500">
+                    <span>Subtotal</span>
+                    <span className="tabular-nums line-through">{soles(total)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-amber-700">
+                    <span className="inline-flex items-center gap-1"><Gift size={13} weight="fill" /> Premio{canjeSel ? `: ${canjeSel.nombre}` : ''}</span>
+                    <span className="tabular-nums">− {soles(descuentoCanje)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">{nItems > 0 ? `${nItems} ítem${nItems > 1 ? 's' : ''} · a cobrar` : 'A cobrar'}</span>
+                    <span className="text-xl font-bold text-gray-900 tabular-nums">{soles(totalNeto)}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">{nItems > 0 ? `${nItems} ítem${nItems > 1 ? 's' : ''}` : 'Total'}</span>
+                  <span className="text-xl font-bold text-gray-900 tabular-nums">{soles(total)}</span>
+                </div>
+              )}
 
               {/* Aviso de fidelización: cuántos puntos suma esta venta */}
               {preview && clienteIdentificado && (

@@ -142,6 +142,9 @@ export interface DetalleWalkIn {
   idTrabajador: number
   cantidad: number
   precioUnitarioOverride?: number
+  /** Si esta línea se cubre con un canje de fidelización: id de la recompensa.
+   *  El backend valida, aplica el descuento y descuenta los puntos. */
+  idRecompensaCanje?: number
 }
 
 export interface WalkInPayload {
@@ -168,6 +171,12 @@ export interface VentaResumen {
   idVenta: number
   fechaVenta?: string
   total: number
+  /** Descuento por fidelización (0 = sin canje). El total ya viene neto. */
+  descuento?: number
+  /** Puntos ganados por esta venta. */
+  puntosGanados?: number
+  /** Puntos canjeados en esta venta (positivo). Explica ventas a S/0 o sin evidencia. */
+  puntosCanjeados?: number
   metodoPago: string
   numeroOperacion?: string
   rutaImagenEvidencia?: string

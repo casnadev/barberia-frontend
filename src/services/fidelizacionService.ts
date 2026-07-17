@@ -31,7 +31,21 @@ export interface RecompensaFidel {
    * una de sede es una fila por sede (un stock cada una). Sin lógica extra.
    */
   alcance: AlcanceFidel
+
+  /** Qué ENTREGA el premio al canjearse. Default 'Manual' (sin efecto automático). */
+  tipo?: TipoRecompensaFidel
+  /** % (DescuentoPorcentaje) o S/ (DescuentoMonto). null en ServicioGratis/Manual. */
+  valor?: number | null
+  /** Servicio que va gratis (solo tipo 'ServicioGratis'). null en el resto. */
+  idServicio?: number | null
 }
+
+/** Qué entrega una recompensa. */
+export type TipoRecompensaFidel =
+  | 'ServicioGratis'
+  | 'DescuentoPorcentaje'
+  | 'DescuentoMonto'
+  | 'Manual'
 
 /** T7 — Alcance de una recompensa. */
 export type AlcanceFidel = 'Empresa' | 'Sede'
@@ -188,6 +202,11 @@ export interface RecompensaDisponible {
   alcance?: AlcanceFidel
   /** T7 — sede exclusiva ("Solo en San Isidro"). null = vale en toda la marca. */
   nombreSedeExclusiva?: string | null
+
+  /** Qué entrega el premio: para saber si la caja agrega un servicio gratis o aplica descuento. */
+  tipo?: TipoRecompensaFidel
+  valor?: number | null
+  idServicio?: number | null
 }
 
 /** Resultado de generar el PNG del logo que exige Google Wallet. */
@@ -248,7 +267,13 @@ export const fidelizacionService = {
       // T7 — sin alcance explícito (datos previos a la migración) → 'Sede', que es el
       // default conservador: nadie regala una recompensa en tres locales por accidente.
       recompensas: Array.isArray(d?.recompensas)
-        ? d.recompensas.map((r: any) => ({ ...r, alcance: r?.alcance === 'Empresa' ? 'Empresa' : 'Sede' }))
+        ? d.recompensas.map((r: any) => ({
+            ...r,
+            alcance: r?.alcance === 'Empresa' ? 'Empresa' : 'Sede',
+            tipo: r?.tipo ?? 'Manual',
+            valor: r?.valor ?? null,
+            idServicio: r?.idServicio ?? null,
+          }))
         : [],
       promociones: Array.isArray(d?.promociones) ? d.promociones : [],
       nombreNegocio: d?.nombreNegocio ?? null,

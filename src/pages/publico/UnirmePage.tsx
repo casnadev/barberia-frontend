@@ -419,8 +419,11 @@ export function UnirmePage() {
 
               {info.recompensas.length > 0 && (
                 <div className="mt-3 space-y-1.5 border-t border-gray-100 pt-3">
-                  <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                    <Gift size={12} weight="fill" /> Puedes canjear
+                  <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                    <span className="grid h-5 w-5 place-items-center rounded-md text-white" style={{ background: color }}>
+                      <Gift size={12} weight="fill" />
+                    </span>
+                    Premios disponibles
                   </p>
                   {info.recompensas.slice(0, 4).map((r, i) => (
                     <div key={i} className="flex items-center justify-between gap-2 text-sm">
@@ -432,15 +435,16 @@ export function UnirmePage() {
               )}
 
               {info.niveles.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1.5 border-t border-gray-100 pt-3">
+                <div className="mt-3 grid grid-cols-4 gap-1.5 border-t border-gray-100 pt-3">
                   {[...info.niveles].sort((a, b) => a.puntosMinimos - b.puntosMinimos).map((n, i) => (
-                    <span
+                    <div
                       key={i}
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white"
+                      className="flex flex-col items-center justify-center gap-1 rounded-xl px-1 py-2.5 text-center text-white"
                       style={{ background: n.color || '#9ca3af' }}
                     >
-                      <Medal size={10} weight="fill" /> {n.nombre}
-                    </span>
+                      <Medal size={16} weight="fill" />
+                      <span className="w-full truncate text-[11px] font-semibold leading-tight">{n.nombre}</span>
+                    </div>
                   ))}
                 </div>
               )}
@@ -532,14 +536,14 @@ export function UnirmePage() {
                   2. Sin target="_blank": al pulsar el link se navegaba FUERA y se perdía el
                      formulario a medio llenar. */}
               <p className="mt-3 text-center text-[11px] leading-relaxed text-gray-400">
-                Al unirte aceptas cómo{' '}
+                Al unirte aceptas nuestras{' '}
                 <a
                   href="/privacidad-clientes"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline hover:text-gray-600"
                 >
-                  tratamos tus datos
+                  Políticas de seguridad
                 </a>.
               </p>
             </div>

@@ -261,10 +261,20 @@ export function VentasPage() {
                   <span className="text-lg font-bold text-gray-900">{soles(v.total)}</span>
                   <span className="text-xs text-gray-400">{v.metodoPago} · {fmtFechaHora(v.fechaVenta)}</span>
                 </div>
-                <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
+                <div className="mt-2 flex items-center gap-2 flex-wrap text-xs text-gray-400">
                   {v.rutaImagenEvidencia
                     ? <span className="inline-flex items-center gap-1 text-blue-600"><ImageIcon className="w-3.5 h-3.5" /> Con evidencia</span>
                     : <span className="inline-flex items-center gap-1"><ImageIcon className="w-3.5 h-3.5" /> Sin evidencia</span>}
+                  {/* Delta de puntos: explica una venta a S/0 o sin evidencia (fue un canje). */}
+                  {(v.puntosCanjeados ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1 font-semibold text-amber-700">🎁 −{v.puntosCanjeados} pts</span>
+                  )}
+                  {(v.puntosGanados ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1 font-medium text-emerald-600">+{v.puntosGanados} pts</span>
+                  )}
+                  {(v.descuento ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1 text-gray-500">Cortesía {soles(v.descuento!)}</span>
+                  )}
                 </div>
               </button>
             )

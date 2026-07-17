@@ -15,7 +15,9 @@ import {
   type GuardarProgramaConfig,
   type NivelFidel,
   type RecompensaFidel,
+  type TipoRecompensaFidel,
 } from '@/services/fidelizacionService'
+import { serviciosService } from '@/services/serviciosService'
 import { ComboBox } from '@/components/ComboBox'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -145,6 +147,14 @@ export function ProgramaFidelizacionPanel() {
   const [avanzado, setAvanzado] = useState(false)
   const [qrAbierto, setQrAbierto] = useState(false)
 
+  // Servicios de la sede: para el picker de "servicio gratis" de una recompensa.
+  const [servicios, setServicios] = useState<any[]>([])
+  useEffect(() => {
+    serviciosService.getServicios()
+      .then((s: any) => setServicios(Array.isArray(s) ? s.filter((x: any) => x.estado !== false) : []))
+      .catch(() => {})
+  }, [])
+
   // Simulador: cuánto gasta el cliente de ejemplo.
   const [simGasto, setSimGasto] = useState(85)
   // Puntos que ya tiene ese cliente de ejemplo (para el "próximo nivel").
@@ -238,6 +248,12 @@ export function ProgramaFidelizacionPanel() {
     if (cfg.niveles.some((n) => !n.nombre.trim())) { toast.error('Cada nivel necesita un nombre'); return }
     if (cfg.recompensas.some((r) => !r.nombre.trim())) { toast.error('Cada recompensa necesita un nombre'); return }
     if (cfg.recompensas.some((r) => r.puntosRequeridos < 1)) { toast.error('Cada recompensa necesita al menos 1 punto'); return }
+    if (cfg.recompensas.some((r) => r.tipo === 'ServicioGratis' && !r.idServicio)) {
+      toast.error('El premio "servicio gratis" necesita que elijas el servicio'); return
+    }
+    if (cfg.recompensas.some((r) => (r.tipo === 'DescuentoPorcentaje' || r.tipo === 'DescuentoMonto') && (!r.valor || r.valor <= 0))) {
+      toast.error('El descuento necesita un valor mayor a 0'); return
+    }
 
     setGuardando(true)
     try {
@@ -656,6 +672,55 @@ export function ProgramaFidelizacionPanel() {
                     <span className="inline-flex items-center gap-1 pb-2 text-[11px] font-semibold text-rose-600">
                       <WarningCircle size={12} weight="fill" /> Agotada
                     </span>
+                  )}
+                </div>
+
+                {/* Qué ENTREGA el premio: lo usa la caja para aplicarlo como descuento.
+                    'Manual' = el barbero decide (comportamiento de siempre). */}
+                <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-gray-100 pt-3">
+                  <div className="w-56">
+                    <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-400">Qué entrega</span>
+                    <ComboBox
+                      value={r.tipo ?? 'Manual'}
+                      onChange={(v) => setRec(i, { tipo: String(v) as TipoRecompensaFidel, valor: null, idServicio: null })}
+                      opciones={[
+                        { valor: 'Manual', etiqueta: 'Manual · lo aplica el barbero' },
+                        { valor: 'ServicioGratis', etiqueta: 'Un servicio gratis' },
+                        { valor: 'DescuentoPorcentaje', etiqueta: 'Descuento en %' },
+                        { valor: 'DescuentoMonto', etiqueta: 'Descuento en S/' },
+                      ]}
+                      inputClassName={input}
+                    />
+                  </div>
+
+                  {r.tipo === 'ServicioGratis' && (
+                    <div className="w-56">
+                      <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-400">Servicio gratis</span>
+                      <ComboBox
+                        value={r.idServicio == null ? '' : String(r.idServicio)}
+                        onChange={(v) => setRec(i, { idServicio: v === '' ? null : Number(v) })}
+                        opciones={[
+                          { valor: '', etiqueta: 'Elige un servicio…' },
+                          ...servicios.map((s: any) => ({ valor: String(s.idServicio), etiqueta: s.nombre })),
+                        ]}
+                        inputClassName={input}
+                      />
+                    </div>
+                  )}
+
+                  {(r.tipo === 'DescuentoPorcentaje' || r.tipo === 'DescuentoMonto') && (
+                    <div className="w-32">
+                      <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                        {r.tipo === 'DescuentoPorcentaje' ? 'Porcentaje' : 'Monto'}
+                      </span>
+                      <NumberField
+                        value={r.valor ?? 0}
+                        onChange={(v) => setRec(i, { valor: v })}
+                        min={0}
+                        suffix={r.tipo === 'DescuentoPorcentaje' ? '%' : 'S/'}
+                        ariaLabel="Valor del descuento"
+                      />
+                    </div>
                   )}
                 </div>
 
