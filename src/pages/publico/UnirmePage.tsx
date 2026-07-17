@@ -47,9 +47,9 @@ export function UnirmePage() {
   const [cargando, setCargando] = useState(true)
 
   const [paso, setPaso] = useState<Paso>('datos')
-  // "alta" = inscribirse (formulario completo). "recuperar" = ya estás registrado,
-  // solo teléfono + OTP → tu tarjeta (imagen 1).
-  const [modo, setModo] = useState<'alta' | 'recuperar'>('alta')
+  // Flujo teléfono-primero: se pide el WhatsApp, se evalúa, y RECIÉN ahí se ramifica.
+  // faseNuevo = ya evaluamos y es un cliente NUEVO, así que mostramos nombre/correo.
+  const [faseNuevo, setFaseNuevo] = useState(false)
   const [nombre, setNombre] = useState('')
   const [telefono, setTelefono] = useState('')
   const [correo, setCorreo] = useState('')
@@ -82,59 +82,64 @@ export function UnirmePage() {
     e?.response?.data?.detail || e?.response?.data?.mensaje || fallback
 
   /* ── PASO 1 → evaluar ────────────────────────────────────────────────── */
+  const emailOk = (c: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c)
+
+  /* ── Botón principal del paso 1 ─────────────────────────────────────────
+     Fase teléfono: evaluar el WhatsApp y ramificar.
+     Fase nuevo:    ya sabemos que es nuevo → crear con sus datos.            */
   const continuar = async () => {
     setError(null)
-    if (modo === 'alta' && nombre.trim().length < 2) { setError('Escribe tu nombre.'); return }
-    if (telefono.trim().length !== 9) { setError('Tu celular debe tener 9 dígitos.'); return }
-    if (modo === 'alta' && correo.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo.trim())) {
-      setError('Ese correo no parece válido.'); return
-    }
+    if (telefono.trim().length !== 9) { setError('Tu WhatsApp debe tener 9 dígitos.'); return }
 
-    setEnviando(true)
-    try {
-      const ev = await inscripcionService.evaluar(sedeId, {
-        nombreCompleto: nombre.trim() || 'Cliente',
-        telefono: telefono.trim(),
-        correo: modo === 'alta' ? (correo.trim() || null) : null,
-      })
-      setEvaluacion(ev)
+    // ── FASE NUEVO: ya evaluado como nuevo, ahora crea la cuenta ──
+    if (faseNuevo) {
+      if (nombre.trim().length < 2) { setError('Escribe tu nombre.'); return }
+      if (correo.trim() && !emailOk(correo.trim())) { setError('Ese correo no parece válido.'); return }
 
-      // ── Modo RECUPERAR: solo vale un teléfono YA registrado. ──
-      if (modo === 'recuperar') {
-        if (ev.caso !== 'TelefonoExistente' || !ev.requiereOtp) {
-          setError('No encontramos una tarjeta con ese número. Toca “¿Primera vez? Inscríbete”.')
+      setEnviando(true)
+      try {
+        // Reevaluar con el correo: si ese correo YA reservó aquí (caso B), toca OTP.
+        const ev = await inscripcionService.evaluar(sedeId, {
+          nombreCompleto: nombre.trim(), telefono: telefono.trim(), correo: correo.trim() || null,
+        })
+        if (ev.requiereOtp) {
+          setEvaluacion(ev)
+          await inscripcionService.enviarOtp(sedeId, { telefono: telefono.trim(), correo: correo.trim() || null, caso: ev.caso })
+          setPaso('codigo')
           return
         }
-        await inscripcionService.enviarOtp(sedeId, { telefono: telefono.trim(), correo: null, caso: ev.caso })
-        setPaso('codigo')
-        return
-      }
-
-      if (!ev.requiereOtp) {
-        // Caso C: nadie con esos datos. Nada que robar → entra directo.
         const r = await inscripcionService.inscribirse(sedeId, {
-          nombreCompleto: nombre.trim(),
-          telefono: telefono.trim(),
-          correo: correo.trim() || null,
-          fechaNacimiento: cumple || null,
+          nombreCompleto: nombre.trim(), telefono: telefono.trim(),
+          correo: correo.trim() || null, fechaNacimiento: cumple || null,
         })
         setListo({ codigo: r.codigoQr, yaExistia: r.yaExistia, wallet: r.enlaceWallet })
         setPaso('listo')
+      } catch (e: any) {
+        setError(msgError(e, 'No pudimos completar tu registro.'))
+      } finally { setEnviando(false) }
+      return
+    }
+
+    // ── FASE TELÉFONO: evaluar quién es ──
+    setEnviando(true)
+    try {
+      const ev = await inscripcionService.evaluar(sedeId, {
+        nombreCompleto: 'Cliente', telefono: telefono.trim(), correo: null,
+      })
+      setEvaluacion(ev)
+
+      if (!ev.requiereOtp) {
+        // Nadie con ese número en barber.pe → cliente NUEVO: pedir sus datos (sin OTP).
+        setFaseNuevo(true)
         return
       }
 
-      // Hay identidad ajena de por medio: hay que verificar.
-      await inscripcionService.enviarOtp(sedeId, {
-        telefono: telefono.trim(),
-        correo: correo.trim() || null,
-        caso: ev.caso,
-      })
+      // Teléfono ya registrado (tenga tarjeta aquí o no) → verificar por WhatsApp.
+      await inscripcionService.enviarOtp(sedeId, { telefono: telefono.trim(), correo: null, caso: ev.caso })
       setPaso('codigo')
     } catch (e: any) {
-      setError(msgError(e, 'No pudimos continuar. Revisa tus datos.'))
-    } finally {
-      setEnviando(false)
-    }
+      setError(msgError(e, 'No pudimos continuar. Revisa tu número.'))
+    } finally { setEnviando(false) }
   }
 
   /* ── PASO 2 → confirmar ──────────────────────────────────────────────── */
@@ -145,13 +150,15 @@ export function UnirmePage() {
 
     setEnviando(true)
     try {
-      const r = modo === 'recuperar'
+      // Teléfono existente → recuperar: NO pisa el nombre y crea/devuelve la tarjeta
+      // de ESTE negocio. Correo existente (caso B) → confirmar con la decisión de vincular.
+      const r = evaluacion.caso === 'TelefonoExistente'
         ? await inscripcionService.recuperar(sedeId, {
             telefono: telefono.trim(),
             codigo: codigo.trim(),
           })
         : await inscripcionService.confirmar(sedeId, {
-            nombreCompleto: nombre.trim(),
+            nombreCompleto: nombre.trim() || 'Cliente',
             telefono: telefono.trim(),
             correo: correo.trim() || null,
             fechaNacimiento: cumple || null,
@@ -212,16 +219,22 @@ export function UnirmePage() {
       <div className="min-h-screen bg-gray-50 px-4 py-10">
         <div className="mx-auto max-w-sm text-center">
           <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl text-white" style={{ background: color }}>
-            {listo.yaExistia ? <CheckCircle size={30} weight="fill" /> : <Confetti size={30} weight="fill" />}
+            {(evaluacion?.yaTieneTarjeta || listo.yaExistia) ? <CheckCircle size={30} weight="fill" /> : <Confetti size={30} weight="fill" />}
           </div>
 
           <h1 className="mt-4 text-xl font-bold text-gray-900">
-            {listo.yaExistia ? '¡Recuperaste tu tarjeta!' : '¡Listo! Ya eres parte del club'}
+            {evaluacion?.yaTieneTarjeta
+              ? 'Ya tienes tu tarjeta'
+              : listo.yaExistia
+                ? '¡Tu tarjeta está lista!'
+                : '¡Listo! Ya eres parte del club'}
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            {listo.yaExistia
-              ? 'Es la misma de siempre, con todos tus puntos intactos.'
-              : `Desde ahora, cada visita a ${info.nombreNegocio} te suma puntos.`}
+            {evaluacion?.yaTieneTarjeta
+              ? `Es la de ${info.nombreNegocio}, con todos tus puntos. Ábrela en tu Google Wallet o míralos aquí.`
+              : listo.yaExistia
+                ? `Tu tarjeta de ${info.nombreNegocio} quedó lista, con tu historial.`
+                : `Desde ahora, cada visita a ${info.nombreNegocio} te suma puntos.`}
           </p>
 
           <div className="mt-6 space-y-2">
@@ -242,7 +255,7 @@ export function UnirmePage() {
                 rel="noreferrer"
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white hover:bg-gray-800"
               >
-                Agregar a Google Wallet
+                {evaluacion?.yaTieneTarjeta ? 'Abrir en Google Wallet' : 'Agregar a Google Wallet'}
               </a>
             )}
           </div>
@@ -436,87 +449,61 @@ export function UnirmePage() {
             {/* Formulario */}
             <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4">
               <div className="space-y-3">
-                {/* Imagen 1 — atajo para el que YA está registrado. */}
-                <div className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2">
-                  <span className="text-xs text-gray-500">
-                    {modo === 'alta' ? '¿Ya te inscribiste?' : '¿Primera vez?'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => { setModo((m) => (m === 'alta' ? 'recuperar' : 'alta')); setError(null) }}
-                    className="text-xs font-semibold"
-                    style={{ color }}
-                  >
-                    {modo === 'alta' ? 'Ver mi tarjeta' : 'Inscríbete'}
-                  </button>
-                </div>
-
-                {modo === 'recuperar' && (
-                  <p className="rounded-lg bg-gray-50 px-3 py-2 text-[11px] leading-relaxed text-gray-500">
-                    Pon tu celular y te enviamos un código por WhatsApp para confirmar que
-                    eres tú. Luego abrimos tu tarjeta con todos tus puntos.
-                  </p>
-                )}
-
-                {modo === 'alta' && (
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-500">Tu nombre</label>
-                    <input
-                      value={nombre}
-                      onChange={(e) => setNombre(e.target.value)}
-                      placeholder="Ej. Carlos Ramos"
-                      autoComplete="name"
-                      className={campo}
-                    />
-                  </div>
-                )}
-
+                {/* Teléfono SIEMPRE: es la identidad. Con él te reconocemos. */}
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-500">Tu celular</label>
+                  <label className="mb-1 block text-xs font-medium text-gray-500">Tu WhatsApp</label>
                   <input
                     value={telefono}
-                    onChange={(e) => setTelefono(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                    onChange={(e) => { setTelefono(e.target.value.replace(/\D/g, '').slice(0, 9)); if (faseNuevo) setFaseNuevo(false); setError(null) }}
                     placeholder="9 dígitos"
                     inputMode="numeric"
                     autoComplete="tel"
                     className={`${campo} tabular-nums`}
                   />
-                  <p className="mt-1 text-[11px] text-gray-400">
-                    Es tu identificación: con él tu barbero te suma los puntos.
-                  </p>
+                  {!faseNuevo && (
+                    <p className="mt-1 text-[11px] text-gray-400">
+                      Si ya tienes cuenta, te reconocemos y solo confirmas por WhatsApp.
+                    </p>
+                  )}
                 </div>
 
-                {modo === 'alta' && (<>
-                {/* El correo es OPCIONAL pero vale oro: es lo que engancha, solo, la
-                    reserva que hizo hace meses dejando únicamente el correo. Sin él,
-                    esa historia se pierde y empieza de cero. */}
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-500">
-                    Tu correo <span className="font-normal text-gray-400">· opcional</span>
-                  </label>
-                  <input
-                    value={correo}
-                    onChange={(e) => setCorreo(e.target.value)}
-                    placeholder="tucorreo@ejemplo.com"
-                    inputMode="email"
-                    autoComplete="email"
-                    className={campo}
-                  />
-                  <p className="mt-1 text-[11px] text-gray-400">
-                    ¿Ya reservaste aquí con tu correo? Ponlo y recuperamos tu historial.
-                  </p>
-                </div>
+                {/* Datos del cliente NUEVO — solo tras evaluar que el número no existe. */}
+                {faseNuevo && (
+                  <>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-500">Tu nombre</label>
+                      <input
+                        value={nombre}
+                        onChange={(e) => setNombre(e.target.value)}
+                        placeholder="Ej. Carlos Ramos"
+                        autoComplete="name"
+                        className={campo}
+                        autoFocus
+                      />
+                    </div>
 
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-500">
-                    Tu cumpleaños <span className="font-normal text-gray-400">· opcional</span>
-                  </label>
-                  {/* T5 — Era un <input type="date">. En Android eso abre el picker nativo,
-                      que arranca en el mes actual: para llegar a 1987 hay que pulsar la
-                      flecha ~460 veces. Ahora se teclea: 13081987 → 13/08/1987. */}
-                  <CampoCumpleanos id="cumple" value={cumple} onChange={setCumple} className={campo} />
-                </div>
-                </>)}
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-500">
+                        Tu correo <span className="font-normal text-gray-400">· opcional</span>
+                      </label>
+                      <input
+                        value={correo}
+                        onChange={(e) => setCorreo(e.target.value)}
+                        placeholder="tucorreo@ejemplo.com"
+                        inputMode="email"
+                        autoComplete="email"
+                        className={campo}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-500">
+                        Tu cumpleaños <span className="font-normal text-gray-400">· opcional</span>
+                      </label>
+                      <CampoCumpleanos id="cumple" value={cumple} onChange={setCumple} className={campo} />
+                    </div>
+                  </>
+                )}
               </div>
 
               {error && (
@@ -531,8 +518,10 @@ export function UnirmePage() {
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white disabled:opacity-60"
                 style={{ background: color }}
               >
-                {enviando ? <CircleNotch size={16} className="animate-spin" /> : <Star size={16} weight="fill" />}
-                {enviando ? 'Un momento…' : (modo === 'recuperar' ? 'Ver mi tarjeta' : 'Unirme al programa')}
+                {enviando
+                  ? <CircleNotch size={16} className="animate-spin" />
+                  : (faseNuevo ? <Star size={16} weight="fill" /> : <ArrowRight size={16} weight="bold" />)}
+                {enviando ? 'Un momento…' : (faseNuevo ? 'Unirme al programa' : 'Continuar')}
               </button>
 
               {/* T4 — DOS bugs aquí:
